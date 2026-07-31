@@ -13,6 +13,7 @@ config/features=PackedStringArray("4.7")
 [autoload]
 
 Authority="*res://scripts/authority.gd"
+Settings="*res://scripts/settings.gd"
 Harness="*res://scripts/harness.gd"
 
 [display]

@@ -4,8 +4,16 @@ extends Node
 ##   --shot=<name>  boot, capture shots/<name>.png, quit (needs rendering)
 
 
+var _shot_menu := ""  # "", "pause" or "settings": open that UI before --shot
+
+
 func _ready() -> void:
-	for arg in OS.get_cmdline_user_args():
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	var args := OS.get_cmdline_user_args()
+	for arg in args:
+		if arg.begins_with("--menu="):
+			_shot_menu = arg.trim_prefix("--menu=")
+	for arg in args:
 		if arg == "--smoke":
 			_smoke.call_deferred()
 		elif arg.begins_with("--shot="):
@@ -60,7 +68,30 @@ func _smoke() -> void:
 			if not bounds.grow(8.0).has_point(player.position):
 				failures.append("player escaped world bounds at %s" % player.position)
 
+	# pause menu: Esc opens + pauses, Esc again closes + resumes
+	_tap_action("ui_cancel")
+	for i in 3:
+		await get_tree().process_frame
+	if not get_tree().paused:
+		failures.append("Esc did not open the pause menu")
+	_tap_action("ui_cancel")
+	for i in 3:
+		await get_tree().process_frame
+	if get_tree().paused:
+		failures.append("Esc did not close the pause menu")
+
 	_finish_smoke(failures)
+
+
+func _tap_action(action: String) -> void:
+	var press := InputEventAction.new()
+	press.action = action
+	press.pressed = true
+	Input.parse_input_event(press)
+	var release := InputEventAction.new()
+	release.action = action
+	release.pressed = false
+	Input.parse_input_event(release)
 
 
 func _finish_smoke(failures: Array[String]) -> void:
@@ -74,7 +105,16 @@ func _finish_smoke(failures: Array[String]) -> void:
 
 
 func _shot(shot_name: String) -> void:
-	for i in 10:
+	for i in 6:
+		await get_tree().process_frame
+	if _shot_menu != "":
+		var menu := get_tree().get_first_node_in_group("pause_menu") as PauseMenu
+		if menu != null:
+			if _shot_menu == "settings":
+				menu.open_settings()
+			else:
+				menu.open()
+	for i in 6:
 		await get_tree().process_frame
 	var image := get_viewport().get_texture().get_image()
 	var dir := ProjectSettings.globalize_path("res://shots")

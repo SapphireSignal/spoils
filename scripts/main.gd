@@ -11,11 +11,7 @@ func _ready() -> void:
 	var spawn: Vector2 = world_info["spawn"]
 	var player: Player = Authority.spawn_player(ysort, spawn)
 	_limit_camera(player.camera)
-
-
-func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_cancel"):
-		get_tree().quit()
+	add_child(PauseMenu.new())
 
 
 func _limit_camera(camera: Camera2D) -> void:
