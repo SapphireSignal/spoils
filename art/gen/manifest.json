@@ -1,0 +1,209 @@
+{
+  "tile": [
+    64,
+    32
+  ],
+  "floors": {
+    "concrete_a": [
+      0,
+      0
+    ],
+    "concrete_b": [
+      1,
+      0
+    ],
+    "concrete_c": [
+      2,
+      0
+    ],
+    "concrete_cracked_a": [
+      3,
+      0
+    ],
+    "concrete_cracked_b": [
+      0,
+      1
+    ],
+    "asphalt_a": [
+      1,
+      1
+    ],
+    "asphalt_b": [
+      2,
+      1
+    ],
+    "asphalt_line": [
+      3,
+      1
+    ],
+    "dirt_a": [
+      0,
+      2
+    ],
+    "dirt_b": [
+      1,
+      2
+    ],
+    "moss_a": [
+      2,
+      2
+    ],
+    "moss_b": [
+      3,
+      2
+    ]
+  },
+  "props": {
+    "wall_a": {
+      "size": [
+        64,
+        72
+      ],
+      "origin": [
+        32,
+        56
+      ]
+    },
+    "wall_b": {
+      "size": [
+        64,
+        72
+      ],
+      "origin": [
+        32,
+        56
+      ]
+    },
+    "wall_window": {
+      "size": [
+        64,
+        72
+      ],
+      "origin": [
+        32,
+        56
+      ]
+    },
+    "wall_broken_a": {
+      "size": [
+        64,
+        72
+      ],
+      "origin": [
+        32,
+        56
+      ]
+    },
+    "wall_broken_b": {
+      "size": [
+        64,
+        72
+      ],
+      "origin": [
+        32,
+        56
+      ]
+    },
+    "crate_wood": {
+      "size": [
+        32,
+        30
+      ],
+      "origin": [
+        16,
+        20
+      ]
+    },
+    "crate_mil": {
+      "size": [
+        32,
+        30
+      ],
+      "origin": [
+        16,
+        20
+      ]
+    },
+    "barrel_rust": {
+      "size": [
+        22,
+        32
+      ],
+      "origin": [
+        11,
+        27
+      ]
+    },
+    "barrel_olive": {
+      "size": [
+        22,
+        32
+      ],
+      "origin": [
+        11,
+        27
+      ]
+    },
+    "rubble_a": {
+      "size": [
+        48,
+        26
+      ],
+      "origin": [
+        24,
+        20
+      ]
+    },
+    "rubble_b": {
+      "size": [
+        48,
+        26
+      ],
+      "origin": [
+        24,
+        20
+      ]
+    },
+    "pillar": {
+      "size": [
+        18,
+        54
+      ],
+      "origin": [
+        9,
+        50
+      ]
+    },
+    "shadow": {
+      "size": [
+        24,
+        12
+      ],
+      "origin": [
+        12,
+        6
+      ]
+    }
+  },
+  "char": {
+    "frame": [
+      32,
+      40
+    ],
+    "cols": 5,
+    "origin": [
+      16,
+      37
+    ],
+    "dirs": [
+      "E",
+      "SE",
+      "S",
+      "SW",
+      "W",
+      "NW",
+      "N",
+      "NE"
+    ]
+  }
+}
