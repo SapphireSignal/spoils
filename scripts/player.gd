@@ -2,16 +2,25 @@ class_name Player
 extends CharacterBody2D
 ## Raider avatar: 8-direction WASD movement with iso perspective squash.
 ## Built entirely in code (no .tscn) — the whole game is code-authored.
+##
+## Camera: manual smoothing, then rounded to whole pixels. A camera at a
+## fractional position makes the entire 640x360 render resample every frame,
+## which reads as the whole game "going blurry" while walking.
 
 const SPEED := 120.0
 const Y_SQUASH := 0.6  # screen-vertical speed factor; sells iso perspective
-const WALK_FPS := 8.0
+const WALK_FPS := 10.0
+const WALK_FRAMES := 6
+const SHEET_COLS := 7  # idle + 6 walk frames
+const CAM_OFFSET := Vector2(0, -16)
+const CAM_SMOOTH := 8.0
 
 var camera: Camera2D
 
 var _sprite: Sprite2D
 var _dir_index := 2  # sheet rows are E,SE,S,SW,W,NW,N,NE — start facing S
 var _anim_time := 0.0
+var _cam_pos := Vector2.ZERO
 
 
 func _init() -> void:
@@ -25,9 +34,9 @@ func _init() -> void:
 
 	_sprite = Sprite2D.new()
 	_sprite.texture = load("res://art/gen/char.png")
-	_sprite.hframes = 5
+	_sprite.hframes = SHEET_COLS
 	_sprite.vframes = 8
-	_sprite.frame = _dir_index * 5
+	_sprite.frame = _dir_index * SHEET_COLS
 	_sprite.offset = Vector2(0, -17)  # feet (frame y=37 of 40) sit on origin
 	add_child(_sprite)
 
@@ -39,10 +48,15 @@ func _init() -> void:
 	add_child(collider)
 
 	camera = Camera2D.new()
-	camera.position = Vector2(0, -16)
-	camera.position_smoothing_enabled = true
-	camera.position_smoothing_speed = 8.0
+	camera.top_level = true  # followed manually; must never inherit subpixels
+	camera.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
 	add_child(camera)
+
+
+func _ready() -> void:
+	_cam_pos = global_position + CAM_OFFSET
+	camera.global_position = _cam_pos.round()
+	camera.make_current()
 
 
 func _physics_process(delta: float) -> void:
@@ -52,12 +66,17 @@ func _physics_process(delta: float) -> void:
 	_animate(input_vec, delta)
 
 
+func _process(delta: float) -> void:
+	_cam_pos = _cam_pos.lerp(global_position + CAM_OFFSET, 1.0 - exp(-CAM_SMOOTH * delta))
+	camera.global_position = _cam_pos.round()
+
+
 func _animate(input_vec: Vector2, delta: float) -> void:
 	if input_vec.length_squared() > 0.01:
 		_dir_index = wrapi(roundi(rad_to_deg(input_vec.angle()) / 45.0), 0, 8)
 		_anim_time += delta
-		var step := int(_anim_time * WALK_FPS) % 4
-		_sprite.frame = _dir_index * 5 + 1 + step
+		var step := int(_anim_time * WALK_FPS) % WALK_FRAMES
+		_sprite.frame = _dir_index * SHEET_COLS + 1 + step
 	else:
 		_anim_time = 0.0
-		_sprite.frame = _dir_index * 5
+		_sprite.frame = _dir_index * SHEET_COLS

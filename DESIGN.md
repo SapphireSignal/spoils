@@ -120,8 +120,12 @@ than being scattered through UI/input code — so a server can own them later. N
 - **Godot 4.7.1 Windows export templates already installed** (`%APPDATA%\Godot\export_templates\4.7.1.stable\`)
   — shipping a standalone .exe needs no downloads.
 - **Deliberately absent:** Aseprite, Tiled, Audacity (removed at user request — do not reinstall).
-- Current project state: empty dir skeleton (`art/palettes/` with the two .gpl files,
-  `tools/`, `scripts/`, `scenes/`, `shots/`) — **no code written yet**.
+- Current project state: **Milestone 1 built and user-playtested** (git repo, Play.bat,
+  smoke + shot harnesses all working). After playtest feedback: ground tiles are
+  edge-less/low-contrast (no visible grid), buildings are brick with neighbor-masked
+  wall pieces (continuous runs, not cubes), props have distinct silhouettes, walk cycle
+  is 6 frames @ 10fps, and the camera is manually smoothed then pixel-snapped
+  (fractional camera scroll = whole-screen shimmer at 640x360 — never regress this).
 
 ## 7. Self-verification requirements (non-negotiable)
 
@@ -144,8 +148,9 @@ Claude must prove its own work without the user:
 ## 8. First milestones (each ends with a screenshot to the user)
 
 1. **Walkable world:** project scaffold, generated iso tileset + 8-dir character,
-   Y-sorted map with props, camera, WASD movement, Play.bat. *(Approved to build —
-   was mid-scaffold when paused; user must say "go" to resume.)*
+   Y-sorted map with props, camera, WASD movement, Play.bat. *(DONE 2026-07-31,
+   plus a feedback pass: smooth ground, brick buildings, distinct props,
+   6-frame walk, pixel-snapped camera.)*
 2. **Gunplay:** aim at mouse, shoot with tracers/flash/shake/sound, destructible props.
 3. **Enemies:** scav AI (patrol→chase→shoot), health/death, loot drops.
 4. **The loop:** containers, inventory, extraction point, raid timer, death = loss, stash

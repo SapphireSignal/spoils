@@ -4,106 +4,88 @@
     32
   ],
   "floors": {
-    "concrete_a": [
+    "concrete_0": [
       0,
       0
     ],
-    "concrete_b": [
+    "concrete_1": [
       1,
       0
     ],
-    "concrete_c": [
+    "concrete_2": [
       2,
       0
     ],
-    "concrete_cracked_a": [
+    "concrete_3": [
       3,
       0
     ],
-    "concrete_cracked_b": [
+    "concrete_4": [
       0,
       1
     ],
-    "asphalt_a": [
+    "concrete_5": [
       1,
       1
     ],
-    "asphalt_b": [
+    "crack_0": [
       2,
       1
+    ],
+    "crack_1": [
+      3,
+      1
+    ],
+    "crack_2": [
+      0,
+      2
+    ],
+    "stain_0": [
+      1,
+      2
+    ],
+    "stain_1": [
+      2,
+      2
+    ],
+    "moss_0": [
+      3,
+      2
+    ],
+    "dirt_0": [
+      0,
+      3
+    ],
+    "dirt_1": [
+      1,
+      3
+    ],
+    "dirt_2": [
+      2,
+      3
+    ],
+    "dirt_blend_0": [
+      3,
+      3
+    ],
+    "dirt_blend_1": [
+      0,
+      4
+    ],
+    "asphalt_0": [
+      1,
+      4
+    ],
+    "asphalt_1": [
+      2,
+      4
     ],
     "asphalt_line": [
       3,
-      1
-    ],
-    "dirt_a": [
-      0,
-      2
-    ],
-    "dirt_b": [
-      1,
-      2
-    ],
-    "moss_a": [
-      2,
-      2
-    ],
-    "moss_b": [
-      3,
-      2
+      4
     ]
   },
   "props": {
-    "wall_a": {
-      "size": [
-        64,
-        72
-      ],
-      "origin": [
-        32,
-        56
-      ]
-    },
-    "wall_b": {
-      "size": [
-        64,
-        72
-      ],
-      "origin": [
-        32,
-        56
-      ]
-    },
-    "wall_window": {
-      "size": [
-        64,
-        72
-      ],
-      "origin": [
-        32,
-        56
-      ]
-    },
-    "wall_broken_a": {
-      "size": [
-        64,
-        72
-      ],
-      "origin": [
-        32,
-        56
-      ]
-    },
-    "wall_broken_b": {
-      "size": [
-        64,
-        72
-      ],
-      "origin": [
-        32,
-        56
-      ]
-    },
     "crate_wood": {
       "size": [
         32,
@@ -114,14 +96,24 @@
         20
       ]
     },
-    "crate_mil": {
+    "crate_ammo": {
       "size": [
-        32,
+        36,
         30
       ],
       "origin": [
-        16,
-        20
+        18,
+        18
+      ]
+    },
+    "dumpster": {
+      "size": [
+        40,
+        38
+      ],
+      "origin": [
+        20,
+        26
       ]
     },
     "barrel_rust": {
@@ -134,14 +126,34 @@
         27
       ]
     },
-    "barrel_olive": {
+    "gas_cylinder": {
       "size": [
-        22,
-        32
+        14,
+        38
       ],
       "origin": [
-        11,
-        27
+        7,
+        33
+      ]
+    },
+    "tire_stack": {
+      "size": [
+        30,
+        28
+      ],
+      "origin": [
+        15,
+        24
+      ]
+    },
+    "pallet": {
+      "size": [
+        38,
+        24
+      ],
+      "origin": [
+        19,
+        13
       ]
     },
     "rubble_a": {
@@ -183,6 +195,406 @@
         12,
         6
       ]
+    },
+    "wall_brick_a_m0000": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_a_m1000": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_a_m0100": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_a_m1100": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_a_m0010": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_a_m1010": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_a_m0110": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_a_m1110": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_a_m0001": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_a_m1001": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_a_m0101": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_a_m1101": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_a_m0011": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_a_m1011": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_a_m0111": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_a_m1111": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_a_win_x": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_a_win_y": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_a_broken_a": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_a_broken_b": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_b_m0000": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_b_m1000": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_b_m0100": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_b_m1100": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_b_m0010": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_b_m1010": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_b_m0110": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_b_m1110": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_b_m0001": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_b_m1001": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_b_m0101": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_b_m1101": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_b_m0011": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_b_m1011": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_b_m0111": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_b_m1111": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_b_win_x": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_b_win_y": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_b_broken_a": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
+    },
+    "wall_brick_b_broken_b": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ]
     }
   },
   "char": {
@@ -190,7 +602,7 @@
       32,
       40
     ],
-    "cols": 5,
+    "cols": 7,
     "origin": [
       16,
       37

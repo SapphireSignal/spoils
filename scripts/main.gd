@@ -24,4 +24,3 @@ func _limit_camera(camera: Camera2D) -> void:
 	camera.limit_top = int(bounds.position.y)
 	camera.limit_right = int(bounds.end.x)
 	camera.limit_bottom = int(bounds.end.y)
-	camera.reset_smoothing()
