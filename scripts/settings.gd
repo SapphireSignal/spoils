@@ -8,6 +8,10 @@ const PATH := "user://settings.cfg"
 const DISPLAY_BORDERLESS := 0
 const DISPLAY_WINDOWED := 1
 
+# design-base view size; the real view EXPANDS from this to fill the window
+# at the largest whole-number pixel scale (no letterbox, no fractional blur)
+const BASE_VIEW := Vector2i(640, 360)
+
 var display_mode := DISPLAY_BORDERLESS
 var quality := 2       # 0 low, 1 medium, 2 high
 var max_fps := 0       # 0 = uncapped
@@ -21,7 +25,20 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_load()
 	_build_fps_overlay()
+	get_window().size_changed.connect(_update_scale)
 	apply_all()
+	_update_scale()
+
+
+func _update_scale() -> void:
+	var win := get_window()
+	var size: Vector2i = win.size
+	if size.x < 1 or size.y < 1:
+		return
+	@warning_ignore("integer_division")
+	var scale := maxi(1, mini(size.x / BASE_VIEW.x, size.y / BASE_VIEW.y))
+	win.content_scale_size = Vector2i(
+		ceili(size.x / float(scale)), ceili(size.y / float(scale)))
 
 
 func _process(_delta: float) -> void:
