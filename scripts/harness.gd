@@ -42,22 +42,23 @@ func _smoke() -> void:
 	if player == null:
 		failures.append("Player missing")
 	else:
+		# movement runs in _process (render rate), so checks are wall-time based
 		var start: Vector2 = player.position
 		Input.action_press("move_right")
-		for i in 40:
-			await get_tree().physics_frame
+		await get_tree().create_timer(0.8).timeout
 		Input.action_release("move_right")
 		var moved := player.position.x - start.x
-		if moved < 20.0:
-			failures.append("player barely moved (dx=%.1f after 40 ticks)" % moved)
-		# walk into the map border for a while: must be stopped, not escape
-		Input.action_press("move_up")
-		for i in 600:
-			await get_tree().physics_frame
-		Input.action_release("move_up")
-		var bounds: Rect2 = (main.get("world_info") as Dictionary)["bounds"]
-		if not bounds.grow(8.0).has_point(player.position):
-			failures.append("player escaped world bounds at %s" % player.position)
+		if moved < 40.0:
+			failures.append("player barely moved (dx=%.1f after 0.8s)" % moved)
+		# walk into the map border from just inside it: must be stopped
+		if floor_layer != null:
+			player.position = floor_layer.map_to_local(Vector2i(4, 4))
+			Input.action_press("move_up")
+			await get_tree().create_timer(2.0).timeout
+			Input.action_release("move_up")
+			var bounds: Rect2 = (main.get("world_info") as Dictionary)["bounds"]
+			if not bounds.grow(8.0).has_point(player.position):
+				failures.append("player escaped world bounds at %s" % player.position)
 
 	_finish_smoke(failures)
 

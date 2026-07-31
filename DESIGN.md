@@ -112,6 +112,12 @@ than being scattered through UI/input code — so a server can own them later. N
 ## 6. Machine & toolchain facts (verified 2026-07-31)
 
 - **OS:** Windows 11. Shell: PowerShell 5.1. Beefy CPU (i9-14900KF, 32 threads).
+- **Display: 240 Hz monitor, desktop at 1680x1080 (a stretched/non-native mode).**
+  Consequences (learned from user playtest complaints): ALL motion must update at
+  render rate (`_process`), never at the 60 Hz physics tick — 60 Hz stepping reads
+  as "20 fps" at 240 Hz. Camera must sit on whole pixels every frame. Game runs
+  fullscreen (integer 2x letterboxed at this desktop res; native 1080p would be
+  a perfect 3x).
 - **Engine:** `D:\Godot\Godot_v4.7.1-stable_win64_console.exe` (console build — use for all
   CLI/headless work; there is also a windowed exe without `_console` for Play shortcuts).
 - **Python 3.14 + Pillow 12.3** on PATH — the art pipeline.

@@ -10,5 +10,4 @@ func spawn_player(parent: Node, pos: Vector2) -> Player:
 	player.name = "Player"
 	player.position = pos
 	parent.add_child(player)
-	player.reset_physics_interpolation()  # no first-frame streak from (0,0)
 	return player
