@@ -1391,7 +1391,19 @@ func _place_pile(family: String, cell: Vector2i, heap: int,
 		# heap has a direction — the way a load spills off one side
 		var reach := spread * (0.5 + 0.42 * float(i))
 		var at := base + lean * reach + _clutter_offset(spread * 0.55)
+		# a satellite still has to respect the world: unchecked, these
+		# landed in roads, doorways and ON PARKED CARS, which walled a
+		# driveable car in and failed the smoke test
+		if not _clutter_spot_free(at):
+			continue
 		_add_prop(_pick_variant_varied(family), at)
+
+
+func _clutter_spot_free(at: Vector2) -> bool:
+	var cell := _floor_layer.local_to_map(at)
+	return not (_occupied.has(cell) or _on_road(cell) or _near_a_door(cell)
+		or _rail_cells.has(cell) or _ballast.has(cell)
+		or _plaza.has(cell) or _apron.has(cell) or _sidewalk.has(cell))
 
 
 func _scatter_around(families: Array, cell: Vector2i, count: int,
@@ -1406,6 +1418,8 @@ func _scatter_around(families: Array, cell: Vector2i, count: int,
 			continue
 		var at := base + bias * _rng.randf_range(0.0, spread) \
 			+ _clutter_offset(spread * 0.7)
+		if not _clutter_spot_free(at):
+			continue
 		_add_prop(_pick_variant_varied(family), at)
 
 

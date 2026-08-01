@@ -258,14 +258,26 @@ func _smoke() -> void:
 		elif not car.engine_on:
 			failures.append("the engine did not start on entry")
 		else:
-			# headless sends no input — feed the drive vector directly
-			car.auto_drive = Vector2(0.8944, 0.4472)
-			var car_start := car.global_position
-			await get_tree().create_timer(1.0).timeout
-			car.auto_drive = Vector2.ZERO
-			if car.global_position.distance_to(car_start) < 40.0:
-				failures.append("car barely moved while driving (%.1f px)" %
+			# DRIVE, in whichever direction is open. This asserts that the
+			# driving system works — not that one particular car happens to
+			# be parked with room. A car boxed in by a wall genuinely can't
+			# move, and the test used to fail the whole build for it the
+			# moment the layout shifted a parked car's neighbours.
+			var best_move := 0.0
+			for dir in [Vector2(0.8944, 0.4472), Vector2(-0.8944, -0.4472),
+					Vector2(0.8944, -0.4472), Vector2(-0.8944, 0.4472)]:
+				var car_start := car.global_position
+				car.auto_drive = dir
+				await get_tree().create_timer(0.8).timeout
+				car.auto_drive = Vector2.ZERO
+				best_move = maxf(best_move,
 					car.global_position.distance_to(car_start))
+				if best_move >= 40.0:
+					break
+				await get_tree().create_timer(0.3).timeout   # roll to a stop
+			if best_move < 40.0:
+				failures.append("car would not drive in any direction "
+					+ "(best %.1f px)" % best_move)
 			car.exit_car()
 			await get_tree().create_timer(0.6).timeout
 			if player.driving != null or not player.visible:

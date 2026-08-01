@@ -3,6 +3,22 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.35] — 2026-08-01
+
+### Fixed
+- **v0.6.34 shipped with a failing smoke test.** The commands were
+  chained unconditionally, so a red build reached main. Two genuine
+  problems were underneath it:
+  - **The smoke test asserted the wrong thing.** It drove whichever car
+    came first in the group and demanded 40 px of travel. Moving the
+    scrapyard hall shifted the layout, that car ended up parked without
+    room, and the entire build failed for it. It now tries all four
+    directions and fails only if the car can't move in *any* of them —
+    asserting that driving works, not that one car is parked well.
+  - **Clutter pile satellites had no occupancy check** (a v0.6.29 bug of
+    mine): they could land in roads, in doorways, and on top of parked
+    cars. They now test the cell like every other placement does.
+
 ## [0.6.34] — 2026-08-01
 
 ### Fixed
