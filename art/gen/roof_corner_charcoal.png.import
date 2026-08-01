@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cgqxuvnotd1r0"
-path="res://.godot/imported/roof_rim_umber_n.png-8b3b9384e1918cc16d9769aa9e769fed.ctex"
+uid="uid://b5lr6ktcg3utc"
+path="res://.godot/imported/roof_corner_charcoal.png-0229b65b3c40437ed5fbcb97f02b5303.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/gen/roof_rim_umber_n.png"
-dest_files=["res://.godot/imported/roof_rim_umber_n.png-8b3b9384e1918cc16d9769aa9e769fed.ctex"]
+source_file="res://art/gen/roof_corner_charcoal.png"
+dest_files=["res://.godot/imported/roof_corner_charcoal.png-0229b65b3c40437ed5fbcb97f02b5303.ctex"]
 
 [params]
 

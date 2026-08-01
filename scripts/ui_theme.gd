@@ -40,15 +40,15 @@ static func _build() -> Theme:
 	theme.default_font = font()
 	theme.default_font_size = 9
 
-	# deep burgundy, slightly translucent: distinct from every backdrop (the
-	# gold vault AND the blue-gray scenes), which the old gray-blue wasn't
-	var btn_normal := _flat(Color("411d31", 0.88), Color("752438", 0.9))
+	# deep burgundy, translucent: distinct from every backdrop (the gold vault
+	# AND the blue-gray scenes), which the old gray-blue wasn't
+	var btn_normal := _flat(Color("411d31", 0.62), Color("752438", 0.75))
 	btn_normal.content_margin_top = 5
 	btn_normal.content_margin_bottom = 4
-	var btn_hover := _flat(Color("752438", 0.92), Color("a53030"))
+	var btn_hover := _flat(Color("752438", 0.78), Color("a53030", 0.9))
 	btn_hover.content_margin_top = 5
 	btn_hover.content_margin_bottom = 4
-	var btn_pressed := _flat(Color("241527", 0.92), Color("752438"))
+	var btn_pressed := _flat(Color("241527", 0.8), Color("752438", 0.85))
 	btn_pressed.content_margin_top = 5
 	btn_pressed.content_margin_bottom = 4
 	# keyboard-focus marker: subtle, same family as hover

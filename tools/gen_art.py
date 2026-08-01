@@ -262,7 +262,9 @@ def make_floors_atlas() -> tuple[Image.Image, dict[str, list[int]]]:
 # so adjacent segments continue each other's pattern seamlessly.
 
 WALL_H = 40
-SEG_THICK = 7  # coping depth in screen px
+SEG_THICK = 2  # cap depth in screen px — slim and flush with the wall
+               # (a wide cap read as a fat lid on a thin wall; the ROOF's eave
+               # modules are what overhang, not the wall itself)
 
 BRICK_STYLES = {
     # two clearly different materials (user: buildings must not match)
@@ -293,10 +295,7 @@ def _seg_brick(rng: random.Random, base, mortar, i: int, fy: int) -> tuple:
     return base
 
 def make_wall_segment(style: str, axis: str, window_variant: int = -1,
-                      broken_seed: int = -1,
-                      flip_coping: bool = False) -> tuple[Canvas, tuple, list]:
-    """flip_coping: north/west placements need the coping extending toward the
-    building interior (under the roof), not outward past the roof edge."""
+                      broken_seed: int = -1) -> tuple[Canvas, tuple, list]:
     rng = random.Random(f"{SEED}:seg:{style}:{axis}:{window_variant}:{broken_seed}")
     base_col, mortar_col = (C(n) for n in BRICK_STYLES[style][axis])
     # canvas: 32 wide edge + coping overhang + outline margins
@@ -304,8 +303,6 @@ def make_wall_segment(style: str, axis: str, window_variant: int = -1,
     ox = 8
     oy = 56
     cop_dx = SEG_THICK if axis == "x" else -SEG_THICK  # coping goes to the back
-    if flip_coping:
-        cop_dx = -cop_dx
 
     heights: list[int] = []
     if broken_seed >= 0:
@@ -404,12 +401,8 @@ def wall_piece_inventory() -> dict[str, tuple[Canvas, tuple, list]]:
     for style in BRICK_STYLES:
         for axis in ("x", "y"):
             pieces[f"seg_{style}_{axis}"] = make_wall_segment(style, axis)
-            pieces[f"seg_{style}_{axis}_in"] = make_wall_segment(
-                style, axis, flip_coping=True)
             for v in range(len(SEG_WINDOWS)):
                 pieces[f"seg_{style}_{axis}_win_{v}"] = make_wall_segment(style, axis, v)
-                pieces[f"seg_{style}_{axis}_win_{v}_in"] = make_wall_segment(
-                    style, axis, v, flip_coping=True)
             for b in range(2):
                 pieces[f"seg_{style}_{axis}_broken_{b}"] = make_wall_segment(
                     style, axis, -1, b)
@@ -464,15 +457,41 @@ def make_roof_fascia(tone: str, axis: str) -> tuple[Canvas, tuple, list | None]:
         c.set(x, by + 2, INK)
     return c, (ox + 16, oy), None
 
-def make_roof_rim(tone: str, axis: str) -> tuple[Canvas, tuple, list | None]:
-    _, _, lite_col = (C(n) for n in ROOF_TONES[tone])
-    c = Canvas(40, 24)
-    ox, oy = 4, 10
+def make_roof_eave(tone: str, side: str) -> tuple[Canvas, tuple, list | None]:
+    """North/west eave: extends the roof plane OUTWARD over the wall coping
+    (the symmetric caps stick out ~8px past the roof line on the far sides).
+    side 'n': out direction (+2,-1) from an x-axis edge; 'w': (-2,-1), y-axis."""
+    rng = random.Random(f"{SEED}:eave:{tone}:{side}")
+    base_col, dark_col, lite_col = (C(n) for n in ROOF_TONES[tone])
+    axis = "x" if side == "n" else "y"
+    step = 1 if side == "n" else -1
+    c = Canvas(56, 28)
+    ox, oy = 12, 16
     for i in range(32):
         x = ox + 16 + (-16 + i)
         by = oy + _seg_base_fy(axis, i)
-        c.set(x, by, lite_col)
+        for j in range(10):
+            px_x = x + step * j
+            px_y = by - (j + 1) // 2
+            r = rng.random()
+            col = base_col
+            if r < 0.08:
+                col = dark_col
+            elif j == 9:
+                col = lite_col  # lit outer rim
+            c.set(px_x, px_y, col)
     return c, (ox + 16, oy), None
+
+def make_roof_corner(tone: str) -> tuple[Canvas, tuple, list | None]:
+    """Small roof-colored diamond capping a wall post at the roof plane, so
+    every corner (and door jamb) reads identical under the roof."""
+    base_col, dark_col, lite_col = (C(n) for n in ROOF_TONES[tone])
+    c = Canvas(20, 12)
+    rows = small_diamond_rows(16, 8)
+    for i, (x0, x1) in enumerate(rows):
+        for x in range(x0, x1 + 1):
+            c.set(2 + x, 2 + i, lite_col if i == 0 else base_col)
+    return c, (10, 6), None
 
 def make_roof_vent() -> tuple[Canvas, tuple, list | None]:
     c = Canvas(24, 22)
@@ -1410,8 +1429,9 @@ def main() -> None:
             entries[f"roof_tile_{tone}_{v}"] = make_roof_tile(tone, v)
         entries[f"roof_fascia_{tone}_s"] = make_roof_fascia(tone, "x")
         entries[f"roof_fascia_{tone}_e"] = make_roof_fascia(tone, "y")
-        entries[f"roof_rim_{tone}_n"] = make_roof_rim(tone, "x")
-        entries[f"roof_rim_{tone}_w"] = make_roof_rim(tone, "y")
+        entries[f"roof_eave_{tone}_n"] = make_roof_eave(tone, "n")
+        entries[f"roof_eave_{tone}_w"] = make_roof_eave(tone, "w")
+        entries[f"roof_corner_{tone}"] = make_roof_corner(tone)
     entries["roof_vent"] = make_roof_vent()
     entries["roof_hatch"] = make_roof_hatch()
     entries["shadow"] = (make_shadow(), (12, 6), None)
@@ -1465,7 +1485,7 @@ def main() -> None:
         return img.resize((img.width * 3, img.height * 3), Image.NEAREST)
 
     pad = 12
-    show_walls = ["seg_brick_a_x", "seg_brick_a_x_in", "seg_brick_a_y",
+    show_walls = ["seg_brick_a_x", "seg_brick_a_y",
                   "seg_brick_a_x_win_0", "seg_brick_a_x_win_1", "seg_brick_a_x_win_2",
                   "seg_brick_a_x_broken_0", "post_brick_a", "seg_brick_b_x",
                   "seg_brick_b_y_win_1", "post_brick_b",

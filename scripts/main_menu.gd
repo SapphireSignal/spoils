@@ -41,6 +41,11 @@ var _changelog: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.5.6", ["all walls and corners symmetrical again",
+		"slim wall tops - the wide cap looked like a lid on a thin wall",
+		"roof eaves now overhang and fully cover the wall tops",
+		"roof caps over every corner post and door jamb",
+		"buttons more see-through", "changelog button visible again"]],
 	["v0.5.5", ["more detail in this changelog",
 		"new burgundy buttons that stand out on every backdrop",
 		"changelog link dimmed to match the footer"]],
@@ -331,22 +336,20 @@ func _build_ui() -> void:
 	center.add_child(_settings)
 	root.add_child(center)
 
-	# subtle footer link, dim like the version label beside it
+	# same look as every other button (a flat/dim version was invisible on
+	# the darker backdrops)
 	var changelog_btn := Button.new()
 	changelog_btn.text = "changelog"
-	changelog_btn.flat = true
 	changelog_btn.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	changelog_btn.offset_left = -86
-	changelog_btn.offset_top = -40
+	changelog_btn.offset_left = -96
+	changelog_btn.offset_top = -44
 	changelog_btn.offset_right = -6
-	changelog_btn.offset_bottom = -20
-	changelog_btn.add_theme_color_override("font_color", UITheme.TEXT_DIM)
-	changelog_btn.add_theme_color_override("font_hover_color", UITheme.TEXT_BRIGHT)
+	changelog_btn.offset_bottom = -22
 	changelog_btn.pressed.connect(_open_changelog)
 	root.add_child(changelog_btn)
 
 	var version := Label.new()
-	version.text = "pre-alpha v0.5.5"
+	version.text = "pre-alpha v0.5.6"
 	version.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	version.offset_left = -130
 	version.offset_top = -16

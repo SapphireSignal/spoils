@@ -1,8 +1,23 @@
-﻿# Changelog
+# Changelog
 
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.5.6] — 2026-07-31
+
+### Fixed
+- Wall symmetry for good: the coping-flip experiment is removed — every wall
+  uses the identical cap, all four corners match (the flipped caps were
+  overlapping their own faces and colliding at the top corner).
+- Wall caps slimmed to a flush 3px top — the wide cap read as a fat lid on a
+  thin wall. The ROOF is what overhangs now: new eave modules extend the roof
+  plane over the wall tops on the far sides, and every post gets a
+  roof-colored cap so corners and door jambs read identical under the roof.
+- The changelog button was invisible on dark backdrops (flat + dim) — it is a
+  normal themed button again.
+
+### Changed
+- All buttons are more translucent.
 ## [0.5.5] — 2026-07-31
 
 ### Changed

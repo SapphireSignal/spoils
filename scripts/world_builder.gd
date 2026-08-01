@@ -270,10 +270,9 @@ func _build_shell(rect: Rect2i, style: String, roof_tone: String,
 						posts[(center + (v as Vector2)).round()] = true
 					continue
 				var axis: String = _EDGE_AXIS[side]
-				# north/west walls use the coping-flipped variant so their cap
-				# extends under the roof, never past its edge
-				var flip := "_in" if (side == "yn" or side == "xn") else ""
-				var piece := "seg_%s_%s%s" % [style, axis, flip]
+				# every wall uses the identical piece per axis — symmetric caps
+				# and matching corners on all four sides (user call)
+				var piece := "seg_%s_%s" % [style, axis]
 				if ruined and Vector2(cell - ruin_corner).length() < 3.0:
 					if _rng.randf() < 0.25:
 						for v in verts:  # collapsed gap: posts mark the stumps
@@ -281,7 +280,7 @@ func _build_shell(rect: Rect2i, style: String, roof_tone: String,
 						continue
 					piece = "seg_%s_%s_broken_%d" % [style, axis, _rng.randi_range(0, 1)]
 				elif _rng.randf() < 0.3:
-					piece = "seg_%s_%s_win_%d%s" % [style, axis, _rng.randi_range(0, 2), flip]
+					piece = "seg_%s_%s_win_%d" % [style, axis, _rng.randi_range(0, 2)]
 				_add_prop(piece, center + (_EDGE_OFFSET[side] as Vector2))
 
 	# posts at the four outer corners of the shell
@@ -302,10 +301,10 @@ func _build_shell(rect: Rect2i, style: String, roof_tone: String,
 		for x in range(rect.position.x, rect.end.x):
 			_occupied[Vector2i(x, y)] = true
 
-	_build_roof(interior, roof_tone)
+	_build_roof(interior, roof_tone, posts.keys())
 
 
-func _build_roof(interior: Rect2i, tone: String) -> void:
+func _build_roof(interior: Rect2i, tone: String, post_positions: Array) -> void:
 	# Modular roof, one module per cell/edge by explicit formula:
 	#   tile   at map_to_local(cell)          + (0, -wall_h)
 	#   fascia at cell center + edge offset   + (0, -wall_h)  (south/east)
@@ -338,12 +337,19 @@ func _build_roof(interior: Rect2i, tone: String) -> void:
 				match side:
 					"yp": module = "roof_fascia_%s_s" % tone
 					"xp": module = "roof_fascia_%s_e" % tone
-					"yn": module = "roof_rim_%s_n" % tone
-					"xn": module = "roof_rim_%s_w" % tone
+					"yn": module = "roof_eave_%s_n" % tone
+					"xn": module = "roof_eave_%s_w" % tone
 				var edge := _prop_sprite(module)
 				edge.position = _floor_layer.map_to_local(cell) \
 					+ (_EDGE_OFFSET[side] as Vector2) - roof.position + lift
 				roof.add_child(edge)
+
+	# a roof-colored cap over every post, so all corners and door jambs read
+	# identical when the roof is on
+	for post_pos in post_positions:
+		var cap := _prop_sprite("roof_corner_%s" % tone)
+		cap.position = (post_pos as Vector2) - roof.position + lift
+		roof.add_child(cap)
 
 	for i in 2:
 		var cell := Vector2i(_rng.randi_range(interior.position.x, interior.end.x - 1),

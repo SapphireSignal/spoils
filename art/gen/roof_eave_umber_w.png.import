@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bfkaoi3l8qqtf"
-path="res://.godot/imported/seg_brick_a_x_in.png-6ed8a4635ab66f539879c4eb6bdeb9dc.ctex"
+uid="uid://0n0axgc06fs3"
+path="res://.godot/imported/roof_eave_umber_w.png-7874e5145c408d1529d2b1429e001811.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/gen/seg_brick_a_x_in.png"
-dest_files=["res://.godot/imported/seg_brick_a_x_in.png-6ed8a4635ab66f539879c4eb6bdeb9dc.ctex"]
+source_file="res://art/gen/roof_eave_umber_w.png"
+dest_files=["res://.godot/imported/roof_eave_umber_w.png-7874e5145c408d1529d2b1429e001811.ctex"]
 
 [params]
 

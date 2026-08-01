@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cx6csyvftco1r"
-path="res://.godot/imported/seg_brick_a_x_win_1_in.png-f65b3a984697d39f16f0783d3bcf24f1.ctex"
+uid="uid://d1lj23rpkubxg"
+path="res://.godot/imported/roof_eave_charcoal_n.png-11b2a11941bae262cad2c6e7c7f57ce2.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/gen/seg_brick_a_x_win_1_in.png"
-dest_files=["res://.godot/imported/seg_brick_a_x_win_1_in.png-f65b3a984697d39f16f0783d3bcf24f1.ctex"]
+source_file="res://art/gen/roof_eave_charcoal_n.png"
+dest_files=["res://.godot/imported/roof_eave_charcoal_n.png-11b2a11941bae262cad2c6e7c7f57ce2.ctex"]
 
 [params]
 
