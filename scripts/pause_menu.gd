@@ -45,9 +45,12 @@ func _ready() -> void:
 	var spacer := Control.new()
 	spacer.custom_minimum_size = Vector2(150, 3)
 	box.add_child(spacer)
-	_resume_btn = _button(box, "RESUME", close)
-	_button(box, "SETTINGS", _show_settings)
-	_button(box, "QUIT TO DESKTOP", func() -> void: get_tree().quit())
+	_resume_btn = _button(box, "resume", close)
+	_button(box, "settings", _show_settings)
+	_button(box, "main menu", func() -> void:
+		get_tree().paused = false
+		get_tree().change_scene_to_file("res://scenes/menu.tscn"))
+	_button(box, "quit to desktop", func() -> void: get_tree().quit())
 	_main_panel.add_child(box)
 	center.add_child(_main_panel)
 
