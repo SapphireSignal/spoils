@@ -1143,12 +1143,12 @@ def make_vehicle(kind: str, scheme: int, rev: bool = False,
             prof.append(h)
         win_lo, win_hi = 13, 25
         glass_roof = (9, 14)
-    bed_spots = (27, 36)
+    bed_lo, bed_hi = 26, 44   # open-bed interior span in profile coords
     if rev:
         prof = prof[::-1]
         win_lo, win_hi = L - win_hi, L - win_lo
         glass_roof = (L - glass_roof[1], L - glass_roof[0])
-        bed_spots = (L - 44 + 2, L - 44 + 11)
+        bed_lo, bed_hi = L - 44, L - 26
     clear = 4  # ground clearance (wheels fill it)
     oy = 34
     ox = 6
@@ -1195,24 +1195,42 @@ def make_vehicle(kind: str, scheme: int, rev: bool = False,
     for y in range(oy + seam // 2 - clear - prof[seam] + 2, oy + seam // 2 - clear):
         c.set(ox + seam, y, body_dd)
     # SE end cap: the only end face the camera can see. Rear of an NW-bound
-    # car (tail lights), front of an SE-bound one (head lights + grille).
+    # car (tail lights + trunk seam), front of an SE-bound one (head lights +
+    # grille). 5px deep with a wrapped corner so the body clearly ENDS in a
+    # face, not a flat cutoff (user report: "cars don't have fronts/backs").
     cap_h = prof[L - 1]
-    for t in range(3):
+    cap_d = 5
+    for t in range(cap_d):
         x = ox + L + t
         base = oy + (L + t) // 2
-        for y in range(base - clear - cap_h + (t + 1) // 2, base - clear + 1):
+        top_y = base - clear - cap_h + (t + 1) // 2
+        for y in range(top_y, base - clear + 1):
             c.set(x, y, body_dd)
-        c.set(x, base - clear, C("202e37"))       # bumper
+        c.set(x, top_y, body_d)                   # lit top edge of the cap
+        c.set(x, base - clear, C("202e37"))       # bumper band
         c.set(x, base - clear - 1, C("202e37"))
+    # wrapped corner: the side face's last column darkens into the cap
+    for y in range(oy + (L - 1) // 2 - clear - cap_h + 1, oy + (L - 1) // 2 - clear):
+        c.set(ox + L - 1, y, body_dd)
     cap_top = oy + L // 2 - clear - cap_h
+    lights_y = cap_top + 2
     if rev:  # head lights + grille slits
-        c.set(ox + L, cap_top + 2, C("e8c170"))
-        c.set(ox + L + 2, cap_top + 3, C("e8c170"))
-        c.set(ox + L + 1, cap_top + 5, C("151d28"))
-        c.set(ox + L + 1, cap_top + 6, C("151d28"))
-    else:    # tail lights
-        c.set(ox + L, cap_top + 2, C("cf573c") if scheme == 0 else C("a53030"))
-        c.set(ox + L + 2, cap_top + 3, C("cf573c") if scheme == 0 else C("a53030"))
+        for lx in (0, 1):
+            c.set(ox + L + lx, lights_y, C("e8c170"))
+        for lx in (3, 4):
+            c.set(ox + L + lx, lights_y + 1, C("e8c170"))
+        for gy in (lights_y + 3, lights_y + 5):
+            c.set(ox + L + 1, gy, C("151d28"))
+            c.set(ox + L + 2, gy, C("151d28"))
+            c.set(ox + L + 3, gy + 1, C("151d28"))
+    else:    # tail lights + trunk seam
+        tail = C("cf573c") if scheme == 0 else C("a53030")
+        for lx in (0, 1):
+            c.set(ox + L + lx, lights_y, tail)
+        for lx in (3, 4):
+            c.set(ox + L + lx, lights_y + 1, tail)
+        for sx_ in range(1, 4):
+            c.set(ox + L + sx_, lights_y + 3 + (sx_ // 2), C("10141f"))
     for wf in (8, 34):  # wheel arches + wheels
         cxw = ox + wf + 3
         cyw = oy + (wf + 3) // 2 - 1
@@ -1226,18 +1244,24 @@ def make_vehicle(kind: str, scheme: int, rev: bool = False,
                 if d <= 10:
                     c.set(cxw + dx, cyw + dy, C("10141f") if d > 3 else C("202e37"))
         c.set(cxw, cyw, C("577277"))
-    if kind == "pickup":  # cargo in the bed
+    if kind == "pickup":  # cargo strictly INSIDE the bed — no cab overlap
+        inner_lo = bed_lo + 3   # margins off the cab wall and the tailgate
+        inner_hi = bed_hi - 3
+        cursor = inner_lo
         for i in range(rng.randint(1, 2)):
-            w = rng.choice((12, 16))
+            w = rng.choice((10, 12, 14))
+            if cursor + w + 4 > inner_hi:  # no room left: skip, never overlap
+                break
             mini = Canvas(w + 4, 14)
             mb = iso_prism(mini, 2, 1, w, w // 2, rng.randint(4, 6),
                 C("be772b"), C("884b2b"), C("602c2c"))
             for mx in range(w):
                 mini.set(2 + mx, mb[mx] + 2, C("341c27"))
             mini.outline_auto()
-            bi = bed_spots[0] + i * (bed_spots[1] - bed_spots[0]) + rng.randint(-1, 1)
+            bi = cursor + rng.randint(0, max(0, inner_hi - (cursor + w + 4)))
             c.img.alpha_composite(mini.img, (ox + bi, oy + bi // 2 - 24))
             c.px = c.img.load()
+            cursor = bi + w + 5
     if broken:
         # shattered glass: every glass pixel goes dark, a few bright shards
         shard_spots = []
@@ -1382,6 +1406,170 @@ def make_tree(kind: str, variant: int) -> tuple[Canvas, tuple, list]:
     c.outline_auto()
     cropped, origin = crop_canvas(c, (cx, feet + 1))
     return cropped, origin, ["circle", 2.0]
+
+def make_body(variant: int) -> tuple[Canvas, tuple, list | None]:
+    """A fallen raider past the barricades — the sniper's warning, written in
+    bodies. Built from the player's proportions but randomized: jacket color,
+    hat or hair, sometimes a beard, sometimes the pack still on. Two poses
+    (face-up / face-down). Sparse placement is the builder's job."""
+    rng = random.Random(f"{SEED}:body:{variant}")
+    jackets = [("752438", "411d31"), ("3c5e8b", "253a5e"), ("577277", "394a50"),
+               ("884b2b", "602c2c"), ("7a4841", "4d2b32"), ("25562e", "19332d")]
+    jkt, jkt_d = (C(n) for n in jackets[variant % len(jackets)])
+    pant, boot = C("202e37"), C("10141f")
+    hair_cols = ["4d2b32", "341c27", "602c2c", "819796"]
+    hair = C(hair_cols[rng.randrange(len(hair_cols))])
+    has_hat = rng.random() < 0.4
+    has_beard = not has_hat and rng.random() < 0.45
+    has_pack = rng.random() < 0.35
+    face_down = rng.random() < 0.5
+    c = Canvas(30, 18)
+    ox, oy = 4, 6
+    # dried stain beneath (dark, subtle)
+    for i in range(rng.randint(4, 8)):
+        c.set(ox + 6 + rng.randint(-2, 6), oy + 6 + rng.randint(-1, 2), C("241527"))
+    # torso lying along the (2,1) diagonal
+    for i in range(9):
+        x = ox + 6 + i
+        y = oy + 2 + i // 2
+        c.set(x, y, jkt)
+        c.set(x, y + 1, jkt)
+        c.set(x, y + 2, jkt_d)
+    if has_pack:  # pack humped on the back
+        for i in range(4):
+            c.set(ox + 8 + i, oy + 1 + i // 2, C("7a4841" if variant % 2 else "4d2b32"))
+    # head at the upper end
+    hx, hy = ox + 4, oy + 1
+    for dx in range(3):
+        for dy in range(3):
+            c.set(hx + dx, hy + dy, C("d7b594") if not face_down else hair)
+    if face_down:
+        c.set(hx + 2, hy + 2, C("c09473"))  # sliver of cheek
+    else:
+        c.set(hx, hy, hair)                 # hair over the brow
+        c.set(hx + 1, hy, hair)
+        if has_beard:
+            c.set(hx + 1, hy + 2, C("c09473"))
+            c.set(hx + 2, hy + 2, hair)
+    if has_hat:  # knit cap in a spare color
+        hat = C(["a53030", "de9e41", "394a50", "25562e"][rng.randrange(4)])
+        c.set(hx, hy, hat)
+        c.set(hx + 1, hy, hat)
+        c.set(hx + 2, hy, hat)
+        c.set(hx, hy + 1, hat)
+    # one arm flung out
+    adx = -1 if rng.random() < 0.5 else 1
+    for i in range(3):
+        c.set(ox + 7 + i * adx, oy + 5 + (1 if adx > 0 else -1) * (i // 2), jkt)
+    c.set(ox + 7 + 3 * adx, oy + 5 + (1 if adx > 0 else 0), C("d7b594"))
+    # legs: one straight, one bent
+    for i in range(4):
+        c.set(ox + 15 + i, oy + 7 + i // 2, pant)
+    c.set(ox + 19, oy + 9, boot)
+    c.set(ox + 20, oy + 9, boot)
+    bend = rng.randint(0, 1)
+    for i in range(3):
+        c.set(ox + 15 + i, oy + 9 + bend, pant)
+    c.set(ox + 18, oy + 10 + bend, boot)
+    c.outline_auto()
+    cr, orr = crop_canvas(c, (ox + 12, oy + 9))
+    return cr, orr, None
+
+
+def make_barricade(kind: str, state: str) -> tuple[Canvas, tuple, list | None]:
+    """Playable-edge barricades: concrete jersey barriers and metal fences,
+    running along the screen (2,1) axis (mirrored at registration for the
+    other axis). States: intact, damaged (cracked / bent), fallen (flat on
+    the ground, no collider — walk right over it). The ring these form IS the
+    map's advertised edge; the world visibly continues beyond them."""
+    rng = random.Random(f"{SEED}:barricade:{kind}:{state}")
+    LN = 28
+    c = Canvas(LN + 14, 36)
+    ox, oy = 4, 24
+
+    if kind == "jersey":
+        if state == "fallen":  # tipped onto its back: low flat slab
+            for i in range(LN):
+                x = ox + i
+                by = oy + i // 2
+                for d in range(6):
+                    col = CONC_BASE if d < 4 else CONC_D1
+                    if rng.random() < 0.06:
+                        col = CONC_D2
+                    c.set(x + d, by - 2 - (d + 1) // 2, col)
+                c.set(x, by - 1, CONC_D1)
+            c.outline_auto()
+            cr, orr = crop_canvas(c, (ox + LN // 2, oy + 7))
+            return cr, orr, None
+        heights = [10] * LN
+        if state == "cracked":  # a chunk bitten out of the middle
+            bite_at = rng.randint(9, 15)
+            for i in range(bite_at, bite_at + rng.randint(4, 6)):
+                if i < LN:
+                    heights[i] = rng.randint(3, 6)
+        for i in range(LN):
+            x = ox + i
+            by = oy + i // 2
+            h = heights[i]
+            for k in range(h):
+                col = CONC_BASE
+                if (i + k) % 9 < 2 and h == 10 and 2 < k < 8:
+                    col = C("de9e41") if (i + k) % 2 else C("be772b")  # worn chevron
+                elif rng.random() < 0.05:
+                    col = CONC_D1
+                c.set(x, by - k, col)
+            c.set(x, by, CONC_D2)               # dark foot
+            top_y = by - h
+            c.set(x, top_y, CONC_L1)            # lit crown
+            c.set(x + 1, top_y - 1, CONC_D1)    # thin top face toward NE
+            c.set(x + 2, top_y - 1, CONC_D1)
+        if state == "cracked":  # rubble at the foot of the bite
+            for r in range(rng.randint(3, 5)):
+                rx = ox + rng.randint(8, 20)
+                c.set(rx, oy + rx // 2 + rng.randint(0, 1) - 4, CONC_L1)
+        c.outline_auto()
+        cr, orr = crop_canvas(c, (ox + LN // 2, oy + 8))
+        return cr, orr, ["diamond", 15.0, 5.0]
+
+    # metal fence panel
+    steel, steel_d, rust = C("577277"), C("394a50"), C("884b2b")
+    if state == "fallen":  # panel flat on the ground
+        for i in range(LN):
+            x = ox + i
+            by = oy + i // 2
+            c.set(x, by - 2, steel_d)
+            c.set(x + 4, by - 4, steel_d)
+            if i % 5 == 0:  # cross slats of the lattice, laying flat
+                for d in range(1, 4):
+                    c.set(x + d, by - 2 - (d + 1) // 2, steel_d if d % 2 else rust)
+        c.outline_auto()
+        cr, orr = crop_canvas(c, (ox + LN // 2, oy + 7))
+        return cr, orr, None
+    sag = 2 if state == "bent" else 0
+    post_h = 15
+    for px_ in (2, LN - 3):  # posts
+        x = ox + px_
+        by = oy + px_ // 2
+        for k in range(post_h):
+            c.set(x, by - k, steel_d if k % 4 else rust)
+        c.set(x, by, C("202e37"))
+    for rail_k in (4, 12):  # rails following the edge slope (mid-sag if bent)
+        for i in range(2, LN - 2):
+            x = ox + i
+            mid_dip = sag if abs(i - LN // 2) < 8 else 0
+            y = oy + i // 2 - rail_k + mid_dip
+            c.set(x, y, steel if rng.random() > 0.12 else rust)
+    for i in range(4, LN - 4, 3):  # lattice verticals
+        x = ox + i
+        mid_dip = sag if abs(i - LN // 2) < 8 else 0
+        by = oy + i // 2
+        for k in range(5, 12):
+            if rng.random() > 0.15:
+                c.set(x, by - k + mid_dip, steel_d)
+    c.outline_auto()
+    cr, orr = crop_canvas(c, (ox + LN // 2, oy + 8))
+    return cr, orr, ["diamond", 15.0, 5.0]
+
 
 def make_street_lamp(state: str) -> tuple[Canvas, tuple, list]:
     """Lamp fixture with a DARK bulb — the lit look is a separate glow overlay
@@ -1715,6 +1903,21 @@ def prop_inventory() -> tuple[dict, dict]:
         fam("trash", i, draw_trash(rng, kind))
     for i in range(3):
         props[f"puddle_{i}"] = make_puddle(i)
+    # edge barricades: x-axis drawn, y-axis mirrored; fallen ones are a
+    # separate family (no collider — they're walked over)
+    for i, (kind, state) in enumerate(
+            [("jersey", "intact"), ("jersey", "cracked"),
+             ("fence", "intact"), ("fence", "bent")]):
+        art = make_barricade(kind, state)
+        fam("barricade_x", i, art)
+        fam("barricade_y", i, mirror_prop(art))
+    for i, (kind, state) in enumerate([("jersey", "fallen"), ("fence", "fallen")]):
+        art = make_barricade(kind, state)
+        fam("barricade_x_flat", i, art)
+        fam("barricade_y_flat", i, mirror_prop(art))
+    for i in range(6):  # fallen raiders (half mirrored for pose variety)
+        art = make_body(i)
+        fam("body", i, mirror_prop(art) if i % 2 else art)
     return props, families
 
 def make_shadow() -> Canvas:

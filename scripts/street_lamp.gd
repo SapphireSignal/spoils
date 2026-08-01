@@ -73,5 +73,5 @@ func _process(delta: float) -> void:
 	if _drop_left > 0.0:
 		_drop_left -= delta
 		flick *= 0.12 if fmod(_time * 41.0, 1.0) < 0.6 else 0.55
-	_glow.modulate.a = clampf(0.95 * _night * flick, 0.0, 1.0)
-	_light.energy = 1.15 * _night * flick
+	_glow.modulate.a = clampf(_night * flick, 0.0, 1.0)
+	_light.energy = 1.35 * _night * flick  # keeps its pool in the darker night

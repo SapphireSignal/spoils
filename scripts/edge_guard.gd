@@ -5,7 +5,6 @@ extends Node
 ## and rounds start coming in from off-screen — three hits and the raid ends.
 ## Turn back and it all resets.
 
-const WARN_MARGIN := 96.0        # f-metric distance from the edge (6 tile rings)
 const GRACE_SECONDS := 3.0
 const SHOT_INTERVAL_MIN := 1.3
 const SHOT_INTERVAL_MAX := 2.1
@@ -13,10 +12,14 @@ const SHOT_SPEED := 950.0
 const SHOT_SPAWN_DIST := 430.0   # beyond every supported view half-diagonal
 const SHOT_LIFE := 1.4
 const HIT_RADIUS := 8.0
+# past these depths beyond the barricades the sniper stops playing fair —
+# the fire rate and accuracy escalate so nobody outruns the buffer zone
+const ESCALATE_DEPTH := 240.0
+const LETHAL_DEPTH := 480.0
 
 var _player: Player
 var _map_center := Vector2.ZERO
-var _map_half_h := 0.0
+var _barrier_f := 0.0
 var _world: Node2D
 var _label: Label
 var _zone_time := 0.0
@@ -29,11 +32,11 @@ var _round_vel: Array[Vector2] = []
 var _round_age: Array[float] = []
 
 
-func setup(player: Player, world: Node2D, map_center: Vector2, map_half_h: float) -> void:
+func setup(player: Player, world: Node2D, map_center: Vector2, barrier_f: float) -> void:
 	_player = player
 	_world = world
 	_map_center = map_center
-	_map_half_h = map_half_h
+	_barrier_f = barrier_f
 	_rng.randomize()
 
 	var layer := CanvasLayer.new()
@@ -58,7 +61,8 @@ func _process(delta: float) -> void:
 		return
 	var u := _player.global_position - _map_center
 	var f := absf(u.x) * 0.5 + absf(u.y)
-	if f < _map_half_h - WARN_MARGIN:
+	var depth := f - _barrier_f  # how far past the barricade line
+	if depth < 8.0:
 		_leave_zone()
 		return
 	if not _label.visible:
@@ -69,8 +73,13 @@ func _process(delta: float) -> void:
 		return
 	_shot_timer -= delta
 	if _shot_timer <= 0.0:
-		_shot_timer = _rng.randf_range(SHOT_INTERVAL_MIN, SHOT_INTERVAL_MAX)
-		_fire_round(u)
+		if depth > LETHAL_DEPTH:
+			_shot_timer = 0.55
+		elif depth > ESCALATE_DEPTH:
+			_shot_timer = 0.8
+		else:
+			_shot_timer = _rng.randf_range(SHOT_INTERVAL_MIN, SHOT_INTERVAL_MAX)
+		_fire_round(u, depth)
 
 
 func _leave_zone() -> void:
@@ -80,14 +89,16 @@ func _leave_zone() -> void:
 	_shot_timer = 0.0
 
 
-func _fire_round(u: Vector2) -> void:
-	# the shot comes from OUTSIDE — the direction of the nearest edge
+func _fire_round(u: Vector2, depth: float) -> void:
+	# the shot comes from OUTSIDE — the direction of the nearest edge —
+	# and the deeper you push, the less the sniper misses
 	var out_dir := Vector2(0.5 * signf(u.x), signf(u.y)).normalized()
 	var side := out_dir.orthogonal()
 	var target := _player.global_position
 	var start := target + out_dir * SHOT_SPAWN_DIST \
 		+ side * _rng.randf_range(-60.0, 60.0)
-	var aim := target + side * _rng.randf_range(-8.0, 8.0)
+	var err := 2.0 if depth > ESCALATE_DEPTH else 8.0
+	var aim := target + side * _rng.randf_range(-err, err)
 	var vel := (aim - start).normalized() * SHOT_SPEED
 
 	var round_node := Node2D.new()

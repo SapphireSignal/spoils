@@ -15,6 +15,9 @@ var _deploy_label: Label
 var _deploy_time := 0.0
 var _last_roof_cell := Vector2i(-9999, -9999)
 var _respawning := false
+var _prompt: Label
+var _prompt_door: Door
+var _prompt_open := false
 
 
 func _ready() -> void:
@@ -46,27 +49,60 @@ func _build_world() -> void:
 	# let the deploy screen actually render before the heavy lifting
 	await get_tree().process_frame
 	await get_tree().process_frame
+	# aim a temporary camera at (roughly) the spawn crossroads during the
+	# build, so tile chunks and sprites around it render — and warm up —
+	# behind the deploy screen, not on the first visible frame
+	var warm_cam := Camera2D.new()
+	add_child(warm_cam)
+	warm_cam.global_position = Vector2(0.0, WorldBuilder.MAP_H * 16.0)
+	warm_cam.make_current()
+	# render every light type once behind the deploy screen: the FIRST frame
+	# a 2D light (or canvas modulate) draws, the GPU pipeline for it compiles
+	# — that stall must happen here, covered, not mid-raid
+	var warm_fx := Node2D.new()
+	warm_fx.position = warm_cam.global_position
+	var warm_radial := PointLight2D.new()
+	warm_radial.texture = load("res://art/gen/light_radial.png")
+	warm_radial.energy = 0.4
+	warm_fx.add_child(warm_radial)
+	var warm_cone := PointLight2D.new()
+	warm_cone.texture = load("res://art/gen/light_cone.png")
+	warm_cone.energy = 0.4
+	warm_cone.position = Vector2(24, 0)
+	warm_fx.add_child(warm_cone)
+	var warm_mod := CanvasModulate.new()
+	warm_mod.color = Color(0.999, 0.999, 0.999)
+	warm_fx.add_child(warm_mod)
+	add_child(warm_fx)
 	await _prewarm_textures()
 	var builder := WorldBuilder.new()
 	var info: Dictionary = await builder.build(self, Harness.world_seed)
 	_floor_layer = info["floor"]
 	_roofs = info["roofs"]
 	var ysort: Node2D = info["ysort"]
+	warm_fx.queue_free()  # before the environment adds its own modulate
 	_player = Authority.spawn_player(ysort, info["spawn"])
-	_player.set_map_diamond(info["map_center"], info["map_half_h"])
 	_player.died.connect(_on_player_died)
-	_limit_camera(_player.camera, info["bounds"])
+	warm_cam.queue_free()  # the player camera takes over
+	await get_tree().process_frame
 
+	# the tail is spread over frames too: environment pools, the edge guard,
+	# and the whole pause-menu UI each land on their own frame instead of
+	# stacking ~1000 node instantiations into one
 	var environment := EnvironmentSystem.new()
 	add_child(environment)
-	environment.setup(self, _floor_layer, info["puddle_spots"], _roofs)
+	await environment.setup(self, _floor_layer, info["puddle_spots"], _roofs)
+	await get_tree().process_frame
 
 	var guard := EdgeGuard.new()
 	guard.name = "EdgeGuard"
 	add_child(guard)
-	guard.setup(_player, self, info["map_center"], info["map_half_h"])
+	guard.setup(_player, self, info["map_center"], info["barrier_f"])
+	_build_prompt()
+	await get_tree().process_frame
 
 	add_child(PauseMenu.new())
+	await get_tree().process_frame
 	world_info = info  # publish LAST: the harness polls this to detect readiness
 
 	var tween := create_tween()
@@ -78,17 +114,57 @@ func _build_world() -> void:
 
 func _prewarm_textures() -> void:
 	# touch every generated texture while the deploy screen covers the game:
-	# decode + GPU upload happen here, not as tiny hitches during play
+	# decode + GPU upload happen here, not as tiny hitches during play.
+	# Time-budgeted like the builder — never blow the frame budget.
 	var dir := DirAccess.open("res://art/gen")
 	if dir == null:
 		return
-	var loaded := 0
+	var deadline := Time.get_ticks_usec() + 2400
 	for file in dir.get_files():
 		if file.ends_with(".png"):
 			load("res://art/gen/" + file)
-			loaded += 1
-			if loaded % 40 == 0:
+			if Time.get_ticks_usec() >= deadline:
 				await get_tree().process_frame
+				deadline = Time.get_ticks_usec() + 2400
+
+
+func _build_prompt() -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 70
+	_prompt = Label.new()
+	_prompt.theme = UITheme.get_theme()
+	_prompt.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_prompt.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_prompt.position.y -= 40.0
+	_prompt.add_theme_color_override("font_color", UITheme.TEXT)
+	_prompt.visible = false
+	layer.add_child(_prompt)
+	add_child(layer)
+
+
+func _update_prompt() -> void:
+	# "press f to open/close" — only right next to a door
+	var best: Door = null
+	var best_d := 30.0 * 30.0
+	for node in get_tree().get_nodes_in_group("doors"):
+		var door := node as Door
+		var d := door.global_position.distance_squared_to(_player.global_position)
+		if d < best_d:
+			best_d = d
+			best = door
+	if best == null:
+		_prompt.visible = false
+		_prompt_door = null
+		return
+	# rebuild the text only when the door or its state changes — bind_label
+	# asks the display server and must not run per frame
+	if best != _prompt_door or best.is_open() != _prompt_open:
+		_prompt_door = best
+		_prompt_open = best.is_open()
+		_prompt.text = "press %s to %s" % [
+			Settings.bind_label("interact").to_lower(),
+			"close" if _prompt_open else "open"]
+	_prompt.visible = true
 
 
 func _process(delta: float) -> void:
@@ -98,6 +174,8 @@ func _process(delta: float) -> void:
 			MAP_NAME, ".".repeat(1 + int(_deploy_time * 3.0) % 3)]
 	if _player == null or _floor_layer == null:
 		return
+	if _prompt != null:
+		_update_prompt()
 	var cell := _floor_layer.local_to_map(_player.position)
 	if cell == _last_roof_cell:
 		return
@@ -140,12 +218,3 @@ func _on_player_died() -> void:
 	await fade_out.finished
 	layer.queue_free()
 	_respawning = false
-
-
-func _limit_camera(camera: Camera2D, bounds: Rect2) -> void:
-	# coarse rectangular backstop; the real fence is the diamond clamp in
-	# Player._camera_target
-	camera.limit_left = int(bounds.position.x)
-	camera.limit_top = int(bounds.position.y)
-	camera.limit_right = int(bounds.end.x)
-	camera.limit_bottom = int(bounds.end.y)

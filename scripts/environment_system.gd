@@ -9,7 +9,9 @@ extends Node
 ## building. Every rain pixel — drop and splash — is the puddles' blue.
 
 const DAY_SECONDS := 1200.0         # one full day/night cycle (20 min)
-const DEEP_NIGHT := Color(0.25, 0.28, 0.50)
+const DEEP_NIGHT := Color(0.14, 0.16, 0.34)  # night is DARK — that's the fun
+const STORM_TINT_SECONDS := 45.0    # storm darkening fades in over ~45 s —
+                                    # the screen must never visibly "switch"
 
 const DROP_COUNT := 240
 const SPLASH_COUNT := 220
@@ -26,6 +28,7 @@ var rain_intensity := 0.0           # 0..1, ramps in and out
 var night_amount := 0.0             # 0 day .. 1 deep night
 
 var _raining := false
+var _storm_tint := 0.0              # visual darkening, slower than the rain
 var _weather_timer := 0.0
 var _lightning_timer := 999.0
 var _flash: ColorRect
@@ -53,6 +56,9 @@ var _splash_free: Array[int] = []
 
 func setup(root: Node2D, floor_layer: TileMapLayer, puddle_spots: Array,
 		roofs: Array) -> void:
+	# setup is async (pool creation yields) — _process must not run until
+	# everything below exists
+	set_process(false)
 	_window = root.get_window()
 	_floor_layer = floor_layer
 	for roof in roofs:
@@ -89,6 +95,8 @@ func setup(root: Node2D, floor_layer: TileMapLayer, puddle_spots: Array,
 		_splash_sprites.append(sprite)
 		_splash_age.append(0.0)
 		_splash_free.append(i)
+		if i % 80 == 79:
+			await get_tree().process_frame
 
 	# drops render above the whole world (they are in the air)
 	var drop_layer := Node2D.new()
@@ -107,6 +115,8 @@ func setup(root: Node2D, floor_layer: TileMapLayer, puddle_spots: Array,
 		drop_layer.add_child(sprite)
 		_drop_sprites.append(sprite)
 		_drop_active[i] = 0
+		if i % 80 == 79:
+			await get_tree().process_frame
 
 	var sky := CanvasLayer.new()
 	sky.layer = 30
@@ -135,11 +145,13 @@ func setup(root: Node2D, floor_layer: TileMapLayer, puddle_spots: Array,
 	])
 	_weather_timer = randf_range(60.0, 200.0)
 	add_to_group("environment")
+	set_process(true)
 
 
 func force_weather(rain_on: bool) -> void:  # harness hook
 	_raining = rain_on
 	rain_intensity = 1.0 if rain_on else 0.0
+	_storm_tint = rain_intensity
 	_weather_timer = 9999.0
 	for puddle in _puddles:
 		puddle.modulate.a = 0.9 if rain_on else 0.0
@@ -155,8 +167,12 @@ func force_time(t: float) -> void:  # harness hook, 0..1
 func _process(delta: float) -> void:
 	day_time = fmod(day_time + delta / DAY_SECONDS, 1.0)
 	var tint := _tint_gradient.sample(day_time)
-	if rain_intensity > 0.0:  # storms darken the world a touch
-		tint = tint.darkened(0.12 * rain_intensity)
+	# storm darkening on its own slow, eased fade — decoupled from the rain
+	# density ramp so the screen color NEVER visibly steps
+	_storm_tint = move_toward(_storm_tint, 1.0 if _raining else 0.0,
+		delta / STORM_TINT_SECONDS)
+	if _storm_tint > 0.0:
+		tint = tint.darkened(0.12 * smoothstep(0.0, 1.0, _storm_tint))
 	_tint.color = tint
 	night_amount = _night_amount_for(day_time)
 	get_tree().call_group("street_lamps", "set_night", night_amount)

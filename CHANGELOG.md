@@ -3,6 +3,56 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.5] — 2026-08-01
+
+The barricade update: the map got honest edges, the deploy got smooth, and the
+roadmap got bigger.
+
+### Added
+- **The barricade line**: a randomized ring of concrete jersey barriers and
+  metal fences (intact / cracked / bent / knocked flat, with slip-through gaps
+  and wreckage where roads breach it) now marks the playable edge. The world
+  visibly continues beyond it — but crossing the line starts the sniper
+  warning, and the fire escalates with depth (faster, more accurate) so the
+  buffer cannot be outrun. **The camera never clamps anymore** — it stays
+  welded to the character everywhere; the old edge camera-shift is gone,
+  along with the playable area shrinking to a tighter district.
+- **Fallen raiders** past the barricades: sparse randomized bodies (jacket
+  colors, hats, beards, packs, poses) where the sniper left them.
+- **Door prompts**: "press f to open" / "press f to close" appears when
+  standing right at a door (shows the current interact bind).
+- Roadmap additions (user direction): **Tarkov-style loot** (grid inventory,
+  item footprints, searchable containers) and **character doll gear slots**
+  land in M4; **quests** become M6 (v1.1); **a second map** becomes M7 (v1.2).
+  **Machines are cut** — every enemy will be human AI with guns — and
+  **rarity color tiers are cut** (Tarkov loot doesn't have them). README
+  rewritten to match reality.
+
+### Changed
+- **Deploy is dip-free**: world building is time-budgeted per frame (~2.4 ms),
+  the post-build spawn/environment/UI tail is spread over frames, textures
+  prewarm behind the cover, a warm camera pre-bakes the spawn area, and light
+  shaders compile covered. Worst case is now a single unavoidable frame at the
+  menu→game scene swap; the build itself holds refresh rate.
+- **Weather can't jump anymore**: storm darkening fades over ~45 s with
+  easing, decoupled from rain density.
+- **Deep night is much darker** (flashlight and lamp energy raised to match);
+  street lamp glow reads strong in the dark.
+- Vehicles: **real end faces** — 5px-deep caps with bumper band, head lights +
+  grille or tail lights + trunk seam, wrapped corner — and pickup cargo is
+  placed strictly inside the measured bed (a box could overlap the cab).
+- The flashlight toggle is an actual dry **click** (impulse + tiny ping), not
+  a musical blip.
+- The main menu builds its changelog rows lazily (a few hundred labels made
+  the menu heavy to tear down on deploy).
+
+### Fixed
+- Environment could process for a few frames before its async setup finished
+  (null gradient errors in headless runs).
+- The smoke test's sniper check used a lambda-captured bool that GDScript
+  copies by value — it now uses reference capture and passes for the right
+  reason.
+
 ## [0.6.4] — 2026-08-01
 
 ### Fixed

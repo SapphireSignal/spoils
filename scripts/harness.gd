@@ -41,6 +41,10 @@ func _ready() -> void:
 			_perf.call_deferred()
 		elif arg == "--probe-world":
 			_probe_world.call_deferred()
+		elif arg == "--perf-deploy":
+			_perf_deploy.call_deferred()
+		elif arg == "--probe-sniper":
+			_probe_sniper.call_deferred()
 		elif arg == "--probe-exclusive":
 			_probe_exclusive.call_deferred()
 
@@ -149,13 +153,18 @@ func _smoke() -> void:
 				if roof.modulate.a < 0.9:
 					failures.append("roof did not return outside (a=%.2f)" % roof.modulate.a)
 
-	# edge sniper: standing at the map edge past the grace period draws fire
+	# edge sniper: standing past the barricades past the grace period draws
+	# fire (deep in the buffer the fire escalates and may kill + respawn
+	# within the window, so track HITS, not remaining hp)
 	if player != null and floor_layer != null:
-		var full_hp: int = player.hp
-		player.position = floor_layer.map_to_local(Vector2i(2, 160))
+		# array capture: GDScript lambdas copy captured LOCALS by value, so a
+		# bare bool flag would never reach this scope
+		var hit_flag: Array[bool] = [false]
+		player.hurt.connect(func() -> void: hit_flag[0] = true)
+		player.position = floor_layer.map_to_local(Vector2i(12, 160))
 		await get_tree().create_timer(5.6).timeout
-		if player.hp >= full_hp:
-			failures.append("edge sniper never hit (hp still %d)" % player.hp)
+		if not hit_flag[0]:
+			failures.append("edge sniper never hit past the barricades")
 		player.respawn(info["spawn"])
 		await get_tree().process_frame
 
@@ -306,6 +315,62 @@ func _perf() -> void:
 	get_tree().quit(0)
 
 
+func _perf_deploy() -> void:
+	## Frame pacing THROUGH a deploy: menu -> scene change -> async build ->
+	## first second of play. The worst frame is the number that matters —
+	## the deploy screen must hold the user's refresh rate.
+	for i in 5:
+		await get_tree().process_frame
+	var t0 := Time.get_ticks_usec()
+	get_tree().change_scene_to_file("res://scenes/main.tscn")
+	var frames := 0
+	var prev_us := Time.get_ticks_usec()
+	var built_us := 0
+	var spikes: Array[Vector2] = []  # (ms, seconds since deploy click)
+	while true:
+		await get_tree().process_frame
+		var now_us := Time.get_ticks_usec()
+		var ms := float(now_us - prev_us) / 1000.0
+		spikes.append(Vector2(ms, float(now_us - t0) / 1_000_000.0))
+		prev_us = now_us
+		frames += 1
+		var current := get_tree().current_scene
+		if built_us == 0 and current != null and current.name == "Main" \
+				and not (current.get("world_info") as Dictionary).is_empty():
+			built_us = now_us
+		if built_us != 0 and now_us - built_us > 1_000_000:
+			break
+	spikes.sort_custom(func(a: Vector2, b: Vector2) -> bool: return a.x > b.x)
+	var top := ""
+	for i in mini(4, spikes.size()):
+		top += " %.1fms@%.2fs" % [spikes[i].x, spikes[i].y]
+	print("PERF-DEPLOY frames=%d build_s=%.2f worst:%s" % [
+		frames, float(built_us - t0) / 1_000_000.0, top])
+	get_tree().quit(0)
+
+
+func _probe_sniper() -> void:
+	## Live EdgeGuard internals while parked past the barricades.
+	await _ensure_game_scene()
+	var main := get_tree().current_scene
+	var info: Dictionary = main.get("world_info")
+	var floor_layer: TileMapLayer = info["floor"]
+	var player := main.get_node_or_null("World/Player") as Player
+	var guard := main.get_node_or_null("EdgeGuard") as EdgeGuard
+	print("barrier_f=%s guard=%s" % [info.get("barrier_f"), guard])
+	player.position = floor_layer.map_to_local(Vector2i(12, 160))
+	for step in 12:
+		await get_tree().create_timer(0.5).timeout
+		var u: Vector2 = player.global_position - (info["map_center"] as Vector2)
+		var f := absf(u.x) * 0.5 + absf(u.y)
+		print("t=%.1f pos=%s f=%.0f depth=%.0f label=%s zone_t=%.2f rounds=%d hp=%d" % [
+			step * 0.5 + 0.5, player.global_position, f,
+			f - float(info["barrier_f"]), str((guard.get("_label") as Label).visible),
+			float(guard.get("_zone_time")), (guard.get("_rounds") as Array).size(),
+			player.hp])
+	get_tree().quit(0)
+
+
 func _probe_world() -> void:
 	## Content census: lamp/vehicle/door counts and shot-aimable positions.
 	await _ensure_game_scene()
@@ -348,7 +413,20 @@ func _probe_world() -> void:
 				vehicle_cells.append(floor_layer.local_to_map((child as Node2D).position))
 				break
 	print("VEHICLES total=%d cells=%s" % [vehicle_cells.size(), vehicle_cells.slice(0, 10)])
-	print("DOORS total=%d" % get_tree().get_nodes_in_group("doors").size())
+	var door_cells: Array[Vector2i] = []
+	for door in get_tree().get_nodes_in_group("doors"):
+		door_cells.append(floor_layer.local_to_map((door as Node2D).global_position))
+	print("DOORS total=%d cells=%s" % [door_cells.size(), door_cells.slice(0, 5)])
+
+	# the interact prompt must appear when parked right at a door
+	var player := main.get_node_or_null("World/Player") as Player
+	var first_door := get_tree().get_first_node_in_group("doors") as Door
+	if player != null and first_door != null:
+		player.position = first_door.global_position + Vector2(0, 18)
+		for i in 3:
+			await get_tree().process_frame
+		var prompt := main.get("_prompt") as Label
+		print("PROMPT visible=%s text='%s'" % [str(prompt.visible), prompt.text])
 	get_tree().quit(0)
 
 

@@ -40,8 +40,6 @@ var _was_moving := false
 var _light: PointLight2D
 var _hurt_rect: ColorRect
 var _hurt_left := 0.0
-var _map_center := Vector2.ZERO
-var _map_half_h := 0.0
 var _window: Window
 
 
@@ -78,7 +76,7 @@ func _init() -> void:
 	_light.texture = load("res://art/gen/light_cone.png")
 	_light.offset = Vector2(128.0, 0.0)  # apex sits on the light pos
 	_light.color = Color("e7d5b3")
-	_light.energy = 1.05
+	_light.energy = 1.35  # nights are DARK now; the beam has to earn its keep
 	_light.position = Vector2(0, -14)
 	_light.enabled = false
 	add_child(_light)
@@ -101,11 +99,6 @@ func _ready() -> void:
 	var s := float(maxi(1, Settings.pixel_scale))
 	camera.global_position = _camera_target(global_position, s)
 	camera.make_current()
-
-
-func set_map_diamond(center: Vector2, half_h: float) -> void:
-	_map_center = center
-	_map_half_h = half_h
 
 
 func take_hit() -> void:
@@ -181,26 +174,10 @@ func _process(delta: float) -> void:
 
 
 func _camera_target(from: Vector2, s: float) -> Vector2:
-	var target := from + CAM_OFFSET
-	if _map_half_h > 0.0:
-		var view_half := Vector2(_window.content_scale_size) * 0.5
-		var limit := _map_half_h - (view_half.x * 0.5 + view_half.y)
-		target = _clamp_to_diamond(target, limit)
-	# back onto the screen-pixel grid (the clamp can land off-grid)
-	return (target * s).round() / s
-
-
-func _clamp_to_diamond(point: Vector2, limit: float) -> Vector2:
-	var u := point - _map_center
-	# project onto the diamond |x|/2 + |y| <= limit (two passes settle corners)
-	for pass_i in 2:
-		for sx: float in [1.0, -1.0]:
-			for sy: float in [1.0, -1.0]:
-				var over := u.x * (0.5 * sx) + u.y * sy - limit
-				if over > 0.0:
-					var n := Vector2(0.5 * sx, sy)
-					u -= n * (over / n.length_squared())
-	return _map_center + u
+	# the camera NEVER clamps — it is welded to the character (user call).
+	# The world past the barricade ring is real and deep enough that the
+	# sniper ends any trip long before the void could scroll into view.
+	return ((from + CAM_OFFSET) * s).round() / s
 
 
 func _interact() -> void:

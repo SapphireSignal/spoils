@@ -47,9 +47,23 @@ var _buttons: VBoxContainer
 var _settings: SettingsPanel
 var _keybinds: KeybindsPanel
 var _changelog: PanelContainer
+var _changelog_list: VBoxContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.5", ["the playable map is smaller - barricades mark the real edge now",
+		"the world visibly continues past the line, but the sniper owns it",
+		"fallen raiders lie out past the barricades. let them be a warning",
+		"the camera never shifts at the edge - locked on you, always",
+		"push deeper past the line and the shots only come faster",
+		"cars have real fronts and backs - grilles, lights, bumpers, trunks",
+		"truck cargo sits inside the bed now, nothing pokes through the cab",
+		"deploying no longer dips the framerate",
+		"a prompt appears at doors: press f to open, press f to close",
+		"the flashlight actually clicks",
+		"weather fades in and out slowly - no more sudden color shifts",
+		"deep night is much darker - the flashlight and lamps matter now",
+		"new on the roadmap: tarkov-style loot and gear slots, quests, a second map"]],
 	["v0.6.4", ["fixed the blurry walk: character and camera share one pixel grid now",
 		"diagonal walking no longer shimmers the world",
 		"the character is pixel-locked to the screen while moving"]],
@@ -501,25 +515,12 @@ func _build_changelog_panel() -> PanelContainer:
 	var scroll := ScrollContainer.new()
 	scroll.custom_minimum_size = Vector2(280, 210)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	var list := VBoxContainer.new()
-	list.add_theme_constant_override("separation", 3)
-	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	for entry in CHANGELOG_ENTRIES:
-		var version_label := Label.new()
-		version_label.text = str(entry[0])
-		version_label.add_theme_color_override("font_color", UITheme.TEXT_BRIGHT)
-		list.add_child(version_label)
-		for line in (entry[1] as Array):
-			var item := Label.new()
-			item.text = "- " + str(line)
-			item.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			item.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			item.add_theme_color_override("font_color", UITheme.TEXT_DIM)
-			list.add_child(item)
-		var gap := Control.new()
-		gap.custom_minimum_size = Vector2(0, 4)
-		list.add_child(gap)
-	scroll.add_child(list)
+	_changelog_list = VBoxContainer.new()
+	_changelog_list.add_theme_constant_override("separation", 3)
+	_changelog_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# rows are built LAZILY on first open — a few hundred labels made the
+	# menu heavy to build and heavy to tear down on deploy (frame spike)
+	scroll.add_child(_changelog_list)
 	box.add_child(scroll)
 
 	var back := Button.new()
@@ -531,6 +532,22 @@ func _build_changelog_panel() -> PanelContainer:
 
 
 func _open_changelog() -> void:
+	if _changelog_list.get_child_count() == 0:
+		for entry in CHANGELOG_ENTRIES:
+			var version_label := Label.new()
+			version_label.text = str(entry[0])
+			version_label.add_theme_color_override("font_color", UITheme.TEXT_BRIGHT)
+			_changelog_list.add_child(version_label)
+			for line in (entry[1] as Array):
+				var item := Label.new()
+				item.text = "- " + str(line)
+				item.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				item.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				item.add_theme_color_override("font_color", UITheme.TEXT_DIM)
+				_changelog_list.add_child(item)
+			var gap := Control.new()
+			gap.custom_minimum_size = Vector2(0, 4)
+			_changelog_list.add_child(gap)
 	_buttons.visible = false
 	_changelog.visible = true
 

@@ -23,7 +23,7 @@ func _ready() -> void:
 	_door_open = _synth_blip(0.11, 180.0, 110.0, 0.30)
 	_door_close = _synth_blip(0.09, 130.0, 82.0, 0.36)
 	_crack = _synth_noise(0.07, 0.34)
-	_click = _synth_blip(0.03, 950.0, 700.0, 0.12)
+	_click = _synth_click()
 	for i in 4:
 		var player := AudioStreamPlayer.new()
 		player.volume_db = -8.0
@@ -86,6 +86,28 @@ func _synth_blip(duration: float, freq_from: float, freq_to: float, amp: float) 
 		var env := minf(float(i) / attack, 1.0) * pow(1.0 - t, 2.2)
 		var s := (sin(phase) + 0.15 * sin(phase * 2.0)) * env * amp
 		data.encode_s16(i * 2, int(clampf(s, -1.0, 1.0) * 32767.0))
+	var wav := AudioStreamWAV.new()
+	wav.format = AudioStreamWAV.FORMAT_16_BITS
+	wav.mix_rate = RATE
+	wav.stereo = false
+	wav.data = data
+	return wav
+
+
+func _synth_click() -> AudioStreamWAV:
+	## A dry mechanical CLICK (flashlight switch): one sharp impulse with an
+	## instant decay and a faint metallic ping — no musical chirp.
+	var count := int(0.018 * RATE)
+	var data := PackedByteArray()
+	data.resize(count * 2)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash("spoils-click")
+	for i in count:
+		var t := float(i) / count
+		var env := pow(1.0 - t, 6.0)
+		var s := rng.randf_range(-1.0, 1.0) * 0.5 * env
+		s += 0.25 * sin(TAU * 1800.0 * float(i) / RATE) * env * env
+		data.encode_s16(i * 2, int(clampf(s * 0.5, -1.0, 1.0) * 32767.0))
 	var wav := AudioStreamWAV.new()
 	wav.format = AudioStreamWAV.FORMAT_16_BITS
 	wav.mix_rate = RATE

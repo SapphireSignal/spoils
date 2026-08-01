@@ -7,18 +7,24 @@ This file carries everything a fresh session needs that isn't in those two.
 
 ## Where we are
 
-- **Version v0.6.3** ("the transit update"), all committed & pushed. The map is
-  named **"transit"** (user-chosen), 320×320, fresh seeded layout per deploy, walkable to
-  its true diamond edge with the edge-sniper rule guarding it (first
-  damage/hp/death in the game). Doors are interactive (F), flashlight works
-  (E), nights are dark, lamps flicker, rain is world-anchored.
-- **Milestone 1 (walkable world) is DONE** (~16 user feedback passes, see
-  CHANGELOG v0.2.0 → v0.6.3).
+- **Version v0.6.5** ("the barricade update"), committed & pushed. Map
+  **"transit"** (user-named), 320×320 total with the PLAYABLE district inside
+  a randomized barricade ring (inset 31 cells); the world visibly continues
+  beyond it but escalating sniper fire owns the buffer (fallen-raider bodies
+  past the line sell it). Camera NEVER clamps (user call). Doors interactive
+  (F, with prompt), flashlight (E, real click), DARK nights, flickering lamps,
+  world-anchored rain, ~45 s weather tint fades, dip-free time-budgeted
+  deploys, fresh seeded layout per deploy.
+- **Milestone 1 (walkable world) is DONE** (~18 user feedback passes, see
+  CHANGELOG v0.2.0 → v0.6.5).
 - **NEXT: Milestone 2 — GUNPLAY, to ship as v0.7.0.** Mouse aim, hitscan with
   tracers, muzzle flash, screen shake, destructible props, first synthesized
   gun sounds. The user starts it by saying "go".
-- After that (design doc §8): M3 enemies (0.8), M4 raid loop (0.9),
-  M5 machines/bots/lighting/trader → 1.0.
+- After that (design doc §8): M3 human enemies (0.8), M4 the loop with
+  TARKOV-STYLE loot: grid inventory, containers, character doll gear slots
+  (0.9), M5 fake-player bots/lighting/trader (1.0), M6 quests (1.1), M7 second
+  map (1.2). **User calls 2026-08-01: NO machine enemies (human AI only), NO
+  rarity color tiers on loot.**
 
 ## Versioning policy (user-agreed, do not drift)
 
@@ -44,8 +50,12 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   look per building, interactive Door on a visible side, entrance pockets kept
   clear inside AND out), lane-correct road vehicles (some broken + litter),
   sparse mostly-dead street lamps, sticks, clustered scatter, puddle spots.
-  Border collision hugs the true diamond edge (tips chamfered); build() is a
-  COROUTINE that yields while building (no deploy hitch).
+  BARRICADE RING at inset 31 = the advertised map edge (art axis x/y, flats
+  walkable-over, road breaches get wreckage) + sparse bodies past it; tree
+  density tiers off through the buffer band. Border collision at the true
+  diamond edge is only a backstop. build() is a COROUTINE with TIME-BUDGETED
+  yielding (~2.4 ms/frame via _tick() — never fixed work-counts; that caused
+  deploy fps dips).
 - `scripts/environment_system.gd` — day/night tint (20 min, continuous
   gradient loop — endpoints MUST match or midnight snaps), world-anchored
   rain (drop pool falls to real ground points, splash pool stays put, roofed
@@ -55,12 +65,13 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   PointLight2D pool at night with per-lamp flicker/dropouts.
 - `scripts/door.gd` — closed-by-default door: F toggles, 4-frame swing,
   thin wall-line collider disabled while open, group "doors".
-- `scripts/edge_guard.gd` — map-edge sniper: centered warning ("turn back or
-  you will get sniped"), 3 s grace, off-screen tracer rounds, 3 hits = death.
+- `scripts/edge_guard.gd` — barricade-line sniper: centered warning ("turn
+  back or you will get sniped") on crossing barrier_f, 3 s grace, off-screen
+  tracer rounds, ESCALATING interval/accuracy with depth, 3 hits = death.
 - `scripts/player.gd` — render-rate movement (NOT physics tick), hold/toggle
   crouch, flashlight cone on E (8 facings; smooth light textures may rotate,
-  sprites never), hp/take_hit/hurt-flash/died + respawn, camera clamped to an
-  inset DIAMOND then snapped to SCREEN pixels (see rule 1).
+  sprites never), hp/take_hit/hurt-flash/died + respawn, camera UNCLAMPED and
+  welded to the character, snapped to SCREEN pixels (see rule 1).
 - `scripts/main.gd` — deploy screen ("deploying to transit", animated
   dots) → texture prewarm → awaited async world build → environment → edge
   guard → pause menu; death fade → respawn. `scripts/main_menu.gd` — 3
@@ -162,8 +173,9 @@ then `godot_console --headless --path . --import`.
   reload(R), weapon slots(1/2/3) — wire in M2 (guns).
 - Settings "graphics quality" is stored but drives nothing until M5
   lighting/effects.
-- Night darkness + flashlight + lamp lights shipped in v0.6.3 (CanvasModulate
-  + PointLight2D — real 2D lighting still expands in M5). Known minor:
-  monitor panel-stretch shimmer is out of our control. Map edge diamond tips
-  are chamfered ~11-17 tiles (invisible, deep forest) so the camera clamp can
-  always keep the player on screen — don't "fix" the unreachable tips.
+- Night darkness + flashlight + lamp lights shipped in v0.6.3, deepened in
+  v0.6.5 (CanvasModulate + PointLight2D — real 2D lighting still expands in
+  M5). Known minor: monitor panel-stretch shimmer is out of our control. One
+  ~30 ms frame on the menu→game scene swap remains (hard cut, invisible in
+  motion; the fps counter blips ~200 for one window) — everything after holds
+  refresh rate; fixing it needs keep-menu-resident scene switching, deferred.

@@ -14,18 +14,20 @@ multiplayer version remains possible later without a rewrite.
 
 Inspirations and what to take from each:
 
-- **ARC Raiders** — the *world and threat*: a hostile **machine faction** as the headline
-  PvE enemy (patrolling mechs/drones that hunt noise and light), topside ruins, the feeling
-  of scavenging under something bigger than you.
-- **Escape from Tarkov** — the *stakes and meta*: raid-based loop, **you lose what you
-  carry when you die**, persistent stash between raids, gear choice = risk choice,
-  extraction points, raid timer, tension over action.
-- **Destiny** — the *feel and reward*: punchy, juicy gunplay (screen shake, muzzle flash,
-  meaty sounds, satisfying reloads) and **color-coded loot rarity** with dopamine on pickup.
-  Guns should feel great even when the fantasy is grim.
+- **ARC Raiders** — the *world*: a dead, overrun topside, the feeling of scavenging
+  a place that ended without you. (User call 2026-08-01: NO machine faction —
+  every enemy in SPOILS is human AI with guns.)
+- **Escape from Tarkov** — the *stakes, meta, and loot*: raid-based loop, **you lose
+  what you carry when you die**, persistent stash between raids, gear choice = risk
+  choice, extraction points, raid timer, tension over action. Loot is Tarkov-style:
+  grid inventory, item footprints, containers you search, a character doll with gear
+  slots — item VALUE over rarity colors (user call 2026-08-01: no color-coded tiers).
+- **Destiny** — the *gun feel only*: punchy, juicy gunplay (screen shake, muzzle
+  flash, meaty sounds, satisfying reloads). Guns should feel great even when the
+  fantasy is grim.
 
-One-line pitch: *Tarkov's raid loop + ARC Raiders' machine-haunted world + Destiny's
-gun-feel, at 32 pixels tall.*
+One-line pitch: *Tarkov's raid loop and loot in a dead overrun district, with guns
+that feel like Destiny, at 32 pixels tall.*
 
 ## 2. The workflow contract (important)
 
@@ -63,36 +65,43 @@ gun-feel, at 32 pixels tall.*
 - **1 map**: "transit" — a 320×320 ruined industrial/urban district with interiors,
   chokepoints, 3–4 extraction points. A fresh layout is generated per deploy from a seed
   (pinnable for testing); the road grid / forest / building DNA stays recognizable.
-- **6–10 guns** across classes (pistol / SMG / shotgun / rifle / DMR) with rarity tiers
-  (white→green→blue→purple→gold, Destiny-style colors within the palette).
-- **AI factions:**
-  - **Machines** (ARC-style): patrol routes, react to sound/light, telegraphed attacks,
-    tanky, drop rare components. Not farmable loot piñatas — a hazard to route around.
+- **6–10 guns** across classes (pistol / SMG / shotgun / rifle / DMR), told apart by
+  stats, feel, and condition — NOT rarity colors (user call: Tarkov has none).
+- **AI factions — all human, all armed** (user call: no machines):
   - **Scavs** (human raiders): squads with basic tactics (flank, suppress, retreat), varied
-    gear, fight machines too. Three-way fights are a feature.
+    gear. Rival squads fight each other too — three-way fights are a feature.
   - **"Fake players"** (elite scav variant): human-like callsigns, randomized player-tier
     loadouts, and player-like behavior — they loot containers, pick their fights, and
     **path to an extraction zone to leave the raid with their haul** (if one extracts with
     loot you wanted, it's gone). Design details are at Claude's discretion — user greenlit
     this and specifically likes the extract-seeking behavior.
-- **Systems:** hitscan-with-tracer gunplay, armor/HP, simple healing, loot tables, containers,
-  raid timer, extraction, stash persistence, trader, death = loss.
-- **Explicitly out of v1:** multiplayer/netcode, attachments/modding, quests, hideout
-  upgrades, limb damage, insurance.
+- **Systems:** hitscan-with-tracer gunplay, armor/HP, simple healing, Tarkov-style loot
+  (grid inventory with item footprints, searchable containers, character doll gear
+  slots: helmet/armor/rig/backpack/weapons), loot tables, raid timer, extraction,
+  stash persistence, trader, death = loss.
+- **Post-1.0, already committed (user call 2026-08-01):** quests (trader tasks), a
+  second map. **Explicitly out of v1:** multiplayer/netcode, attachments/modding,
+  hideout upgrades, limb damage, insurance.
 
-### World rules (shipped in v0.6.3 — keep true)
-- The map is walkable to its true diamond edge; there is no visible void, ever.
-- The last stretch before the edge is **sniper country**: a centered warning
-  ("turn back or you will get sniped"), a 3 s grace period, then off-screen rounds.
-  Three hits kill; death currently respawns at the spawn crossroads (M4 turns this
-  into real raid loss).
+### World rules (v0.6.3–v0.6.5 — keep true)
+- **The barricade ring IS the map edge** (randomized jersey barriers + fences,
+  some flat, gaps to slip through, wreckage where roads breach it). The world
+  visibly continues beyond it and there is no visible void, ever.
+- **The camera never clamps** — welded to the character everywhere (user call).
+  The buffer band past the barricades is deep enough that escalating sniper
+  fire (faster + near-perfect with depth) ends any trip before the true tile
+  edge could scroll into view. Sparse fallen raiders past the line sell it.
+- Crossing the line: centered warning ("turn back or you will get sniped"),
+  3 s grace, then off-screen rounds. Three hits kill; death currently respawns
+  at the spawn crossroads (M4 turns this into real raid loss).
 - Building doors are **closed and interactive** (F opens/closes, swing animation,
-  collision while shut). Entrances — inside pocket and outside approach — always
-  spawn clear of props.
-- Nights are dark for real; the flashlight (E) and the surviving minority of
-  flickering street lamps are the light sources until M5 lighting.
-- Weather is world-anchored: raindrops fall to real ground points and splash where
-  they land, in the puddles' blue.
+  collision while shut, "press f to open/close" prompt at close range).
+  Entrances — inside pocket and outside approach — always spawn clear of props.
+- Nights are DARK; the flashlight (E) and the surviving minority of flickering
+  street lamps are the light sources until M5 lighting.
+- Weather is world-anchored and **never jumps**: raindrops fall to real ground
+  points and splash where they land in the puddles' blue; storm tinting fades
+  over ~45 s.
 
 ### Multiplayer future (build-for, don't build-yet)
 The long-term goal is real PvPvE. **Architecture rule from day one:** gameplay state changes
@@ -106,7 +115,8 @@ than being scattered through UI/input code — so a server can own them later. N
 - **Scale:** ~32px tall characters, **64×32 isometric floor tiles**, props sized to match.
 - **Mood:** grim, overcast, readable. Dithering for grime/texture. Godot 2D dynamic lighting
   does the heavy lifting: dark interiors, muzzle flashes as brief PointLight2D pops,
-  flashlight cones, machine eye-glow. Rarity colors are the deliberate saturation pops.
+  flashlight cones, lamp pools, tracers and muzzle flashes are the deliberate
+  saturation pops (no rarity colors — cut by user call).
 - **Pipeline:** ALL art is generated by a Python script (`tools/gen_art.py`, Pillow,
   deterministic seed, palette loaded from the .gpl). Regenerating is always safe.
   No hand-drawn files, no external art. If an asset looks bad, fix the generator.
@@ -121,7 +131,7 @@ than being scattered through UI/input code — so a server can own them later. N
   AudioStreamWAV buffers at startup). **No audio files in the repo.**
 - Gunshots = shaped noise bursts with per-class character (bass thump for shotgun, crack
   for DMR); impacts, footsteps (surface-aware later), UI ticks, extraction siren.
-- Sparse ambient dread over music: low wind/rumble loop, distant machine sounds as a
+- Sparse ambient dread over music: low wind/rumble loop, distant gunfire as a
   *gameplay tell*. No melodies needed for v1.
 
 ## 6. Machine & toolchain facts (verified 2026-07-31)
@@ -190,8 +200,14 @@ Claude must prove its own work without the user:
    Y-sorted map with props, camera, WASD movement, Play.bat. *(DONE 2026-07-31,
    plus a feedback pass: smooth ground, brick buildings, distinct props,
    6-frame walk, pixel-snapped camera.)*
-2. **Gunplay:** aim at mouse, shoot with tracers/flash/shake/sound, destructible props.
-3. **Enemies:** scav AI (patrol→chase→shoot), health/death, loot drops.
-4. **The loop:** containers, inventory, extraction point, raid timer, death = loss, stash
-   persistence. First real "raid".
-5. **Machines, fake-player bots, lighting pass, trader** — then iterate on user playtests.
+2. **Gunplay (v0.7):** aim at mouse, shoot with tracers/flash/shake/sound,
+   destructible props.
+3. **Enemies (v0.8):** human scav AI (patrol→chase→shoot), health/death, loot drops.
+4. **The loop (v0.9):** Tarkov-style loot — grid inventory with item footprints,
+   searchable containers, character doll gear slots (helmet/armor/rig/backpack/
+   weapons) — extraction points, raid timer, death = loss, stash persistence.
+   First real "raid".
+5. **The living raid (v1.0):** human-like "fake player" bots, dynamic lighting pass,
+   trader — then iterate on user playtests.
+6. **Quests (v1.1):** trader tasks (fetch / kill / extract-with), rewards, unlocks.
+7. **A second map (v1.2):** new district, new biome, new extraction geometry.

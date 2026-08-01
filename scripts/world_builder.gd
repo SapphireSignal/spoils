@@ -19,11 +19,17 @@ extends RefCounted
 const MAP_W := 320
 const MAP_H := 320
 const TILE := Vector2i(64, 32)
-const EDGE_FOREST := 14      # outer band that is always deep woods
+const EDGE_FOREST := 34      # treeline: woods start just inside the barriers
+const BARRIER_INSET := 31    # the barricade ring — the map's ADVERTISED edge.
+# Everything gameplay lives inside it; the 31-tile band beyond is sniper
+# country, deep enough that a player who ignores the warning dies (escalating
+# fire) long before the camera — which never clamps — could reach the void.
 const ROAD_COUNT := 5        # per axis
 const LAMP_WORKING_CHANCE := 0.42  # the district is dead; most lamps are too
-# chamfer the 4 diamond tips so the player can never outrun the camera clamp
-# (sized for the largest supported view: 960x540 -> cut_x 2*270+20, cut_y 240+16)
+const BUILD_BUDGET_US := 2400  # max build work per frame: the deploy screen
+                               # must hold the user's full refresh rate
+# border collision at the true diamond edge (an absolute backstop; the
+# sniper is the real wall). Tips chamfered a little for good measure.
 const TIP_CUT_X := 560.0
 const TIP_CUT_Y := 256.0
 
@@ -37,7 +43,7 @@ var _ysort: Node2D
 var _roofs: Array[RoofReveal] = []
 var _occupied: Dictionary = {}
 var _scene_tree: SceneTree
-var _work := 0
+var _deadline_us := 0
 
 # plan state
 var _roads_v: Array[Vector2i] = []   # (x_start, width)
@@ -57,6 +63,7 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 		seed_text = "district-%d" % Time.get_ticks_usec()
 	_rng.seed = hash(seed_text)
 	_scene_tree = root.get_tree()
+	_deadline_us = Time.get_ticks_usec() + BUILD_BUDGET_US
 	_manifest = _load_manifest()
 
 	_floor_layer = TileMapLayer.new()
@@ -72,20 +79,17 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 	_plan_roads()
 	await _plan_forest()
 	_plan_paths()
-	_plan_plots()
+	await _plan_plots()
 
 	await _paint_terrain()
-	var shells := 0
 	for plot in _plots:
-		_build_shell(plot)
-		shells += 1
-		if shells % 2 == 0:
-			await _scene_tree.process_frame
-	_place_yards()
-	_place_lamps()
+		await _build_shell(plot)
+	await _place_yards()
+	await _place_lamps()
+	await _place_barricades()
 	await _place_trees()
 	await _place_lone_trees()
-	_place_road_vehicles()
+	await _place_road_vehicles()
 	await _scatter_props()
 	_collect_puddle_spots()
 	_build_border_collision(root)
@@ -101,16 +105,27 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 		"map_rect": _map_rect(),
 		"map_center": (top_c + bottom_c) / 2.0,
 		"map_half_h": (bottom_c.y - top_c.y) / 2.0,
+		# f-metric value of the barricade ring (|dx|/2 + |dy| from center);
+		# crossing it puts you in sniper country
+		"barrier_f": 32.0 * ((float(MAP_W) - 1.0) * 0.5 - float(BARRIER_INSET)),
 		"roofs": _roofs,
 		"cells": Vector2i(MAP_W, MAP_H),
 		"puddle_spots": _puddle_spots,
 	}
 
 
-func _breathe(every: int) -> void:
-	_work += 1
-	if _work % every == 0:
+func _tick() -> void:
+	# time-budgeted yielding: the moment this frame's build budget is spent,
+	# hand the frame back — fixed work-counts per frame caused visible fps
+	# dips on the deploy screen
+	if Time.get_ticks_usec() >= _deadline_us:
 		await _scene_tree.process_frame
+		_deadline_us = Time.get_ticks_usec() + BUILD_BUDGET_US
+
+
+func _cell_inset(cell: Vector2i) -> int:
+	# distance (in cells) from the nearest true map edge
+	return mini(mini(cell.x, MAP_W - 1 - cell.x), mini(cell.y, MAP_H - 1 - cell.y))
 
 
 func _map_rect() -> Rect2:
@@ -186,8 +201,7 @@ func _plan_forest() -> void:
 				var cell := Vector2i(x, y)
 				if not _on_road(cell):
 					_forest[cell] = true
-		if y % 40 == 39:
-			await _scene_tree.process_frame
+		await _tick()
 	# interior woods: big blobs AND small groves — trees live INSIDE the map,
 	# not just along its rim
 	var blobs: Array[Vector2i] = []
@@ -214,7 +228,7 @@ func _plan_forest() -> void:
 			for off in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
 				if _rng.randf() < 0.8:
 					frontier.append(cell + off)
-		await _breathe(6)
+		await _tick()
 
 
 func _plan_paths() -> void:
@@ -239,6 +253,7 @@ func _plan_plots() -> void:
 	var attempts := 0
 	while _plots.size() < 34 and attempts < 1400:
 		attempts += 1
+		await _tick()
 		var kind := "house" if _rng.randf() < 0.55 else "warehouse"
 		var size := Vector2i(_rng.randi_range(6, 8), _rng.randi_range(5, 7)) \
 			if kind == "house" else Vector2i(_rng.randi_range(9, 12), _rng.randi_range(7, 9))
@@ -312,8 +327,7 @@ func _paint_terrain() -> void:
 						and _rng.randf() < 0.96:
 					tile_name = "asphalt_line_h"
 			_set_tile(cell, tile_name)
-		if y % 20 == 19:
-			await _scene_tree.process_frame
+		await _tick()
 
 
 func _set_tile(cell: Vector2i, tile_name: String) -> void:
@@ -480,6 +494,7 @@ func _build_shell(plot: Dictionary) -> void:
 				sides.append("yn")
 			if y == interior.end.y - 1:
 				sides.append("yp")
+			await _tick()
 			for side in sides:
 				var center := _floor_layer.map_to_local(cell)
 				var verts: Array = _EDGE_VERTS[side]
@@ -520,7 +535,7 @@ func _build_shell(plot: Dictionary) -> void:
 		for x in range(rect.position.x, rect.end.x):
 			_occupied[Vector2i(x, y)] = true
 
-	_build_roof(interior, plot["tone"], posts.keys(), ruined)
+	await _build_roof(interior, plot["tone"], posts.keys(), ruined)
 
 	# the entrance pocket: the door cell and everything around it stays empty
 	var pocket: Array[Vector2i] = [door_cell]
@@ -560,6 +575,7 @@ func _build_roof(interior: Rect2i, tone: String, post_positions: Array,
 	var lift := Vector2(0, -float(_wall_h))
 	var ruin_corner := interior.end - Vector2i(1, 1)
 	for y in range(interior.position.y, interior.end.y):
+		await _tick()
 		for x in range(interior.position.x, interior.end.x):
 			var cell := Vector2i(x, y)
 			var tile_name := "roof_tile_%s_%d" % [tone, _rng.randi_range(0, 1)]
@@ -691,6 +707,7 @@ func _furnish_warehouse(interior: Rect2i, pocket: Array[Vector2i]) -> void:
 
 func _place_yards() -> void:
 	for yard in _yards:
+		await _tick()
 		for y in range(yard.position.y, yard.end.y):
 			for x in range(yard.position.x, yard.end.x):
 				var cell := Vector2i(x, y)
@@ -734,6 +751,7 @@ func _place_lamps() -> void:
 					and not _on_road(cell) and not _near_a_door(cell):
 				_add_lamp(cell)
 			y += _rng.randi_range(14, 22)
+			await _tick()
 	for r in _roads_h:
 		var x := EDGE_FOREST + _rng.randi_range(2, 8)
 		while x < MAP_W - EDGE_FOREST:
@@ -742,6 +760,65 @@ func _place_lamps() -> void:
 					and not _on_road(cell) and not _near_a_door(cell):
 				_add_lamp(cell)
 			x += _rng.randi_range(14, 22)
+			await _tick()
+
+
+func _place_barricades() -> void:
+	# the barricade ring — the map's ADVERTISED edge. Randomized pieces with
+	# slip-through gaps, some knocked flat; roads breach the line with
+	# flattened wreckage on the asphalt. The world continues beyond it.
+	var lo := BARRIER_INSET
+	var hi_x := MAP_W - 1 - BARRIER_INSET
+	var hi_y := MAP_H - 1 - BARRIER_INSET
+	await _ring_side("x", lo, lo, hi_x, true)
+	await _ring_side("x", hi_y, lo, hi_x, false)
+	await _ring_side("y", lo, lo + 2, hi_y - 2, false)
+	await _ring_side("y", hi_x, lo + 2, hi_y - 2, true)
+	await _place_bodies()
+
+
+func _ring_side(axis: String, fixed: int, from: int, to: int, _far: bool) -> void:
+	var i := from + _rng.randi_range(0, 2)
+	while i <= to:
+		# x-running sides vary cx (cy fixed); y-running sides vary cy
+		var cell := Vector2i(i, fixed) if axis == "x" else Vector2i(fixed, i)
+		i += _rng.randi_range(2, 4)
+		await _tick()
+		if _occupied.has(cell):
+			continue
+		if _on_road(cell):
+			if _rng.randf() < 0.55:
+				_add_prop_at_cell(_pick_variant("barricade_%s_flat" % axis), cell,
+					Vector2(10, 5))
+			continue
+		if _rng.randf() < 0.08:
+			continue  # a clean gap — you can always slip through somewhere
+		var fam := "barricade_" + axis
+		if _rng.randf() < 0.2:
+			fam += "_flat"
+		_add_prop_at_cell(_pick_variant(fam), cell, Vector2(5, 2))
+
+
+func _place_bodies() -> void:
+	# fallen raiders PAST the line, sparse — the sniper warning, made visible
+	var count := _rng.randi_range(14, 20)
+	var placed := 0
+	var attempts := 0
+	while placed < count and attempts < 300:
+		attempts += 1
+		await _tick()
+		var depth := BARRIER_INSET - _rng.randi_range(2, 12)
+		var along := _rng.randi_range(BARRIER_INSET - 8, MAP_W - 1 - BARRIER_INSET + 8)
+		var cell := Vector2i.ZERO
+		match _rng.randi_range(0, 3):
+			0: cell = Vector2i(along, depth)
+			1: cell = Vector2i(along, MAP_H - 1 - depth)
+			2: cell = Vector2i(depth, along)
+			3: cell = Vector2i(MAP_W - 1 - depth, along)
+		if _occupied.has(cell):
+			continue
+		_add_prop_at_cell(_pick_variant("body"), cell, Vector2(10, 5))
+		placed += 1
 
 
 func _add_lamp(cell: Vector2i) -> void:
@@ -763,15 +840,23 @@ func _add_lamp(cell: Vector2i) -> void:
 
 
 func _place_trees() -> void:
+	# density falls off past the barricades: full woods where the player
+	# lives, thinning into the sniper's buffer (which is scenery, not a hike)
 	for cell in _forest:
 		if _dirt_path.has(cell) or _occupied.has(cell):
 			continue
+		var inset := _cell_inset(cell as Vector2i)
+		var chance := 0.28
+		if inset < 12:
+			chance = 0.04
+		elif inset < 26:
+			chance = 0.12
 		var roll := _rng.randf()
-		if roll < 0.28:
+		if roll < chance:
 			_add_prop_at_cell(_pick_variant("tree"), cell as Vector2i, Vector2(12, 6))
-		elif roll < 0.33:
+		elif roll < chance + 0.05 and inset >= 20:
 			_add_prop_at_cell(_pick_variant("stick"), cell as Vector2i, Vector2(14, 7))
-		await _breathe(2600)
+		await _tick()
 
 
 func _place_lone_trees() -> void:
@@ -800,12 +885,13 @@ func _place_lone_trees() -> void:
 			if not _occupied.has(scell) and not _on_road(scell):
 				_add_prop_at_cell(_pick_variant("stick"), scell, Vector2(12, 6))
 		placed += 1
-		await _breathe(70)
+		await _tick()
 
 
 func _place_road_vehicles() -> void:
 	# abandoned vehicles in their lanes — right way round, some broken into
 	for i in 36:
+		await _tick()
 		var vertical := _rng.randf() < 0.5
 		var fam := ""
 		var cell := Vector2i.ZERO
@@ -848,6 +934,7 @@ func _scatter_props() -> void:
 	var attempts := 0
 	while placed < 620 and attempts < 12000:
 		attempts += 1
+		await _tick()
 		var cell: Vector2i
 		if _rng.randf() < 0.65 and not _plots.is_empty():
 			# cluster near a building — loot gathers where people were
@@ -857,6 +944,8 @@ func _scatter_props() -> void:
 				_rng.randi_range(ring.position.y, ring.end.y - 1))
 		else:
 			cell = Vector2i(_rng.randi_range(4, MAP_W - 5), _rng.randi_range(4, MAP_H - 5))
+		if _cell_inset(cell) < EDGE_FOREST + 2:
+			continue  # junk belongs INSIDE the barricade line
 		if _occupied.has(cell) or _forest.has(cell) or _on_road(cell) \
 				or _near_a_door(cell):
 			continue

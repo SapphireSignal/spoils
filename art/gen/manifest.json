@@ -778,7 +778,7 @@
     "vehicle_nw_0": {
       "size": [
         62,
-        47
+        48
       ],
       "origin": [
         32,
@@ -793,7 +793,7 @@
     "vehicle_se_0": {
       "size": [
         62,
-        48
+        49
       ],
       "origin": [
         32,
@@ -808,7 +808,7 @@
     "vehicle_ne_0": {
       "size": [
         62,
-        47
+        48
       ],
       "origin": [
         29,
@@ -823,7 +823,7 @@
     "vehicle_sw_0": {
       "size": [
         62,
-        48
+        49
       ],
       "origin": [
         29,
@@ -838,7 +838,7 @@
     "vehicle_nw_1": {
       "size": [
         62,
-        47
+        48
       ],
       "origin": [
         32,
@@ -853,7 +853,7 @@
     "vehicle_se_1": {
       "size": [
         62,
-        48
+        49
       ],
       "origin": [
         32,
@@ -868,7 +868,7 @@
     "vehicle_ne_1": {
       "size": [
         62,
-        47
+        48
       ],
       "origin": [
         29,
@@ -883,7 +883,7 @@
     "vehicle_sw_1": {
       "size": [
         62,
-        48
+        49
       ],
       "origin": [
         29,
@@ -898,7 +898,7 @@
     "vehicle_nw_2": {
       "size": [
         62,
-        49
+        50
       ],
       "origin": [
         32,
@@ -913,11 +913,11 @@
     "vehicle_se_2": {
       "size": [
         62,
-        48
+        45
       ],
       "origin": [
         32,
-        34
+        30
       ],
       "collider": [
         "diamond",
@@ -928,7 +928,7 @@
     "vehicle_ne_2": {
       "size": [
         62,
-        49
+        50
       ],
       "origin": [
         29,
@@ -943,11 +943,11 @@
     "vehicle_sw_2": {
       "size": [
         62,
-        48
+        45
       ],
       "origin": [
         29,
-        34
+        30
       ],
       "collider": [
         "diamond",
@@ -958,7 +958,7 @@
     "vehicle_nw_3": {
       "size": [
         62,
-        47
+        48
       ],
       "origin": [
         32,
@@ -973,7 +973,7 @@
     "vehicle_se_3": {
       "size": [
         62,
-        48
+        49
       ],
       "origin": [
         32,
@@ -988,7 +988,7 @@
     "vehicle_ne_3": {
       "size": [
         62,
-        47
+        48
       ],
       "origin": [
         29,
@@ -1003,7 +1003,7 @@
     "vehicle_sw_3": {
       "size": [
         62,
-        48
+        49
       ],
       "origin": [
         29,
@@ -1018,7 +1018,7 @@
     "vehicle_nw_4": {
       "size": [
         62,
-        49
+        50
       ],
       "origin": [
         32,
@@ -1033,11 +1033,11 @@
     "vehicle_se_4": {
       "size": [
         62,
-        47
+        45
       ],
       "origin": [
         32,
-        33
+        30
       ],
       "collider": [
         "diamond",
@@ -1048,7 +1048,7 @@
     "vehicle_ne_4": {
       "size": [
         62,
-        49
+        50
       ],
       "origin": [
         29,
@@ -1063,11 +1063,11 @@
     "vehicle_sw_4": {
       "size": [
         62,
-        47
+        45
       ],
       "origin": [
         29,
-        33
+        30
       ],
       "collider": [
         "diamond",
@@ -1463,6 +1463,236 @@
       ],
       "origin": [
         19,
+        10
+      ],
+      "collider": null
+    },
+    "barricade_x_0": {
+      "size": [
+        34,
+        25
+      ],
+      "origin": [
+        16,
+        21
+      ],
+      "collider": [
+        "diamond",
+        15.0,
+        5.0
+      ]
+    },
+    "barricade_y_0": {
+      "size": [
+        34,
+        25
+      ],
+      "origin": [
+        17,
+        21
+      ],
+      "collider": [
+        "diamond",
+        15.0,
+        5.0
+      ]
+    },
+    "barricade_x_1": {
+      "size": [
+        34,
+        25
+      ],
+      "origin": [
+        16,
+        21
+      ],
+      "collider": [
+        "diamond",
+        15.0,
+        5.0
+      ]
+    },
+    "barricade_y_1": {
+      "size": [
+        34,
+        25
+      ],
+      "origin": [
+        17,
+        21
+      ],
+      "collider": [
+        "diamond",
+        15.0,
+        5.0
+      ]
+    },
+    "barricade_x_2": {
+      "size": [
+        28,
+        27
+      ],
+      "origin": [
+        14,
+        23
+      ],
+      "collider": [
+        "diamond",
+        15.0,
+        5.0
+      ]
+    },
+    "barricade_y_2": {
+      "size": [
+        28,
+        27
+      ],
+      "origin": [
+        13,
+        23
+      ],
+      "collider": [
+        "diamond",
+        15.0,
+        5.0
+      ]
+    },
+    "barricade_x_3": {
+      "size": [
+        28,
+        27
+      ],
+      "origin": [
+        14,
+        23
+      ],
+      "collider": [
+        "diamond",
+        15.0,
+        5.0
+      ]
+    },
+    "barricade_y_3": {
+      "size": [
+        28,
+        27
+      ],
+      "origin": [
+        13,
+        23
+      ],
+      "collider": [
+        "diamond",
+        15.0,
+        5.0
+      ]
+    },
+    "barricade_x_flat_0": {
+      "size": [
+        37,
+        19
+      ],
+      "origin": [
+        16,
+        14
+      ],
+      "collider": null
+    },
+    "barricade_y_flat_0": {
+      "size": [
+        37,
+        19
+      ],
+      "origin": [
+        20,
+        14
+      ],
+      "collider": null
+    },
+    "barricade_x_flat_1": {
+      "size": [
+        36,
+        18
+      ],
+      "origin": [
+        16,
+        13
+      ],
+      "collider": null
+    },
+    "barricade_y_flat_1": {
+      "size": [
+        36,
+        18
+      ],
+      "origin": [
+        19,
+        13
+      ],
+      "collider": null
+    },
+    "body_0": {
+      "size": [
+        21,
+        13
+      ],
+      "origin": [
+        10,
+        10
+      ],
+      "collider": null
+    },
+    "body_1": {
+      "size": [
+        21,
+        13
+      ],
+      "origin": [
+        10,
+        10
+      ],
+      "collider": null
+    },
+    "body_2": {
+      "size": [
+        21,
+        13
+      ],
+      "origin": [
+        10,
+        10
+      ],
+      "collider": null
+    },
+    "body_3": {
+      "size": [
+        21,
+        13
+      ],
+      "origin": [
+        10,
+        10
+      ],
+      "collider": null
+    },
+    "body_4": {
+      "size": [
+        21,
+        13
+      ],
+      "origin": [
+        10,
+        10
+      ],
+      "collider": null
+    },
+    "body_5": {
+      "size": [
+        21,
+        13
+      ],
+      "origin": [
+        10,
         10
       ],
       "collider": null
@@ -2406,6 +2636,34 @@
       "trash_2",
       "trash_3",
       "trash_4"
+    ],
+    "barricade_x": [
+      "barricade_x_0",
+      "barricade_x_1",
+      "barricade_x_2",
+      "barricade_x_3"
+    ],
+    "barricade_y": [
+      "barricade_y_0",
+      "barricade_y_1",
+      "barricade_y_2",
+      "barricade_y_3"
+    ],
+    "barricade_x_flat": [
+      "barricade_x_flat_0",
+      "barricade_x_flat_1"
+    ],
+    "barricade_y_flat": [
+      "barricade_y_flat_0",
+      "barricade_y_flat_1"
+    ],
+    "body": [
+      "body_0",
+      "body_1",
+      "body_2",
+      "body_3",
+      "body_4",
+      "body_5"
     ]
   },
   "char": {
