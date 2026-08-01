@@ -7,7 +7,10 @@ This file carries everything a fresh session needs that isn't in those two.
 
 ## Where we are
 
-- **Version v0.6.9** (see CHANGELOG for v0.6.6-v0.6.9: prone stance on Z,
+- **Version v0.6.11** (v0.6.10: car caps brightened to READ — invisible-dark
+  ≠ missing, wheel-arch bites fixed, attic-dark roof holes, sniper volleys,
+  zoom ladder to 6x w/ glide, no wide zoom; v0.6.11: 3D pass — iso pillars,
+  domed cylinders, tire tori, sloped rubble). Older (v0.6.6-v0.6.9: prone stance on Z,
   splash screen + menu music + full audio suite, lattice-fence barricade
   line, 3D barrels, complete vehicles, wheel zoom ladder w/ edge
   auto-tighten, anti-banding dither film, clip audit in gen_art — generation

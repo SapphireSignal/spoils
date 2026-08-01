@@ -51,6 +51,11 @@ var _changelog_list: VBoxContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.11", ["everything is 3d now: pillars are real columns with caps",
+		"snapped pillars show their broken tops - rebar and all",
+		"gas tanks got domed shoulders and curved bands like the barrels",
+		"tire stacks show the dark hole down the middle",
+		"rubble piles have lit and shaded slopes with a bright ridge"]],
 	["v0.6.10", ["car ends are visible now - they existed but were painted too dark",
 		"wheel arches no longer bite into hoods and trunks",
 		"the broken-into door hangs attached to the car, not floating below",

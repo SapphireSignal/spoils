@@ -3,6 +3,20 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.11] — 2026-08-01
+
+### Changed
+- **The 3D-illusion pass** (user call: everything should read like the
+  barrels and cars): pillars rebuilt as true iso columns — diamond caps on
+  intact ones, rough broken tops with exposed rebar on snapped ones, lit
+  west / shaded east faces, a plinth at the base. Upright gas cylinders got
+  elliptical shoulders, domed crowns, valve stubs, and safety bands that
+  follow the curvature. Tire stacks are stacked tori — the top tire shows
+  its tread ellipse and the dark hole through the middle. Rubble piles have
+  a lit western slope, a shaded eastern slope, a bright crest ridge, and
+  dark ground contact. Everything else (crates, furniture, buildings) was
+  already prism-built.
+
 ## [0.6.10] — 2026-08-01
 
 ### Fixed

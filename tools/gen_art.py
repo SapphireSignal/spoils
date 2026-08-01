@@ -757,27 +757,48 @@ def draw_cylinder(rng: random.Random, color: str, h: int,
     }
     lite, base, dark, glint = tones[color]
     if not toppled:
-        c = Canvas(14, h + 8)
-        cx = 7
-        top = 5
-        dome = {top: 2, top + 1: 3, top + 2: 4, top + 3: 4}
-        for y, half in dome.items():
-            for x in range(cx - half, cx + half):
-                c.set(x, y, lite if x < cx else base)
-        for y in range(top + 4, h + 1):
-            for x in range(cx - 4, cx + 4):
-                t = (x - (cx - 4)) / 8.0
-                c.set(x, y, lite if t < 0.3 else (base if t < 0.75 else dark))
-        band_y = top + 4 + (h - top - 4) // 2
-        for x in range(cx - 4, cx + 4):
-            c.set(x, band_y, dark)
-            c.set(x, band_y - 1, glint if x % 2 else base)
-            c.set(x, h + 2, C("202e37"))
-        c.rect(cx - 1, 2, cx, 4, C("577277"))
+        # upright tank as a true iso cylinder: elliptical shoulder, domed
+        # cap with a curved highlight, walls hanging off the ellipse curve
+        import math as _math
+        r = 5
+        c = Canvas(2 * r + 6, h + 12)
+        cx = r + 3
+        top_cy = 7
+
+        def edge_dy(dx: int) -> int:
+            f = 1.0 - (dx * dx) / float(r * r)
+            return int(round(_math.sqrt(max(0.0, f)) * (r // 2 + 1)))
+
+        for dx in range(-r, r + 1):  # domed cap above the shoulder ellipse
+            dy = edge_dy(dx)
+            for y in range(top_cy - dy - 2, top_cy + dy + 1):
+                col = base
+                if y < top_cy - dy:
+                    col = lite                       # dome crown
+                elif dx < -1 and y <= top_cy:
+                    col = lite
+                elif y >= top_cy + dy - 1:
+                    col = dark
+                c.set(cx + dx, y, col)
+        c.rect(cx - 1, 2, cx, 4, C("577277"))        # valve stub on top
+        c.set(cx + 1, 3, C("394a50"))
+        for dx in range(-r, r + 1):  # walls follow the ellipse's lower edge
+            dy = edge_dy(dx)
+            t = (dx + r) / float(2 * r)
+            col = lite if t < 0.28 else (base if t < 0.74 else dark)
+            for y in range(top_cy + dy, top_cy + dy + h - 8):
+                c.set(cx + dx, y, col)
+        band_h = (h - 8) // 2
+        for dx in range(-r, r + 1):  # safety band follows the curvature
+            dy = edge_dy(dx)
+            c.set(cx + dx, top_cy + dy + band_h, dark)
+            c.set(cx + dx, top_cy + dy + band_h - 1, glint if dx % 2 else base)
+            c.set(cx + dx, top_cy + dy + h - 8, C("202e37"))  # foot ring
         for _ in range(rng.randint(2, 5)):
-            c.set(rng.randrange(cx - 3, cx + 3), rng.randrange(top + 6, h), C("602c2c"))
+            fx = rng.randrange(cx - r + 1, cx + r - 1)
+            c.set(fx, top_cy + edge_dy(fx - cx) + rng.randrange(3, h - 10), C("602c2c"))
         c.outline_auto()
-        return c, (7, h + 2), ["circle", 4.0]
+        return c, (cx, top_cy + h - 7), ["circle", 4.0]
     c = Canvas(h + 8, 16)
     for i in range(h - 4):
         x = 5 + i
@@ -808,27 +829,45 @@ def draw_tires(rng: random.Random, count: int, single: bool) -> tuple[Canvas, tu
             c.set(cx + a, 4 if abs(a) < 2 else 5, C("202e37"))
         c.outline_auto()
         return c, (12, 23), ["circle", 6.0]
-    c = Canvas(30, 10 + 6 * count)
+    # tire stack as stacked tori: each tire is an ellipse ring with a side
+    # wall; the top one shows its tread ellipse AND the dark hole through
+    # the middle — that hole is what sells the 3D (user: everything 3D)
+    import math as _math
+    c = Canvas(32, 17 + 5 * count)
     cx = 15
-    halves = [8, 11, 12, 12, 11, 9]
+    r_out = 11
+
+    def ell(dx: int, r: int) -> int:
+        f = 1.0 - (dx * dx) / float(r * r)
+        return int(round(_math.sqrt(max(0.0, f)) * (r * 0.45)))
+
     for i in range(count):
-        dx = rng.randint(-1, 1)
-        base_y = 6 * (count - 1 - i) + 4
+        jx = rng.randint(-1, 1)
+        base_y = 8 + 5 * (count - 1 - i)
         top = i == count - 1
-        for row, half in enumerate(halves):
-            y = base_y + row
-            for x in range(cx + dx - half, cx + dx + half):
-                t = (x - (cx + dx - half)) / (2 * half)
-                col = C("202e37") if (row <= 1 and 0.15 < t < 0.85) else C("151d28")
-                if row >= 4:
-                    col = C("10141f")
-                c.set(x, y, col)
+        for dx in range(-r_out, r_out + 1):  # side wall band
+            dy = ell(dx, r_out)
+            for y in range(base_y + dy, base_y + dy + 5):
+                t = (dx + r_out) / float(2 * r_out)
+                c.set(cx + jx + dx, y, C("151d28") if t < 0.6 else C("10141f"))
         if top:
-            for row, half in ((0, 5), (1, 6), (2, 5)):
-                for x in range(cx + dx - half, cx + dx + half):
-                    c.set(x, base_y + row + 1, C("090a14"))
+            for dx in range(-r_out, r_out + 1):  # tread ellipse on top
+                dy = ell(dx, r_out)
+                for y in range(base_y - dy, base_y + dy + 1):
+                    col = C("151d28")
+                    if y <= base_y - dy + 1 and dx < 2:
+                        col = C("202e37")            # rim highlight NW
+                    c.set(cx + jx + dx, y, col)
+            for dx in range(-5, 6):              # the hole through the middle
+                dy = ell(dx, 5)
+                for y in range(base_y - dy, base_y + dy + 1):
+                    c.set(cx + jx + dx, y, C("090a14"))
+        else:
+            for dx in range(-r_out, r_out + 1):  # sliver of this tire's top
+                dy = ell(dx, r_out)
+                c.set(cx + jx + dx, base_y + dy, C("202e37") if dx < 0 else C("151d28"))
     c.outline_auto()
-    return c, (15, 6 * count + 4), ["circle", 7.0 if count > 1 else 6.0]
+    return c, (15, 8 + 5 * count + 4), ["circle", 7.0 if count > 1 else 6.0]
 
 def draw_pallet(rng: random.Random, broken: bool, stacked: bool) -> tuple[Canvas, tuple, list]:
     c = Canvas(38, 28)
@@ -892,9 +931,21 @@ def draw_rubble(rng: random.Random, size: int) -> tuple[Canvas, tuple, list]:
     cx = w // 2 + 2
     for x in range(4, w):
         h = int(hmax * (1 - ((x - cx) / (w / 2 - 1)) ** 2)) + rng.randint(-1, 1)
-        for y in range(c.h - 3 - max(0, h), c.h - 2):
-            t = rng.random()
-            c.set(x, y, grays[1] if t < 0.5 else (grays[0] if t < 0.8 else grays[2]))
+        peak = c.h - 3 - max(0, h)
+        for y in range(peak, c.h - 2):
+            # a mound, not a blob: lit western slope, shaded eastern slope,
+            # a bright ridge along the crest, dark contact at the ground
+            depth = y - peak
+            col = grays[1]
+            if x < cx - 2 and depth > 0:
+                col = grays[2] if rng.random() < 0.6 else grays[1]
+            elif x > cx + 2:
+                col = grays[0] if rng.random() < 0.7 else grays[1]
+            if depth == 0 and rng.random() < 0.7:
+                col = grays[3] if abs(x - cx) < w // 4 else grays[2]
+            if y >= c.h - 3:
+                col = grays[0]
+            c.set(x, y, col)
     for _ in range(rng.randint(6, 8 + 3 * size)):
         x, y = rng.randrange(6, w - 4), rng.randrange(c.h - 5 - hmax, c.h - 3)
         c.set(x, y, grays[3])
@@ -931,30 +982,45 @@ def draw_pillar(rng: random.Random, kind: str) -> tuple[Canvas, tuple, list]:
             c.set(48 + i, 9 + i % 2, C("602c2c"))
         c.outline_auto()
         return c, (26, 16), ["diamond", 22.0, 5.0]
+    # upright column as a real iso PRISM: diamond top, two shaded faces, a
+    # plinth — the old front-view rectangle read completely flat (user call)
     h = 44 if kind == "tall" else 26
-    c = Canvas(18, h + 10)
-    for y in range(6, h + 4):
-        for x in range(4, 14):
-            col = CONC_L1 if x < 8 else (CONC_BASE if x < 12 else CONC_D1)
-            if rng.random() < 0.08:
-                col = CONC_D1
-            c.set(x, y, col)
-    cuts = {}
-    for x in range(4, 14):
-        cut = rng.randint(0, 5)
-        cuts[x] = cut
-        for y in range(6, 6 + cut):
-            c.set(x, y, (0, 0, 0, 0))
-        c.set(x, 6 + cut, C("819796"))
-    for rx in (8, 11):
-        top = 6 + cuts.get(rx, 0)
-        for y in range(top - 3, top + 1):
-            c.set(rx, y, C("602c2c"))
-    for y in range(h + 2, h + 6):
-        for x in range(2, 16):
-            c.set(x, y, CONC_BASE if x < 9 else CONC_D1)
+    c = Canvas(20, h + 14)
+    rows = small_diamond_rows(12, 6)
+    ox, oy = 3, 3
+    bottoms = [0] * 12
+    for i, (x0, x1) in enumerate(rows):
+        for x in range(x0, x1 + 1):
+            bottoms[x] = i
+    for x in range(12):  # shaft: lit west face, shaded east
+        b = oy + bottoms[x]
+        for y in range(b + 1, b + h + 1):
+            col = CONC_L1 if x < 4 else (CONC_BASE if x < 8 else CONC_D1)
+            if rng.random() < 0.07:
+                col = CONC_D1 if x < 8 else CONC_D2
+            c.set(ox + x, y, col)
+    if kind == "tall":  # clean cap
+        for i, (x0, x1) in enumerate(rows):
+            for x in range(x0, x1 + 1):
+                c.set(ox + x, oy + i, CONC_L2 if i < 3 else CONC_L1)
+    else:  # snapped: rough broken top with rebar
+        for i, (x0, x1) in enumerate(rows):
+            for x in range(x0, x1 + 1):
+                jag = rng.randint(0, 2)
+                c.set(ox + x, oy + i + jag, CONC_BASE if rng.random() < 0.6 else CONC_D1)
+                if jag > 1:
+                    c.set(ox + x, oy + i, (0, 0, 0, 0))
+        for rx in (4, 8):
+            top = oy + bottoms[rx]
+            for y in range(top - 3, top + 1):
+                c.set(ox + rx, y, C("602c2c"))
+            c.set(ox + rx + 1, top - 3, C("884b2b"))
+    for x in range(12):  # plinth at the base
+        b = oy + bottoms[x] + h
+        c.set(ox + x - 1 if x == 0 else ox + x, b + 1, CONC_BASE if x < 8 else CONC_D1)
+        c.set(ox + x, b + 2, CONC_D1 if x < 8 else CONC_D2)
     c.outline_auto()
-    return c, (9, h + 4), ["circle", 6.0]
+    return c, (ox + 6, oy + h + 5), ["circle", 6.0]
 
 # ------------------------------------------------------------ furniture -----
 # Interior dressing so buildings read as lived-in places, not empty shells.
