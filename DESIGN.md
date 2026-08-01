@@ -126,9 +126,12 @@ than being scattered through UI/input code — so a server can own them later. N
 - **Godot 4.7.1 Windows export templates already installed** (`%APPDATA%\Godot\export_templates\4.7.1.stable\`)
   — shipping a standalone .exe needs no downloads.
 - **Deliberately absent:** Aseprite, Tiled, Audacity (removed at user request — do not reinstall).
-- Current project state: **v0.4.0** — Milestone 1 plus two user-feedback passes.
+- Current project state: **v0.6.2** — Milestone 1 plus many user-feedback and
+  content passes (160×160 living district, weather/day-night, menus, keybinds,
+  crouch; see CHANGELOG.md and **CLAUDE.md — the session handoff file with all
+  operational conventions**). Next: Milestone 2 (gunplay) as v0.7.0.
   GitHub repo (private): https://github.com/SapphireSignal/spoils. Established
-  conventions that must not regress:
+  conventions that must not regress (fuller list in CLAUDE.md):
   - Camera locked to whole pixels; ALL motion updates in `_process` (see Display note).
   - UI text uses the generated bitmap font (`tools/gen_font.py`) via `UITheme` —
     never Godot's default vector font (blurry at 1x).
