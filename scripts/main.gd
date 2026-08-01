@@ -129,13 +129,11 @@ func _prewarm_textures() -> void:
 
 
 func _build_prompt() -> void:
+	# floats in screen space but PINNED to the door it belongs to
 	var layer := CanvasLayer.new()
 	layer.layer = 70
 	_prompt = Label.new()
 	_prompt.theme = UITheme.get_theme()
-	_prompt.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	_prompt.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_prompt.position.y -= 40.0
 	_prompt.add_theme_color_override("font_color", UITheme.TEXT)
 	_prompt.visible = false
 	layer.add_child(_prompt)
@@ -164,6 +162,16 @@ func _update_prompt() -> void:
 		_prompt.text = "press %s to %s" % [
 			Settings.bind_label("interact").to_lower(),
 			"close" if _prompt_open else "open"]
+	# pin the label just above the door, following it on screen
+	var camera := get_viewport().get_camera_2d()
+	if camera != null:
+		var view := Vector2(get_window().content_scale_size)
+		var on_screen := best.global_position - camera.get_screen_center_position() \
+			+ view * 0.5
+		var pos := on_screen + Vector2(-_prompt.size.x * 0.5, -56.0)
+		pos.x = clampf(pos.x, 4.0, view.x - _prompt.size.x - 4.0)
+		pos.y = clampf(pos.y, 4.0, view.y - 16.0)
+		_prompt.position = pos.round()
 	_prompt.visible = true
 
 
