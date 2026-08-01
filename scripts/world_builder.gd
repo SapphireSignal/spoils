@@ -102,6 +102,7 @@ var _map_trees: Array[Vector3i] = [] # (x, y, autumn) — every planted tree,
 var _lz_rect := Rect2i()             # the lift's clearing
 var _toll_gate: Node2D = null        # the warden's crossing
 var _toll_cell := Vector2i.ZERO
+var _freight_cell := Vector2i.ZERO   # where the night freight stands
 var _extracts: Array[Dictionary] = []  # ways out, handed to Extraction
 var _window_cells: Dictionary = {}   # (x, y, side_id) -> true where a wall
                                      # segment carries glass
@@ -223,6 +224,8 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 		},
 		"extracts": _extracts,
 		"toll_gate": _toll_gate,
+		# where the freight stands: the trainyard's stretch of the main line
+		"freight_stop": _floor_layer.map_to_local(_freight_cell),
 	}
 
 
@@ -456,6 +459,8 @@ func _plan_rail() -> void:
 		return
 	var r: Rect2i = _block_rects[yard_blocks[0]]
 	_rail_row = r.position.y + r.size.y / 2 + _rng.randi_range(-2, 2)
+	# the freight stands mid-yard, where the platform would have been
+	_freight_cell = Vector2i(r.position.x + r.size.x / 2, _rail_row)
 	for x in range(BARRIER_INSET - 2, MAP_W - BARRIER_INSET + 2):
 		var cell := Vector2i(x, _rail_row)
 		if _on_road(cell):

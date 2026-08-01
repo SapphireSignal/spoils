@@ -43,6 +43,18 @@ var hidden_in_bush := false     # Foliage sets it; the sprite fades so the
 # opening doors from further away than the prompt appears. Every future
 # interactable inherits the rule for free by going through the prompt.
 var prompt_target: Node2D = null
+# riding something that isn't a car (the freight): welded to it, hidden,
+# and out of the input loop until it puts you down or takes you out
+var riding: Node2D = null
+var ride_offset := Vector2.ZERO
+
+
+func board_ride(what: Node2D, offset: Vector2) -> void:
+	riding = what
+	ride_offset = offset
+	visible = false
+	collision_layer = 0
+	set_flashlight(false)
 
 var _sprite: Sprite2D
 var _shadow: Sprite2D
@@ -186,6 +198,12 @@ func _process(delta: float) -> void:
 		_hurt_left -= delta
 		_hurt_rect.color.a = maxf(0.0, 0.30 * (_hurt_left / HURT_FLASH_TIME))
 
+	if riding != null:
+		# aboard the freight: the camera rides with it, nothing else runs
+		global_position = riding.global_position + ride_offset
+		_update_camera(delta)
+		return
+
 	if driving != null:
 		# riding: the body is welded to the car (so the camera weld, zoom
 		# and snap all keep working off the same position they always use)
@@ -314,6 +332,8 @@ func _interact() -> void:
 		(best as DriveableCar).enter(self)
 	elif best is TollGate:
 		(best as TollGate).use()
+	elif best is NightFreight:
+		(best as NightFreight).board()
 
 
 func _animate(input_vec: Vector2, delta: float) -> void:

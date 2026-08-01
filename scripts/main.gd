@@ -164,6 +164,16 @@ func _build_world() -> void:
 			beacon.position = z["pos"] as Vector2
 			ysort.add_child(beacon)
 	extraction.extracted.connect(_on_extracted)
+	# mara on the radio — reusable; the M2 walk-in is entirely her voice
+	var radio := Radio.new()
+	radio.name = "Radio"
+	add_child(radio)
+	# the night freight: five minutes away, one minute in the yard
+	var freight := NightFreight.new()
+	freight.name = "NightFreight"
+	ysort.add_child(freight)
+	freight.setup(info["freight_stop"] as Vector2, _player, radio)
+	freight.extracted.connect(_on_extracted)
 	# the warden's crossing: his window, and what paying him buys
 	var toll: TollGate = info.get("toll_gate", null)
 	if toll != null:
@@ -321,6 +331,15 @@ func _update_prompt() -> void:
 		if d < 42.0 * 42.0 and d < best_d:
 			best_d = d
 			best = car
+	# the freight, but only while it's actually standing in the yard
+	for node in get_tree().get_nodes_in_group("trains"):
+		var train := node as NightFreight
+		if train == null or not train.can_board():
+			continue
+		var d := train.global_position.distance_squared_to(_player.global_position)
+		if d < NightFreight.BOARD_RANGE * NightFreight.BOARD_RANGE and d < best_d:
+			best_d = d
+			best = train
 	# the toll warden answers from a car's length away — you pull UP to
 	# his window, you don't get out and knock
 	for node in get_tree().get_nodes_in_group("toll_gates"):
@@ -353,6 +372,8 @@ func _update_prompt() -> void:
 				"upstairs" if going_up else "back down"]
 		elif best is TollGate:
 			_prompt.text = "press %s to talk to the warden" % key
+		elif best is NightFreight:
+			_prompt.text = "press %s to get on the train" % key
 		else:
 			_prompt.text = "press %s to enter the car" % key
 	# pin the label just above the target, following it on screen

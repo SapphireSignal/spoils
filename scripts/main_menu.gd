@@ -66,6 +66,14 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.32", ["the night freight runs. it comes into the yard every",
+		"five minutes, stands for one, and goes without you",
+		"mara calls it in on the radio before it arrives, warns",
+		"you when its nearly out of time, and tells you off if",
+		"you miss it",
+		"press f to get on, then departing in 10... and it pulls",
+		"out of the district with you aboard",
+		"you can hear the mic key up and drop - thats her radio"]],
 	["v0.6.31", ["leaves fall from every leafy tree now, and they take",
 		"turns - no more one tree getting spammed while the tree",
 		"beside it drops nothing",

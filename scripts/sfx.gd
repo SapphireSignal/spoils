@@ -88,6 +88,11 @@ func _ready() -> void:
 	_bump_player = AudioStreamPlayer.new()
 	add_child(_bump_player)
 	_car_bump = _synth_bump()
+	_horn_player = AudioStreamPlayer.new()
+	add_child(_horn_player)
+	_horn = _synth_horn()
+	_radio_open = _synth_squelch(true)
+	_radio_close = _synth_squelch(false)
 	_thunder_player = AudioStreamPlayer.new()
 	add_child(_thunder_player)
 	_heavy_thread = Thread.new()
@@ -184,6 +189,10 @@ var _engine_db := -60.0
 var _engine_pitch := 1.0
 var _bump_player: AudioStreamPlayer
 var _car_bump: AudioStreamWAV
+var _horn_player: AudioStreamPlayer
+var _horn: AudioStreamWAV
+var _radio_open: AudioStreamWAV
+var _radio_close: AudioStreamWAV
 var _engine_target := 0.0   # intensity 0..1; Sfx slews it DOWN on its own
                             # (the loop once played forever after an exit —
                             # nobody was calling set_engine anymore)
@@ -366,6 +375,67 @@ func _render_heavy() -> void:
 func _apply_heavy(rain: AudioStreamWAV, alarm: AudioStreamWAV) -> void:
 	_rain_loop = rain
 	_alarm = alarm
+
+
+func play_radio(open: bool) -> void:
+	## The mic keying up and keying down. This is what actually sells a
+	## radio — the squelch either side of the words, not the words.
+	_bump_player.volume_db = -24.0
+	_bump_player.pitch_scale = 1.0 if open else 0.88
+	_bump_player.stream = _radio_open if open else _radio_close
+	_bump_player.play()
+
+
+func _synth_squelch(open: bool) -> AudioStreamWAV:
+	## Key-up is a short rising hiss that snaps into carrier; key-down is
+	## the carrier dropping out with a click and a tail of static.
+	var count := int((0.13 if open else 0.17) * RATE)
+	var data := PackedByteArray()
+	data.resize(count * 2)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash("spoils-squelch-%s" % str(open))
+	var lp := 0.0
+	for i in count:
+		var t := float(i) / count
+		var n := rng.randf_range(-1.0, 1.0)
+		lp = n * 0.35 + lp * 0.65          # band-limited: radio, not white
+		var env := 0.0
+		if open:
+			# hiss swells, then the carrier clamps it
+			env = smoothstep(0.0, 0.45, t) * (1.0 - smoothstep(0.55, 1.0, t))
+		else:
+			# a click, then the hiss falls away
+			env = pow(1.0 - t, 2.2)
+			if i < int(0.004 * RATE):
+				env = 1.0
+		var s := lp * env * 0.5
+		data.encode_s16(i * 2, int(clampf(s, -1.0, 1.0) * 32767.0))
+	return _wav(data)
+
+
+func _synth_horn() -> AudioStreamWAV:
+	## A freight horn, two tones a fifth apart, heard across a district —
+	## still quiet by this game's rules, just LONG.
+	var count := int(1.6 * RATE)
+	var data := PackedByteArray()
+	data.resize(count * 2)
+	var p1 := 0.0
+	var p2 := 0.0
+	for i in count:
+		var t := float(i) / count
+		p1 += TAU * 138.0 / RATE
+		p2 += TAU * 207.0 / RATE
+		var env := minf(t / 0.06, 1.0) * (1.0 - smoothstep(0.6, 1.0, t))
+		var s := (sin(p1) * 0.6 + sin(p2) * 0.4
+			+ 0.18 * sin(p1 * 2.0)) * env * 0.3
+		data.encode_s16(i * 2, int(clampf(s, -1.0, 1.0) * 32767.0))
+	return _wav(data)
+
+
+func play_horn() -> void:
+	_horn_player.volume_db = -21.0     # distant, per the standing rule
+	_horn_player.stream = _horn
+	_horn_player.play()
 
 
 func _synth_bump() -> AudioStreamWAV:

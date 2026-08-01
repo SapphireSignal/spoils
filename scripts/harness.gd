@@ -389,6 +389,10 @@ func _shot(shot_name: String) -> void:
 			select_scene.call("_open_map_select")
 			select_scene.call("_select_transit")
 	for arg in OS.get_cmdline_user_args():
+		if arg == "--freight":
+			var train := get_tree().get_first_node_in_group("trains")
+			if train != null:
+				train.call("force_waiting")
 		if arg == "--toll":
 			var dialog := get_tree().current_scene.get_node_or_null("TollDialog")
 			if dialog != null:

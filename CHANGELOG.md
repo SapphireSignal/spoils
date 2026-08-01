@@ -3,6 +3,35 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.32] — 2026-08-01
+
+### Added
+- **Extract 3: THE NIGHT FREIGHT** (user design, including the timing).
+  A locomotive hauling two cars slides into the trainyard **every five
+  real minutes, stands for exactly one, and leaves whether you're aboard
+  or not**. Miss it and you wait five minutes or walk. `press f to get
+  on the train` while it stands; boarding welds you aboard (hidden, out
+  of the input loop, camera riding with it), then **"departing in
+  10…0"**, then it pulls away slowly, builds speed down the rails and
+  off the map into the debrief.
+- **The locomotive** is drawn to be unmistakable next to the dead stock:
+  longer than a boxcar, taller at the cab, charcoal with an amber
+  stripe, warm lit cab windows, a burning headlight and a stack.
+- **mara on the radio** (user request). A reusable `Radio` panel — the
+  M2 walk-in tutorial is entirely her voice, so it was worth building
+  properly. She calls the freight in twenty seconds out, tells you when
+  it's down to twenty-five, tells you to sit tight once you're aboard,
+  and tells you off when it rolls without you. Calls queue rather than
+  clipping each other, because a dispatcher waits for the channel.
+- **It sounds like a radio**: new synthesized mic **squelch** on key-up
+  and key-down (band-limited hiss, not white noise) either side of every
+  transmission, plus a long two-tone **freight horn** heard across the
+  district. *There is no voice acting and there won't be by accident —
+  bespoke lines can't be sourced from a sound library. The squelch and
+  the writing do the performance.*
+- Harness: `--freight` puts the train in the yard immediately instead of
+  waiting out the real-time cycle.
+
 ## [0.6.31] — 2026-08-01
 
 ### Fixed

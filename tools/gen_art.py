@@ -3181,6 +3181,116 @@ def make_bed() -> tuple[Canvas, tuple, list]:
     c.outline_auto()
     return c, (18, 30), ["diamond", 13.0, 7.0]
 
+def make_locomotive() -> tuple[Canvas, tuple, list]:
+    """The night freight's engine — the one train in transit that still
+    runs, and it is meant to be unmistakable next to the dead stock in
+    the yard: longer than a boxcar, taller at the cab, black with warm
+    lit windows, a headlight, and a stack. Same (2,1) projection family
+    as everything else on rails."""
+    rng = random.Random(f"{SEED}:locomotive")
+    body_c, body_d, body_dd = C("394a50"), C("202e37"), C("151d28")
+    L = 72
+    clear = 6
+    ox, oy = 6, 52
+    c = Canvas(120, 104)
+    # profile: long low hood at the front, tall cab toward the rear
+    prof = []
+    for i in range(L):
+        f = i / float(L - 1)
+        if f < 0.06:
+            h = 20
+        elif f < 0.52:
+            h = 26                    # the hood
+        elif f < 0.58:
+            h = 26 + int((f - 0.52) / 0.06 * 12)
+        elif f < 0.90:
+            h = 38                    # the cab
+        else:
+            h = 30
+        prof.append(h)
+    for i in range(L):                            # side face
+        x = ox + i
+        base = oy + i // 2
+        for y in range(base - clear - prof[i], base - clear + 1):
+            col = body_d if i % 5 else body_dd    # panel ribs
+            if y > base - clear - 5:
+                col = body_dd                     # running board shadow
+            c.set(x, y, col)
+    prev_top = None
+    for i in range(L):                            # roof plane
+        x = ox + i
+        base = oy + i // 2
+        top = base - clear - prof[i]
+        span = 1 if prev_top is None else abs(prev_top - top) + 1
+        rising = prev_top is not None and prev_top > top
+        for t in range(1, ROOF_DEPTH + 1):
+            col = body_c if t < ROOF_DEPTH else body_dd
+            for k in range(span):
+                yy = top + (k if rising else -k)
+                c.set(x + t, yy - (t + 1) // 2, col)
+                c.set(x + t, yy - t // 2, col)
+        prev_top = top
+    # cab windows: warm, because somebody is driving it
+    for i in range(int(L * 0.60), int(L * 0.86)):
+        x = ox + i
+        base = oy + i // 2
+        top = base - clear - prof[i]
+        if (i - int(L * 0.60)) % 9 < 6:
+            for y in range(top + 5, top + 13):
+                c.set(x, y, C("e8c170") if y < top + 9 else C("de9e41"))
+    for i in range(6, int(L * 0.50)):             # hood louvres
+        if i % 6 < 2:
+            x = ox + i
+            base = oy + i // 2
+            for y in range(base - clear - prof[i] + 6, base - clear - 8):
+                c.set(x, y, body_dd)
+    # a stripe down the flank so it reads at a distance
+    for i in range(3, L - 3):
+        c.set(ox + i, oy + i // 2 - clear - 8, C("de9e41"))
+    # the front end: full-width wall, headlight, coupler
+    wall_x0 = ox
+    wall_top0 = oy - clear - prof[0]
+    wall_bot0 = oy - clear
+    for t in range(1, 3):
+        x = wall_x0 - t
+        rise = t // 2
+        for y in range(wall_top0 + rise, wall_bot0 + rise + 1):
+            c.set(x, y, body_dd)
+    for k in range(3):                            # the headlight, burning
+        c.set(ox - 2 + k, oy - clear - prof[0] + 4, C("ebede9"))
+        c.set(ox - 2 + k, oy - clear - prof[0] + 5, C("e8c170"))
+    c.set(ox - 2, oy - clear - 2, C("10141f"))    # coupler
+    # the stack, and the smoke plate behind it
+    stack_x = ox + int(L * 0.18)
+    for k in range(7):
+        c.set(stack_x, oy + stack_x // 2 - ox // 2 - clear - prof[10] - 6 - k,
+              C("202e37"))
+        c.set(stack_x + 1, oy + stack_x // 2 - ox // 2 - clear - prof[10] - 6 - k,
+              C("151d28"))
+    for wf in (10, 30, 52, 64):                   # bogies
+        cxw = ox + wf + 3
+        cyw = oy + (wf + 3) // 2 - 2
+        for dy in range(-2, 3):
+            for dx in range(-4, 5):
+                if dx * dx + dy * dy * 2 <= 14:
+                    c.set(cxw + dx, cyw + dy, (0, 0, 0, 0))
+        for dy in range(-3, 3):
+            for dx in range(-4, 5):
+                d = dx * dx + dy * dy * 2
+                if d <= 18:
+                    c.set(cxw + dx, cyw + dy, C("10141f") if d > 6 else C("202e37"))
+        c.set(cxw, cyw, C("577277"))
+    for _ in range(rng.randint(3, 5)):            # soot and wear
+        c.set(ox + rng.randrange(4, L - 4), oy + rng.randrange(6, 20),
+              C("151d28"))
+    c.outline_auto()
+    origin_full = (ox + (L + 3) // 2 + ROOF_DEPTH // 2,
+                   oy + (L + 3) // 4 - ROOF_DEPTH // 4)
+    cropped, origin = crop_canvas(c, origin_full)
+    return cropped, origin, ["poly", [
+        -44.0, -10.0, 44.0, 10.0, 44.0, 20.0, -44.0, 0.0]]
+
+
 def make_boxcar(scheme: int, broken: bool) -> tuple[Canvas, tuple, list]:
     """Freight boxcar on the (2,1) iso diagonal, same projection family as
     the road vehicles: ribbed slab side, sliding door, roof walkway, full
@@ -4396,6 +4506,7 @@ def prop_inventory() -> tuple[dict, dict]:
     props["smoker"] = make_smoker_sheet()
     props["chalkboard"] = make_chalkboard()
     props["helicopter"] = make_helicopter()
+    props["locomotive"] = make_locomotive()
     props["toll_booth"] = make_toll_booth()
     props["toll_barrier"] = make_toll_barrier(False)
     props["toll_barrier_open"] = make_toll_barrier(True)
