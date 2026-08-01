@@ -293,14 +293,19 @@ def _seg_brick(rng: random.Random, base, mortar, i: int, fy: int) -> tuple:
     return base
 
 def make_wall_segment(style: str, axis: str, window_variant: int = -1,
-                      broken_seed: int = -1) -> tuple[Canvas, tuple, list]:
+                      broken_seed: int = -1,
+                      flip_coping: bool = False) -> tuple[Canvas, tuple, list]:
+    """flip_coping: north/west placements need the coping extending toward the
+    building interior (under the roof), not outward past the roof edge."""
     rng = random.Random(f"{SEED}:seg:{style}:{axis}:{window_variant}:{broken_seed}")
     base_col, mortar_col = (C(n) for n in BRICK_STYLES[style][axis])
     # canvas: 32 wide edge + coping overhang + outline margins
     c = Canvas(48, 66)
-    ox = 8 if axis == "x" else 8  # local origin x inside canvas
+    ox = 8
     oy = 56
     cop_dx = SEG_THICK if axis == "x" else -SEG_THICK  # coping goes to the back
+    if flip_coping:
+        cop_dx = -cop_dx
 
     heights: list[int] = []
     if broken_seed >= 0:
@@ -376,29 +381,35 @@ def make_wall_segment(style: str, axis: str, window_variant: int = -1,
     return c, origin, ["poly", poly]
 
 def make_wall_post(style: str) -> tuple[Canvas, tuple, list]:
+    # exactly WALL_H tall: the cap sits flush in the roof plane, closing the
+    # fascia line at each corner instead of poking through the roof
     rng = random.Random(f"{SEED}:post:{style}")
     c = Canvas(18, 62)
     lit, dark = (C(n) for n in BRICK_STYLES[style]["x"])
     _, darker = (C(n) for n in BRICK_STYLES[style]["y"])
-    bottoms = iso_prism(c, 2, 1, 12, 6, WALL_H + 4, lit, lit, dark)
+    bottoms = iso_prism(c, 2, 1, 12, 6, WALL_H, lit, lit, dark)
     for x in range(12):  # concrete cap
         y = bottoms[x]
         c.set(2 + x, y, CONC_L1)
         c.set(2 + x, y - 1, CONC_L1 if x % 2 else CONC_L2)
     for x in range(12):  # course shading
-        for y in range(bottoms[x] + 2, bottoms[x] + WALL_H + 4, 4):
+        for y in range(bottoms[x] + 2, bottoms[x] + WALL_H, 4):
             if rng.random() < 0.6:
                 c.set(2 + x, y, dark if x < 6 else darker)
     c.outline_auto()
-    return c, (8, 1 + WALL_H + 4 + 3), ["circle", 4.0]
+    return c, (8, 1 + WALL_H + 3), ["circle", 4.0]
 
 def wall_piece_inventory() -> dict[str, tuple[Canvas, tuple, list]]:
     pieces: dict[str, tuple[Canvas, tuple, list]] = {}
     for style in BRICK_STYLES:
         for axis in ("x", "y"):
             pieces[f"seg_{style}_{axis}"] = make_wall_segment(style, axis)
+            pieces[f"seg_{style}_{axis}_in"] = make_wall_segment(
+                style, axis, flip_coping=True)
             for v in range(len(SEG_WINDOWS)):
                 pieces[f"seg_{style}_{axis}_win_{v}"] = make_wall_segment(style, axis, v)
+                pieces[f"seg_{style}_{axis}_win_{v}_in"] = make_wall_segment(
+                    style, axis, v, flip_coping=True)
             for b in range(2):
                 pieces[f"seg_{style}_{axis}_broken_{b}"] = make_wall_segment(
                     style, axis, -1, b)
@@ -416,80 +427,70 @@ ROOF_TONES = {  # different shades of "black" per building
     "umber": ("241527", "10141f", "4d2b32"),
 }
 
-def make_building_roof(tiles_w: int, tiles_h: int,
-                       tone: str) -> tuple[Canvas, tuple, list | None]:
-    rng = random.Random(f"{SEED}:roof:{tiles_w}x{tiles_h}:{tone}")
+# Modular roof system (user direction: modular prefabs + explicit placement
+# formulas). The game places, per interior cell:
+#     roof_tile_<tone>_<v>   at  map_to_local(cell) + (0, -WALL_H)
+# and per boundary edge of the interior, at edge_midpoint + (0, -WALL_H):
+#     roof_fascia_<tone>_s   (south edges: dark trim hanging off the eave)
+#     roof_fascia_<tone>_e   (east edges)
+#     roof_rim_<tone>        (north/west edges: 1px lit rim only)
+# Tiles use the same tessellating diamond as the floor, so seams are exact.
+
+def make_roof_tile(tone: str, variant: int) -> tuple[Canvas, tuple, list | None]:
+    rng = random.Random(f"{SEED}:rooftile:{tone}:{variant}")
     base_col, dark_col, lite_col = (C(n) for n in ROOF_TONES[tone])
-    margin = 8
-    span_w = (tiles_w + tiles_h) * 32 + 2 * margin
-    span_h = (tiles_w + tiles_h) * 16 + 2 * margin
-    c = Canvas(span_w, span_h)
-    off_x = (tiles_h - 1) * 32 + margin  # canvas x of cell (0,0)'s diamond
-    off_y = margin
-
-    mask: set = set()
-    for cy in range(tiles_h):
-        for cx in range(tiles_w):
-            sx = off_x + (cx - cy) * 32
-            sy = off_y + (cx + cy) * 16
-            for y in range(32):
-                s = diamond_span(y)
-                if s:
-                    for x in range(s[0], s[1] + 1):
-                        mask.add((sx + x, sy + y))
-    # single 2px dilation: the roof edge sits flush on the wall plane
-    grown = set(mask)
-    for (x, y) in mask:
-        for dx, dy in ((2, 1), (-2, 1), (2, -1), (-2, -1), (1, 0), (-1, 0)):
-            grown.add((x + dx, y + dy))
-    mask = grown
-
-    for (x, y) in mask:
-        r = rng.random()
-        col = base_col
-        if r < 0.09:
-            col = dark_col
-        elif r < 0.13:
-            col = lite_col
-        c.set(x, y, col)
-    # a few tar patch blobs
-    for i in range(3):
-        patch = blob(rng, off_x + (tiles_w - 1) * 16 + rng.randint(-40, 40),
-                     off_y + (tiles_w + tiles_h) * 8 + rng.randint(-30, 30),
-                     rng.randint(30, 70), mask)
+    c = Canvas(64, 32)
+    region = {(x, y) for y in range(32) for x in range(64) if in_diamond(x, y)}
+    for (x, y) in region:
+        c.set(x, y, base_col)
+    speckle(c, rng, region, [dark_col, lite_col], [0.09, 0.04])
+    if variant == 1:
+        patch = blob(rng, 32 + rng.randint(-10, 10), 16 + rng.randint(-4, 4),
+                     rng.randint(20, 40), region)
         for (x, y) in patch:
             c.set(x, y, dark_col)
-    # edges: highlight on upper rims, fascia trim hanging off lower rims
-    for (x, y) in list(mask):
-        if (x, y - 1) not in mask:
-            c.set(x, y, lite_col)
-        if (x, y + 1) not in mask:
-            c.set(x, y, dark_col)
-            c.set(x, y + 1, INK)
-            c.set(x, y + 2, INK)
-    # vents + hatch, kept off the edges
-    bottoms_hint = off_y + (tiles_w + tiles_h) * 8
-    vent = Canvas(24, 22)
-    vb = iso_prism(vent, 2, 1, 20, 10, 7, CONC_BASE, CONC_D1, CONC_D2)
+    return c, (32, 16), None
+
+def make_roof_fascia(tone: str, axis: str) -> tuple[Canvas, tuple, list | None]:
+    base_col, dark_col, lite_col = (C(n) for n in ROOF_TONES[tone])
+    c = Canvas(40, 24)
+    ox, oy = 4, 10
+    for i in range(32):
+        x = ox + 16 + (-16 + i)
+        by = oy + _seg_base_fy(axis, i)
+        c.set(x, by - 1, lite_col)   # lit eave rim
+        c.set(x, by, dark_col)       # fascia board
+        c.set(x, by + 1, INK)
+        c.set(x, by + 2, INK)
+    return c, (ox + 16, oy), None
+
+def make_roof_rim(tone: str, axis: str) -> tuple[Canvas, tuple, list | None]:
+    _, _, lite_col = (C(n) for n in ROOF_TONES[tone])
+    c = Canvas(40, 24)
+    ox, oy = 4, 10
+    for i in range(32):
+        x = ox + 16 + (-16 + i)
+        by = oy + _seg_base_fy(axis, i)
+        c.set(x, by, lite_col)
+    return c, (ox + 16, oy), None
+
+def make_roof_vent() -> tuple[Canvas, tuple, list | None]:
+    c = Canvas(24, 22)
+    vb = iso_prism(c, 2, 1, 20, 10, 7, CONC_BASE, CONC_D1, CONC_D2)
     for x in range(3, 17):
         if x % 3 != 0:
-            vent.set(2 + x, vb[x] + 3, INK)
-            vent.set(2 + x, vb[x] + 5, INK)
-    vent.outline_auto()
-    hatch = Canvas(20, 14)
-    hb = iso_prism(hatch, 2, 1, 16, 8, 2, CONC_D1, CONC_D2, INK)
-    for x in range(4, 12):
-        hatch.set(2 + x, hb[x] - 1, CONC_BASE)
-    hatch.outline_auto()
-    c.img.alpha_composite(vent.img, (off_x + 8, bottoms_hint - 30))
-    c.img.alpha_composite(hatch.img, (off_x - (tiles_h - 2) * 32, bottoms_hint - 4))
-    c.px = c.img.load()
+            c.set(2 + x, vb[x] + 3, INK)
+            c.set(2 + x, vb[x] + 5, INK)
     c.outline_auto()
+    return c, (12, 15), None
 
-    # origin = center of the SOUTH corner cell (w-1, h-1)
-    south_cx = off_x + (tiles_w - 1 - (tiles_h - 1)) * 32 + 32
-    south_cy = off_y + (tiles_w - 1 + tiles_h - 1) * 16 + 16
-    return c, (south_cx, south_cy), None
+def make_roof_hatch() -> tuple[Canvas, tuple, list | None]:
+    c = Canvas(20, 14)
+    hb = iso_prism(c, 2, 1, 16, 8, 2, CONC_D1, CONC_D2, INK)
+    for x in range(4, 12):
+        c.set(2 + x, hb[x] - 1, CONC_BASE)
+    c.outline_auto()
+    return c, (10, 8), None
 
 # ---------------------------------------------------------------- props ------
 
@@ -1404,8 +1405,15 @@ def main() -> None:
         entries[name] = (canvas, origin, collider)
     for name, piece in wall_piece_inventory().items():
         entries[name] = piece
-    entries["roof_7x5"] = make_building_roof(7, 5, "charcoal")  # building A
-    entries["roof_6x5"] = make_building_roof(6, 5, "umber")     # building B
+    for tone in ROOF_TONES:
+        for v in range(2):
+            entries[f"roof_tile_{tone}_{v}"] = make_roof_tile(tone, v)
+        entries[f"roof_fascia_{tone}_s"] = make_roof_fascia(tone, "x")
+        entries[f"roof_fascia_{tone}_e"] = make_roof_fascia(tone, "y")
+        entries[f"roof_rim_{tone}_n"] = make_roof_rim(tone, "x")
+        entries[f"roof_rim_{tone}_w"] = make_roof_rim(tone, "y")
+    entries["roof_vent"] = make_roof_vent()
+    entries["roof_hatch"] = make_roof_hatch()
     entries["shadow"] = (make_shadow(), (12, 6), None)
 
     grabber = Canvas(8, 12)  # HSlider knob for the UI theme
@@ -1457,10 +1465,11 @@ def main() -> None:
         return img.resize((img.width * 3, img.height * 3), Image.NEAREST)
 
     pad = 12
-    show_walls = ["seg_brick_a_x", "seg_brick_a_y", "seg_brick_a_x_win_0",
-                  "seg_brick_a_x_win_1", "seg_brick_a_x_win_2", "seg_brick_a_y_win_0",
+    show_walls = ["seg_brick_a_x", "seg_brick_a_x_in", "seg_brick_a_y",
+                  "seg_brick_a_x_win_0", "seg_brick_a_x_win_1", "seg_brick_a_x_win_2",
                   "seg_brick_a_x_broken_0", "post_brick_a", "seg_brick_b_x",
-                  "seg_brick_b_y_win_1", "post_brick_b", "roof_6x5"]
+                  "seg_brick_b_y_win_1", "post_brick_b",
+                  "roof_tile_charcoal_0", "roof_fascia_charcoal_s", "roof_vent"]
     fam_show = [n for fam in families.values() for n in fam]
     rows_imgs = [
         [x3(floors)],

@@ -220,9 +220,9 @@ func _pick_variant(family: String) -> String:
 
 func _place_buildings() -> void:
 	# doors: ONE (interior cell, side) edge each — a single doorway per building
-	_build_shell(BUILDING_A, "brick_a",
+	_build_shell(BUILDING_A, "brick_a", "charcoal",
 		[[Vector2i(BUILDING_A.end.x - 2, 10), "xp"]], false)
-	_build_shell(BUILDING_B, "brick_b",
+	_build_shell(BUILDING_B, "brick_b", "umber",
 		[[Vector2i(33, BUILDING_B.position.y + 1), "yn"]], true)
 
 
@@ -239,7 +239,8 @@ const _EDGE_VERTS := {
 }
 
 
-func _build_shell(rect: Rect2i, style: String, doors: Array, ruined: bool) -> void:
+func _build_shell(rect: Rect2i, style: String, roof_tone: String,
+		doors: Array, ruined: bool) -> void:
 	var interior: Rect2i = rect.grow(-1)
 	var ruin_corner: Vector2i = interior.end - Vector2i(1, 1)
 	var posts: Dictionary = {}  # rounded Vector2 -> true
@@ -269,7 +270,10 @@ func _build_shell(rect: Rect2i, style: String, doors: Array, ruined: bool) -> vo
 						posts[(center + (v as Vector2)).round()] = true
 					continue
 				var axis: String = _EDGE_AXIS[side]
-				var piece := "seg_%s_%s" % [style, axis]
+				# north/west walls use the coping-flipped variant so their cap
+				# extends under the roof, never past its edge
+				var flip := "_in" if (side == "yn" or side == "xn") else ""
+				var piece := "seg_%s_%s%s" % [style, axis, flip]
 				if ruined and Vector2(cell - ruin_corner).length() < 3.0:
 					if _rng.randf() < 0.25:
 						for v in verts:  # collapsed gap: posts mark the stumps
@@ -277,7 +281,7 @@ func _build_shell(rect: Rect2i, style: String, doors: Array, ruined: bool) -> vo
 						continue
 					piece = "seg_%s_%s_broken_%d" % [style, axis, _rng.randi_range(0, 1)]
 				elif _rng.randf() < 0.3:
-					piece = "seg_%s_%s_win_%d" % [style, axis, _rng.randi_range(0, 2)]
+					piece = "seg_%s_%s_win_%d%s" % [style, axis, _rng.randi_range(0, 2), flip]
 				_add_prop(piece, center + (_EDGE_OFFSET[side] as Vector2))
 
 	# posts at the four outer corners of the shell
@@ -298,22 +302,56 @@ func _build_shell(rect: Rect2i, style: String, doors: Array, ruined: bool) -> vo
 		for x in range(rect.position.x, rect.end.x):
 			_occupied[Vector2i(x, y)] = true
 
-	_build_roof(rect, interior)
+	_build_roof(interior, roof_tone)
 
 
-func _build_roof(rect: Rect2i, interior: Rect2i) -> void:
-	# one generated slab sized to this building; it caps the walls exactly.
-	# RoofReveal fades it out when the player is inside.
+func _build_roof(interior: Rect2i, tone: String) -> void:
+	# Modular roof, one module per cell/edge by explicit formula:
+	#   tile   at map_to_local(cell)          + (0, -wall_h)
+	#   fascia at cell center + edge offset   + (0, -wall_h)  (south/east)
+	#   rim    likewise                                        (north/west)
+	# RoofReveal fades the whole group when the player is inside the walls.
 	var south_corner := interior.end - Vector2i(1, 1)
 	var roof := RoofReveal.new()
-	# trigger strictly when the player is INSIDE the walls, not on the
-	# surrounding ground
-	roof.cells = interior
+	roof.cells = interior  # trigger strictly inside the walls
 	# y-sort: draws over everything of this building (walls, posts, interior)
 	roof.position = _floor_layer.map_to_local(south_corner) + Vector2(0, 24)
-	var slab := _prop_sprite("roof_%dx%d" % [interior.size.x, interior.size.y])
-	slab.position = Vector2(0, -24 - float(_wall_h))
-	roof.add_child(slab)
+	var lift := Vector2(0, -float(_wall_h))
+
+	for y in range(interior.position.y, interior.end.y):
+		for x in range(interior.position.x, interior.end.x):
+			var cell := Vector2i(x, y)
+			var tile := _prop_sprite("roof_tile_%s_%d" % [tone, _rng.randi_range(0, 1)])
+			tile.position = _floor_layer.map_to_local(cell) - roof.position + lift
+			roof.add_child(tile)
+			var sides: Array[String] = []
+			if x == interior.position.x:
+				sides.append("xn")
+			if x == interior.end.x - 1:
+				sides.append("xp")
+			if y == interior.position.y:
+				sides.append("yn")
+			if y == interior.end.y - 1:
+				sides.append("yp")
+			for side in sides:
+				var module := ""
+				match side:
+					"yp": module = "roof_fascia_%s_s" % tone
+					"xp": module = "roof_fascia_%s_e" % tone
+					"yn": module = "roof_rim_%s_n" % tone
+					"xn": module = "roof_rim_%s_w" % tone
+				var edge := _prop_sprite(module)
+				edge.position = _floor_layer.map_to_local(cell) \
+					+ (_EDGE_OFFSET[side] as Vector2) - roof.position + lift
+				roof.add_child(edge)
+
+	for i in 2:
+		var cell := Vector2i(_rng.randi_range(interior.position.x, interior.end.x - 1),
+			_rng.randi_range(interior.position.y, interior.end.y - 1))
+		var deco := _prop_sprite("roof_vent" if i == 0 else "roof_hatch")
+		deco.position = _floor_layer.map_to_local(cell) - roof.position + lift
+		roof.add_child(deco)
+
 	_ysort.add_child(roof)
 	_roofs.append(roof)
 

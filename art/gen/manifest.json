@@ -549,7 +549,53 @@
         ]
       ]
     },
+    "seg_brick_a_x_in": {
+      "size": [
+        48,
+        66
+      ],
+      "origin": [
+        24,
+        56
+      ],
+      "collider": [
+        "poly",
+        [
+          -13.6,
+          -12.8,
+          18.4,
+          3.2,
+          13.6,
+          12.8,
+          -18.4,
+          -3.2
+        ]
+      ]
+    },
     "seg_brick_a_x_win_0": {
+      "size": [
+        48,
+        66
+      ],
+      "origin": [
+        24,
+        56
+      ],
+      "collider": [
+        "poly",
+        [
+          -13.6,
+          -12.8,
+          18.4,
+          3.2,
+          13.6,
+          12.8,
+          -18.4,
+          -3.2
+        ]
+      ]
+    },
+    "seg_brick_a_x_win_0_in": {
       "size": [
         48,
         66
@@ -595,7 +641,53 @@
         ]
       ]
     },
+    "seg_brick_a_x_win_1_in": {
+      "size": [
+        48,
+        66
+      ],
+      "origin": [
+        24,
+        56
+      ],
+      "collider": [
+        "poly",
+        [
+          -13.6,
+          -12.8,
+          18.4,
+          3.2,
+          13.6,
+          12.8,
+          -18.4,
+          -3.2
+        ]
+      ]
+    },
     "seg_brick_a_x_win_2": {
+      "size": [
+        48,
+        66
+      ],
+      "origin": [
+        24,
+        56
+      ],
+      "collider": [
+        "poly",
+        [
+          -13.6,
+          -12.8,
+          18.4,
+          3.2,
+          13.6,
+          12.8,
+          -18.4,
+          -3.2
+        ]
+      ]
+    },
+    "seg_brick_a_x_win_2_in": {
       "size": [
         48,
         66
@@ -687,7 +779,53 @@
         ]
       ]
     },
+    "seg_brick_a_y_in": {
+      "size": [
+        48,
+        66
+      ],
+      "origin": [
+        24,
+        56
+      ],
+      "collider": [
+        "poly",
+        [
+          -18.4,
+          3.2,
+          13.6,
+          -12.8,
+          18.4,
+          -3.2,
+          -13.6,
+          12.8
+        ]
+      ]
+    },
     "seg_brick_a_y_win_0": {
+      "size": [
+        48,
+        66
+      ],
+      "origin": [
+        24,
+        56
+      ],
+      "collider": [
+        "poly",
+        [
+          -18.4,
+          3.2,
+          13.6,
+          -12.8,
+          18.4,
+          -3.2,
+          -13.6,
+          12.8
+        ]
+      ]
+    },
+    "seg_brick_a_y_win_0_in": {
       "size": [
         48,
         66
@@ -733,7 +871,53 @@
         ]
       ]
     },
+    "seg_brick_a_y_win_1_in": {
+      "size": [
+        48,
+        66
+      ],
+      "origin": [
+        24,
+        56
+      ],
+      "collider": [
+        "poly",
+        [
+          -18.4,
+          3.2,
+          13.6,
+          -12.8,
+          18.4,
+          -3.2,
+          -13.6,
+          12.8
+        ]
+      ]
+    },
     "seg_brick_a_y_win_2": {
+      "size": [
+        48,
+        66
+      ],
+      "origin": [
+        24,
+        56
+      ],
+      "collider": [
+        "poly",
+        [
+          -18.4,
+          3.2,
+          13.6,
+          -12.8,
+          18.4,
+          -3.2,
+          -13.6,
+          12.8
+        ]
+      ]
+    },
+    "seg_brick_a_y_win_2_in": {
       "size": [
         48,
         66
@@ -809,7 +993,7 @@
       ],
       "origin": [
         8,
-        48
+        44
       ],
       "collider": [
         "circle",
@@ -817,6 +1001,29 @@
       ]
     },
     "seg_brick_b_x": {
+      "size": [
+        48,
+        66
+      ],
+      "origin": [
+        24,
+        56
+      ],
+      "collider": [
+        "poly",
+        [
+          -13.6,
+          -12.8,
+          18.4,
+          3.2,
+          13.6,
+          12.8,
+          -18.4,
+          -3.2
+        ]
+      ]
+    },
+    "seg_brick_b_x_in": {
       "size": [
         48,
         66
@@ -862,6 +1069,29 @@
         ]
       ]
     },
+    "seg_brick_b_x_win_0_in": {
+      "size": [
+        48,
+        66
+      ],
+      "origin": [
+        24,
+        56
+      ],
+      "collider": [
+        "poly",
+        [
+          -13.6,
+          -12.8,
+          18.4,
+          3.2,
+          13.6,
+          12.8,
+          -18.4,
+          -3.2
+        ]
+      ]
+    },
     "seg_brick_b_x_win_1": {
       "size": [
         48,
@@ -885,7 +1115,53 @@
         ]
       ]
     },
+    "seg_brick_b_x_win_1_in": {
+      "size": [
+        48,
+        66
+      ],
+      "origin": [
+        24,
+        56
+      ],
+      "collider": [
+        "poly",
+        [
+          -13.6,
+          -12.8,
+          18.4,
+          3.2,
+          13.6,
+          12.8,
+          -18.4,
+          -3.2
+        ]
+      ]
+    },
     "seg_brick_b_x_win_2": {
+      "size": [
+        48,
+        66
+      ],
+      "origin": [
+        24,
+        56
+      ],
+      "collider": [
+        "poly",
+        [
+          -13.6,
+          -12.8,
+          18.4,
+          3.2,
+          13.6,
+          12.8,
+          -18.4,
+          -3.2
+        ]
+      ]
+    },
+    "seg_brick_b_x_win_2_in": {
       "size": [
         48,
         66
@@ -977,7 +1253,53 @@
         ]
       ]
     },
+    "seg_brick_b_y_in": {
+      "size": [
+        48,
+        66
+      ],
+      "origin": [
+        24,
+        56
+      ],
+      "collider": [
+        "poly",
+        [
+          -18.4,
+          3.2,
+          13.6,
+          -12.8,
+          18.4,
+          -3.2,
+          -13.6,
+          12.8
+        ]
+      ]
+    },
     "seg_brick_b_y_win_0": {
+      "size": [
+        48,
+        66
+      ],
+      "origin": [
+        24,
+        56
+      ],
+      "collider": [
+        "poly",
+        [
+          -18.4,
+          3.2,
+          13.6,
+          -12.8,
+          18.4,
+          -3.2,
+          -13.6,
+          12.8
+        ]
+      ]
+    },
+    "seg_brick_b_y_win_0_in": {
       "size": [
         48,
         66
@@ -1023,7 +1345,53 @@
         ]
       ]
     },
+    "seg_brick_b_y_win_1_in": {
+      "size": [
+        48,
+        66
+      ],
+      "origin": [
+        24,
+        56
+      ],
+      "collider": [
+        "poly",
+        [
+          -18.4,
+          3.2,
+          13.6,
+          -12.8,
+          18.4,
+          -3.2,
+          -13.6,
+          12.8
+        ]
+      ]
+    },
     "seg_brick_b_y_win_2": {
+      "size": [
+        48,
+        66
+      ],
+      "origin": [
+        24,
+        56
+      ],
+      "collider": [
+        "poly",
+        [
+          -18.4,
+          3.2,
+          13.6,
+          -12.8,
+          18.4,
+          -3.2,
+          -13.6,
+          12.8
+        ]
+      ]
+    },
+    "seg_brick_b_y_win_2_in": {
       "size": [
         48,
         66
@@ -1099,32 +1467,164 @@
       ],
       "origin": [
         8,
-        48
+        44
       ],
       "collider": [
         "circle",
         4.0
       ]
     },
-    "roof_7x5": {
+    "roof_tile_charcoal_0": {
       "size": [
-        400,
-        208
+        64,
+        32
       ],
       "origin": [
-        232,
-        184
+        32,
+        16
       ],
       "collider": null
     },
-    "roof_6x5": {
+    "roof_tile_charcoal_1": {
       "size": [
-        368,
-        192
+        64,
+        32
       ],
       "origin": [
-        200,
-        168
+        32,
+        16
+      ],
+      "collider": null
+    },
+    "roof_fascia_charcoal_s": {
+      "size": [
+        40,
+        24
+      ],
+      "origin": [
+        20,
+        10
+      ],
+      "collider": null
+    },
+    "roof_fascia_charcoal_e": {
+      "size": [
+        40,
+        24
+      ],
+      "origin": [
+        20,
+        10
+      ],
+      "collider": null
+    },
+    "roof_rim_charcoal_n": {
+      "size": [
+        40,
+        24
+      ],
+      "origin": [
+        20,
+        10
+      ],
+      "collider": null
+    },
+    "roof_rim_charcoal_w": {
+      "size": [
+        40,
+        24
+      ],
+      "origin": [
+        20,
+        10
+      ],
+      "collider": null
+    },
+    "roof_tile_umber_0": {
+      "size": [
+        64,
+        32
+      ],
+      "origin": [
+        32,
+        16
+      ],
+      "collider": null
+    },
+    "roof_tile_umber_1": {
+      "size": [
+        64,
+        32
+      ],
+      "origin": [
+        32,
+        16
+      ],
+      "collider": null
+    },
+    "roof_fascia_umber_s": {
+      "size": [
+        40,
+        24
+      ],
+      "origin": [
+        20,
+        10
+      ],
+      "collider": null
+    },
+    "roof_fascia_umber_e": {
+      "size": [
+        40,
+        24
+      ],
+      "origin": [
+        20,
+        10
+      ],
+      "collider": null
+    },
+    "roof_rim_umber_n": {
+      "size": [
+        40,
+        24
+      ],
+      "origin": [
+        20,
+        10
+      ],
+      "collider": null
+    },
+    "roof_rim_umber_w": {
+      "size": [
+        40,
+        24
+      ],
+      "origin": [
+        20,
+        10
+      ],
+      "collider": null
+    },
+    "roof_vent": {
+      "size": [
+        24,
+        22
+      ],
+      "origin": [
+        12,
+        15
+      ],
+      "collider": null
+    },
+    "roof_hatch": {
+      "size": [
+        20,
+        14
+      ],
+      "origin": [
+        10,
+        8
       ],
       "collider": null
     },
