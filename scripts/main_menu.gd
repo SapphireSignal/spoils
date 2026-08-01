@@ -1,9 +1,8 @@
 extends Node2D
-## Main menu. Four generated backdrop scenes rotate with a slow crossfade,
+## Main menu. Generated backdrop scenes rotate with a slow crossfade,
 ## each with its own living detail:
 ##   hoard      - gold sparkles rising past the buttons
 ##   scrapyard  - flickering neon sign + drifting smog
-##   safehouse  - warm lamp glow, breathing
 ##   overlook   - clouds drifting over a dead city, dust on the wind
 ## DEPLOY starts the raid.
 
@@ -17,7 +16,6 @@ var _fade_tween: Tween
 var _time := 0.0
 
 var _neon: Sprite2D
-var _lamp_glow: Sprite2D
 var _clouds_a: Sprite2D
 var _clouds_b: Sprite2D
 var _sparkles: CPUParticles2D
@@ -62,8 +60,6 @@ func _process(delta: float) -> void:
 		elif fmod(_time * 13.0, 1.0) < 0.06:
 			flick = 0.55
 		_neon.modulate.a = flick
-	if _lamp_glow.visible:
-		_lamp_glow.modulate.a = 0.8 + 0.13 * sin(_time * 2.1) + 0.07 * sin(_time * 7.7)
 	if _clouds_a.visible:
 		var w := 960.0
 		_clouds_a.position.x = wrapf(_clouds_a.position.x - 3.5 * delta, -w, w)
@@ -137,17 +133,7 @@ func _build_scenes() -> void:
 	add_child(scrap)
 	_scenes.append(scrap)
 
-	# 3: the abandoned safehouse
-	var safe := Node2D.new()
-	_backdrop(safe, "menu_safehouse")
-	_lamp_glow = Sprite2D.new()
-	_lamp_glow.texture = load("res://art/gen/menu_safehouse_glow.png")
-	_lamp_glow.position = Vector2(220, 110)  # over the desk lamp
-	safe.add_child(_lamp_glow)
-	add_child(safe)
-	_scenes.append(safe)
-
-	# 4: the overlook
+	# 3: the overlook
 	var overlook := Node2D.new()
 	_backdrop(overlook, "menu_overlook")
 	_clouds_a = Sprite2D.new()

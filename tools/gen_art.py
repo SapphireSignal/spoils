@@ -1283,68 +1283,6 @@ def make_scene_scrapyard(props: dict) -> tuple[Canvas, Canvas]:
         ov.set(x, y, C("7a367b"))
     return c, ov
 
-def make_scene_safehouse(props: dict) -> tuple[Canvas, Canvas]:
-    """Concept 3: abandoned safehouse cross-section. Returns (base, lamp glow)."""
-    rng = random.Random(f"{SEED}:scene:safe")
-    c = _scene_base()
-    _vgrad(c, [(SCENE_H, C("090a14"))])
-    # room shell (cross-section slice)
-    rx0, ry0, rx1, ry1 = 140, 100, 820, 470
-    c.rect(rx0, ry0, rx1, ry1, C("202e37"))                     # back wall
-    speckle(c, rng, {(x, y) for y in range(ry0, ry1) for x in range(rx0, rx1)},
-            [C("151d28"), C("394a50")], [0.05, 0.03])
-    c.rect(rx0, ry0, rx1, ry0 + 14, C("151d28"))                # ceiling beam
-    c.rect(rx0, ry1 - 60, rx1, ry1, C("341c27"))                # floor
-    for x in range(rx0, rx1, 34):
-        c.vline(x, ry1 - 60, ry1, C("241527"))
-    c.rect(rx0 - 22, ry0 - 10, rx0, ry1 + 10, C("10141f"))      # cut walls
-    c.rect(rx1, ry0 - 10, rx1 + 22, ry1 + 10, C("10141f"))
-    # pinned map
-    c.rect(rx0 + 60, ry0 + 50, rx0 + 150, ry0 + 116, C("e7d5b3"))
-    for i in range(4):
-        x = rx0 + 70 + i * 20
-        c.rect(x, ry0 + 60 + (i * 7) % 30, x + 12, ry0 + 62 + (i * 7) % 30, C("a53030"))
-    for p in ((70, 58), (108, 84), (132, 100)):
-        c.set(rx0 + p[0], ry0 + p[1], C("cf573c"))
-    # shelf with cans
-    sy = ry0 + 160
-    c.rect(rx0 + 40, sy, rx0 + 230, sy + 4, C("4d2b32"))
-    for i in range(9):
-        can_x = rx0 + 48 + i * 20
-        col = (C("75a743"), C("a53030"), C("3c5e8b"))[i % 3]
-        c.rect(can_x, sy - 14, can_x + 10, sy - 1, col)
-        c.rect(can_x, sy - 14, can_x + 10, sy - 12, C("819796"))
-    # desk + lamp (glow is the overlay)
-    dx, dy = rx1 - 250, ry1 - 92
-    c.rect(dx, dy, dx + 190, dy + 10, C("602c2c"))
-    c.rect(dx + 8, dy + 10, dx + 16, dy + 60, C("4d2b32"))
-    c.rect(dx + 174, dy + 10, dx + 182, dy + 60, C("4d2b32"))
-    c.rect(dx + 130, dy - 26, dx + 136, dy, C("394a50"))        # lamp arm
-    c.rect(dx + 120, dy - 34, dx + 148, dy - 22, C("577277"))   # lamp head
-    c.rect(dx + 124, dy - 24, dx + 144, dy - 22, C("e8c170"))   # bulb
-    # papers on desk
-    c.rect(dx + 30, dy - 4, dx + 60, dy, C("c7cfcc"))
-    c.rect(dx + 70, dy - 3, dx + 96, dy, C("a8b5b2"))
-    # gear: our own sprites
-    def put(name: str, x: int, y: int) -> None:
-        _paste(c, props[name][0].img, x, y)
-    put("crate_1", rx0 + 60, ry1 - 90)
-    put("crate_3", rx0 + 130, ry1 - 76)
-    put("barrel_2", rx0 + 210, ry1 - 96)
-    put("pallet_0", rx0 + 300, ry1 - 66)
-    # bedroll
-    c.rect(rx0 + 420, ry1 - 74, rx0 + 520, ry1 - 56, C("411d31"))
-    c.rect(rx0 + 420, ry1 - 74, rx0 + 440, ry1 - 56, C("752438"))
-    # lamp glow overlay (soft alpha by design, like the vignette)
-    glow = Canvas(220, 160)
-    gr, gg, gb, _ = C("e8c170")
-    for y in range(160):
-        for x in range(220):
-            d = ((x - 110) / 105.0) ** 2 + ((y - 60) / 80.0) ** 2
-            if d < 1.0:
-                glow.set(x, y, (gr, gg, gb, int(70 * (1.0 - d))))
-    return c, glow
-
 def make_scene_overlook(props: dict, char_sheet: Image.Image) -> tuple[Canvas, Canvas]:
     """Concept 4: the overlook. Returns (base, drifting cloud strip)."""
     rng = random.Random(f"{SEED}:scene:overlook")
@@ -1498,10 +1436,6 @@ def main() -> None:
     assert_palette(scrap_base.img, "menu_scrapyard")
     scrap_base.img.save(OUT / "menu_scrapyard.png")
     scrap_neon.img.save(OUT / "menu_scrapyard_neon.png")
-    safe_base, safe_glow = make_scene_safehouse(entries)
-    assert_palette(safe_base.img, "menu_safehouse")
-    safe_base.img.save(OUT / "menu_safehouse.png")
-    safe_glow.img.save(OUT / "menu_safehouse_glow.png")  # soft alpha by design
     over_base, over_clouds = make_scene_overlook(entries, sheet)
     assert_palette(over_base.img, "menu_overlook")
     over_base.img.save(OUT / "menu_overlook.png")
