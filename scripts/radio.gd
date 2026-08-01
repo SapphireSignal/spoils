@@ -88,5 +88,9 @@ func _process(delta: float) -> void:
 		_panel.modulate.a = 0.0
 		if not _queue.is_empty():
 			await get_tree().create_timer(0.5).timeout
+			# the timer outlives a freed scene: extracting mid-queue used
+			# to resume this on a dead Radio
+			if not is_inside_tree():
+				return
 			if _left <= 0.0 and not _queue.is_empty():
 				_speak(_queue.pop_front())

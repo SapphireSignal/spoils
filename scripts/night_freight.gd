@@ -52,7 +52,11 @@ func setup(stop_pos: Vector2, player: Player, radio: Radio) -> void:
 	_radio = radio
 	position = _stop_pos - RAIL_DIR * 2600.0
 	visible = false
-	_clock = FIRST_ARRIVAL - PERIOD    # first arrival at FIRST_ARRIVAL
+	# AWAY fires when _clock reaches PERIOD, so to arrive FIRST_ARRIVAL
+	# seconds from now the clock must START that far short of PERIOD.
+	# The sign was inverted, which put the first train 580 s out — the
+	# v0.6.40 note claiming "20 seconds in" was simply wrong.
+	_clock = PERIOD - FIRST_ARRIVAL
 
 	# origins come from the manifest like every other prop — guessing them
 	# put the hauled cars off the rails

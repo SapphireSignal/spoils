@@ -64,7 +64,14 @@ func zone_position(kind: String) -> Vector2:
 
 
 func _process(delta: float) -> void:
-	if _leaving or _player == null or _player.dead or _zones.is_empty():
+	if _player != null and _player.dead and _label.visible:
+		_label.visible = false          # no green counter over the death fade
+		_active = -1
+	# a window is open: don't extract underneath it. The map doesn't pause
+	# the tree, so standing in the LZ and pressing M used to extract you
+	# with the map still up.
+	if _leaving or _player == null or _player.dead or _zones.is_empty() \
+			or Ui.blocks_gameplay():
 		return
 	var here := _player.global_position
 	var inside := -1

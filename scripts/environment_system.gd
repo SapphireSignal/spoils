@@ -320,7 +320,12 @@ func _strike() -> void:
 	tween.tween_property(_flash, "color:a", peak * 0.75, 0.08)
 	tween.tween_property(_flash, "color:a", 0.0, 0.50)
 	# tight on the flash's heels — a second of lag read as disconnected
-	get_tree().create_timer(randf_range(0.15, 0.5)).timeout.connect(Sfx.play_thunder)
+	# guarded: the tree owns this timer, so a strike right before quitting
+	# to the menu used to clap thunder over the main menu
+	var when := get_tree().create_timer(randf_range(0.15, 0.5))
+	when.timeout.connect(func() -> void:
+		if is_inside_tree():
+			Sfx.play_thunder())
 
 
 func _night_amount_for(t: float) -> float:

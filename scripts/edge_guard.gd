@@ -81,7 +81,10 @@ func _process(delta: float) -> void:
 		pi_ -= 1
 	if _player == null or _player.dead or stood_down:
 		# paying the warden buys exactly this: the guns stop caring while
-		# you drive out past the line
+		# you drive out past the line. Rounds ALREADY QUEUED have to die
+		# too — the staggered volley kept landing up to 0.84 s after the
+		# stand-down, which is the very thing v0.6.40 claimed to fix.
+		_pending.clear()
 		_leave_zone()
 		return
 	var u := _player.global_position - _map_center
@@ -128,7 +131,7 @@ func _fire_volley(depth: float) -> void:
 
 
 func _spawn_round() -> void:
-	if _player == null or _player.dead:
+	if _player == null or _player.dead or stood_down:
 		return
 	var u := _player.global_position - _map_center
 	var depth := absf(u.x) * 0.5 + absf(u.y) - _barrier_f

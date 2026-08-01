@@ -258,6 +258,19 @@ func _process(delta: float) -> void:
 		_engine_player.pitch_scale = _engine_pitch
 
 
+func silence_world() -> void:
+	## Cut every looping world bed at once. Both of these are driven per
+	## frame from the raid scene, so when that scene goes away there is
+	## nobody left to slew them down and they just keep playing.
+	_engine_target = 0.0
+	_engine_db = -60.0
+	if _engine_player != null:
+		_engine_player.stop()
+	_rain_db = -60.0
+	if _rain_player != null:
+		_rain_player.stop()
+
+
 func alarm_stream() -> AudioStreamWAV:
 	return _alarm  # null until the background render lands — callers skip
 

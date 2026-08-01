@@ -3,6 +3,65 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.42] — 2026-08-01 — the sweep, part one
+
+Three parallel audits read every script end to end. These are the
+severe findings, fixed. The rest are logged, not silently dropped.
+
+### Fixed — softlocks and game-breakers
+- **Quitting to the menu with a window open bricked every later raid.**
+  The window stack lives in an autoload, so it outlived the scene that
+  pushed to it: pause → "main menu" → deploy again left the stack
+  occupied, and the new raid read *no input at all* — ESC and M were
+  dead too, so there was no way out short of killing the process. Every
+  scene root now starts from a cleared stack.
+- **Dying aboard the freight was an unrecoverable softlock.** `riding`
+  was set on boarding and cleared by nothing anywhere in the codebase,
+  and `respawn()` didn't reset it — so after the death fade the player
+  was teleported back onto the departed train every frame, invisible,
+  collisionless, with input never read. Respawn now clears the ride,
+  visibility, collision and floor lift.
+- **The first night freight arrived 580 seconds in, not 20.** The cycle
+  clock was seeded with its sign inverted, which means the v0.6.40 note
+  claiming "the first freight arrives 20 seconds in" was flatly wrong.
+- **Extracting worked underneath an open map.** The map deliberately
+  doesn't pause the tree, so standing in the landing zone and pressing M
+  still ran the countdown and extracted you — which then poisoned the
+  window stack per the first bug. Extraction now stands down while any
+  window is open, and the green counter no longer sits over the death
+  fade.
+- **The sniper stand-down was incomplete** — the fix v0.6.40 claimed.
+  Already-queued rounds in a staggered volley still spawned and could
+  kill you up to 0.84 s after paying the warden or boarding the train.
+  Queued rounds are now dropped and `_spawn_round` respects the flag.
+
+### Fixed — world
+- **The district's outer rim was bare.** `EDGE_FOREST`, the content
+  margin, was left at 85 when v0.6.36 moved the barricade ring to 66, so
+  lamps, lone trees, road vehicles, puddles and scatter all stopped 19
+  cells short of the barricades.
+- **Half the street scatter was missing**: heaps incremented the placed
+  counter twice, so the loop hit its budget of 210 pieces early.
+
+### Also
+- Rain and the engine bed kept playing under the main menu after
+  quitting a raid, and could carry into the next one — world audio is
+  silenced when the raid scene exits.
+- Timers owned by the SceneTree outlived their scene: the death sequence
+  resumed on a freed instance, mara's radio could speak from a freed
+  node, and a lightning strike could clap thunder over the main menu.
+  All three are guarded.
+
+### Not fixed — logged with reproduction steps
+The audits found more than one release should absorb: the helicopter
+leaking if you die mid-lift, `stood_down` never resetting (pay the toll,
+walk back in, and the whole ring stays blind for the raid), headlights
+burning on a car you died in, per-frame `Label.text` churn on three
+countdowns, the freight re-parsing the 137 KB manifest during the deploy
+tail, `_place_toll_gate` not checking occupancy, `_plan_safehouse`
+running before the POI rects it tests against exist, and ~10 genuinely
+dead functions and sprite families. All recorded.
+
 ## [0.6.41] — 2026-08-01
 
 ### Performance

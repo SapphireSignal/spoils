@@ -52,6 +52,8 @@ var _tooltip_label: Label
 var _zoom := 3.0                      # screen px per map cell, continuous
 var _pan := Vector2.ZERO
 var _recenter := false                # centering waits for real layout
+var _status_stamp := -1               # last minute shown on the clock bar
+var _status_weather := ""
 var _dragging := false
 var _hover_key := ""
 var _hover_time := 0.0
@@ -408,6 +410,7 @@ func _process(delta: float) -> void:
 		var hour := int(t * 24.0)
 		var minute := int(fmod(t * 24.0, 1.0) * 60.0)
 		var rain: float = float(_environment.get("rain_intensity"))
+		var stamp := hour * 60 + minute
 		var weather := "clear"
 		if rain > 0.65:
 			weather = "storming"
@@ -415,7 +418,12 @@ func _process(delta: float) -> void:
 			weather = "raining"
 		elif t >= 0.10 and t <= 0.38:
 			weather = "morning mist"
-		_status.text = "time %02d:%02d   -   %s" % [hour, minute, weather]
+		# the clock changes once a minute — don't reformat it 240 times a
+		# second just because the marker layer is redrawing
+		if stamp != _status_stamp or weather != _status_weather:
+			_status_stamp = stamp
+			_status_weather = weather
+			_status.text = "time %02d:%02d   -   %s" % [hour, minute, weather]
 	_update_tooltip(delta)
 
 

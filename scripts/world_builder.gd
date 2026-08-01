@@ -19,7 +19,13 @@ extends RefCounted
 const MAP_W := 256
 const MAP_H := 256
 const TILE := Vector2i(64, 32)
-const EDGE_FOREST := 85      # content margin: gameplay stays inside the
+const EDGE_FOREST := 68      # content margin: gameplay stays inside the
+                             # ring. DERIVED from BARRIER_INSET — it was
+                             # left at 85 when the ring moved to 66, so
+                             # lamps, lone trees, road vehicles, puddles
+                             # and scatter all stopped 19 cells short of
+                             # the barricades and the district's outer
+                             # rim came out visibly bare.
                              # treeline fringe (inset 78..85, inside the ring)
 const BARRIER_INSET := 66    # the barricade ring — the map's ADVERTISED edge.
                              # 78 gave ~100 playable cells and squeezed the
@@ -3012,8 +3018,10 @@ func _scatter_props() -> void:
 				# heap — one anchor piece with stragglers spilling off one
 				# side, never a tidy stack (user: asymmetrical piling)
 				if _rng.randf() < 0.26 and family in ["barrel", "tires", "rubble"]:
+					# NOTE: no `placed += 1` here — the loop increments it
+					# once below. Counting a heap twice made the district
+					# stop well short of the tuned 210 scatter pieces.
 					_place_pile(family, cell, _rng.randi_range(2, 4))
-					placed += 1
 				else:
 					_add_prop(_pick_variant_varied(family),
 						_floor_layer.map_to_local(cell) + _clutter_offset(11.0))

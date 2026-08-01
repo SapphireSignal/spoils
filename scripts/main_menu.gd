@@ -66,6 +66,17 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.42", ["a code sweep found some bad ones:",
+		"quitting to the menu with a window open used to leave",
+		"every later raid unable to read your input at all",
+		"dying on the freight was an unrecoverable softlock",
+		"the first train was ten minutes late, not twenty seconds",
+		"snipers could still hit you after youd paid to leave",
+		"the edge of the district had no lamps, trees or vehicles",
+		"rain kept playing under the menu after you quit"]],
+	["v0.6.41", ["loading into transit had a 233ms stall in it. it was a",
+		"developer contact sheet - half a megabyte of artwork the",
+		"game never shows - being loaded every single raid"]],
 	["v0.6.40", ["the snipers stop shooting once youre riding the freight",
 		"out - catching it is a real way out, not a death sentence",
 		"the first train now comes 20 seconds in, not 45",
@@ -473,6 +484,8 @@ const CHANGELOG_ENTRIES := [
 
 
 func _ready() -> void:
+	_menu_reset_windows()
+	Sfx.silence_world()   # no rain wash or engine bed carried in from a raid
 	add_to_group("main_menu")
 	var camera := Camera2D.new()
 	add_child(camera)
@@ -528,6 +541,12 @@ func _process(delta: float) -> void:
 		_tick_den()
 	if _scenes[1].visible:
 		_tick_drain(delta)
+
+
+func _menu_reset_windows() -> void:
+	## belt and braces with main.gd: whichever scene we arrive from, the
+	## menu starts with no windows claimed (see the Ui.clear note there)
+	Ui.clear()
 
 
 func _unhandled_input(event: InputEvent) -> void:

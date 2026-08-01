@@ -164,6 +164,16 @@ func respawn(at: Vector2) -> void:
 	hp = MAX_HP
 	dead = false
 	velocity = Vector2.ZERO
+	# dying aboard the freight left `riding` set with no way to clear it:
+	# respawn teleported you straight back onto the departed train every
+	# frame, invisible and collisionless, with input never read — an
+	# unrecoverable softlock
+	if riding != null:
+		riding = null
+		ride_offset = Vector2.ZERO
+	visible = true
+	collision_layer = 1
+	floor_lift = 0.0
 
 
 func set_flashlight(on: bool) -> void:

@@ -28,8 +28,22 @@ var _toll_dialog: TollDialog
 
 
 func _ready() -> void:
+	# The window stack lives in an AUTOLOAD, so it outlives the scene that
+	# pushed to it. Quitting to the menu with the pause menu (or the map)
+	# open left the stack occupied forever: the next raid read no input at
+	# all, and ESC and M were both dead, so there was no way out of it.
+	# Every scene root now starts from an empty stack.
+	Ui.clear()
 	_show_deploy_screen()
 	_build_world.call_deferred()
+
+
+func _exit_tree() -> void:
+	# world audio is driven from THIS scene every frame; without the scene
+	# nothing winds it down, so the engine bed and the rain wash kept
+	# playing under the main menu (and into the next raid)
+	Sfx.silence_world()
+	Ui.clear()
 
 
 func _show_deploy_screen() -> void:
@@ -396,6 +410,12 @@ func _process(delta: float) -> void:
 			MAP_NAME, ".".repeat(1 + int(_deploy_time * 3.0) % 3)]
 	if _player == null or _floor_layer == null:
 		return
+	# This runs EVERY frame on purpose. It walks five node groups, which
+	# is real work, but `prompt_target` is what F is allowed to act on —
+	# throttling it to 20 Hz opened a window where the prompt said one
+	# thing and F did another (the smoke test caught exactly that). The
+	# interaction rule is worth more than the allocations; revisit only
+	# by making the search cheaper, never by running it less often.
 	if _prompt != null:
 		_update_prompt()
 	# the driving crash course pops for a few seconds whenever you get in
@@ -447,6 +467,11 @@ func _on_player_died() -> void:
 	await fade_in.finished
 	label.visible = true
 	await get_tree().create_timer(1.2).timeout
+	# SceneTreeTimers are owned by the tree and fire even after this scene
+	# is freed — quitting to the menu during the death hold resumed this
+	# coroutine on a dead instance
+	if not is_inside_tree():
+		return
 	if _player_upper != -1:      # death upstairs respawns on the ground
 		_set_upper_state(_player_upper, false)
 		_player_upper = -1
