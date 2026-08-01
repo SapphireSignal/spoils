@@ -63,6 +63,7 @@ var _alarm_cars: Array[Dictionary] = []  # {node, lights} — armed intact cars
 var _sidewalk: Dictionary = {}       # cell -> "v"/"h" (walkways flanking roads)
 var _traffic_cells: Array[Vector2i] = []
 var _zone_salt := 0                  # per-build salt for the weathering zones
+var _bush_nodes: Array[Node2D] = []  # registered with the Foliage manager
 
 
 func build(root: Node2D, seed_text: String = "") -> Dictionary:
@@ -98,11 +99,14 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 	await _place_yards()
 	await _place_lamps()
 	await _place_traffic_lights()
+	await _place_street_furniture()
 	await _place_barricades()
 	await _place_trees()
 	await _place_lone_trees()
 	await _place_road_vehicles()
 	await _scatter_props()
+	await _place_foliage()
+	await _fill_dead_spots()
 	_collect_puddle_spots()
 	_build_border_collision(root)
 
@@ -124,6 +128,8 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 		"floor_coords": _floor_coords,
 		"alarm_cars": _alarm_cars,
 		"traffic_cells": _traffic_cells,
+		"bushes": _bush_nodes,
+		"walk_cells": _sidewalk.size(),
 	}
 
 
@@ -396,7 +402,7 @@ func _paint_terrain() -> void:
 			# roads DEAD-END at the barricade line: the buffer beyond is bare
 			# district, so the stubs stop under the wreckage (user call)
 			if (road_v >= 0 or road_h >= 0) and _cell_inset(cell) >= BARRIER_INSET - 2:
-				tile_name = "asphalt_%d" % _rng.randi_range(0, 3)
+				tile_name = "asphalt_%d" % _rng.randi_range(0, 1)
 				var cw := _crosswalk_at(cell, road_v, road_h)
 				# crosswalks at the crossings, center dashes elsewhere (on
 				# BOTH road directions, never at crossings), the odd manhole
@@ -410,16 +416,23 @@ func _paint_terrain() -> void:
 					tile_name = "asphalt_line_h"
 				elif _rng.randf() < 0.006:
 					tile_name = "manhole_0"
+				elif _rng.randf() < 0.045:
+					tile_name = "asphalt_crack_%d" % _rng.randi_range(0, 1)
+				elif _rng.randf() < 0.02:
+					tile_name = "asphalt_hole_%d" % _rng.randi_range(0, 1)
 			elif _sidewalk.has(cell) and not is_forest and not is_dirt \
 					and _cell_inset(cell) >= BARRIER_INSET - 2:
 				# walkway slabs: mostly intact, some cracked open (the broken
 				# tile eats through to the dirt and grows weeds)
-				if _rng.randf() < 0.13:
+				var sw_roll := _rng.randf()
+				if sw_roll < 0.10:
 					tile_name = "sidewalk_%s_broken_%d" % [str(_sidewalk[cell]),
 						_rng.randi_range(0, 1)]
+				elif sw_roll < 0.26:
+					tile_name = "sidewalk_%s_crack_%d" % [str(_sidewalk[cell]),
+						_rng.randi_range(0, 1)]
 				else:
-					tile_name = "sidewalk_%s_%d" % [str(_sidewalk[cell]),
-						_rng.randi_range(0, 3)]
+					tile_name = "sidewalk_%s_0" % str(_sidewalk[cell])
 			elif not is_forest and not is_dirt:
 				# biome blending: concrete touching grass grows grass; concrete
 				# touching a dirt path picks up dirt — no hard tile seams
@@ -930,6 +943,89 @@ func _place_traffic_lights() -> void:
 					_add_prop_at_cell("%s_%d" % [fam, idx], cell, Vector2(3, 2))
 				_traffic_cells.append(cell)
 				placed += 1
+
+
+func _place_street_furniture() -> void:
+	# benches and bus shelters on the walkways — it IS the transit district.
+	# Sparse, spaced, never near doors; the piece's axis follows the road's.
+	var since_shelter := 99
+	var since_bench := 99
+	for cell in _sidewalk:
+		await _tick()
+		since_shelter += 1
+		since_bench += 1
+		if _occupied.has(cell) or _near_a_door(cell) \
+				or _cell_inset(cell) < BARRIER_INSET:
+			continue
+		var axis: String = "y" if str(_sidewalk[cell]) == "v" else "x"
+		var roll := _rng.randf()
+		if roll < 0.012 and since_shelter > 14:
+			_add_prop_at_cell("shelter_%s_%d" % [axis,
+				0 if _rng.randf() < 0.7 else 1], cell, Vector2(2, 1))
+			since_shelter = 0
+		elif roll < 0.042 and since_bench > 8:
+			_add_prop_at_cell("bench_%s_%d" % [axis,
+				0 if _rng.randf() < 0.75 else 1], cell, Vector2(3, 2))
+			since_bench = 0
+
+
+func _place_foliage() -> void:
+	# bushes in the green pockets, plus planters hugging building walls —
+	# they register with the Foliage manager (wiggle + see-through)
+	for cell in _forest:
+		await _tick()
+		if _occupied.has(cell) or _dirt_path.has(cell) \
+				or _cell_inset(cell) < BARRIER_INSET:
+			continue
+		if _rng.randf() < 0.06:
+			_bush_nodes.append(_add_prop_at_cell(_pick_variant("bush"),
+				cell as Vector2i, Vector2(12, 6)))
+	for plot in _plots:
+		var ring: Rect2i = (plot["rect"] as Rect2i).grow(1)
+		for i in _rng.randi_range(2, 5):
+			await _tick()
+			var cell := Vector2i(
+				_rng.randi_range(ring.position.x, ring.end.x - 1),
+				_rng.randi_range(ring.position.y, ring.end.y - 1))
+			if _occupied.has(cell) or _on_road(cell) or _sidewalk.has(cell) \
+					or _forest.has(cell) or _near_a_door(cell) \
+					or (plot["rect"] as Rect2i).has_point(cell):
+				continue
+			_bush_nodes.append(_add_prop_at_cell(_pick_variant("bush"),
+				cell, Vector2(8, 4)))
+
+
+func _fill_dead_spots() -> void:
+	# the emptiness pass (user: "add stuff wherever theres nothing"): walk a
+	# coarse lattice; where a whole neighborhood is bare, drop a grass tuft,
+	# a bush, or a scrap of litter — quiet life, never clutter
+	for gy in range(EDGE_FOREST, MAP_H - EDGE_FOREST, 3):
+		for gx in range(EDGE_FOREST, MAP_W - EDGE_FOREST, 3):
+			await _tick()
+			var cell := Vector2i(gx + _rng.randi_range(-1, 1),
+				gy + _rng.randi_range(-1, 1))
+			if _occupied.has(cell) or _forest.has(cell) or _dirt_path.has(cell) \
+					or _on_road(cell) or _sidewalk.has(cell) or _near_a_door(cell):
+				continue
+			var bare := true
+			for dy in range(-2, 3):
+				for dx in range(-2, 3):
+					var n := cell + Vector2i(dx, dy)
+					if _occupied.has(n) or _forest.has(n) or _on_road(n):
+						bare = false
+						break
+				if not bare:
+					break
+			if not bare:
+				continue
+			var roll := _rng.randf()
+			if roll < 0.30:
+				_add_prop_at_cell(_pick_variant("tuft"), cell, Vector2(14, 7))
+			elif roll < 0.38:
+				_bush_nodes.append(_add_prop_at_cell(_pick_variant("bush"),
+					cell, Vector2(10, 5)))
+			elif roll < 0.44:
+				_add_prop_at_cell(_pick_variant("trash"), cell, Vector2(12, 6))
 
 
 func _place_barricades() -> void:

@@ -82,6 +82,16 @@ var _changelog_list: VBoxContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.16", ["raid music: your three picks rotate randomly, never twice in a row",
+		"music plays from raid start until you die - no more random cuts",
+		"a music folder in the game directory holds the whole audition list",
+		"roads are smooth now, with real cracks and the odd pothole",
+		"sidewalks: clean slabs, some hairline-cracked, some broken open",
+		"bushes grow in the greens - push through and they rustle, wiggle,",
+		"and go see-through around you",
+		"grass tufts, benches and bus shelters fill the empty corners",
+		"the woods lost their red confetti - green floors, brown for dirt only",
+		"dirt paths got gray mud mixed in - no more blood-red stripes"]],
 	["v0.6.15", ["three new living menu backdrops: the den, the drain, the storm",
 		"the den: kettle, verne and mara at home - candle vs radio glow",
 		"the job board pins every district - transit ringed red, tonight's job",

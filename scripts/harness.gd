@@ -67,9 +67,14 @@ func _ensure_game_scene() -> void:
 		current = get_tree().current_scene
 		if current != null and not (current.get("world_info") as Dictionary).is_empty() \
 				and current.get("_deploy_screen") == null:
-			break
+			return
 		await get_tree().create_timer(0.2).timeout
 		waited += 0.2
+	# FAIL FAST: a world that never readied means broken art/scripts — die
+	# loudly instead of letting the next step hang forever (the "stuck
+	# background task" the user kept killing on 2026-08-01)
+	printerr("HARNESS FAIL: world never became ready (30s) — aborting")
+	get_tree().quit(1)
 
 
 func _smoke() -> void:
@@ -446,6 +451,11 @@ func _probe_world() -> void:
 	print("DOORS total=%d cells=%s" % [door_cells.size(), door_cells.slice(0, 5)])
 	var traffic: Array = info.get("traffic_cells", [])
 	print("TRAFFIC total=%d cells=%s" % [traffic.size(), traffic.slice(0, 6)])
+	var bush_cells: Array[Vector2i] = []
+	for bush in (info.get("bushes", []) as Array):
+		bush_cells.append(floor_layer.local_to_map((bush as Node2D).position))
+	print("FOLIAGE bushes=%d cells=%s" % [bush_cells.size(), bush_cells.slice(0, 6)])
+	print("WALKS cells=%d" % int(info.get("walk_cells", -1)))
 
 	# the interact prompt must appear when parked right at a door
 	var player := main.get_node_or_null("World/Player") as Player

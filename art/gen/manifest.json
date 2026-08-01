@@ -101,143 +101,143 @@
       3,
       5
     ],
-    "asphalt_2": [
+    "asphalt_crack_0": [
       0,
       6
     ],
-    "asphalt_3": [
+    "asphalt_crack_1": [
       1,
+      6
+    ],
+    "asphalt_hole_0": [
+      2,
+      6
+    ],
+    "asphalt_hole_1": [
+      3,
       6
     ],
     "asphalt_line": [
-      2,
-      6
+      0,
+      7
     ],
     "asphalt_line_h": [
-      3,
-      6
+      1,
+      7
     ],
     "wood_0": [
-      0,
+      2,
       7
     ],
     "wood_1": [
-      1,
+      3,
       7
     ],
     "wood_2": [
-      2,
-      7
+      0,
+      8
     ],
     "wood_3": [
-      3,
-      7
+      1,
+      8
     ],
     "wood_4": [
-      0,
+      2,
       8
     ],
     "asphalt_stall": [
-      1,
+      3,
       8
     ],
     "screed_0": [
-      2,
-      8
+      0,
+      9
     ],
     "screed_1": [
-      3,
-      8
+      1,
+      9
     ],
     "screed_2": [
-      0,
+      2,
       9
     ],
     "screed_3": [
-      1,
+      3,
       9
     ],
     "forest_0": [
-      2,
-      9
+      0,
+      10
     ],
     "forest_1": [
-      3,
-      9
+      1,
+      10
     ],
     "forest_2": [
-      0,
+      2,
       10
     ],
     "forest_3": [
-      1,
+      3,
       10
     ],
     "grass_blend_0": [
-      2,
-      10
+      0,
+      11
     ],
     "grass_blend_1": [
-      3,
-      10
+      1,
+      11
     ],
     "grass_blend_2": [
-      0,
+      2,
       11
     ],
     "concrete_worn_0": [
-      1,
+      3,
       11
     ],
     "concrete_worn_1": [
-      2,
-      11
+      0,
+      12
     ],
     "concrete_worn_2": [
-      3,
-      11
+      1,
+      12
     ],
     "concrete_damp_0": [
-      0,
+      2,
       12
     ],
     "concrete_damp_1": [
-      1,
+      3,
       12
     ],
     "concrete_damp_2": [
-      2,
-      12
-    ],
-    "sidewalk_v_0": [
-      3,
-      12
-    ],
-    "sidewalk_v_1": [
       0,
       13
     ],
-    "sidewalk_v_2": [
+    "sidewalk_v_0": [
       1,
-      13
-    ],
-    "sidewalk_v_3": [
-      2,
       13
     ],
     "sidewalk_h_0": [
+      2,
+      13
+    ],
+    "sidewalk_v_crack_0": [
       3,
       13
     ],
-    "sidewalk_h_1": [
+    "sidewalk_v_crack_1": [
       0,
       14
     ],
-    "sidewalk_h_2": [
+    "sidewalk_h_crack_0": [
       1,
       14
     ],
-    "sidewalk_h_3": [
+    "sidewalk_h_crack_1": [
       2,
       14
     ],
@@ -1857,6 +1857,192 @@
       ],
       "collider": null
     },
+    "bush_0": {
+      "size": [
+        19,
+        14
+      ],
+      "origin": [
+        9,
+        12
+      ],
+      "collider": null
+    },
+    "bush_1": {
+      "size": [
+        23,
+        16
+      ],
+      "origin": [
+        11,
+        14
+      ],
+      "collider": null
+    },
+    "bush_2": {
+      "size": [
+        19,
+        14
+      ],
+      "origin": [
+        9,
+        12
+      ],
+      "collider": null
+    },
+    "tuft_0": {
+      "size": [
+        10,
+        10
+      ],
+      "origin": [
+        4,
+        7
+      ],
+      "collider": null
+    },
+    "tuft_1": {
+      "size": [
+        11,
+        10
+      ],
+      "origin": [
+        4,
+        7
+      ],
+      "collider": null
+    },
+    "tuft_2": {
+      "size": [
+        8,
+        10
+      ],
+      "origin": [
+        4,
+        7
+      ],
+      "collider": null
+    },
+    "bench_x_0": {
+      "size": [
+        30,
+        30
+      ],
+      "origin": [
+        15,
+        22
+      ],
+      "collider": [
+        "diamond",
+        12.0,
+        5.0
+      ]
+    },
+    "bench_y_0": {
+      "size": [
+        30,
+        30
+      ],
+      "origin": [
+        14,
+        22
+      ],
+      "collider": [
+        "diamond",
+        12.0,
+        5.0
+      ]
+    },
+    "bench_x_1": {
+      "size": [
+        30,
+        30
+      ],
+      "origin": [
+        15,
+        22
+      ],
+      "collider": [
+        "diamond",
+        12.0,
+        5.0
+      ]
+    },
+    "bench_y_1": {
+      "size": [
+        30,
+        30
+      ],
+      "origin": [
+        14,
+        22
+      ],
+      "collider": [
+        "diamond",
+        12.0,
+        5.0
+      ]
+    },
+    "shelter_x_0": {
+      "size": [
+        64,
+        59
+      ],
+      "origin": [
+        29,
+        47
+      ],
+      "collider": [
+        "diamond",
+        20.0,
+        8.0
+      ]
+    },
+    "shelter_y_0": {
+      "size": [
+        64,
+        59
+      ],
+      "origin": [
+        34,
+        47
+      ],
+      "collider": [
+        "diamond",
+        20.0,
+        8.0
+      ]
+    },
+    "shelter_x_1": {
+      "size": [
+        64,
+        59
+      ],
+      "origin": [
+        29,
+        47
+      ],
+      "collider": [
+        "diamond",
+        20.0,
+        8.0
+      ]
+    },
+    "shelter_y_1": {
+      "size": [
+        64,
+        59
+      ],
+      "origin": [
+        34,
+        47
+      ],
+      "collider": [
+        "diamond",
+        20.0,
+        8.0
+      ]
+    },
     "trash_0": {
       "size": [
         9,
@@ -3411,6 +3597,32 @@
       "stick_1",
       "stick_2",
       "stick_3"
+    ],
+    "bush": [
+      "bush_0",
+      "bush_1",
+      "bush_2"
+    ],
+    "tuft": [
+      "tuft_0",
+      "tuft_1",
+      "tuft_2"
+    ],
+    "bench_x": [
+      "bench_x_0",
+      "bench_x_1"
+    ],
+    "bench_y": [
+      "bench_y_0",
+      "bench_y_1"
+    ],
+    "shelter_x": [
+      "shelter_x_0",
+      "shelter_x_1"
+    ],
+    "shelter_y": [
+      "shelter_y_0",
+      "shelter_y_1"
     ],
     "trash": [
       "trash_0",

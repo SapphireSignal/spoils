@@ -243,6 +243,8 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
         # red stripe once the old speckle went away)
         region = _floor_base(c, rng, C("341c27"), C("241527"), C("4d2b32"),
                              0.02, 0.02)
+        speckle(c, rng, region, [C("202e37")], [0.05])   # gray mud pulls the
+        # red out of the earth — long dirt strips read blood-red without it
         for i in range(rng.randint(10, 14)):
             x = 6 + rng.randrange(52)
             y = 4 + rng.randrange(24)
@@ -284,10 +286,10 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
             _floor_base(c, rng, CONC_BASE, CONC_D1, CONC_L1, 0.012, 0.03)
 
     elif kind == "forest":
-        # woodland floor: dark mulch with undergrowth flecks (speckle kept low —
-        # dense dots shimmer when the camera scrolls back and forth)
-        region = _floor_base(c, rng, C("19332d"), C("341c27"), C("241527"), 0.11, 0.07)
-        speckle(c, rng, region, [C("25562e"), C("4d2b32")], [0.035, 0.028])
+        # woodland floor: GREEN-family patches only — the old warm-brown mix
+        # scattered red confetti across every wood (user: no red noise)
+        region = _floor_base(c, rng, C("19332d"), C("10141f"), C("25562e"), 0.07, 0.05)
+        speckle(c, rng, region, [C("341c27")], [0.018])
 
     elif kind == "grass_blend":
         # transition tile: concrete with grass CREEPING onto it in clumps —
@@ -312,10 +314,10 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
         # cell +y axis (flanks vertical roads), sidewalk_h along +x. Broken
         # variants lose chunks to the dirt underneath and grow weeds in the
         # bites — nature reclaiming the district.
-        # a clearly PALER slab band than the concrete field around it — the
-        # first cut used the field's own base and the walkway vanished into
-        # it, leaving the joints floating like tick marks
-        region = _floor_base(c, rng, CONC_L1, CONC_BASE, CONC_L2, 0.16, 0.05)
+        # a clearly PALER slab band than the concrete field around it,
+        # SMOOTH except for its joint lines (user: no things on the walks;
+        # the lines are fine). "crack" variant adds one hairline.
+        region = _floor_base(c, rng, CONC_L1, CONC_BASE, CONC_L2, 0.0, 0.0)
         broken = "broken" in kind
         for (x, y) in region:
             if kind.startswith("sidewalk_v"):
@@ -324,6 +326,16 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
                 param = (x - 32) * 0.5 + (y - 16)   # joint lines run along +y
             if param % 16 < 1.1:
                 c.set(x, y, CONC_BASE)
+        if "crack" in kind and not broken:          # one clean hairline
+            x, y = 14 + rng.randrange(24), 6 + rng.randrange(14)
+            dx = rng.choice((-1, 1))
+            for _ in range(rng.randint(14, 22)):
+                if (x, y) in region:
+                    c.set(x, y, CONC_BASE)
+                    if rng.random() < 0.3:
+                        c.set(x + 1, y, CONC_BASE)
+                x += dx if rng.random() < 0.7 else -dx
+                y += rng.choice((0, 1, 1, -1))
         if broken:
             for _ in range(rng.randint(2, 3)):
                 bite = blob(rng, 8 + rng.randrange(48), 6 + rng.randrange(20),
@@ -383,7 +395,30 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
                 c.set(x, y, C("819796"))
 
     elif kind == "asphalt":
-        _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.04, 0.02)
+        # SMOOTH road surface (user call) — damage lives in its own tiles
+        _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.0, 0.0)
+    elif kind == "asphalt_crack":
+        region = _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.0, 0.0)
+        x, y = 16 + rng.randrange(30), 6 + rng.randrange(16)
+        dx = rng.choice((-1, 1))
+        for _ in range(rng.randint(16, 26)):        # a wandering crack
+            if (x, y) in region:
+                c.set(x, y, CONC_D2)
+                if rng.random() < 0.35:
+                    c.set(x + 1, y, C("090a14"))
+            x += dx if rng.random() < 0.72 else -dx
+            y += rng.choice((0, 1, 1, -1))
+    elif kind == "asphalt_hole":
+        region = _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.0, 0.0)
+        hx = 22 + rng.randrange(20)
+        hy = 9 + rng.randrange(12)
+        hole = blob(rng, hx, hy, rng.randint(12, 22), region)
+        for (x, y) in hole:                          # a small pothole
+            c.set(x, y, C("090a14"))
+        for (x, y) in list(hole):                    # chipped rim
+            for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+                if (nx, ny) in region and (nx, ny) not in hole:
+                    c.set(nx, ny, CONC_BASE if (nx + ny) % 3 == 0 else CONC_D2)
     elif kind == "asphalt_line":
         # center dashes for roads running along the cell +y axis (screen SW).
         # dash period 16 px: 64/16 tessellates, so dashes continue seamlessly
@@ -415,7 +450,8 @@ FLOOR_TILES = [
     ("dirt_blend_0", ("dirt_blend", 0)), ("dirt_blend_1", ("dirt_blend", 1)),
     ("dirt_blend_2", ("dirt_blend", 2)),
     ("asphalt_0", ("asphalt", 0)), ("asphalt_1", ("asphalt", 1)),
-    ("asphalt_2", ("asphalt", 2)), ("asphalt_3", ("asphalt", 3)),
+    ("asphalt_crack_0", ("asphalt_crack", 0)), ("asphalt_crack_1", ("asphalt_crack", 1)),
+    ("asphalt_hole_0", ("asphalt_hole", 0)), ("asphalt_hole_1", ("asphalt_hole", 1)),
     ("asphalt_line", ("asphalt_line", 0)), ("asphalt_line_h", ("asphalt_line_h", 0)),
     ("wood_0", ("wood", 0)), ("wood_1", ("wood", 1)), ("wood_2", ("wood", 2)),
     ("wood_3", ("wood", 3)), ("wood_4", ("wood", 4)),
@@ -430,10 +466,12 @@ FLOOR_TILES = [
     ("concrete_worn_2", ("concrete_worn", 2)),
     ("concrete_damp_0", ("concrete_damp", 0)), ("concrete_damp_1", ("concrete_damp", 1)),
     ("concrete_damp_2", ("concrete_damp", 2)),
-    ("sidewalk_v_0", ("sidewalk_v", 0)), ("sidewalk_v_1", ("sidewalk_v", 1)),
-    ("sidewalk_v_2", ("sidewalk_v", 2)), ("sidewalk_v_3", ("sidewalk_v", 3)),
-    ("sidewalk_h_0", ("sidewalk_h", 0)), ("sidewalk_h_1", ("sidewalk_h", 1)),
-    ("sidewalk_h_2", ("sidewalk_h", 2)), ("sidewalk_h_3", ("sidewalk_h", 3)),
+    ("sidewalk_v_0", ("sidewalk_v", 0)),
+    ("sidewalk_h_0", ("sidewalk_h", 0)),
+    ("sidewalk_v_crack_0", ("sidewalk_v_crack", 0)),
+    ("sidewalk_v_crack_1", ("sidewalk_v_crack", 1)),
+    ("sidewalk_h_crack_0", ("sidewalk_h_crack", 0)),
+    ("sidewalk_h_crack_1", ("sidewalk_h_crack", 1)),
     ("sidewalk_v_broken_0", ("sidewalk_v_broken", 0)),
     ("sidewalk_v_broken_1", ("sidewalk_v_broken", 1)),
     ("sidewalk_h_broken_0", ("sidewalk_h_broken", 0)),
@@ -1709,6 +1747,157 @@ def make_tree(kind: str, variant: int) -> tuple[Canvas, tuple, list]:
     cropped, origin = crop_canvas(c, (cx, feet + 1))
     return cropped, origin, ["circle", 2.0]
 
+def draw_bush(rng: random.Random, variant: int) -> tuple[Canvas, tuple, list | None]:
+    """A leafy clump the player can push through — no collider. The game's
+    Foliage manager wiggles it and fades it while you're inside."""
+    w = rng.choice((16, 20, 24))
+    h = w // 2 + rng.randint(1, 3)
+    c = Canvas(w + 8, h + 10)
+    cx = c.w // 2
+    cy = h // 2 + 4
+    pts: set = set()
+    for dx in range(-w // 2, w // 2 + 1):
+        e = 1.0 - (dx / (w / 2.0)) ** 2
+        if e <= 0.0:
+            continue
+        half = h / 2.0 * (e ** 0.5) * rng.uniform(0.82, 1.12)
+        for dy in range(int(-half), int(half) + 1):
+            pts.add((cx + dx, cy + dy))
+    for (x, y) in pts:
+        col = C("19332d")
+        if (x - 1, y) not in pts or (x, y - 1) not in pts:
+            col = C("25562e")                        # lit north-west rim
+        elif (x, y + 1) not in pts:
+            col = C("10141f")                        # ground shadow rim
+        c.set(x, y, col)
+    for i in range(rng.randint(2, 4)):               # leaf-cluster highlights
+        x = cx + rng.randint(-w // 3, w // 3)
+        y = cy + rng.randint(-h // 3, 0)
+        c.set(x, y, C("468232"))
+        c.set(x + 1, y, C("25562e"))
+    if variant == 2:                                 # the berried one
+        for i in range(3):
+            c.set(cx + rng.randint(-w // 3, w // 3),
+                  cy + rng.randint(0, h // 3), C("a53030"))
+    c.set(cx, cy + h // 2 + 1, C("341c27"))          # a hint of stem
+    c.outline_auto()
+    cr, orr = crop_canvas(c, (cx, cy + h // 2 + 2))
+    return cr, orr, None
+
+
+def draw_tuft(rng: random.Random, variant: int) -> tuple[Canvas, tuple, list | None]:
+    """A few blades of grass through the concrete — dead-spot dressing."""
+    c = Canvas(18, 16)
+    base_x, base_y = 9, 11
+    for b in range(rng.randint(3, 5)):
+        bx = base_x + rng.randint(-3, 3)
+        ht = rng.randint(3, 5)
+        lean = rng.choice((-1, 0, 1))
+        for k in range(ht):
+            c.set(bx + (lean * k) // 3, base_y - k,
+                  C("25562e") if k < ht - 1 else C("468232"))
+    c.set(base_x + rng.randint(-2, 2), base_y + 1, C("19332d"))
+    c.outline_auto()
+    cr, orr = crop_canvas(c, (base_x, base_y + 1))
+    return cr, orr, None
+
+
+def draw_bench(rng: random.Random, broken: bool) -> tuple[Canvas, tuple, list]:
+    """Street bench along the (2,1) axis: metal frame, worn wood slats."""
+    c = Canvas(48, 40)
+    ox, oy = 8, 16
+    ln = 26
+    for i in range(ln):                              # three seat slats
+        x = ox + i
+        by = oy + i // 2
+        for (s, col) in ((0, C("884b2b")), (2, C("602c2c")), (4, C("341c27"))):
+            if broken and s == 2 and 9 < i < 16:
+                continue                             # a slat kicked out
+            c.set(x, by + s // 2, col)
+            c.set(x, by + s // 2 + 1 if s == 0 else by + s // 2, col)
+    for i in range(ln):                              # backrest rail
+        x = ox + i
+        c.set(x, oy + i // 2 - 6, C("394a50"))
+        c.set(x, oy + i // 2 - 5, C("202e37"))
+    for (px_, lean) in ((ox + 2, 0), (ox + ln - 3, 0)):
+        top = oy + (px_ - ox) // 2
+        for k in range(6):                           # legs
+            c.set(px_ + (k // 4 if broken and lean == 0 and px_ > ox + 4 else 0),
+                  top + 3 + k, C("202e37"))
+        c.set(px_, top - 6, C("202e37"))             # back post
+        c.set(px_, top - 4, C("202e37"))
+    c.outline_auto()
+    cr, orr = crop_canvas(c, (ox + ln // 2, oy + ln // 4 + 8))
+    return cr, orr, ["diamond", 12.0, 5.0]
+
+
+def draw_shelter(rng: random.Random, wrecked: bool) -> tuple[Canvas, tuple, list]:
+    """Bus shelter along the (2,1) axis — it IS the transit district.
+    Glass back wall, flat roof, a route plate; the wrecked one lost a
+    pane and most of its dignity."""
+    c = Canvas(84, 80)
+    ox, oy = 14, 50
+    ln = 48
+    post_h = 26
+    # glass panes between the posts (drawn first, posts overlap)
+    for i in range(ln):
+        x = ox + i
+        by = oy + i // 2
+        pane = i // 16
+        dead_pane = wrecked and pane == 1
+        for k in range(4, post_h - 4):
+            if dead_pane:
+                continue
+            col = C("253a5e")
+            if (i + k) % 9 == 0:
+                col = C("3c5e8b")                    # glint diagonal
+            c.set(x, by - k, col)
+    if wrecked:                                      # shards at the dead pane
+        for i in range(6):
+            sx_ = ox + 18 + rng.randrange(12)
+            c.set(sx_, oy + sx_ // 2 - ox // 2 + rng.randint(0, 2), C("73bed3"))
+            c.set(sx_ + 1, oy + sx_ // 2 - ox // 2 + 1, C("253a5e"))
+    for pi in (0, 16, 32, ln - 1):                   # posts
+        x = ox + pi
+        by = oy + pi // 2
+        for k in range(post_h):
+            c.set(x, by - k, C("202e37"))
+            c.set(x + 1, by - k, C("151d28"))
+    for i in range(ln):                              # frame rails
+        x = ox + i
+        by = oy + i // 2
+        c.set(x, by - 4, C("202e37"))
+        c.set(x, by - post_h + 3, C("202e37"))
+    # roof slab: top face toward NE, drip edge
+    for i in range(ln + 2):
+        x = ox - 1 + i
+        ry = oy + (i - 1) // 2 - post_h
+        for t in range(1, 9):
+            col = C("151d28") if t < 8 else C("10141f")
+            c.set(x + t, ry - (t + 1) // 2, col)
+            c.set(x + t, ry - t // 2, col)
+        c.set(x, ry, C("202e37"))                    # fascia
+        c.set(x, ry + 1, C("090a14"))
+    if wrecked:                                      # roof corner sags
+        for i in range(10):
+            c.set(ox + ln - 8 + i, oy + (ln - 8 + i) // 2 - post_h + i // 3,
+                  C("151d28"))
+    # bench inside
+    for i in range(20):
+        x = ox + 14 + i
+        by = oy + (14 + i) // 2
+        c.set(x, by - 8, C("602c2c"))
+        c.set(x, by - 7, C("341c27"))
+    # route plate on the near post
+    c.rect(ox - 3, oy - post_h + 2, ox + 3, oy - post_h + 8, C("090a14"))
+    c.rect(ox - 2, oy - post_h + 3, ox + 2, oy - post_h + 7, C("de9e41"))
+    c.set(ox - 1, oy - post_h + 5, C("090a14"))
+    c.set(ox + 1, oy - post_h + 5, C("090a14"))
+    c.outline_auto()
+    cr, orr = crop_canvas(c, (ox + ln // 2, oy + ln // 4 + 2))
+    return cr, orr, ["diamond", 20.0, 8.0]
+
+
 def make_body(variant: int) -> tuple[Canvas, tuple, list | None]:
     """A fallen raider past the barricades — drawn with the SAME lying-figure
     geometry as the player's prone sheet, so bodies are exactly character
@@ -2354,6 +2543,22 @@ def prop_inventory() -> tuple[dict, dict]:
     for i in range(4):
         rng = random.Random(f"{SEED}:stick:{i}")
         fam("stick", i, draw_stick(rng, i))
+    for i in range(3):
+        rng = random.Random(f"{SEED}:bush:{i}")
+        fam("bush", i, draw_bush(rng, i))
+    for i in range(3):
+        rng = random.Random(f"{SEED}:tuft:{i}")
+        fam("tuft", i, draw_tuft(rng, i))
+    for i, broken in enumerate((False, True)):
+        rng = random.Random(f"{SEED}:bench:{i}")
+        bench = draw_bench(rng, broken)
+        fam("bench_x", i, bench)
+        fam("bench_y", i, mirror_prop(bench))
+    for i, wrecked in enumerate((False, True)):
+        rng = random.Random(f"{SEED}:shelter:{i}")
+        shelter = draw_shelter(rng, wrecked)
+        fam("shelter_x", i, shelter)
+        fam("shelter_y", i, mirror_prop(shelter))
     for i, kind in enumerate(("can_a", "can_b", "can_c", "bottle", "paper")):
         rng = random.Random(f"{SEED}:trash:{i}")
         fam("trash", i, draw_trash(rng, kind))

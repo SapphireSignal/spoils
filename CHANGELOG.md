@@ -3,6 +3,33 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.16] — 2026-08-01
+
+### Changed
+- **Raid music, the user's way:** they auditioned 23 candidate tracks from
+  a listening folder (`music/in game music/`, .gdignore'd) and kept three
+  (guitar 02 / harp 01 / piano 01). Those now rotate randomly — never the
+  same twice in a row — playing continuously from raid start until death
+  with only a 2–5 s breath between tracks (the old 70–180 s silences read
+  as broken audio). Death stops the music; respawn restarts it.
+- **Streets cleaned up** (user call): asphalt is SMOOTH, with damage moved
+  into dedicated tiles — wandering cracks (~4.5%) and chipped potholes
+  (~2%). Sidewalks are clean slabs with joints; ~16% carry a hairline
+  crack, ~10% are broken open to the dirt.
+- **The world got little lives** (user request): BUSHES in the greens and
+  against buildings — walk through one and it rustles, wiggles (whole-
+  pixel, grid-safe), and fades to 55% around you (new Foliage manager);
+  grass TUFTS breaking through bare concrete; BENCHES and BUS SHELTERS
+  (it is the transit district) spaced along the walkways; and a dead-spot
+  pass that drops a tuft, bush, or scrap of litter wherever a whole
+  neighborhood scanned empty.
+- **Color corrections:** forest floors are green-family only (the old
+  warm-brown patches read as red confetti across every wood); dirt paths
+  mix in gray mud so long strips no longer read blood-red.
+- **Harness hardening:** any run whose world never readies now aborts
+  loudly after 30 s instead of hanging (the "stuck background task" the
+  user kept having to kill); the world probe reports WALKS and FOLIAGE.
+
 ## [0.6.15] — 2026-08-01
 
 ### Changed

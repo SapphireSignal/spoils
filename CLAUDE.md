@@ -7,8 +7,22 @@ This file carries everything a fresh session needs that isn't in those two.
 
 ## Where we are
 
-- **Version v0.6.15**, all committed/tagged/pushed (eighteen releases on
-  2026-08-01, v0.6.3 → v0.6.15 — read CHANGELOG.md for the full arc).
+- **Version v0.6.16**, all committed/tagged/pushed (nineteen releases on
+  2026-08-01, v0.6.3 → v0.6.16 — read CHANGELOG.md for the full arc).
+- v0.6.16: raid music = USER'S 3 AUDITIONED PICKS (guitar02/harp01/piano01
+  as raid_0..2) rotating random-no-repeat, CONTINUOUS from raid start to
+  death (2-5s breaths; stop on died, restart post-respawn; the audition
+  folder music/"in game music"/ is .gdignore'd — more candidates go there,
+  assets/audio/music/raid_N.ogg are the installed picks). Streets: smooth
+  asphalt + asphalt_crack/_hole tiles; sidewalk plain/crack/broken rolls.
+  scripts/foliage.gd = bush manager (wiggle ±1 WHOLE px on 6-frame toggle,
+  alpha→0.55 inside, grass rustle on enter; bushes registered via
+  info["bushes"]). Benches/shelters (bench_/shelter_ x/y families) spaced
+  on walk cells; _fill_dead_spots lattice pass (tuft/bush/trash on bare
+  3x3 neighborhoods). Forest tiles = green family only; dirt gets gray
+  mud. HARNESS: _ensure_game_scene aborts loudly after 30s (fail-fast —
+  never let a broken world hang a probe again); probe prints WALKS +
+  FOLIAGE cells.
 - v0.6.15: menu backdrops = den/drain/storm (LIVING: candle/needles/LEDs/
   smoke; ray/motes/drips; rain/strikes/bolts/thunder/flickering windows —
   scene coords use PC offset const, backdrop 0/1/2), raid music (music.gd

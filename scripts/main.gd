@@ -117,6 +117,12 @@ func _build_world() -> void:
 	for entry in (info["alarm_cars"] as Array):
 		alarms.register(entry["node"] as Node2D, entry["lights"] as Array)
 	alarms.setup(_player)
+	var foliage := Foliage.new()
+	foliage.name = "Foliage"
+	add_child(foliage)
+	for bush in (info["bushes"] as Array):
+		foliage.register(bush as Node2D)
+	foliage.setup(_player)
 	_player.setup_surfaces(_floor_layer, _surface_kinds_from(info["floor_coords"]))
 	# (zoom never widens past the native view, so no edge camera-guard needed)
 	_build_prompt()
@@ -238,6 +244,7 @@ func _on_player_died() -> void:
 	if _respawning:
 		return
 	_respawning = true
+	Music.stop_raid(1.0)  # the raid ends with you; a fresh one restarts it
 	var layer := CanvasLayer.new()
 	layer.layer = 90
 	var black := ColorRect.new()
@@ -267,3 +274,4 @@ func _on_player_died() -> void:
 	await fade_out.finished
 	layer.queue_free()
 	_respawning = false
+	Music.play_raid()
