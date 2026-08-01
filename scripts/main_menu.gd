@@ -66,6 +66,12 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.26", ["the map is drawn now, not screenshotted: roads are",
+		"real strokes, woods are soft green, buildings are solid,",
+		"the rail has ties and the wire is a dashed red line",
+		"no more boxes around anything - names sit on the map",
+		"you are a pulsing ring you cannot lose",
+		"it fills the window, and the zoom is smooth"]],
 	["v0.6.25", ["windows behave now: whatever you have open owns the",
 		"screen, and nothing behind it listens",
 		"esc closes the map instead of opening settings behind it",

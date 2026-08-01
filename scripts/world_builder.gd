@@ -193,6 +193,7 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 		"zones": _zone_summary(),
 		"story_h": _story_h,
 		"map_image": _bake_map_image(),
+		"map_vec": _map_vectors(),
 		"poi": {
 			"court": [_court_rect.position.x, _court_rect.position.y,
 				_court_rect.size.x, _court_rect.size.y],
@@ -2779,6 +2780,60 @@ func _bake_map_image() -> Image:
 		if cell.x >= 0 and cell.y >= 0 and cell.x < MAP_W and cell.y < MAP_H:
 			img.set_pixel(cell.x, cell.y, Color("de9e41"))
 	return img
+
+
+func _map_vectors() -> Dictionary:
+	# SHAPES, not pixels: the map screen draws the district with real
+	# strokes and fills (user: "vector drawn nice art, not pixel"), so it
+	# needs the plan itself, not a 1px-per-cell bake.
+	var roads_v: Array = []
+	for r in _roads_v:
+		roads_v.append([r.x, r.y])
+	var roads_h: Array = []
+	for r in _roads_h:
+		roads_h.append([r.x, r.y])
+	var blocks: Array = []
+	for b in _block_rects:
+		var br: Rect2i = _block_rects[b]
+		blocks.append([br.position.x, br.position.y, br.size.x, br.size.y,
+			str(_zones.get(b, "open"))])
+	var buildings: Array = []
+	for plot in _plots:
+		var pr: Rect2i = plot["rect"]
+		var kind := str(plot["kind"])
+		if plot.get("safehouse", false):
+			kind = "safehouse"
+		buildings.append([pr.position.x, pr.position.y, pr.size.x, pr.size.y,
+			kind, int(plot.get("stories", 1))])
+	# the woods as coarse 3-cell buckets: a few hundred soft blobs read as
+	# forest, where a per-tree pass would be thousands of draw calls
+	var green: Dictionary = {}
+	for cell in _forest:
+		var c := cell as Vector2i
+		var key := Vector2i(c.x / 3, c.y / 3)
+		green[key] = int(green.get(key, 0)) + 1
+	var groves: Array = []
+	for key in green:
+		var k := key as Vector2i
+		var autumn := _autumn_rect.has_point(Vector2i(k.x * 3, k.y * 3))
+		groves.append([k.x * 3, k.y * 3, int(green[key]), 1 if autumn else 0])
+	var water: Array = []          # nothing wet in transit — the mills map
+	return {                        # will want this slot
+		"size": [MAP_W, MAP_H],
+		"inset": BARRIER_INSET,
+		"roads_v": roads_v,
+		"roads_h": roads_h,
+		"blocks": blocks,
+		"buildings": buildings,
+		"groves": groves,
+		"water": water,
+		"rail_row": _rail_row,
+		"plaza": [_court_rect.position.x, _court_rect.position.y,
+			_court_rect.size.x, _court_rect.size.y],
+		"apron": [_depot_rect.position.x, _depot_rect.position.y,
+			_depot_rect.size.x, _depot_rect.size.y],
+		"spawn_cell": [_spawn_cell.x, _spawn_cell.y],
+	}
 
 
 func _collect_fog_spots() -> void:

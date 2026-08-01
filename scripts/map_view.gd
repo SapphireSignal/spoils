@@ -11,9 +11,24 @@ extends CanvasLayer
 ## unhandled-input hit test was eaten by the panel and clicking transit
 ## did nothing (user report).
 
-const ZOOMS := [2, 3, 4, 5, 6, 8]
 const TOOLTIP_DELAY := 0.5
-const LABEL_BG := Color(0.035, 0.039, 0.078, 0.72)
+# the map's own palette — a drawn chart, not a screenshot of the ground
+const INK := Color(0.043, 0.055, 0.086)          # deep paper
+const LAND := Color(0.118, 0.153, 0.196)         # the district's ground
+const BLOCK := Color(0.129, 0.165, 0.208)        # barely off the ground:
+                                                 # blocks are where roads
+                                                 # AREN'T, not boxes drawn
+                                                 # on top of it
+const ROAD := Color(0.353, 0.400, 0.443)         # tarmac stroke
+const ROAD_EDGE := Color(0.235, 0.278, 0.310)
+const GREEN := Color(0.145, 0.310, 0.235)        # the woods
+const GREEN_AUTUMN := Color(0.310, 0.251, 0.153)  # turned, not bleeding
+const BUILDING := Color(0.545, 0.600, 0.627)
+const BUILDING_WARM := Color(0.565, 0.373, 0.271)
+const RAIL := Color(0.294, 0.212, 0.208)
+const RING := Color(0.694, 0.259, 0.180)
+const ME := Color(0.976, 0.910, 0.702)
+const LABEL := Color(0.804, 0.851, 0.839)
 
 var _player: Player
 var _environment: Node
@@ -26,13 +41,15 @@ var _font_size := 8
 var _mode := "world"                  # remembered across open/close
 var _panel: PanelContainer
 var _canvas: Control
+var _markers: Control
+var _vec: Dictionary = {}             # the district as shapes, not pixels
 var _world_root: Control
 var _transit_root: Control
 var _status: Label
 var _hint: Label
 var _tooltip: PanelContainer
 var _tooltip_label: Label
-var _zoom_index := 0                  # ZOOMS[0] shows the whole district
+var _zoom := 3.0                      # screen px per map cell, continuous
 var _pan := Vector2.ZERO
 var _recenter := false                # centering waits for real layout
 var _dragging := false
@@ -49,6 +66,7 @@ func setup(info: Dictionary, player: Player, environment: Node,
 	_floor_layer = floor_layer
 	var map_image: Image = info["map_image"]
 	_map_tex = ImageTexture.create_from_image(map_image)
+	_vec = info.get("map_vec", {})
 	var theme := UITheme.get_theme()
 	_font = theme.default_font
 	if theme.has_default_font_size():
@@ -212,10 +230,17 @@ func _build_ui() -> void:
 	_canvas.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_canvas.clip_contents = true
 	_canvas.mouse_filter = Control.MOUSE_FILTER_STOP
-	_canvas.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	_canvas.draw.connect(_draw_transit)
+	_canvas.draw.connect(_draw_district)
 	_canvas.gui_input.connect(_on_canvas_input)
 	_transit_root.add_child(_canvas)
+	# markers live on their own layer: the district is heavy to draw and
+	# only changes when you pan or zoom, while "me" moves every frame
+	_markers = Control.new()
+	_markers.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_markers.clip_contents = true
+	_markers.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_markers.draw.connect(_draw_markers)
+	_transit_root.add_child(_markers)
 	var back := Button.new()
 	back.text = "back"
 	back.position = Vector2(10, 8)
@@ -263,36 +288,41 @@ func _set_mode(mode: String) -> void:
 	_tooltip.visible = false
 	if mode == "transit":
 		_recenter = true
+	_redraw_all()
+
+
+func _redraw_all() -> void:
 	_canvas.queue_redraw()
+	_markers.queue_redraw()
 
 
 func _center_view() -> void:
-	# whole-map zooms center the PLAYABLE district; closer zooms center
+	# a whole-district view centres the district; zoomed in, centre on
 	# the raider
-	var zoom := float(ZOOMS[_zoom_index])
 	var play := _playable()
-	if play.size.x * zoom <= _canvas.size.x \
-			and play.size.y * zoom <= _canvas.size.y:
-		_pan = _canvas.size * 0.5 - play.get_center() * zoom
+	if play.size.x * _zoom <= _canvas.size.x \
+			and play.size.y * _zoom <= _canvas.size.y:
+		_pan = _canvas.size * 0.5 - play.get_center() * _zoom
 	else:
 		var cell := Vector2(_floor_layer.local_to_map(_player.global_position))
-		_pan = _canvas.size * 0.5 - cell * zoom
+		_pan = _canvas.size * 0.5 - cell * _zoom
 	_clamp_pan()
 
 
 func _clamp_pan() -> void:
-	# a map smaller than the window CENTERS; a bigger one pans within it
-	var zoom := float(ZOOMS[_zoom_index])
-	var span := 256.0 * zoom
-	if span <= _canvas.size.x:
-		_pan.x = (_canvas.size.x - span) * 0.5
+	# clamp against the PLAYABLE district (the buffer beyond the wire is
+	# nobody's business), centring it whenever it fits
+	var play := _playable()
+	var span := play.size * _zoom
+	var origin := play.position * _zoom
+	if span.x <= _canvas.size.x:
+		_pan.x = (_canvas.size.x - span.x) * 0.5 - origin.x
 	else:
-		_pan.x = clampf(_pan.x, _canvas.size.x - span, 0.0)
-	if span <= _canvas.size.y:
-		# keep the PLAYABLE middle centered vertically, not the whole image
-		_pan.y = (_canvas.size.y - span) * 0.5
+		_pan.x = clampf(_pan.x, _canvas.size.x - span.x - origin.x, -origin.x)
+	if span.y <= _canvas.size.y:
+		_pan.y = (_canvas.size.y - span.y) * 0.5 - origin.y
 	else:
-		_pan.y = clampf(_pan.y, _canvas.size.y - span, 0.0)
+		_pan.y = clampf(_pan.y, _canvas.size.y - span.y - origin.y, -origin.y)
 
 
 func toggle() -> void:
@@ -342,20 +372,23 @@ func _on_canvas_input(event: InputEvent) -> void:
 	elif event is InputEventMouseMotion and _dragging:
 		_pan += (event as InputEventMouseMotion).relative
 		_clamp_pan()
-		_canvas.queue_redraw()
+		_redraw_all()
 
 
 func _step_zoom(direction: int) -> void:
-	var old_zoom := float(ZOOMS[_zoom_index])
-	_zoom_index = clampi(_zoom_index + direction, 0, ZOOMS.size() - 1)
-	var new_zoom := float(ZOOMS[_zoom_index])
-	if old_zoom != new_zoom:
+	# smooth zoom now the map is drawn, not sampled — no pixel ladder
+	var play := _playable()
+	var fit := minf(_canvas.size.x / (play.size.x + 8.0),
+		_canvas.size.y / (play.size.y + 8.0))
+	var old_zoom := _zoom
+	_zoom = clampf(_zoom * (1.25 if direction > 0 else 0.8), fit, 24.0)
+	if not is_equal_approx(old_zoom, _zoom):
 		# keep the point under the cursor put while zooming
 		var mouse := _canvas.get_local_mouse_position()
 		var map_at := (mouse - _pan) / old_zoom
-		_pan = mouse - map_at * new_zoom
+		_pan = mouse - map_at * _zoom
 		_clamp_pan()
-		_canvas.queue_redraw()
+		_redraw_all()
 
 
 func _process(delta: float) -> void:
@@ -366,7 +399,9 @@ func _process(delta: float) -> void:
 		return
 	_time_accum += delta
 	if _mode == "transit":
-		_canvas.queue_redraw()          # live markers move in realtime
+		_markers.queue_redraw()         # only the markers move each frame
+		if _recenter:
+			_canvas.queue_redraw()
 		var t: float = float(_environment.get("day_time"))
 		var hour := int(t * 24.0)
 		var minute := int(fmod(t * 24.0, 1.0) * 60.0)
@@ -394,10 +429,9 @@ func _update_tooltip(delta: float) -> void:
 				blurb = tile["blurb"]
 				break
 	else:
-		var zoom := float(ZOOMS[_zoom_index])
 		var mouse := _canvas.get_local_mouse_position()
 		if Rect2(Vector2.ZERO, _canvas.size).has_point(mouse):
-			var cell := (mouse - _pan) / zoom
+			var cell := (mouse - _pan) / _zoom
 			for poi in _pois:
 				if (poi["rect"] as Rect2).has_point(cell):
 					key = str(poi["name"]) + str(poi["rect"])
@@ -421,68 +455,194 @@ func _update_tooltip(delta: float) -> void:
 		_tooltip.position = at.round()
 
 
-func _draw_transit() -> void:
+func _cell_to_screen(cell: Vector2) -> Vector2:
+	return _pan + cell * _zoom
+
+
+func _draw_district() -> void:
 	# centering DEFERS to the first real draw: at _set_mode time the
 	# layout hasn't flowed and the canvas reports zero size (the map once
 	# opened panned to nowhere because of it)
 	if _recenter and _canvas.size.x > 100.0:
 		_recenter = false
-		# open at the LARGEST whole zoom that still fits the district —
-		# the map should fill the window, not float in it
 		var play := _playable()
-		_zoom_index = 0
-		for zi in ZOOMS.size():
-			if play.size.x * ZOOMS[zi] <= _canvas.size.x \
-					and play.size.y * ZOOMS[zi] <= _canvas.size.y:
-				_zoom_index = zi
+		# fill the window: the map is the point of this screen
+		_zoom = minf(_canvas.size.x / (play.size.x + 8.0),
+			_canvas.size.y / (play.size.y + 8.0))
 		_center_view()
-	var zoom := float(ZOOMS[_zoom_index])
-	_canvas.draw_texture_rect(_map_tex, Rect2(_pan, Vector2(256, 256) * zoom),
-		false)
-	# POI names ON the map (user: "where all the pois are") — small type
-	# with a dark backing; crowded labels yield to whoever drew first
+	if _vec.is_empty():
+		_canvas.draw_texture_rect(_map_tex,
+			Rect2(_pan, Vector2(256, 256) * _zoom), false)
+		return
+	var z := _zoom
+	var inset := float(_vec["inset"])
+	var w := float((_vec["size"] as Array)[0])
+	var h := float((_vec["size"] as Array)[1])
+
+	# the ground the district stands on
+	var land := Rect2(_cell_to_screen(Vector2(inset, inset)),
+		Vector2(w - inset * 2.0, h - inset * 2.0) * z)
+	_canvas.draw_rect(land, LAND)
+	# city blocks: a shade up from the ground, so the grain of the town
+	# reads without any of the hollow boxes the old map drew
+	for b in (_vec["blocks"] as Array):
+		var br := Rect2(_cell_to_screen(Vector2(float(b[0]), float(b[1]))),
+			Vector2(float(b[2]), float(b[3])) * z)
+		_canvas.draw_rect(br, BLOCK)
+	# the woods, as soft overlapping blobs
+	for g in (_vec["groves"] as Array):
+		var density := float(g[2])
+		if density < 2.0:
+			continue
+		var centre := _cell_to_screen(Vector2(float(g[0]) + 1.5, float(g[1]) + 1.5))
+		var radius := (1.4 + minf(density, 9.0) * 0.16) * z
+		var col: Color = GREEN_AUTUMN if int(g[3]) == 1 else GREEN
+		_canvas.draw_circle(centre, radius, col, true, -1.0, true)
+	# the plaza and the depot apron: paved clearings
+	for paved in [_vec["plaza"], _vec["apron"]]:
+		var pr: Array = paved
+		if float(pr[2]) <= 0.0:
+			continue
+		_canvas.draw_rect(Rect2(
+			_cell_to_screen(Vector2(float(pr[0]), float(pr[1]))),
+			Vector2(float(pr[2]), float(pr[3])) * z), ROAD_EDGE)
+	# roads: real strokes, edged, with a hairline centre — a chart, not
+	# a grid of squares (user: "just make it a normal map")
+	for r in (_vec["roads_v"] as Array):
+		var x := float(r[0])
+		var rw := float(r[1]) * z
+		var top := _cell_to_screen(Vector2(x, inset))
+		var bot := _cell_to_screen(Vector2(x, h - inset))
+		var mid := top.x + rw * 0.5
+		_canvas.draw_line(Vector2(mid, top.y), Vector2(mid, bot.y),
+			ROAD_EDGE, rw + 2.0, true)
+		_canvas.draw_line(Vector2(mid, top.y), Vector2(mid, bot.y),
+			ROAD, rw, true)
+	for r in (_vec["roads_h"] as Array):
+		var y := float(r[0])
+		var rw2 := float(r[1]) * z
+		var left := _cell_to_screen(Vector2(inset, y))
+		var right := _cell_to_screen(Vector2(w - inset, y))
+		var mid2 := left.y + rw2 * 0.5
+		_canvas.draw_line(Vector2(left.x, mid2), Vector2(right.x, mid2),
+			ROAD_EDGE, rw2 + 2.0, true)
+		_canvas.draw_line(Vector2(left.x, mid2), Vector2(right.x, mid2),
+			ROAD, rw2, true)
+	# the rail line, with ties
+	var rail_row := float(_vec["rail_row"])
+	if rail_row > 0.0:
+		var ry := _cell_to_screen(Vector2(0.0, rail_row + 0.5)).y
+		var rx0 := _cell_to_screen(Vector2(inset, 0.0)).x
+		var rx1 := _cell_to_screen(Vector2(w - inset, 0.0)).x
+		_canvas.draw_line(Vector2(rx0, ry), Vector2(rx1, ry), RAIL,
+			maxf(2.0, z * 1.6), true)
+		var tie := rx0
+		while tie < rx1:
+			_canvas.draw_line(Vector2(tie, ry - z), Vector2(tie, ry + z),
+				RAIL.lightened(0.25), 1.0, true)
+			tie += maxf(6.0, z * 3.0)
+	# buildings: solid footprints with a lit north edge
+	for b in (_vec["buildings"] as Array):
+		var rect := Rect2(_cell_to_screen(Vector2(float(b[0]), float(b[1]))),
+			Vector2(float(b[2]), float(b[3])) * z)
+		var kind := str(b[4])
+		var col := BUILDING
+		if kind == "house" or kind == "safehouse":
+			col = BUILDING_WARM
+		elif kind == "school":
+			col = BUILDING_WARM.lightened(0.12)
+		_canvas.draw_rect(rect, col)
+		_canvas.draw_line(rect.position, rect.position + Vector2(rect.size.x, 0.0),
+			col.lightened(0.25), 1.0, true)
+		if int(b[5]) == 2:                       # two-story: a soft core
+			_canvas.draw_rect(rect.grow(-maxf(1.0, z * 0.6)), col.lightened(0.10))
+		if kind == "safehouse":
+			# home is RINGED, not lit up: a bright slab here competed with
+			# the "me" marker that stands on it half the time
+			_canvas.draw_rect(rect.grow(maxf(1.5, z * 0.4)),
+				Color("de9e41"), false, 1.5)
+	# the wire: a broken red line all the way round the playable district
+	var ring := Rect2(_cell_to_screen(Vector2(inset, inset)),
+		Vector2(w - inset * 2.0, h - inset * 2.0) * z)
+	_draw_dashed_rect(_canvas, ring, RING, 2.0, 7.0, 5.0)
+
+
+func _draw_dashed_rect(on: Control, rect: Rect2, col: Color, width: float,
+		dash: float, gap: float) -> void:
+	var corners := [rect.position, Vector2(rect.end.x, rect.position.y),
+		rect.end, Vector2(rect.position.x, rect.end.y)]
+	for i in 4:
+		var a: Vector2 = corners[i]
+		var b: Vector2 = corners[(i + 1) % 4]
+		var span := a.distance_to(b)
+		var dir := (b - a).normalized()
+		var t := 0.0
+		while t < span:
+			var t2 := minf(t + dash, span)
+			on.draw_line(a + dir * t, a + dir * t2, col, width, true)
+			t = t2 + gap
+
+
+func _draw_markers() -> void:
+	if _vec.is_empty() and _map_tex == null:
+		return
+	# POI names ON the map — no boxes any more (user: "remove all of the
+	# squares"), just type with a dark halo so it reads over anything
 	var drawn: Array[Rect2] = []
 	for poi in _pois:
 		if not bool(poi["label"]):
 			continue
 		var text := str(poi["name"])
-		var center: Vector2 = (poi["rect"] as Rect2).get_center() * zoom + _pan
-		var w := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1,
+		var centre: Vector2 = _cell_to_screen((poi["rect"] as Rect2).get_center())
+		var tw := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1,
 			_font_size).x
-		var pos := (center + Vector2(-w * 0.5, float(_font_size) * 0.5 - 1.0)).round()
-		var bg := Rect2(pos + Vector2(-2.0, -float(_font_size)),
-			Vector2(w + 4.0, float(_font_size) + 3.0))
+		var pos := (centre + Vector2(-tw * 0.5, float(_font_size) * 0.5)).round()
+		var bounds := Rect2(pos - Vector2(3.0, float(_font_size)),
+			Vector2(tw + 6.0, float(_font_size) + 4.0))
 		var clash := false
 		for r in drawn:
-			if r.intersects(bg):
+			if r.intersects(bounds):
 				clash = true
 				break
 		if clash:
 			continue
-		drawn.append(bg)
-		var col := Color("c7cfcc") if text == "safehouse" else Color("a8b5b2")
-		_canvas.draw_rect(bg, LABEL_BG)
-		_canvas.draw_string(_font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1,
-			_font_size, col)
-	# live car markers (the driveable ones wander)
+		drawn.append(bounds)
+		_halo_text(_markers, pos, text,
+			ME if text == "safehouse" else LABEL)
+	# live car dots
 	for node in get_tree().get_nodes_in_group("cars"):
 		var car_cell := Vector2(_floor_layer.local_to_map(
 			(node as Node2D).global_position)) + Vector2(0.5, 0.5)
-		_canvas.draw_rect(Rect2(_pan + car_cell * zoom - Vector2(1, 1),
-			Vector2(2, 2)), Color("de9e41"))
-	# the raider: a pulsing marker that says exactly who it is
+		_markers.draw_circle(_cell_to_screen(car_cell), maxf(2.0, _zoom * 0.9),
+			Color("de9e41"), true, -1.0, true)
+	# ME: impossible to lose (user: "alot more noticable"). A pulsing ring,
+	# a bright core, cross ticks, and the label riding above it.
 	var cell := Vector2(_floor_layer.local_to_map(_player.global_position)) \
 		+ Vector2(0.5, 0.5)
-	var ppos := (_pan + cell * zoom).round()
-	var pulse := 0.7 + 0.3 * sin(_time_accum * 5.0)
-	_canvas.draw_rect(Rect2(ppos - Vector2(3, 3), Vector2(6, 6)),
-		Color(0.035, 0.039, 0.078, 0.9))
-	_canvas.draw_rect(Rect2(ppos - Vector2(2, 2), Vector2(4, 4)),
-		Color(0.92, 0.93, 0.91, pulse))
+	var p := _cell_to_screen(cell)
+	var beat := 0.5 + 0.5 * sin(_time_accum * 3.4)
+	var ring_r := 9.0 + 5.0 * beat
+	_markers.draw_circle(p, ring_r, Color(ME.r, ME.g, ME.b, 0.14 + 0.16 * (1.0 - beat)),
+		true, -1.0, true)
+	_markers.draw_arc(p, ring_r, 0.0, TAU, 28,
+		Color(ME.r, ME.g, ME.b, 0.55), 1.5, true)
+	for i in 4:                                  # cross ticks
+		var dir := [Vector2.UP, Vector2.RIGHT, Vector2.DOWN, Vector2.LEFT][i] as Vector2
+		_markers.draw_line(p + dir * 5.0, p + dir * 8.5, ME, 1.5, true)
+	_markers.draw_circle(p, 4.5, Color(0.043, 0.055, 0.086, 0.95), true, -1.0, true)
+	_markers.draw_circle(p, 3.0, ME, true, -1.0, true)
 	var me_w := _font.get_string_size("me", HORIZONTAL_ALIGNMENT_LEFT, -1,
 		_font_size).x
-	var me_pos := (ppos + Vector2(-me_w * 0.5, -6.0)).round()
-	_canvas.draw_rect(Rect2(me_pos + Vector2(-2.0, -float(_font_size)),
-		Vector2(me_w + 4.0, float(_font_size) + 3.0)), LABEL_BG)
-	_canvas.draw_string(_font, me_pos, "me", HORIZONTAL_ALIGNMENT_LEFT, -1,
-		_font_size, UITheme.TEXT_BRIGHT)
+	_halo_text(_markers, (p + Vector2(-me_w * 0.5, -ring_r - 4.0)).round(),
+		"me", ME)
+
+
+func _halo_text(on: Control, pos: Vector2, text: String, col: Color) -> void:
+	# a dark halo instead of a label box — legible over roads, woods or
+	# rooftops without cutting a rectangle out of the map
+	for off in [Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1),
+			Vector2(-1, -1), Vector2(1, 1), Vector2(-1, 1), Vector2(1, -1)]:
+		on.draw_string(_font, pos + off, text, HORIZONTAL_ALIGNMENT_LEFT, -1,
+			_font_size, Color(0.043, 0.055, 0.086, 0.92))
+	on.draw_string(_font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1,
+		_font_size, col)

@@ -3,6 +3,35 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.26] — 2026-08-01
+
+### Changed
+- **The district map is DRAWN, not sampled** (user: "make it all vector
+  drawn... maps with pixel dont really look too good"). The builder now
+  exports the plan itself — `_map_vectors()`: road lines, block rects,
+  building footprints with kind and storey count, the woods bucketed
+  into coarse groves, the rail row, plaza and apron. The map screen
+  strokes and fills that with antialiased primitives: roads as edged
+  strokes, woods as overlapping soft circles (autumn muted, not
+  bleeding red), buildings as solid footprints with a lit north edge
+  and a soft core when they have an upstairs, the rail as a line with
+  ties, and the wire as a dashed red ring around the playable district.
+- **No boxes anywhere** (user: "remove all of the squares"): POI names
+  are drawn with a dark halo instead of a label chip, and city blocks
+  now sit a hair off the ground colour instead of reading as panels.
+  Home is a thin amber ring around the safehouse rather than a bright
+  slab — the slab was swallowing the player marker standing on it.
+- **"me" is unmissable** (user ask): a pulsing translucent disc, a ring,
+  four cross ticks, a dark-backed bright core, and the label riding
+  above it — over roads, woods or rooftops.
+- **Fills the window and zooms smoothly**: the map opens at the scale
+  that fits the whole playable district and the wheel now zooms
+  continuously (1.25×/step, cursor-anchored) — the old integer pixel
+  ladder existed only because the map was a bitmap.
+- Perf: the district is heavy to draw but only changes when you pan or
+  zoom, so it lives on its own layer and the markers redraw alone each
+  frame. 240 avg, worst 5.34 ms, ~5.3k nodes. SMOKE PASS.
+
 ## [0.6.25] — 2026-08-01
 
 ### Fixed
