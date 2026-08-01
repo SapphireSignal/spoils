@@ -48,7 +48,13 @@ Audio taste addendum learned the same day: footsteps at -18dB were
   deploys, fresh seeded layout per deploy.
 - **Milestone 1 (walkable world) is DONE** (~18 user feedback passes, see
   CHANGELOG v0.2.0 → v0.6.5).
-- **NEXT: Milestone 2 — GUNPLAY + THE TUNNELS, to ship as v0.7.0.** Mouse
+- **NEXT: Milestone 2 — GUNPLAY + TUNNELS + STORY, to ship as v0.7.0.**
+  Story foundation is drafted in LORE.md (the cordon/wardens lore, magpie +
+  traders mara/kettle/verne, and the full shot list for "the wire" — the
+  first-launch 2-min painted cinematic that dissolves through dawn mist
+  onto the live district, film straight into gameplay). Menu-backdrop
+  pitches also live there — THE USER PICKS which to build; do not build
+  unpicked ones. Mouse
   aim, hitscan with tracers, muzzle flash, screen shake, destructible props,
   synthesized gun sounds — PLUS the underground tunnel system (user request
   2026-08-01, specced in DESIGN.md §8): secret bookshelf passages in some

@@ -207,7 +207,15 @@ Claude must prove its own work without the user:
    plus a feedback pass: smooth ground, brick buildings, distinct props,
    6-frame walk, pixel-snapped camera.)*
 2. **Gunplay (v0.7):** aim at mouse, shoot with tracers/flash/shake/sound,
-   destructible props. **Plus THE TUNNELS (user request 2026-08-01):** an
+   destructible props. **Plus THE STORY FOUNDATION (user request
+   2026-08-01):** the lore in `LORE.md` (the cordon, the wardens, magpie,
+   traders mara/kettle/verne) and the first-launch ~2 min cinematic
+   "the wire" — 2D painted widescreen shots, letterboxed, parallax drifts,
+   animated layers, lowercase subtitles; ends by dissolving through dawn
+   mist onto the LIVE generated district (built async behind the final
+   shots) — film straight into gameplay, no menu on first boot. Skippable;
+   shown once (flag in settings); harness always skips.
+   **Plus THE TUNNELS (user request 2026-08-01):** an
    underground tunnel system beneath the district. Entrances: a secret
    passage behind the bookshelf in SOME houses (interact to slide it), and
    exactly TWO interactive manholes out on the streets — open the cover,
