@@ -30,9 +30,22 @@ This file carries everything a fresh session needs that isn't in those two.
   1.16, low-pass "engine" bus); foliage muted while driving. Trails
   never cross sidewalks; dash halves paired (_dash_here). **NEXT
   VEHICLE STEP (user ask, deliberately staged): 8-direction vehicle
-  sheets so the nose tracks the cursor at 45 degrees — build ONE sample
-  sedan sheet for user sign-off BEFORE converting the fleet (the
-  end-face saga earned that process).** **v0.6.22 = THE FIXED
+  sheets so the nose tracks the cursor at 45 degrees. SAMPLE BUILT
+  2026-08-01 and SENT — AWAITING SIGN-OFF; do not convert the fleet
+  until the user approves. gen_art.py: `_veh_profile` (length-agnostic
+  side profile), `make_vehicle_flank` (screen-HORIZONTAL heading: the
+  flank faces camera dead-on, roof is a flat band straight above, both
+  ends edge-on) and `make_vehicle_head` (screen-VERTICAL heading: both
+  flanks edge-on, so it is FOUR solid bands — end face / hood-or-trunk
+  / raked glass / roof, drawn far-to-near with skirt fills; per-station
+  loops LADDER into stripes, never do that). Registered as
+  vehicle8_{n,s,e,w}_0 (scheme 4 steel-blue sedan) — sample names, the
+  game references NONE of them. Known: the new views are drawn a touch
+  wider in proportion than the old (2,1) sheets, whose roof depth (12)
+  under-scales a real car's width; matching them means widening the
+  four diagonal views too — offered to the user, their call. On
+  approval: door_open frames + light coords + colliders per facing,
+  then DIRS/HEADINGS in driveable_car.gd goes 4 → 8.** **v0.6.22 = THE FIXED
   MAP** (user call, retroactive to day one: NO procedural rerolls, ever —
   quests will point at real addresses). DISTRICT_SEED "transit-01" in
   world_builder.gd IS the district (picked from a 5-seed audition: towns

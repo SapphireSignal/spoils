@@ -1537,6 +1537,277 @@ def _diag_poly(half_long: float, half_wide: float) -> list:
         flat.append(round(py, 1))
     return ["poly", flat]
 
+VEH_PALETTES = [
+    ("752438", "411d31", "241527"),   # oxblood
+    ("577277", "394a50", "202e37"),   # gray
+    ("25562e", "19332d", "10141f"),   # olive
+    ("884b2b", "602c2c", "341c27"),   # rust
+    ("3c5e8b", "253a5e", "172038"),   # steel blue
+    ("ad7757", "7a4841", "4d2b32"),   # tan
+]
+
+
+def _veh_profile(kind: str, length: int) -> list[int]:
+    """Longitudinal height profile from the FRONT (index 0) to the rear,
+    at any length. Same silhouette the (2,1) views are built from, so a
+    car keeps its shape whichever way it points."""
+    prof = []
+    for i in range(length):
+        f = i / float(length - 1)
+        if kind == "car":
+            if f < 0.065:
+                h = 7
+            elif f < 0.26:
+                h = 10
+            elif f < 0.37:
+                h = 10 + int((f - 0.26) / 0.11 * 10)   # windshield rake
+            elif f < 0.70:
+                h = 20                                  # roof
+            elif f < 0.78:
+                h = 20 - int((f - 0.70) / 0.08 * 9)     # rear glass
+            elif f < 0.93:
+                h = 11                                  # trunk
+            else:
+                h = 8
+        else:                                           # pickup
+            if f < 0.065:
+                h = 8
+            elif f < 0.22:
+                h = 11
+            elif f < 0.28:
+                h = 11 + int((f - 0.22) / 0.06 * 9)
+            elif f < 0.52:
+                h = 20                                  # cab roof
+            elif f < 0.57:
+                h = 12
+            else:
+                h = 10                                  # bed wall
+        prof.append(h)
+    return prof
+
+
+def make_vehicle_flank(kind: str, scheme: int, broken: bool = False,
+                       door_open: bool = False) -> tuple[Canvas, tuple, list]:
+    """SCREEN-HORIZONTAL heading (a world diagonal): the flank faces the
+    camera dead-on, so the roof lies as a flat band straight above it and
+    both end faces go edge-on. Front at the RIGHT; mirroring gives the
+    westbound twin. One of the four angles the (2,1) sheets can't cover."""
+    rng = random.Random(f"{SEED}:vehicle8:flank:{kind}:{scheme}:{broken}")
+    body_c, body_d, body_dd = (C(n) for n in VEH_PALETTES[scheme])
+    glass, glass_d = C("3c5e8b"), C("253a5e")
+    L = 62
+    depth = 11                       # roof plane: the car's width, foreshortened
+    prof = _veh_profile(kind, L)
+    clear = 4
+    ox, oy = 6, 46
+    c = Canvas(L + 14, 68)
+    for i in range(L):               # the near flank: one clean vertical face
+        x = ox + i
+        for y in range(oy - clear - prof[i], oy - clear + 1):
+            c.set(x, y, body_d)
+    for i in range(L):               # top surface, straight up (width axis)
+        x = ox + i
+        top = oy - clear - prof[i]
+        for t in range(1, depth + 1):
+            col = body_c
+            if t == depth:
+                col = body_dd        # the far rim closes the silhouette
+            elif t == depth - 1:
+                col = body_d
+            c.set(x, top - t, col)
+    for i in range(1, L):            # bridge the raked jumps in the contour
+        step = prof[i] - prof[i - 1]
+        if step > 1:
+            for k in range(step):
+                c.set(ox + i, oy - clear - prof[i - 1] - k, body_c)
+        elif step < -1:
+            for k in range(-step):
+                c.set(ox + i - 1, oy - clear - prof[i] - k, body_c)
+    # windshield + rear glass read as raked panels on the top surface
+    for (lo, hi) in ((0.265, 0.37), (0.70, 0.78)):
+        for i in range(int(L * lo), int(L * hi)):
+            x = ox + i
+            top = oy - clear - prof[i]
+            for t in range(3, depth - 2):
+                c.set(x, top - t, glass if t < depth // 2 else glass_d)
+    for i in range(int(L * 0.30), int(L * 0.72)):   # side windows + pillars
+        x = ox + i
+        top = oy - clear - prof[i]
+        if (i - int(L * 0.30)) % 11 < 9:
+            for y in range(top + 2, top + 9):
+                c.set(x, y, C("090a14") if broken else glass_d)
+            if (i - int(L * 0.30)) % 11 < 3:
+                for y in range(top + 2, top + 6):
+                    c.set(x, y, C("090a14") if broken else glass)
+    for i in range(2, L - 2):                        # body trim line
+        c.set(ox + i, oy - clear - 2, body_dd)
+    c.set(ox + L // 2, oy - clear - 3, body_dd)      # door shutline
+    for y in range(oy - clear - prof[L // 2] + 3, oy - clear - 2):
+        c.set(ox + L // 2, y, body_dd)
+    lights_px: list[tuple[int, int]] = []
+    for k in range(3):                               # headlights, front corner
+        c.set(ox + L - 1 - k, oy - clear - prof[L - 1] - 1, C("e8c170"))
+    lights_px.append((ox + L - 2, oy - clear - prof[L - 1] - 1))
+    for k in range(3):                               # tail lights, rear corner
+        c.set(ox + k, oy - clear - prof[0] - 1, C("a53030"))
+    lights_px.append((ox + 1, oy - clear - prof[0] - 1))
+    c.set(ox + L - 1, oy - clear - 1, C("202e37"))   # bumpers
+    c.set(ox, oy - clear - 1, C("202e37"))
+    for wf in (int(L * 0.17), int(L * 0.74)):        # wheels on the near side
+        cxw = ox + wf
+        cyw = oy - 1
+        for dy in range(-2, 3):
+            for dx in range(-4, 5):
+                if dx * dx + dy * dy * 2 <= 12:
+                    c.set(cxw + dx, cyw + dy, (0, 0, 0, 0))
+        for dy in range(-3, 3):
+            for dx in range(-4, 5):
+                d = dx * dx + dy * dy * 2
+                if d <= 16:
+                    c.set(cxw + dx, cyw + dy, C("10141f") if d > 5 else C("202e37"))
+        c.set(cxw, cyw, C("577277"))
+    if door_open or broken:                          # the swung door panel
+        di = ox + L // 2 - 3
+        for k in range(7):
+            for y in range(oy - clear - 2, oy - clear + 3 - k // 3):
+                c.set(di + k, y, body_d if 0 < k < 6 else body_dd)
+            if 1 < k < 5:
+                c.set(di + k, oy - clear, C("090a14") if broken else glass_d)
+    if broken:
+        for _ in range(rng.randint(8, 12)):
+            x = ox + rng.randrange(2, L - 2)
+            y = oy - clear - rng.randrange(1, max(2, prof[x - ox] - 1))
+            c.set(x, y, C("884b2b") if rng.random() < 0.6 else C("602c2c"))
+    c.outline_auto()
+    origin_full = (ox + L // 2, oy)
+    cropped, origin = crop_canvas(c, origin_full)
+    lights_rel = [[px - origin_full[0], py - origin_full[1]] for (px, py) in lights_px]
+    return cropped, origin, ["poly",
+        [-L / 2.0, -3.0, L / 2.0, -3.0, L / 2.0, 3.0, -L / 2.0, 3.0],
+        lights_rel]
+
+
+def make_vehicle_head(kind: str, scheme: int, toward: bool,
+                      broken: bool = False,
+                      door_open: bool = False) -> tuple[Canvas, tuple, list]:
+    """SCREEN-VERTICAL heading (the other world diagonal): the car comes
+    at the camera (toward=True, grille and headlights) or drives away
+    (toward=False, tail lights over the trunk). Both flanks go edge-on,
+    so this is the roof stacked in bands with ONE end face — drawn back
+    to front so nearer bands occlude farther ones."""
+    rng = random.Random(f"{SEED}:vehicle8:head:{kind}:{scheme}:{toward}:{broken}")
+    body_c, body_d, body_dd = (C(n) for n in VEH_PALETTES[scheme])
+    glass, glass_d = C("3c5e8b"), C("253a5e")
+    # Seen end-on, a sedan hides everything past its roof, so the whole
+    # view is FOUR solid surfaces: the end face, the hood (or trunk), the
+    # raked glass, and the roof. Drawn as bands, never per-station — a
+    # per-station pass ladders into stripes on the flat runs.
+    W = 28                            # the body's true width, head on
+    hw_body = W // 2
+    hw_glass = hw_body - 4            # the greenhouse taper IS the 3D read
+    h_face = 10 if toward else 11     # hood line / trunk line
+    h_roof = 20
+    d_low = 5 if toward else 4        # hood or trunk length, foreshortened
+    d_rake = 3 if toward else 2       # windshield / rear glass
+    d_roof = 8
+    ox, oy = 8, 66
+    c = Canvas(W + 16, 78)
+    cx = ox + W // 2
+
+    def _band(y_hi: int, y_lo: int, hw_hi: int, hw_lo: int, top_face: bool) -> None:
+        # one surface, filled solid to the ground so nothing can stripe;
+        # nearer bands are drawn later and occlude what is behind them
+        span = max(1, y_lo - y_hi)
+        for y in range(y_hi, y_lo + 1):
+            f = (y - y_hi) / float(span)
+            hw = int(round(hw_hi + (hw_lo - hw_hi) * f))
+            for x in range(cx - hw, cx + hw + 1):
+                col = body_c if top_face else body_d
+                if x <= cx - hw + 1:
+                    col = body_d if top_face else body_c   # lit north-west
+                elif x >= cx + hw - 1:
+                    col = body_dd                          # shaded east
+                c.set(x, y, col)
+            for yy in range(y, oy + 1):                    # skirt to ground
+                for x in range(cx - hw, cx + hw + 1):
+                    if c.px[x, yy][3] == 0:
+                        c.set(x, yy, body_dd if x >= cx + hw - 1 else body_d)
+
+    y = oy - h_face                   # the top of the near end face
+    y_low_far = y - d_low
+    y_rake_far = y_low_far - d_rake - (h_roof - h_face)
+    y_roof_far = y_rake_far - d_roof
+    _band(y_roof_far, y_rake_far, hw_glass, hw_glass, True)        # roof
+    _band(y_rake_far, y_low_far, hw_glass, hw_body, True)          # glass rake
+    _band(y_low_far, y, hw_body, hw_body, True)                    # hood/trunk
+    for x in range(cx - hw_glass + 1, cx + hw_glass):              # the glass
+        for yy in range(y_rake_far + 1, y_low_far):
+            c.set(x, yy, glass if x < cx else glass_d)
+        c.set(x, y_rake_far, glass_d)
+    for x in range(cx - hw_glass + 2, cx + hw_glass - 1):          # roof crown
+        c.set(x, y_roof_far + 1, body_c)
+    # the near END FACE: the only vertical face the camera can see
+    face_top = oy - h_face
+    for x in range(cx - hw_body, cx + hw_body + 1):
+        for y in range(face_top, oy + 1):
+            col = body_dd
+            if x <= cx - hw_body + 1:
+                col = body_d                            # lit near corner
+            elif x >= cx + hw_body - 1:
+                col = C("10141f")                       # shaded near corner
+            c.set(x, y, col)
+        c.set(x, face_top, body_d)    # lit rim along the top of the face
+    lights_px: list[tuple[int, int]] = []
+    lamp_y = face_top + 2
+    if toward:
+        for k in range(4):            # headlights, both corners
+            c.set(cx - hw_body + 1 + k, lamp_y, C("e8c170"))
+            c.set(cx + hw_body - 1 - k, lamp_y, C("e8c170"))
+            c.set(cx - hw_body + 1 + k, lamp_y + 1, C("de9e41"))
+            c.set(cx + hw_body - 1 - k, lamp_y + 1, C("de9e41"))
+        lights_px = [(cx - hw_body + 2, lamp_y), (cx + hw_body - 2, lamp_y)]
+        for gy in (lamp_y + 3, lamp_y + 4):             # grille slits
+            for x in range(cx - hw_body + 6, cx + hw_body - 5):
+                c.set(x, gy, C("151d28"))
+        c.set(cx, lamp_y + 2, C("819796"))              # badge
+    else:
+        for k in range(4):            # tail lights
+            c.set(cx - hw_body + 1 + k, lamp_y, C("a53030"))
+            c.set(cx + hw_body - 1 - k, lamp_y, C("a53030"))
+            c.set(cx - hw_body + 1 + k, lamp_y + 1, C("752438"))
+            c.set(cx + hw_body - 1 - k, lamp_y + 1, C("752438"))
+        lights_px = [(cx - hw_body + 2, lamp_y), (cx + hw_body - 2, lamp_y)]
+        for x in range(cx - hw_body + 4, cx + hw_body - 3):   # trunk shutline
+            c.set(x, lamp_y + 3, C("10141f"))
+        c.set(cx, lamp_y + 5, C("819796"))              # handle
+    for x in range(cx - hw_body + 1, cx + hw_body):     # bumper strip
+        c.set(x, oy - 1, C("202e37"))
+        c.set(x, oy, C("151d28"))
+    for side in (-1, 1):                                # wheels at the corners
+        wx = cx + side * (hw_body + 1)
+        for dy in range(-4, 1):
+            c.set(wx, oy + dy, C("10141f"))
+            c.set(wx - side, oy + dy, C("10141f") if dy > -4 else C("202e37"))
+        c.set(wx, oy - 2, C("202e37"))
+    if broken:
+        for _ in range(rng.randint(6, 10)):
+            rx = cx + rng.randrange(-hw_body + 1, hw_body - 1)
+            ry = oy - rng.randrange(2, 24)
+            c.set(rx, ry, C("884b2b") if rng.random() < 0.6 else C("602c2c"))
+    if door_open:                     # a door swung out on the near flank
+        for k in range(5):
+            dy = oy - 10 - k
+            for dx in range(0, 4):
+                c.set(cx - hw_body - 2 - dx, dy, body_d if dx < 3 else body_dd)
+    c.outline_auto()
+    origin_full = (cx, oy)
+    cropped, origin = crop_canvas(c, origin_full)
+    lights_rel = [[px - origin_full[0], py - origin_full[1]] for (px, py) in lights_px]
+    return cropped, origin, ["poly",
+        [-W / 2.0, -6.0, W / 2.0, -6.0, W / 2.0, 6.0, -W / 2.0, 6.0],
+        lights_rel]
+
+
 def make_vehicle(kind: str, scheme: int, rev: bool = False,
                  broken: bool = False, door_open: bool = False) -> tuple[Canvas, tuple, list]:
     """Iso vehicle along the screen (2,1) diagonal: side face + a DEEP roof
@@ -3687,6 +3958,15 @@ def prop_inventory() -> tuple[dict, dict]:
             props[f"vehicle_se_{i}_door"] = door_se
             props[f"vehicle_ne_{i}_door"] = mirror_prop(door_nw)
             props[f"vehicle_sw_{i}_door"] = mirror_prop(door_se)
+    # SAMPLE: the four angles a (2,1) sheet can't draw — the flank view
+    # (screen-horizontal heading) and the two head-on views. Nothing in
+    # the game references these yet; they exist for user sign-off before
+    # the whole fleet gets converted to 8 directions.
+    sample_flank = make_vehicle_flank("car", 4)   # scheme 4 = the steel-blue
+    props["vehicle8_e_0"] = sample_flank          # sedan already in the fleet
+    props["vehicle8_w_0"] = mirror_prop(sample_flank)
+    props["vehicle8_s_0"] = make_vehicle_head("car", 4, toward=True)
+    props["vehicle8_n_0"] = make_vehicle_head("car", 4, toward=False)
     # buses for the depot: two liveries parked, two broken into
     bus_specs = [(1, False), (2, False), (0, True), (3, True)]
     for i, (scheme, broken) in enumerate(bus_specs):
