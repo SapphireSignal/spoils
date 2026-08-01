@@ -3,6 +3,19 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.34] — 2026-08-01
+
+### Fixed
+- **The scrapyard warehouse came back** (user: "thats where the warehouse
+  should have been, now you removed it again"). v0.6.31 stopped the hall
+  being built on top of the railway by **skipping it** when no rail-free
+  footprint fitted — which silently reintroduced the original v0.6.22
+  bug, racks and crates standing in the open with no building. Wrong
+  trade. The hall is guaranteed again: it now searches the block at
+  progressively smaller footprints (12×8 down to 6×4) until one fits
+  clear of track, ballast and crossings. A smaller hall is a hall; no
+  hall is the old bug.
+
 ## [0.6.33] — 2026-08-01
 
 ### Changed

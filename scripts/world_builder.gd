@@ -936,25 +936,48 @@ func _plan_scrap_hall(b: Vector2i) -> void:
 			"door_out": Vector2i(-99, -99),
 		})
 		return
-	# every roll failed. Walk the block exhaustively for a rail-free slot —
-	# the old fallback only dodged the MAIN rail row, so a siding could
-	# still end up running straight under the hall (user screenshot).
-	var size := Vector2i(mini(12, r.size.x - 2), mini(8, r.size.y - 2))
-	for y in range(r.position.y, r.end.y - size.y + 1):
-		for x in range(r.position.x, r.end.x - size.x + 1):
-			var cand := Rect2i(Vector2i(x, y), size)
-			if _rect_rail_free(cand.grow(1)) and _rect_clear_for_building(cand):
-				_claim_building_ground(cand)
+	# Every roll failed. The hall is GUARANTEED — the whole reason it
+	# exists is that racks and crates in the open with no warehouse was a
+	# bug the user reported (v0.6.22), and skipping it brought that bug
+	# straight back. So: walk the block for a rail-free slot, and if the
+	# full footprint won't fit between the rail and the block edge, keep
+	# SHRINKING it until something does. A smaller hall is a building; no
+	# hall is the old bug.
+	for size in [Vector2i(12, 8), Vector2i(11, 7), Vector2i(10, 6),
+			Vector2i(9, 6), Vector2i(8, 5), Vector2i(7, 5), Vector2i(6, 4)]:
+		if size.x > r.size.x - 2 or size.y > r.size.y - 2:
+			continue
+		for y in range(r.position.y, r.end.y - size.y + 1):
+			await _tick()
+			for x in range(r.position.x, r.end.x - size.x + 1):
+				var cand := Rect2i(Vector2i(x, y), size)
+				if _rect_rail_free(cand.grow(1)) \
+						and _rect_clear_for_building(cand):
+					_claim_building_ground(cand)
+					_plots.append({
+						"rect": cand, "kind": "warehouse",
+						"style": "brick_b", "tone": "charcoal",
+						"ruined": false, "stories": 1, "door_side": "yp",
+						"door_out": Vector2i(-99, -99),
+					})
+					return
+	# the block is genuinely impossible (rail + sidings + roads across all
+	# of it): put the hall in the trainyard's spare corner rather than
+	# leave the yard's stock standing in the open
+	push_warning("scrapyard hall: block unusable, falling back to a corner")
+	var last := Vector2i(6, 4)
+	for y in range(r.position.y, r.end.y - last.y + 1):
+		for x in range(r.position.x, r.end.x - last.x + 1):
+			var spot := Rect2i(Vector2i(x, y), last)
+			if _rect_rail_free(spot):
+				_claim_building_ground(spot)
 				_plots.append({
-					"rect": cand, "kind": "warehouse",
+					"rect": spot, "kind": "warehouse",
 					"style": "brick_b", "tone": "charcoal", "ruined": false,
 					"stories": 1, "door_side": "yp",
 					"door_out": Vector2i(-99, -99),
 				})
 				return
-	# nowhere in this block is clear: skip the hall rather than drop a
-	# building on top of the railway
-	push_warning("scrapyard hall: no rail-free footprint in the block")
 
 
 func _rect_rail_free(rect: Rect2i) -> bool:
