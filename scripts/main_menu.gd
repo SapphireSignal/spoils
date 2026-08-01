@@ -66,6 +66,12 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.45", ["your car finally faces the way youre driving - the",
+		"left-right sprites had the body drawn one way, the",
+		"lights painted the other way, and the pair swapped",
+		"steering is instant now: tap any direction, or two",
+		"keys for a diagonal, and the nose snaps right there -",
+		"the slow carve is gone"]],
 	["v0.6.44", ["housekeeping: the audits verified a pile of code that",
 		"nothing calls anymore - unused helpers, signals nobody",
 		"listens to, art nothing ever places - all deleted",

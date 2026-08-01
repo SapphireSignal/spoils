@@ -13,7 +13,6 @@ const MAX_SPEED := 190.0        # brisk, not a rocket (user: "way too fast")
 const ACCEL := 220.0
 const BRAKE := 340.0
 const COAST := 150.0            # engine braking while idling down
-const TURN_COOLDOWN := 0.10     # eight facings means smaller, quicker steps
 const DOOR_TIME := 0.34
 # all eight screen headings; the diagonals keep the iso (2,1) slope
 const HEADINGS := ["n", "ne", "e", "se", "s", "sw", "w", "nw"]
@@ -44,7 +43,6 @@ var _poly: CollisionPolygon2D
 var _manifest: Dictionary = {}
 var _player: Player
 var _busy := false              # a door swing is in flight
-var _turn_left := 0.0
 var _lights: Array[PointLight2D] = []
 var _crash_cool := 0.0          # one thump per hit, not one per frame
 var _dust_tex: Texture2D
@@ -205,23 +203,16 @@ func _process(delta: float) -> void:
 			light.enabled = not light.enabled
 		Sfx.play_click()
 
-	# WASD driving (user call — eight facings earned it): hold a direction
-	# and the car pulls that way; let go and it rolls down to a stop. The
-	# heading CARVES toward your input instead of snapping, so the car
-	# still has weight — turns tighten as you slow, like a real wheel.
+	# WASD driving: the nose points where you press, INSTANTLY (user call
+	# 2026-08-01 — the steering carve is gone). W+A is the up-left
+	# diagonal, and so on; keys give exactly eight vectors, so there is
+	# nothing to smooth between. Let go and the car rolls down to a stop.
 	var want_dir := auto_drive
 	if want_dir == Vector2.ZERO:
 		want_dir = Input.get_vector("move_left", "move_right",
 			"move_up", "move_down")
 	if want_dir.length() > 0.1:
-		want_dir = want_dir.normalized()
-		if _drive_dir == Vector2.ZERO:
-			_drive_dir = want_dir
-		else:
-			var turn_rate := 3.6 + 3.2 * (1.0 - absf(speed) / MAX_SPEED)
-			_drive_dir = _drive_dir.slerp(want_dir,
-				minf(1.0, delta * turn_rate)).normalized()
-		_turn_left -= delta
+		_drive_dir = want_dir.normalized()
 		var want := ""
 		var best_dot := -2.0
 		for h in HEADINGS:
@@ -229,10 +220,7 @@ func _process(delta: float) -> void:
 			if d > best_dot:
 				best_dot = d
 				want = h
-		# hysteresis so the sprite never flickers between two facings
-		if want != heading and _turn_left <= 0.0 and best_dot > \
-				(DIRS[heading] as Vector2).normalized().dot(_drive_dir) + 0.06:
-			_turn_left = TURN_COOLDOWN
+		if want != heading:
 			heading = want
 			_apply_variant(_base_variant_name())
 			_poly.set_deferred("polygon", _collider_points(_base_variant_name()))

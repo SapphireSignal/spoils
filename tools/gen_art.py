@@ -1666,8 +1666,12 @@ def make_vehicle_flank(kind: str, scheme: int, broken: bool = False,
                        door_open: bool = False) -> tuple[Canvas, tuple, list]:
     """SCREEN-HORIZONTAL heading (a world diagonal): the flank faces the
     camera dead-on, so the roof lies as a flat band straight above it and
-    both end faces go edge-on. Front at the RIGHT; mirroring gives the
-    westbound twin. One of the four angles the (2,1) sheets can't cover."""
+    both end faces go edge-on. The profile runs front-to-rear along +x,
+    so the FRONT is at the LEFT — this art IS the westbound sprite, and
+    mirroring gives the eastbound twin. (It used to be registered the
+    other way round, which is why a car driving left faced right — user
+    report 2026-08-01.) One of the four angles the (2,1) sheets can't
+    cover."""
     rng = random.Random(f"{SEED}:vehicle8:flank:{kind}:{scheme}:{broken}")
     body_c, body_d, body_dd = (C(n) for n in VEH_PALETTES[scheme])
     glass, glass_d = C("3c5e8b"), C("253a5e")
@@ -1721,12 +1725,15 @@ def make_vehicle_flank(kind: str, scheme: int, broken: bool = False,
     for y in range(oy - clear - prof[L // 2] + 3, oy - clear - 2):
         c.set(ox + L // 2, y, body_dd)
     lights_px: list[tuple[int, int]] = []
+    # profile index 0 is the FRONT and draws at the LEFT edge — headlights
+    # left, tail lights right (they were painted swapped, so the lamps
+    # contradicted the bodywork on both flank headings)
     for k in range(3):                               # headlights, front corner
-        c.set(ox + L - 1 - k, oy - clear - prof[L - 1] - 1, C("e8c170"))
-    lights_px.append((ox + L - 2, oy - clear - prof[L - 1] - 1))
-    for k in range(3):                               # tail lights, rear corner
-        c.set(ox + k, oy - clear - prof[0] - 1, C("a53030"))
+        c.set(ox + k, oy - clear - prof[0] - 1, C("e8c170"))
     lights_px.append((ox + 1, oy - clear - prof[0] - 1))
+    for k in range(3):                               # tail lights, rear corner
+        c.set(ox + L - 1 - k, oy - clear - prof[L - 1] - 1, C("a53030"))
+    lights_px.append((ox + L - 2, oy - clear - prof[L - 1] - 1))
     c.set(ox + L - 1, oy - clear - 1, C("202e37"))   # bumpers
     c.set(ox, oy - clear - 1, C("202e37"))
     for wf in (int(L * 0.17), int(L * 0.74)):        # wheels on the near side
@@ -4532,9 +4539,9 @@ def prop_inventory() -> tuple[dict, dict]:
         # the FOUR angles a (2,1) sheet cannot draw: the flank view (the
         # car crossing the screen) and the two end-on views. With these
         # the nose can track the cursor through all 8 headings.
-        art_e = make_vehicle_flank(kind, scheme, broken=broken)
-        fam("vehicle_e", i, art_e)
-        fam("vehicle_w", i, mirror_prop(art_e))
+        art_w = make_vehicle_flank(kind, scheme, broken=broken)
+        fam("vehicle_w", i, art_w)
+        fam("vehicle_e", i, mirror_prop(art_w))
         fam("vehicle_s", i, make_vehicle_head(kind, scheme, toward=True,
                                               broken=broken))
         fam("vehicle_n", i, make_vehicle_head(kind, scheme, toward=False,
@@ -4547,9 +4554,9 @@ def prop_inventory() -> tuple[dict, dict]:
             props[f"vehicle_se_{i}_door"] = door_se
             props[f"vehicle_ne_{i}_door"] = mirror_prop(door_nw)
             props[f"vehicle_sw_{i}_door"] = mirror_prop(door_se)
-            door_e = make_vehicle_flank(kind, scheme, door_open=True)
-            props[f"vehicle_e_{i}_door"] = door_e
-            props[f"vehicle_w_{i}_door"] = mirror_prop(door_e)
+            door_w = make_vehicle_flank(kind, scheme, door_open=True)
+            props[f"vehicle_w_{i}_door"] = door_w
+            props[f"vehicle_e_{i}_door"] = mirror_prop(door_w)
             props[f"vehicle_s_{i}_door"] = make_vehicle_head(
                 kind, scheme, toward=True, door_open=True)
             props[f"vehicle_n_{i}_door"] = make_vehicle_head(

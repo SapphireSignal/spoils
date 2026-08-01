@@ -159,6 +159,29 @@ This file carries everything a fresh session needs that isn't in those two.
 
 ## THE QUEUE (as of v0.6.44 — work straight down it)
 
+**OVERNIGHT BATCH (user call 2026-08-01, sent before sleeping — work
+these FIRST, autonomously; ship small versions, update this file after
+every one; STOP with a clean handoff before the usage budget runs out):**
+a. ~~Vehicles face where they drive~~ **DONE v0.6.45** — root cause:
+   _veh_profile runs front→rear from index 0, flank painter drew index
+   0 at the LEFT believing front-right, so lights were end-swapped AND
+   the e/w registration was inverted. Drawn flank art = WESTBOUND now.
+   Diagonals + head-ons verified correct. Queue item 6 below is the
+   same bug — also done.
+b. ~~Instant WASD car facing~~ **DONE v0.6.45** — carve/slerp/
+   hysteresis/TURN_COOLDOWN deleted; input vector → nearest of 8,
+   applied immediately.
+c. **Safehouse power box ALWAYS the broken/sparking one** (repair
+   quest later hangs off it). Burn the old rng pick so layout holds.
+d. **No sound on mara's radio popup** — remove the appear sound AND
+   the disappear sound (whatever Sfx call it is).
+e. **Volume panel in settings** — a "volume" button opening four
+   sliders: master, music, sound effects, ambient. Audio buses,
+   persisted, applied on boot.
+Then the standing queue below (skip 1 — needs the user's photo; skip
+6/7 sample-sign-off items and the road-grid rework — need the user);
+then ANOTHER SWEEP; then final handoff.
+
 1. **Yellow centreline still one lane off** — the user photographed it
    with RED LINES showing the correct position. Fixed twice already by
    reasoning; verify EMPIRICALLY against that shot this time.
@@ -170,9 +193,8 @@ This file carries everything a fresh session needs that isn't in those two.
 5. **Pines shed nothing** — by design (v0.6.31 excluded conifers so they
    wouldn't drop broadleaf leaves), but a pine that drops nothing reads
    as dead. Give conifers NEEDLES; dead snags stay bare.
-6. **Flip vehicles so the FRONT faces left** — and swap headlight/brake
-   colours + the manifest light coords across all 8 facings, the _door
-   frames, and EXIT_OFFSET, or the alarm flashers light the wrong end.
+6. ~~Flip vehicles~~ **DONE v0.6.45** (was the flank facing bug — see
+   the overnight batch above).
 7. **Pickup bed** — shade the interior so it reads as a container, put a
    box in it, sample sheet across all angles.
 8. **Catalogue variety** — 2-variant families left (bench, dumpster,

@@ -3,6 +3,30 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.45] — 2026-08-01 — the car faces where it drives
+
+User report (before sleep): driving left showed the truck — and the
+cars — facing right.
+
+### Fixed
+- **The flank sprites were wrong twice over.** `_veh_profile` runs
+  front→rear from index 0, and the flank painter draws index 0 at the
+  LEFT — so the body was drawn front-left while the docstring believed
+  front-right: the headlight/tail colours were painted on the wrong
+  ends, and the art was then registered as the EASTBOUND sprite with
+  its mirror as westbound — backwards. Now: the drawn art is the
+  westbound sprite (front left, headlights left, tails right), the
+  mirror is eastbound, the `_door` frames follow, and the manifest
+  light coords ride the corrected ends. The diagonals and the head-on
+  views were verified correct and untouched.
+
+### Changed
+- **Steering is instant** (user call, supersedes the v0.6.23 carve):
+  W/A/S/D — and two keys together for a diagonal — snap the nose to
+  that heading immediately. The steering-inertia slerp, the facing
+  hysteresis and the turn cooldown are gone. Accel, braking, coast,
+  crash physics and the iso squash are unchanged.
+
 ## [0.6.44] — 2026-08-01 — taking out the dead code
 
 The audits' verified-safe dead list, deleted. No behavior change — the
