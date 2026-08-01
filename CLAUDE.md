@@ -82,9 +82,16 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   integer window scale) + 0.2s-window fps counter. `scripts/keybinds_panel.gd`,
   `scripts/settings_panel.gd`, `scripts/pause_menu.gd`, `scripts/ui_theme.gd`
   (bitmap font + near-black/light-border buttons), `scripts/sfx.gd`
-  (synthesized UI blips + door thunks + sniper crack + flashlight click,
-  auto-wired buttons), `scripts/authority.gd` (state seam: spawn_player,
-  damage_player), `scripts/harness.gd` (see Verification).
+  (ALL synthesized: UI blips, door thunks, sniper crack, flashlight click,
+  per-surface footsteps via play_step(kind, quiet), thunder, rain bed
+  (set_rain), car alarm stream, splash ping; heavy streams render on a
+  Thread), `scripts/music.gd` (menu theme, threaded render, play_menu/
+  stop_menu), `scripts/splash.gd` + `scenes/splash.tscn` (SapphireSignal
+  studio card — THE BOOT SCENE; harness args skip it instantly),
+  `scripts/car_alarms.gd` (armed intact cars: proximity alarm + flashing
+  light overlays from manifest "lights" coords, once per car until death),
+  `scripts/authority.gd` (state seam: spawn_player, damage_player),
+  `scripts/harness.gd` (see Verification; also --shot-splash=<name>).
 
 ## Verification workflow (design doc §7 — never skip)
 

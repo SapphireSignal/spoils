@@ -55,6 +55,7 @@ var _plots: Array[Dictionary] = []   # {rect, kind, style, tone, ruined, door_si
 var _yards: Array[Rect2i] = []
 var _spawn_cell := Vector2i(160, 160)
 var _puddle_spots: Array[Vector2] = []
+var _alarm_cars: Array[Dictionary] = []  # {node, lights} — armed intact cars
 
 
 func build(root: Node2D, seed_text: String = "") -> Dictionary:
@@ -112,6 +113,8 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 		"roofs": _roofs,
 		"cells": Vector2i(MAP_W, MAP_H),
 		"puddle_spots": _puddle_spots,
+		"floor_coords": _floor_coords,
+		"alarm_cars": _alarm_cars,
 	}
 
 
@@ -412,12 +415,22 @@ func _add_prop(prop_name: String, pos: Vector2) -> Node2D:
 
 
 func _add_prop_at_cell(prop_name: String, cell: Vector2i,
-		jitter: Vector2 = Vector2.ZERO) -> void:
+		jitter: Vector2 = Vector2.ZERO) -> Node2D:
 	var pos := _floor_layer.map_to_local(cell)
 	if jitter != Vector2.ZERO:
 		pos += Vector2(_rng.randf_range(-jitter.x, jitter.x), _rng.randf_range(-jitter.y, jitter.y))
-	_add_prop(prop_name, pos)
+	var node := _add_prop(prop_name, pos)
 	_occupied[cell] = true
+	return node
+
+
+func _maybe_arm_car(variant: String, node: Node2D) -> void:
+	# 50/50 on INTACT cars only — broken-into ones were stripped long ago
+	if variant.ends_with("_3") or variant.ends_with("_4"):
+		return
+	if _rng.randf() < 0.5:
+		var info: Dictionary = _manifest["props"][variant]
+		_alarm_cars.append({"node": node, "lights": info.get("lights", [])})
 
 
 func _add_door(door_name: String, pos: Vector2) -> void:
@@ -749,7 +762,10 @@ func _place_yards() -> void:
 		for i in mini(_rng.randi_range(1, 3), stall_cells.size()):
 			# parked facing the building they were left at
 			var fam := "vehicle_nw" if _rng.randf() < 0.5 else "vehicle_ne"
-			_add_prop_at_cell(_pick_variant(fam), stall_cells[i - 1], Vector2(6, 3))
+			var stall_variant := _pick_variant(fam)
+			var stall_car := _add_prop_at_cell(stall_variant, stall_cells[i - 1],
+				Vector2(6, 3))
+			_maybe_arm_car(stall_variant, stall_car)
 		var spill_cells: Array[Vector2i] = []
 		for y in range(yard.position.y, yard.end.y):
 			for x in range(yard.position.x, yard.end.x):
@@ -997,13 +1013,15 @@ func _place_road_vehicles() -> void:
 		var variant := _pick_variant(fam)
 		var pos := _floor_layer.map_to_local(cell) \
 			+ Vector2(_rng.randf_range(-5.0, 5.0), _rng.randf_range(-3.0, 3.0))
-		_add_prop(variant, pos)
+		var car := _add_prop(variant, pos)
 		_occupied[cell] = true
 		if variant.ends_with("_3") or variant.ends_with("_4"):
 			# broken into: it's been through some stuff — litter around it
 			for t in _rng.randi_range(2, 4):
 				_add_prop(_pick_variant("trash"), pos + Vector2(
 					_rng.randf_range(-30.0, 30.0), _rng.randf_range(-16.0, 16.0)))
+		else:
+			_maybe_arm_car(variant, car)
 
 
 func _scatter_props() -> void:

@@ -45,6 +45,9 @@ var _light: PointLight2D
 var _hurt_rect: ColorRect
 var _hurt_left := 0.0
 var _window: Window
+var _floor_layer: TileMapLayer
+var _surface_kinds: Dictionary = {}  # atlas coords -> footstep kind
+var _prev_anim_step := -1
 
 
 func _init() -> void:
@@ -128,6 +131,20 @@ func respawn(at: Vector2) -> void:
 func set_flashlight(on: bool) -> void:
 	flashlight_on = on
 	_light.enabled = on
+
+
+func setup_surfaces(floor_layer: TileMapLayer, kinds: Dictionary) -> void:
+	_floor_layer = floor_layer
+	_surface_kinds = kinds
+
+
+func _footstep() -> void:
+	if _floor_layer == null:
+		return
+	var atlas := _floor_layer.get_cell_atlas_coords(_floor_layer.local_to_map(position))
+	var kind: String = _surface_kinds.get(atlas, "concrete")
+	# crawling drags softly whatever the ground; crouching just treads lighter
+	Sfx.play_step(kind, crouching or prone)
 
 
 func _process(delta: float) -> void:
@@ -230,6 +247,11 @@ func _animate(input_vec: Vector2, delta: float) -> void:
 			fps = CROUCH_WALK_FPS
 		var step := int(_anim_time * fps) % WALK_FRAMES
 		_sprite.frame = _dir_index * SHEET_COLS + 1 + step
+		# footfalls land on the plant frames (one per crawl pull when prone)
+		if step != _prev_anim_step and (step == 1 or (step == 4 and not prone)):
+			_footstep()
+		_prev_anim_step = step
 	else:
 		_anim_time = 0.0
+		_prev_anim_step = -1
 		_sprite.frame = _dir_index * SHEET_COLS

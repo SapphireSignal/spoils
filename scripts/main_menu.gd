@@ -51,6 +51,18 @@ var _changelog_list: VBoxContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.8", ["the sapphire signal splash: the gem, the ping, the first beam",
+		"main menu music - a dark theme for a dead district, made by code",
+		"footsteps: concrete, asphalt, hardwood, grass and dirt all sound right",
+		"steps go quiet when crouched, drag when prone",
+		"thunder rolls in after every lightning strike - distance included",
+		"a soft rain bed rises and falls with the storm",
+		"car alarms: get close to the wrong intact car and it goes off",
+		"alarm lights flash for 3 seconds - once per car, until you die",
+		"vehicles are fully solid now - the dotted roof lattice is gone",
+		"broken-into cars read honest: a door hanging open, a flat tire",
+		"every car has both ends now - the hidden side closes properly",
+		"the flashlight click, door thunks and sniper crack all kept company"]],
 	["v0.6.7", ["the barricade line is a real line now: one piece repeated, worn",
 		"some barriers knocked askew, some flat, uneven gaps - not a sampler",
 		"past the line is bare dead concrete - the woods live inside the map",
@@ -202,6 +214,7 @@ func _ready() -> void:
 	_build_scenes()
 	_build_ui()
 	_activate(0, true)
+	Music.play_menu()
 
 
 func show_backdrop(index: int) -> void:  # harness hook for screenshots

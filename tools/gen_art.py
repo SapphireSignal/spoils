@@ -1185,7 +1185,10 @@ def make_vehicle(kind: str, scheme: int, rev: bool = False,
                 col = body_d            # far rim
             elif rng.random() < 0.02:
                 col = body_d
+            # fill BOTH rounding rows of the 2:1 step — single-pixel strokes
+            # leave a checkerboard of holes that outline into a dotted lattice
             c.set(x + t, top - (t + 1) // 2, col)
+            c.set(x + t, top - t // 2, col)
     # raked glass on the roof plane (windshield when heading SE, rear glass
     # when heading NW) — this is what makes the facing readable from above
     for i in range(glass_roof[0], glass_roof[1]):
@@ -1193,17 +1196,21 @@ def make_vehicle(kind: str, scheme: int, rev: bool = False,
         base = oy + i // 2
         top = base - clear - prof[i]
         for t in range(2, ROOF_DEPTH - 1):
-            c.set(x + t, top - (t + 1) // 2, glass if t < 5 else glass_d)
+            var_col = glass if t < 5 else glass_d
+            c.set(x + t, top - (t + 1) // 2, var_col)
+            c.set(x + t, top - t // 2, var_col)
     for i in range(win_lo, win_hi):  # side window band with pillars
         x = ox + i
         base = oy + i // 2
         top = base - clear - prof[i]
         if (i - win_lo) % 8 < 6:
             for y in range(top + 2, top + 8):
-                c.set(x, y, glass_d)
+                # broken into: side glass gone dark (a couple of glints stay)
+                c.set(x, y, C("090a14") if broken else glass_d)
             if (i - win_lo) % 8 < 2:
                 for y in range(top + 2, top + 6):
-                    c.set(x, y, glass)
+                    c.set(x, y, C("a8b5b2") if (broken and (x + y) % 7 == 0)
+                          else (C("090a14") if broken else glass))
     for i in range(2, L - 2):  # body trim line
         x = ox + i
         base = oy + i // 2
@@ -1229,13 +1236,27 @@ def make_vehicle(kind: str, scheme: int, rev: bool = False,
     # wrapped corner: the side face's last column darkens into the cap
     for y in range(oy + (L - 1) // 2 - clear - cap_h + 1, oy + (L - 1) // 2 - clear):
         c.set(ox + L - 1, y, body_dd)
+    # FAR-END wrap: the hidden end must still close the silhouette — a flat
+    # cutoff read as "the car is missing its front" (user report)
+    far_h = prof[0]
+    for t in range(1, 3):
+        x = ox - t
+        base = oy - (t + 1) // 2
+        far_top = base - clear - far_h + (t + 1) // 2
+        for y in range(far_top, base - clear + 1):
+            c.set(x, y, body_dd)
+        c.set(x, base - clear, C("202e37"))    # bumper hint
+    # a 1px light sliver on the far corner (headlight fwd art, tail rev art)
+    c.set(ox - 2, oy - 1 - clear - far_h + 2, C("de9e41") if not rev else C("752438"))
     cap_top = oy + L // 2 - clear - cap_h
     lights_y = cap_top + 2
+    lights_px: list[tuple[int, int]] = []  # absolute px, for the alarm flashers
     if rev:  # head lights + grille slits
         for lx in (0, 1):
             c.set(ox + L + lx, lights_y, C("e8c170"))
         for lx in (3, 4):
             c.set(ox + L + lx, lights_y + 1, C("e8c170"))
+        lights_px = [(ox + L, lights_y), (ox + L + 4, lights_y + 1)]
         for gy in (lights_y + 3, lights_y + 5):
             c.set(ox + L + 1, gy, C("151d28"))
             c.set(ox + L + 2, gy, C("151d28"))
@@ -1246,6 +1267,7 @@ def make_vehicle(kind: str, scheme: int, rev: bool = False,
             c.set(ox + L + lx, lights_y, tail)
         for lx in (3, 4):
             c.set(ox + L + lx, lights_y + 1, tail)
+        lights_px = [(ox + L, lights_y), (ox + L + 4, lights_y + 1)]
         for sx_ in range(1, 4):
             c.set(ox + L + sx_, lights_y + 3 + (sx_ // 2), C("10141f"))
     for wf in (8, 34):  # wheel arches + wheels
@@ -1280,40 +1302,50 @@ def make_vehicle(kind: str, scheme: int, rev: bool = False,
             c.px = c.img.load()
             cursor = bi + w + 5
     if broken:
-        # shattered glass: every glass pixel goes dark, a few bright shards
-        shard_spots = []
-        for y in range(c.h):
-            for x in range(c.w):
-                if c.get(x, y)[:3] in (glass[:3], glass_d[:3]):
-                    c.set(x, y, C("090a14"))
-                    shard_spots.append((x, y))
-        for (x, y) in rng.sample(shard_spots, k=min(9, len(shard_spots))):
-            c.set(x, y, C("a8b5b2"))
-        for _ in range(rng.randint(10, 16)):  # rust bloom
+        # broken into reads as EVENTS, not damage noise (user call): a door
+        # left hanging open, one flat tire, dark side glass, some rust
+        for _ in range(rng.randint(8, 12)):  # rust bloom
             x = ox + rng.randrange(2, L - 2)
             base = oy + x // 2
             y = base - clear - rng.randrange(1, max(2, prof[min(L - 1, x - ox)] - 1))
             c.set(x, y, C("884b2b") if rng.random() < 0.6 else C("602c2c"))
-        dent_i = rng.randrange(6, L - 10)  # a caved panel
-        for dd in range(rng.randint(3, 5)):
-            x = ox + dent_i + dd
-            base = oy + (dent_i + dd) // 2
-            c.set(x, base - clear - 3, body_dd)
-            c.set(x, base - clear - 4, body_dd)
-        door_i = win_lo + rng.randrange(0, max(1, (win_hi - win_lo) - 4))
-        for y in range(oy + door_i // 2 - clear - prof[door_i] + 2,
-                       oy + door_i // 2 - clear):
-            c.set(ox + door_i, y, C("090a14"))  # sprung door seam
+        # the open door: a panel swung out over the sill, hanging past the
+        # body line with its window hole showing
+        door_i = (win_lo + win_hi) // 2 + rng.randrange(-3, 3)
+        for k in range(6):
+            x = ox + door_i + k
+            base = oy + (door_i + k) // 2
+            top = base - clear + 1
+            for y in range(top, top + 5 - (k // 3)):
+                c.set(x, y, body_d if 0 < k < 5 else body_dd)
+            if 1 < k < 4:
+                c.set(x, top + 1, C("090a14"))     # its window, dark
+        c.set(ox + door_i + 4, oy + (door_i + 4) // 2 - clear + 4, C("819796"))  # handle
+        # one flat tire: the rear wheel squashes onto the ground
+        flat_x = ox + 34 + 3
+        flat_y = oy + (34 + 3) // 2 - 1
+        for dx in range(-3, 4):
+            c.set(flat_x + dx, flat_y + 1, C("10141f"))
+        for dx in range(-4, 5):
+            c.set(flat_x + dx, flat_y + 2, C("10141f"))
+        c.set(flat_x - 5, flat_y + 2, C("202e37"))  # rubber spread
+        c.set(flat_x + 5, flat_y + 2, C("202e37"))
     c.outline_auto()
-    cropped, origin = crop_canvas(
-        c, (ox + (L + 3) // 2 + ROOF_DEPTH // 2, oy + (L + 3) // 4 - ROOF_DEPTH // 4))
-    return cropped, origin, ["diamond", 29.0, 15.0]
+    origin_full = (ox + (L + 3) // 2 + ROOF_DEPTH // 2, oy + (L + 3) // 4 - ROOF_DEPTH // 4)
+    cropped, origin = crop_canvas(c, origin_full)
+    # light positions relative to the origin are crop-invariant — the alarm
+    # system flashes small overlays exactly on the baked light pixels
+    lights_rel = [[px - origin_full[0], py - origin_full[1]] for (px, py) in lights_px]
+    return cropped, origin, ["diamond", 29.0, 15.0], lights_rel
 
-def mirror_prop(prop: tuple[Canvas, tuple, list]) -> tuple[Canvas, tuple, list]:
+def mirror_prop(prop: tuple) -> tuple:
     """Bake the horizontal mirror of a prop (origin re-anchored, collider is
-    symmetric). Mirroring at generation time keeps runtime transform-free."""
-    canvas, origin, collider = prop
-    return canvas.mirrored(), (canvas.w - 1 - origin[0], origin[1]), collider
+    symmetric, light offsets x-flipped). Keeps runtime transform-free."""
+    canvas, origin, collider = prop[0], prop[1], prop[2]
+    mirrored = (canvas.mirrored(), (canvas.w - 1 - origin[0], origin[1]), collider)
+    if len(prop) > 3:
+        return mirrored + ([[-lx, ly] for (lx, ly) in prop[3]],)
+    return mirrored
 
 def make_tree(kind: str, variant: int) -> tuple[Canvas, tuple, list]:
     """Trees, rebuilt. Every kind draws trunk FIRST, then grows the canopy
@@ -1654,6 +1686,93 @@ def make_light_cone() -> Image.Image:
             if a > 0:
                 px[x, y] = (255, 255, 255, a)
     return img
+
+def make_alarm_light() -> Image.Image:
+    """Amber blink dot overlaid on a car's baked light pixels during alarms."""
+    img = Image.new("RGBA", (4, 4), (0, 0, 0, 0))
+    px = img.load()
+    r, g, b, _ = C("e8c170")
+    for x, y in ((1, 1), (2, 1), (1, 2), (2, 2)):
+        px[x, y] = (r, g, b, 255)
+    for x, y in ((0, 1), (3, 1), (0, 2), (3, 2), (1, 0), (2, 0), (1, 3), (2, 3)):
+        px[x, y] = (r, g, b, 110)
+    return img
+
+def make_studio_gem() -> tuple[Canvas, tuple, list | None]:
+    """The sapphire — SapphireSignal's mark. Classic gem cut: light table,
+    faceted crown, deep pavilion, all Apollo blues."""
+    c = Canvas(30, 26)
+    cx = 15
+    # crown (top band)
+    for y in range(4, 9):
+        half = 11 - (8 - y)
+        for x in range(cx - half, cx + half):
+            col = C("73bed3")
+            if y == 4:
+                col = C("a4dddb")                      # lit table
+            elif x < cx - half + 3 or abs(x - cx) < 2:
+                col = C("a4dddb") if y < 6 else C("4f8fba")
+            elif x > cx + half - 3:
+                col = C("3c5e8b")
+            c.set(x, y, col)
+    # pavilion (tapering bottom)
+    for y in range(9, 22):
+        half = max(1, 11 - (y - 9))
+        for x in range(cx - half, cx + half):
+            t = (x - (cx - half)) / max(1, 2 * half)
+            col = C("4f8fba")
+            if t < 0.25:
+                col = C("73bed3")
+            elif t > 0.72:
+                col = C("253a5e")
+            if (x + y) % 9 == 0:
+                col = C("3c5e8b")                      # facet lines
+            c.set(x, y, col)
+    c.set(cx - 5, 5, C("ebede9"))                      # the sparkle
+    c.set(cx - 4, 5, C("ebede9"))
+    c.set(cx - 5, 6, C("ebede9"))
+    c.outline_auto()
+    return c, (cx, 22), None
+
+def make_signal_rings() -> list[Image.Image]:
+    """Expanding broadcast rings for the splash — pixel circles, faded by
+    the runtime via modulate."""
+    rings: list[Image.Image] = []
+    for radius in (6, 10, 15, 21, 28, 36):
+        size = radius * 2 + 4
+        img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+        px = img.load()
+        r, g, b, _ = C("73bed3")
+        steps = max(24, radius * 8)
+        import math as _math
+        for i in range(steps):
+            a = i / steps * 2 * _math.pi
+            x = int(size / 2 + _math.cos(a) * radius)
+            y = int(size / 2 + _math.sin(a) * radius * 0.55)  # iso-squashed
+            if 0 <= x < size and 0 <= y < size:
+                px[x, y] = (r, g, b, 210)
+        rings.append(img)
+    return rings
+
+def make_signal_beam() -> Image.Image:
+    """The first beam: a bright vertical edge that sweeps the wordmark in."""
+    img = Image.new("RGBA", (8, 60), (0, 0, 0, 0))
+    px = img.load()
+    core = C("a4dddb")
+    glow = C("4f8fba")
+    for y in range(60):
+        px[3, y] = (core[0], core[1], core[2], 235)
+        px[4, y] = (core[0], core[1], core[2], 160)
+        px[2, y] = (glow[0], glow[1], glow[2], 110)
+        px[5, y] = (glow[0], glow[1], glow[2], 70)
+        if y % 3 == 0:
+            px[1, y] = (glow[0], glow[1], glow[2], 45)
+    return img
+
+def make_studio_word() -> Image.Image:
+    """'sapphire signal' in the game font, sapphire-toned, 2x."""
+    word = _render_word("sapphire signal", C("a4dddb"), C("4f8fba"))
+    return word.resize((word.width * 2, word.height * 2), Image.NEAREST)
 
 def make_sniper_round() -> Image.Image:
     """Bright tracer round for the map-edge sniper (effect: alpha-graded)."""
@@ -2698,8 +2817,8 @@ def main() -> None:
 
     entries: dict = {}
     props, families = prop_inventory()
-    for name, (canvas, origin, collider) in props.items():
-        entries[name] = (canvas, origin, collider)
+    for name, entry in props.items():
+        entries[name] = entry  # 3-tuples, or 4 with light coords (vehicles)
     for name, piece in wall_piece_inventory().items():
         entries[name] = piece
     for tone in ROOF_TONES:
@@ -2721,12 +2840,15 @@ def main() -> None:
     grabber.rect(1, 9, 6, 10, C("819796"))
     entries["ui_grabber"] = (grabber, (4, 6), None)
 
-    for name, (canvas, origin, collider) in entries.items():
+    for name, entry in entries.items():
+        canvas, origin, collider = entry[0], entry[1], entry[2]
         if name != "shadow":
             assert_palette(canvas.img, name)
         canvas.img.save(OUT / f"{name}.png")
         manifest["props"][name] = {
             "size": [canvas.w, canvas.h], "origin": list(origin), "collider": collider}
+        if len(entry) > 3:
+            manifest["props"][name]["lights"] = entry[3]
     manifest["families"] = families
 
     sheet = make_char_sheet()
@@ -2755,6 +2877,14 @@ def main() -> None:
     make_light_radial().save(OUT / "light_radial.png")  # Light2D textures
     make_light_cone().save(OUT / "light_cone.png")
     make_sniper_round().save(OUT / "sniper_round.png")
+    make_alarm_light().save(OUT / "alarm_light.png")
+    gem_c, _, _ = make_studio_gem()
+    assert_palette(gem_c.img, "studio_gem")
+    gem_c.img.save(OUT / "studio_gem.png")
+    for i, ring in enumerate(make_signal_rings()):
+        ring.save(OUT / f"signal_ring_{i}.png")       # splash fx: alpha-graded
+    make_signal_beam().save(OUT / "signal_beam.png")
+    make_studio_word().save(OUT / "studio_word.png")
 
     # rotating main-menu backdrops (+ their animated overlay layers)
     scene_hoard = make_scene_hoard(entries)

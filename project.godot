@@ -7,7 +7,7 @@ config_version=5
 [application]
 
 config/name="SPOILS"
-run/main_scene="res://scenes/menu.tscn"
+run/main_scene="res://scenes/splash.tscn"
 config/features=PackedStringArray("4.7")
 
 [autoload]
@@ -15,6 +15,7 @@ config/features=PackedStringArray("4.7")
 Authority="*res://scripts/authority.gd"
 Settings="*res://scripts/settings.gd"
 Sfx="*res://scripts/sfx.gd"
+Music="*res://scripts/music.gd"
 Harness="*res://scripts/harness.gd"
 
 [display]

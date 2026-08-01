@@ -46,6 +46,7 @@ func _show_deploy_screen() -> void:
 
 
 func _build_world() -> void:
+	Music.stop_menu()  # the theme fades under the deploy screen
 	# let the deploy screen actually render before the heavy lifting
 	await get_tree().process_frame
 	await get_tree().process_frame
@@ -98,6 +99,13 @@ func _build_world() -> void:
 	guard.name = "EdgeGuard"
 	add_child(guard)
 	guard.setup(_player, self, info["map_center"], info["barrier_f"])
+	var alarms := CarAlarms.new()
+	alarms.name = "CarAlarms"
+	add_child(alarms)
+	for entry in (info["alarm_cars"] as Array):
+		alarms.register(entry["node"] as Node2D, entry["lights"] as Array)
+	alarms.setup(_player)
+	_player.setup_surfaces(_floor_layer, _surface_kinds_from(info["floor_coords"]))
 	_build_prompt()
 	await get_tree().process_frame
 
@@ -126,6 +134,25 @@ func _prewarm_textures() -> void:
 			if Time.get_ticks_usec() >= deadline:
 				await get_tree().process_frame
 				deadline = Time.get_ticks_usec() + 2400
+
+
+func _surface_kinds_from(floor_coords: Dictionary) -> Dictionary:
+	# tile atlas coords -> footstep surface, derived from tile names
+	var kinds: Dictionary = {}
+	for tile_name in floor_coords:
+		var tc: Array = floor_coords[tile_name]
+		var name_str := str(tile_name)
+		var kind := "concrete"
+		if name_str.begins_with("asphalt"):
+			kind = "asphalt"
+		elif name_str.begins_with("wood"):
+			kind = "wood"
+		elif name_str.begins_with("forest") or name_str.begins_with("grass"):
+			kind = "grass"
+		elif name_str.begins_with("dirt"):
+			kind = "dirt"
+		kinds[Vector2i(int(tc[0]), int(tc[1]))] = kind
+	return kinds
 
 
 func _build_prompt() -> void:

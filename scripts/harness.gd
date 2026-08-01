@@ -45,6 +45,8 @@ func _ready() -> void:
 			_perf_deploy.call_deferred()
 		elif arg == "--probe-sniper":
 			_probe_sniper.call_deferred()
+		elif arg.begins_with("--shot-splash="):
+			_shot_splash.call_deferred(arg.trim_prefix("--shot-splash="))
 		elif arg == "--probe-exclusive":
 			_probe_exclusive.call_deferred()
 
@@ -363,6 +365,18 @@ func _perf_deploy() -> void:
 		top += " %.1fms@%.2fs" % [spikes[i].x, spikes[i].y]
 	print("PERF-DEPLOY frames=%d build_s=%.2f worst:%s" % [
 		frames, float(built_us - t0) / 1_000_000.0, top])
+	get_tree().quit(0)
+
+
+func _shot_splash(shot_name: String) -> void:
+	## Capture the studio splash mid-animation (the beam sweep).
+	await get_tree().create_timer(1.6).timeout
+	var image := get_viewport().get_texture().get_image()
+	var dir := ProjectSettings.globalize_path("res://shots")
+	DirAccess.make_dir_recursive_absolute(dir)
+	var path := dir.path_join(shot_name + ".png")
+	image.save_png(path)
+	print("SHOT SAVED: " + path)
 	get_tree().quit(0)
 
 

@@ -3,6 +3,41 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.8] — 2026-08-01
+
+The sound update: the district found its voice — and its studio card.
+
+### Added
+- **SapphireSignal splash screen**: the sapphire wakes, broadcasts signal
+  rings with a sonar ping, and the first beam sweeps across to reveal
+  "sapphire signal" in the game font. Skippable with any input; harness runs
+  bypass it. The game now boots into it before the menu.
+- **Main menu music**: a synthesized dark-ambient theme in A minor — detuned
+  low drone, slow pad swells, a lonely echoing motif, a breath of wind —
+  rendered once on a background thread (11 kHz lo-fi by design), looping
+  seamlessly, fading out under the deploy screen.
+- **Per-surface footsteps**: concrete, asphalt, hollow hardwood, brushed
+  grass, muffled dirt — resolved from the tile under the raider each plant
+  frame, with pitch variation, quieter when crouched, a slow drag when prone.
+- **Thunder**: every lightning strike rolls thunder in after a random
+  0.4–1.4 s distance delay (two synthesized rolls, subtle).
+- **Rain bed**: a soft looping patter that rises and falls with rain density.
+- **Car alarms**: ~half of the INTACT vehicles are armed. Come within reach
+  and a short two-tone alarm fires from the car itself (positional audio)
+  while its baked light pixels flash amber for 3 seconds — once per car,
+  re-armed only when the raider dies and re-enters. Broken-into cars never
+  alarm; they were stripped long ago.
+
+### Fixed
+- **The dotted vehicle lattice**: the roof plane's 2:1 strokes left a
+  checkerboard of transparent holes that the outliner rimmed into dots —
+  the "missing parts" look. Both rounding rows now fill; vehicles are solid.
+- **Hidden vehicle ends close properly**: a 2px body wrap with a bumper hint
+  and a light sliver, so no car ever ends in a flat cutoff.
+- **Broken-into rework**: no more shattered-glass field across the roof —
+  a door hanging open, one flat tire, dark side windows with a couple of
+  glints, rust. Reads as an event, not noise.
+
 ## [0.6.7] — 2026-08-01
 
 ### Changed

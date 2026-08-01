@@ -201,7 +201,11 @@ func _process(delta: float) -> void:
 				puddle.modulate.a = move_toward(a, puddle_target, rate)
 				_puddles_resting = false
 
-	# lightning during heavy rain: a real double-strike that lingers
+	# the rain bed follows the density, always subtle
+	Sfx.set_rain(rain_intensity)
+
+	# lightning during heavy rain: a real double-strike that lingers, thunder
+	# rolling in behind it (the delay is the distance)
 	if _raining and rain_intensity > 0.6:
 		_lightning_timer -= delta
 		if _lightning_timer <= 0.0:
@@ -212,6 +216,8 @@ func _process(delta: float) -> void:
 			tween.tween_property(_flash, "color:a", 0.05, 0.16)
 			tween.tween_property(_flash, "color:a", peak * 0.75, 0.08)
 			tween.tween_property(_flash, "color:a", 0.0, 0.50)
+			get_tree().create_timer(randf_range(0.4, 1.4)).timeout.connect(
+				Sfx.play_thunder)
 
 
 func _night_amount_for(t: float) -> float:
