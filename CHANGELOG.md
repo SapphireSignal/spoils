@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
@@ -10,6 +10,7 @@ All notable changes to SPOILS are documented here. Versions follow a simple
   (the old gray-blue blended into the darker scenes).
 - The changelog link is a dim flat footer link, matching the version label.
 - In-game changelog entries expanded with more detail per version.
+
 ## [0.5.4] — 2026-07-31
 
 ### Added
