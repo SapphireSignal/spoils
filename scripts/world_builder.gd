@@ -99,6 +99,8 @@ var _scrap_rect := Rect2i()          # the scrapyard block
 var _map_marks: Array = []           # [cell, kind] static marks for the map
 var _map_trees: Array[Vector3i] = [] # (x, y, autumn) — every planted tree,
                                      # so the baked map shows the woods
+var _lz_rect := Rect2i()             # the lift's clearing
+var _extracts: Array[Dictionary] = []  # ways out, handed to Extraction
 var _window_cells: Dictionary = {}   # (x, y, side_id) -> true where a wall
                                      # segment carries glass
 const _EDGE_SIDE_IDS := {"yp": 0, "yn": 1, "xp": 2, "xn": 3}
@@ -148,6 +150,7 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 	await _place_comms()
 	await _place_safehouse_ring()
 	await _place_gallery()
+	await _place_lz()
 	await _place_scrapyard()
 	await _place_power_boxes()
 	await _place_school_grounds()
@@ -211,8 +214,11 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 				_scrap_rect.size.x, _scrap_rect.size.y],
 			"safehouse": [_safehouse_rect.position.x, _safehouse_rect.position.y,
 				_safehouse_rect.size.x, _safehouse_rect.size.y],
+			"lz": [_lz_rect.position.x, _lz_rect.position.y,
+				_lz_rect.size.x, _lz_rect.size.y],
 			"rail_row": _rail_row,
 		},
+		"extracts": _extracts,
 	}
 
 
@@ -2034,6 +2040,69 @@ func _place_school_grounds() -> void:
 	for x in range(_playground.position.x, _playground.end.x, 2):
 		if _rng.randf() < 0.7:
 			_fence_piece(Vector2i(x, _playground.end.y - 1), "x")
+
+
+func _place_lz() -> void:
+	# THE LIFT: a clearing somebody keeps clear, with a painted marker,
+	# a dirt track running to it and enough junk around the rim to say
+	# people wait here. The green smoke and glow are runtime.
+	var blocks := _zone_blocks("open")
+	if blocks.is_empty():
+		blocks = _zone_blocks("forest")
+	if blocks.is_empty():
+		return
+	var r: Rect2i = _block_rects[blocks[0]]
+	# the far corner from the gallery, so the two POIs don't crowd
+	var size := Vector2i(9, 8)
+	var pos := Vector2i(r.end.x - size.x - 2, r.end.y - size.y - 2)
+	if _gallery_rect.size.x > 0 and _gallery_rect.get_center().x > r.get_center().x:
+		pos.x = r.position.x + 2
+	_lz_rect = Rect2i(pos, size)
+	var centre := _lz_rect.get_center()
+	for y in range(_lz_rect.position.y, _lz_rect.end.y):
+		await _tick()
+		for x in range(_lz_rect.position.x, _lz_rect.end.x):
+			var cell := Vector2i(x, y)
+			if _on_road(cell) or _rail_cells.has(cell):
+				continue
+			_forest.erase(cell)
+			_dirt_path[cell] = true          # a stamped-flat clearing
+			_set_tile(cell, "dirt_%d" % _rng.randi_range(0, 3))
+			_occupied[cell] = true
+	# the track in: a dirt road from the nearest road to the clearing
+	var road_x: int = _roads_v[0].x
+	for r_v in _roads_v:
+		if absi(r_v.x - centre.x) < absi(road_x - centre.x):
+			road_x = r_v.x
+	var walk_x := centre.x
+	var step := 1 if road_x > centre.x else -1
+	while walk_x != road_x:
+		var tcell := Vector2i(walk_x, centre.y + _rng.randi_range(-1, 1))
+		if not _occupied.has(tcell) and not _on_road(tcell):
+			_dirt_path[tcell] = true
+			_set_tile(tcell, "dirt_%d" % _rng.randi_range(0, 3))
+		walk_x += step
+	# the painted marker in the middle, and the waiting-room junk
+	_add_prop_at_cell("lz_marker", centre, Vector2(0, 0))
+	var rim: Array[Vector2i] = []
+	for y in range(_lz_rect.position.y, _lz_rect.end.y):
+		for x in range(_lz_rect.position.x, _lz_rect.end.x):
+			var cell := Vector2i(x, y)
+			if Vector2(cell - centre).length() > 3.2:
+				rim.append(cell)
+	_shuffle(rim)
+	for i in mini(6, rim.size()):
+		var junk: String = ["barrel", "crate", "crate_stack", "pallet",
+			"tires"][_rng.randi_range(0, 4)]
+		_add_prop_at_cell(_pick_variant(junk), rim[i], Vector2(0, 0))
+	_extracts.append({
+		"name": "the lift",
+		"kind": "lift",
+		"pos": _floor_layer.map_to_local(centre),
+		"radius": 150.0,        # about the clearing itself
+		"auto": true,
+	})
+	_map_marks.append([centre, "lz"])
 
 
 func _place_scrapyard() -> void:

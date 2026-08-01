@@ -3,6 +3,40 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.27] — 2026-08-01
+
+### Added
+- **EXTRACTION — you can leave the raid.** New `Extraction` manager holds
+  every exit on the map, watches the raider's distance to each, runs the
+  green "extracting in N" counter, and plays the leaving sequence.
+  Exits can be automatic (stand in it) or armed by something else — the
+  toll gate and the freight will arm theirs.
+- **Extract 1: THE LIFT** (user design). The builder carves a clearing in
+  the open block, stamps it flat, paints a worn marker on the ground,
+  runs a dirt track to it from the nearest road, and scatters waiting-
+  room junk around the rim. A beacon sits in the middle throwing green
+  smoke (soft fog puffs, tinted and billowing) over an additive ground
+  wash that reads at noon as well as midnight. Walk in, it counts down
+  from five on its own, then a **helicopter** flies in over the treeline
+  with its rotor turning, hangs a rope, and lifts you out of frame.
+  New art: a 3-frame helicopter (lit fuselage, glass nose, tail boom and
+  fin, skids, a rotor disc that sweeps across the frames) and the LZ
+  ground marker.
+- **The debrief: "successfully extracted"** (user spec). How you got out,
+  time survived, xp earned, kill count and raiders killed — plus a kill
+  log listing the minute and the BONE for each one. The haul column is
+  stubbed until the stash and grid inventory land in M4. New `Raid`
+  autoload keeps the ledger (start time, xp, kills with timestamp, bone
+  and whether it was a real raider), so the screen is real the day M3's
+  strays arrive. Harness: `--extract=<method>` opens the debrief with a
+  sample ledger.
+
+### Changed
+- LORE.md §7c and DESIGN.md §8.4 now carry the picked exits as canon —
+  the toll gate (a warden running the crossing as a business), the night
+  freight, and the lift — with the drain, outfall and fog window kept
+  for later. CLAUDE.md gained an IN FLIGHT section tracking all three.
+
 ## [0.6.26] — 2026-08-01
 
 ### Changed

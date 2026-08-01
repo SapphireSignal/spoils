@@ -234,8 +234,20 @@ Claude must prove its own work without the user:
    dark streets; keep it SUBTLE per the audio/visual taste rules.
 4. **The loop (v0.9):** Tarkov-style loot — grid inventory with item footprints,
    searchable containers, character doll gear slots (helmet/armor/rig/backpack/
-   weapons) — extraction points, raid timer, death = loss, stash persistence.
-   First real "raid".
+   weapons) — raid timer, death = loss, stash persistence. First real "raid".
+   **EXTRACTION ships early, in the 0.6.x line** (user request 2026-08-01) —
+   three exits, each its own version, all ending on one summary screen:
+   - **toll gate** — a warden in a booth on the district edge. Interact (from
+     foot or a car) opens a portrait dialogue: an endless "reply" button that
+     keeps him talking lore, a "pay the fee to extract" button, and a way back.
+     Paying opens the wire; drive out of bounds and a green counter runs down.
+   - **night freight** — one distinct, bigger train. "press f to get on",
+     a departure clock counts from ten, then it rolls out under the wire.
+   - **the lift** — a green-smoked LZ off a dirt track. Get close and it
+     counts down on its own; a helicopter comes in, drops a rope, lifts you.
+   - **the summary screen** — "successfully extracted", how you got out, time
+     survived, xp, kills (with the minute and the bone), player kills, and
+     the haul once the stash exists.
 5. **The living raid (v1.0):** human-like "fake player" bots, dynamic lighting pass,
    trader — then iterate on user playtests.
 6. **Quests (v1.1):** trader tasks (fetch / kill / extract-with), rewards, unlocks.

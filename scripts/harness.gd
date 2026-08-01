@@ -367,6 +367,16 @@ func _shot(shot_name: String) -> void:
 			select_scene.call("_open_map_select")
 			select_scene.call("_select_transit")
 	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--extract="):
+			# jump straight to the debrief with a sample ledger, so the
+			# screen can be judged before enemies exist to fill it
+			var screen := get_tree().current_scene.get_node_or_null("ExtractScreen")
+			if screen != null:
+				Raid.add_xp(340)
+				Raid.record_kill("stray", "chest")
+				Raid.record_kill("stray", "head")
+				Raid.record_kill("magpie", "leg", true)
+				screen.call("show_debrief", arg.trim_prefix("--extract="))
 		if arg.begins_with("--map="):
 			var wanted := arg.trim_prefix("--map=")
 			var map_view := get_tree().current_scene.get_node_or_null("MapView")

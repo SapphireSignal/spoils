@@ -5420,6 +5420,28 @@
       ],
       "collider": null
     },
+    "helicopter": {
+      "size": [
+        348,
+        62
+      ],
+      "origin": [
+        46,
+        47
+      ],
+      "collider": null
+    },
+    "lz_marker": {
+      "size": [
+        76,
+        44
+      ],
+      "origin": [
+        38,
+        23
+      ],
+      "collider": null
+    },
     "floor_edge_x": {
       "size": [
         64,

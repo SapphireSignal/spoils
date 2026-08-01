@@ -66,6 +66,15 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.27", ["you can get out now. the first way out is the lift:",
+		"a clearing off a dirt track with green smoke coming",
+		"out of it - stand in it and it counts you down",
+		"a helicopter comes in over the trees, drops a rope,",
+		"and pulls you up out of the district",
+		"then the debrief: how you got out, how long you lasted,",
+		"xp, and every kill with the minute and the bone",
+		"(the haul column waits for the stash update)",
+		"the toll gate and the night freight are next"]],
 	["v0.6.26", ["the map is drawn now, not screenshotted: roads are",
 		"real strokes, woods are soft green, buildings are solid,",
 		"the rail has ties and the wire is a dashed red line",

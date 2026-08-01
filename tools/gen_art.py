@@ -3790,6 +3790,95 @@ def make_smoker_sheet() -> tuple[Canvas, tuple, list | None]:
     sheet.px = sheet.img.load()
     return sheet, (14, 34), None
 
+def make_helicopter() -> tuple[Canvas, tuple, list | None]:
+    """The bird that lifts you out: a 3-frame sheet, rotor turning. Seen
+    from above and to the side like everything else — fuselage with a lit
+    top, a glass nose, tail boom and fin, skids hanging under it, and a
+    rotor disc that blurs across the frames."""
+    rng = random.Random(f"{SEED}:heli")
+    fw, fh = 116, 62
+    frames = []
+    for f in range(3):
+        c = Canvas(fw, fh)
+        cx, cy = 46, 36
+        # skids first: they hang below the body
+        for sx in range(cx - 14, cx + 12):
+            c.set(sx, cy + 11, C("202e37"))
+        for strut_x in (cx - 10, cx + 6):
+            for k in range(3):
+                c.set(strut_x, cy + 8 + k, C("394a50"))
+        # fuselage: a rounded body, lit along the top
+        for dy in range(-9, 10):
+            half = int((1.0 - (dy / 10.0) ** 2) ** 0.5 * 17)
+            for dx in range(-half, half + 1):
+                col = C("394a50")
+                if dy < -5:
+                    col = C("577277")          # top face catches the sky
+                elif dy > 6:
+                    col = C("202e37")          # under-shadow
+                c.set(cx + dx, cy + dy, col)
+        # glass nose, facing west
+        for dy in range(-5, 5):
+            half = int((1.0 - (dy / 6.0) ** 2) ** 0.5 * 7)
+            for dx in range(-half, 1):
+                c.set(cx - 11 + dx, cy + dy,
+                      C("3c5e8b") if dy < 1 else C("253a5e"))
+        # tail boom + fin
+        for tx in range(cx + 15, cx + 44):
+            c.set(tx, cy - 1, C("577277"))
+            c.set(tx, cy, C("394a50"))
+            c.set(tx, cy + 1, C("202e37"))
+        for k in range(9):
+            c.set(cx + 42, cy - 2 - k, C("394a50"))
+            c.set(cx + 43, cy - 2 - k, C("202e37"))
+        for k in range(4):                     # tail rotor
+            c.set(cx + 41 - k, cy - 11 + (k if f == 1 else 0), C("819796"))
+        # main rotor: a long blur disc, swept differently each frame
+        angle = f * 0.9
+        for step in range(-42, 43):
+            t = step / 42.0
+            rx = int(cx + math.cos(angle) * step)
+            ry = int(cy - 13 + math.sin(angle) * step * 0.22)
+            if 0 <= rx < fw and 0 <= ry < fh:
+                c.set(rx, ry, C("819796") if abs(t) > 0.55 else C("c7cfcc"))
+        c.set(cx, cy - 13, C("151d28"))        # the mast
+        c.set(cx, cy - 14, C("394a50"))
+        for _ in range(rng.randint(2, 4)):     # a little wear
+            c.set(cx + rng.randint(-12, 12), cy + rng.randint(-6, 6),
+                  C("202e37"))
+        c.outline_auto()
+        frames.append(c)
+    sheet = Canvas(fw * 3, fh)
+    for i, fr in enumerate(frames):
+        sheet.img.alpha_composite(fr.img, (i * fw, 0))
+    sheet.px = sheet.img.load()
+    return sheet, (46, 47), None
+
+
+def make_lz_marker() -> tuple[Canvas, tuple, list | None]:
+    """The pickup marker painted on the ground: a worn circle with a
+    cross through it, the paint half gone. The green glow and the smoke
+    are runtime — this is just what somebody painted years ago."""
+    rng = random.Random(f"{SEED}:lz")
+    c = Canvas(76, 44)
+    cx, cy = 38, 22
+    for a in range(0, 360, 3):
+        if rng.random() < 0.22:                # the paint has worn through
+            continue
+        rad = math.radians(a)
+        x = int(cx + math.cos(rad) * 30)
+        y = int(cy + math.sin(rad) * 15)
+        c.set(x, y, C("75a743"))
+        c.set(x, y + 1, C("25562e"))
+    for k in range(-18, 19):                   # the cross, iso-aligned
+        if rng.random() < 0.18:
+            continue
+        c.set(cx + k, cy + k // 2, C("75a743"))
+        c.set(cx + k, cy - k // 2, C("25562e"))
+    c.outline_auto()
+    return c, (38, 23), None
+
+
 def make_chalkboard() -> tuple[Canvas, tuple, list | None]:
     """The classroom board on the x-axis wall face: slate, chalk ghost
     lines, the tray, two stubs of chalk nobody came back for."""
@@ -4036,6 +4125,8 @@ def prop_inventory() -> tuple[dict, dict]:
         fam("spray_cans", i, make_spray_cans(i))
     props["smoker"] = make_smoker_sheet()
     props["chalkboard"] = make_chalkboard()
+    props["helicopter"] = make_helicopter()
+    props["lz_marker"] = make_lz_marker()
     props["floor_edge_x"] = make_floor_edge("x")
     props["floor_edge_y"] = make_floor_edge("y")
     # house power

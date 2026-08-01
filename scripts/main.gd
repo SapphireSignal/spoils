@@ -23,6 +23,7 @@ var _player_upper := -1        # index into _uppers while on a second story
 var _car_hint: RichTextLabel
 var _car_hint_until := 0.0
 var _was_driving := false
+var _extract_screen: ExtractScreen
 
 
 func _ready() -> void:
@@ -144,6 +145,25 @@ func _build_world() -> void:
 	add_child(map_view)
 	map_view.setup(info, _player, environment, _floor_layer)
 	add_child(PauseMenu.new())
+
+	# the ways out, and the screen you get when you take one
+	_extract_screen = ExtractScreen.new()
+	_extract_screen.name = "ExtractScreen"
+	add_child(_extract_screen)
+	var extraction := Extraction.new()
+	extraction.name = "Extraction"
+	add_child(extraction)
+	extraction.setup(_player)
+	for zone in (info.get("extracts", []) as Array):
+		var z: Dictionary = zone
+		extraction.register(str(z["name"]), z["pos"] as Vector2,
+			float(z["radius"]), str(z["kind"]), bool(z["auto"]))
+		if str(z["kind"]) == "lift":
+			var beacon := LzBeacon.new()
+			beacon.position = z["pos"] as Vector2
+			ysort.add_child(beacon)
+	extraction.extracted.connect(_on_extracted)
+	Raid.begin()
 	await get_tree().process_frame
 	Music.play_raid()  # sparse ambient with long silences, -26 dB
 	world_info = info  # publish LAST: the harness polls this to detect readiness
@@ -342,6 +362,12 @@ func _process(delta: float) -> void:
 	for roof in _roofs:
 		var reveal := roof as RoofReveal
 		reveal.set_inside(reveal.cells.has_point(cell))
+
+
+func _on_extracted(method: String) -> void:
+	Music.stop_raid(1.5)
+	Sfx.set_engine(0.0)
+	_extract_screen.show_debrief(method)
 
 
 func _on_player_died() -> void:

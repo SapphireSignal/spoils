@@ -103,6 +103,25 @@ This file carries everything a fresh session needs that isn't in those two.
   prone/standing size, den board text, splash SHATTER pacing, all sound
   levels, day length (8-min offer stands), night darkness.
 
+## IN FLIGHT: EXTRACTION (user picked + designed 2026-08-01)
+
+Three exits, shipping one per version in the 0.6.x line, all ending on
+ONE summary screen. Full spec in DESIGN.md §8.4 and LORE.md §7c.
+1. **the lift** — green-smoke LZ off a dirt track, proximity countdown
+   5..1, helicopter flies in, rope, lift, screen. (v0.6.27 target)
+2. **the toll gate** — warden in a booth on the district edge; portrait
+   dialogue with an ENDLESS "reply" button (he rambles lore: the gates,
+   what he's made off raiders — mean and weird by design), "pay the fee
+   to extract", and back. Paying lets you leave the bounds; a green
+   counter runs as you drive out. Needs a portrait + dialogue UI +
+   currency stub.
+3. **the night freight** — one BIGGER, distinct train; "press f to get
+   on the train", rider goes inside, "departing in 10..0", then it
+   accelerates off the map.
+SUMMARY SCREEN: method, time survived, xp, kills (each with the minute
+and the BONE), real-player kills, and the haul (placeholder until the
+stash lands in M4).
+
 ## OPEN DECISIONS the user owes (next session: act on their pick)
 
 1. **TRAILER concept** — pitches sent 2026-08-01, movie-style as they

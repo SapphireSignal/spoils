@@ -21,6 +21,7 @@ Settings="*res://scripts/settings.gd"
 Sfx="*res://scripts/sfx.gd"
 Music="*res://scripts/music.gd"
 Ui="*res://scripts/ui_state.gd"
+Raid="*res://scripts/raid.gd"
 Harness="*res://scripts/harness.gd"
 
 [debug]

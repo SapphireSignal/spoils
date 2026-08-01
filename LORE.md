@@ -288,28 +288,36 @@ some open only under conditions (the hour, the weather, a price paid),
 and the good ones are watched. You choose your exit when you choose
 what you're carrying.
 
-**PITCHES for transit's exits — THE USER PICKS; do not build unpicked
-ones.**
-- **the drain (always open, always slow).** Back down a manhole into
-  the storm mains and walk out under the wire. Free, reliable, and the
-  tollman's junction sits between you and the outside. Fits the film,
-  fits "going down". The baseline exit.
-- **the toll gate (pay to leave).** A stretch of wire under plastic
-  sheeting where the wardens look the other way for a price. Fast and
-  safe — and it charges you in brass, so it taxes greed exactly when
-  you have the most to lose.
-- **the night freight (timed).** The rail line still runs one train.
-  It comes when it comes; mara calls it over the radio. Get to the
-  trainyard in the window and ride out. Miss it and you're walking.
-- **the drive-out (loud).** Take a working vehicle through a road
-  breach in the barricades. The fastest way out with the most weight —
-  and an engine at night is a dinner bell for every gun in the sector.
-- **the outfall (conditional).** The drain's river mouth, only passable
-  when the rain has NOT been running (storms flood it). Weather picks
-  this one for you.
-- **the fog window (conditional).** During dawn fog the wardens'
-  optics are useless and one stretch of open wire is briefly crossable.
-  "out before the fog lifts" stops being a saying and becomes a rule.
+### transit's exits — CANON (user picked 2026-08-01)
+
+**1. the toll gate.** A warden sits a booth on the district edge, and
+he is exactly the kind of man who takes that posting: rude, chatty,
+and rich off people like you. Walk or drive up and he'll talk — he
+will talk forever, about the gates, about the war he says he fought,
+about how much he has made off raiders who thought they were clever.
+Pay his fee and the barrier goes up: the wire stops caring, and you
+drive out past the line while the counter runs down in green. Free to
+leave, if you can afford to leave. (Diegetic proof that the cordon is
+a business, not a principle — the deepest joke in §2.)
+
+**2. the night freight.** The rail still runs one train. It sits in the
+yard bigger and blacker than the dead stock around it, and it goes
+when it goes. Climb aboard, and a departure clock starts whether
+you're ready or not. Then it pulls, slowly, and takes you out under
+the wire on rails the wardens gave up watching years ago.
+
+**3. the lift (the green smoke).** Somebody in the warden air wing
+sells rides. The den pays, you pop the marker, and a bird comes in
+over the treeline with a rope. It is the fastest way out of transit
+and the most expensive, and every raider who uses it knows that the
+crew flying it could just as easily take the haul and go. One day one
+of them will. Marked by a clearing off a dirt track, green smoke
+curling out of it.
+
+**Still unbuilt (kept for later maps / later versions):** the drain
+(walk out through the storm mains — the baseline exit, lands with the
+tunnels), the outfall (blocked when the rain has been running), and
+the fog window (dawn fog blinds the wardens for a few minutes).
 
 ## 8. magpie — the player, and the photo
 
