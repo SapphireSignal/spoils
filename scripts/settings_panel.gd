@@ -5,14 +5,18 @@ extends PanelContainer
 ## CheckBoxes: text-only controls stay pixel-crisp with the bitmap font.
 
 signal closed
+signal keybinds_requested
 
 var _display_btn: Button
 var _fps_value: Label
+var _fps_slider: HSlider
 
 
 func _ready() -> void:
 	theme = UITheme.get_theme()
-	custom_minimum_size = Vector2(240, 0)
+	# fixed width with headroom: value text changes (e.g. "synced (240hz)")
+	# must never resize the panel
+	custom_minimum_size = Vector2(272, 0)
 
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 7)
@@ -53,21 +57,20 @@ func _ready() -> void:
 
 	var fps_box := HBoxContainer.new()
 	fps_box.add_theme_constant_override("separation", 6)
-	var slider := HSlider.new()
-	slider.min_value = 0
-	slider.max_value = 240
-	slider.step = 10
-	slider.value = Settings.max_fps
-	slider.custom_minimum_size = Vector2(90, 12)
-	slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_fps_slider = HSlider.new()
+	_fps_slider.min_value = 0
+	_fps_slider.max_value = 240
+	_fps_slider.step = 10
+	_fps_slider.value = Settings.max_fps
+	_fps_slider.custom_minimum_size = Vector2(90, 12)
+	_fps_slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_fps_value = Label.new()
-	_fps_value.custom_minimum_size = Vector2(52, 0)
-	_fps_value.text = _fps_cap_text(Settings.max_fps)
-	slider.value_changed.connect(func(value: float) -> void:
+	_fps_value.custom_minimum_size = Vector2(86, 0)
+	_fps_slider.value_changed.connect(func(value: float) -> void:
 		Settings.max_fps = int(value)
-		_fps_value.text = _fps_cap_text(Settings.max_fps)
+		_update_fps_row()
 		Settings.apply_all())
-	fps_box.add_child(slider)
+	fps_box.add_child(_fps_slider)
 	fps_box.add_child(_fps_value)
 	box.add_child(_row("FPS CAP", fps_box))
 
@@ -75,7 +78,9 @@ func _ready() -> void:
 		func() -> bool: return Settings.vsync,
 		func(on: bool) -> void:
 			Settings.vsync = on
+			_update_fps_row()
 			Settings.apply_all())))
+	_update_fps_row()
 
 	box.add_child(_row("SHOW FPS", _toggle_button(
 		func() -> bool: return Settings.show_fps,
@@ -84,8 +89,13 @@ func _ready() -> void:
 			Settings.apply_all())))
 
 	box.add_child(_spacer(2))
+	var keybinds := Button.new()
+	keybinds.text = "keybinds"
+	keybinds.pressed.connect(func() -> void: keybinds_requested.emit())
+	box.add_child(keybinds)
+
 	var back := Button.new()
-	back.text = "< BACK"
+	back.text = "< back"
 	back.pressed.connect(func() -> void: closed.emit())
 	box.add_child(back)
 
@@ -134,5 +144,16 @@ func _toggle_button(get_on: Callable, set_on: Callable) -> Button:
 	return button
 
 
+func _update_fps_row() -> void:
+	# with vsync on, the display drives the frame rate — the cap is moot
+	_fps_slider.editable = not Settings.vsync
+	if Settings.vsync:
+		_fps_value.text = "synced (%dhz)" % roundi(DisplayServer.screen_get_refresh_rate())
+		_fps_value.add_theme_color_override("font_color", UITheme.TEXT_DIM)
+	else:
+		_fps_value.text = _fps_cap_text(Settings.max_fps)
+		_fps_value.add_theme_color_override("font_color", UITheme.TEXT)
+
+
 func _fps_cap_text(cap: int) -> String:
-	return "UNCAPPED" if cap == 0 else str(cap)
+	return "uncapped" if cap == 0 else str(cap)

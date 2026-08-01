@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bidlo60wcknv6"
-path="res://.godot/imported/roof_fascia_umber_s.png-f96eb20065e58207a140a641f2930061.ctex"
+uid="uid://ej4gpt25xajc"
+path="res://.godot/imported/roof_tile_pitch_broken_0.png-87b81bf4261bc70b3144679b52716c4b.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/gen/roof_fascia_umber_s.png"
-dest_files=["res://.godot/imported/roof_fascia_umber_s.png-f96eb20065e58207a140a641f2930061.ctex"]
+source_file="res://art/gen/roof_tile_pitch_broken_0.png"
+dest_files=["res://.godot/imported/roof_tile_pitch_broken_0.png-87b81bf4261bc70b3144679b52716c4b.ctex"]
 
 [params]
 

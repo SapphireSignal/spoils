@@ -10,8 +10,9 @@ const MAP_H := 48
 const TILE := Vector2i(64, 32)
 const ROAD_A_X := Vector2i(22, 25)  # column band, runs screen down-left
 const ROAD_B_Y := Vector2i(26, 29)  # row band, runs screen down-right
-const BUILDING_A := Rect2i(8, 8, 9, 7)
-const BUILDING_B := Rect2i(30, 33, 8, 7)
+# deliberately different footprints: A is a small house, B a big warehouse
+const BUILDING_A := Rect2i(9, 8, 7, 6)
+const BUILDING_B := Rect2i(29, 32, 10, 8)
 const SPAWN_CELL := Vector2i(18, 13)
 
 var _rng := RandomNumberGenerator.new()
@@ -144,11 +145,16 @@ func _layout_terrain() -> Array:
 			elif on_b:
 				terrain[y][x] = "asphalt_%d" % _rng.randi_range(0, 1)
 
-	for rect in [BUILDING_A, BUILDING_B]:
-		var inner: Rect2i = rect.grow(-1)
-		for y in range(inner.position.y, inner.end.y):
-			for x in range(inner.position.x, inner.end.x):
-				terrain[y][x] = "concrete_%d" % _rng.randi_range(0, 1)
+	# interior floors: the house gets worn wood planks, the warehouse a
+	# smooth dark screed — both clearly distinct from the street outside
+	var inner_a: Rect2i = BUILDING_A.grow(-1)
+	for y in range(inner_a.position.y, inner_a.end.y):
+		for x in range(inner_a.position.x, inner_a.end.x):
+			terrain[y][x] = "wood_%d" % _rng.randi_range(0, 2)
+	var inner_b: Rect2i = BUILDING_B.grow(-1)
+	for y in range(inner_b.position.y, inner_b.end.y):
+		for x in range(inner_b.position.x, inner_b.end.x):
+			terrain[y][x] = "asphalt_%d" % _rng.randi_range(0, 1)
 	return terrain
 
 
@@ -219,11 +225,11 @@ func _pick_variant(family: String) -> String:
 
 
 func _place_buildings() -> void:
-	# doors: ONE (interior cell, side) edge each — a single doorway per building
-	_build_shell(BUILDING_A, "brick_a", "charcoal",
+	# ONE door each, always on a camera-facing side (east or south)
+	_build_shell(BUILDING_A, "brick_a", "charcoal", "house",
 		[[Vector2i(BUILDING_A.end.x - 2, 10), "xp"]], false)
-	_build_shell(BUILDING_B, "brick_b", "umber",
-		[[Vector2i(33, BUILDING_B.position.y + 1), "yn"]], true)
+	_build_shell(BUILDING_B, "brick_b", "pitch", "warehouse",
+		[[Vector2i(33, BUILDING_B.end.y - 2), "yp"]], true)
 
 
 # edge midpoint offset and segment sprite axis per side of a cell
@@ -239,7 +245,7 @@ const _EDGE_VERTS := {
 }
 
 
-func _build_shell(rect: Rect2i, style: String, roof_tone: String,
+func _build_shell(rect: Rect2i, style: String, roof_tone: String, kind: String,
 		doors: Array, ruined: bool) -> void:
 	var interior: Rect2i = rect.grow(-1)
 	var ruin_corner: Vector2i = interior.end - Vector2i(1, 1)
@@ -301,10 +307,95 @@ func _build_shell(rect: Rect2i, style: String, roof_tone: String,
 		for x in range(rect.position.x, rect.end.x):
 			_occupied[Vector2i(x, y)] = true
 
-	_build_roof(interior, roof_tone, posts.keys())
+	_build_roof(interior, roof_tone, posts.keys(), ruined)
+	if kind == "house":
+		_furnish_house(interior)
+	else:
+		_furnish_warehouse(interior)
 
 
-func _build_roof(interior: Rect2i, tone: String, post_positions: Array) -> void:
+func _interior_free_cells(interior: Rect2i, keep_clear: Array[Vector2i]) -> Array[Vector2i]:
+	var cells: Array[Vector2i] = []
+	for y in range(interior.position.y, interior.end.y):
+		for x in range(interior.position.x, interior.end.x):
+			var cell := Vector2i(x, y)
+			if cell in keep_clear:
+				continue
+			cells.append(cell)
+	return cells
+
+
+func _take_random_cell(cells: Array[Vector2i]) -> Vector2i:
+	var index := _rng.randi_range(0, cells.size() - 1)
+	var cell: Vector2i = cells[index]
+	cells.remove_at(index)
+	return cell
+
+
+func _furnish_house(interior: Rect2i) -> void:
+	# the big furniture keeps a sensible room layout (couch faces the tv),
+	# everything else lands randomly
+	var p := interior.position
+	var couch_side := _rng.randi_range(0, 1)  # which side of the room
+	_add_prop_at_cell("couch", p + Vector2i(1, 1 + couch_side), Vector2(6, 3))
+	_add_prop_at_cell("tv_stand", p + Vector2i(3, 1 + couch_side), Vector2(4, 2))
+	var used: Array[Vector2i] = [
+		p + Vector2i(1, 1 + couch_side), p + Vector2i(3, 1 + couch_side)]
+	var cells := _interior_free_cells(interior, used)
+	var wall_pieces := ["cabinet", "bookshelf"]
+	wall_pieces.shuffle()
+	for piece in wall_pieces:  # against the back wall, random slots
+		var x_offset := _rng.randi_range(0, interior.size.x - 1)
+		var cell := Vector2i(p.x + x_offset, p.y)
+		if cells.has(cell):
+			cells.erase(cell)
+			_add_prop_at_cell(piece, cell, Vector2(6, 2))
+	var extras := ["table", "chair", "crate_%d" % _rng.randi_range(0, 5),
+		_pick_variant("barrel")]
+	for i in _rng.randi_range(2, extras.size()):
+		if cells.is_empty():
+			break
+		_add_prop_at_cell(extras[i - 1], _take_random_cell(cells), Vector2(8, 4))
+
+
+func _furnish_warehouse(interior: Rect2i) -> void:
+	# random rack count along the back wall, random gaps; stock lands wherever
+	var p := interior.position
+	var rack_slots: Array[int] = []
+	for x_offset in range(1, interior.size.x - 1, 2):
+		rack_slots.append(x_offset)
+	rack_slots.shuffle()
+	var used: Array[Vector2i] = []
+	for i in _rng.randi_range(2, mini(3, rack_slots.size())):
+		var cell := Vector2i(p.x + rack_slots[i - 1], p.y)
+		_add_prop_at_cell("rack", cell, Vector2(8, 2))
+		used.append(cell)
+
+	var cells := _interior_free_cells(interior, used)
+	var stock_mix := [
+		["crate_stack", 0.24], ["crate", 0.22], ["pallet", 0.18],
+		["barrel", 0.20], ["cylinder", 0.16],
+	]
+	var total := 0.0
+	for opt in stock_mix:
+		total += opt[1]
+	for i in _rng.randi_range(6, 10):
+		if cells.is_empty():
+			break
+		var cell := _take_random_cell(cells)
+		var roll := _rng.randf() * total
+		for opt in stock_mix:
+			roll -= opt[1]
+			if roll <= 0.0:
+				var item: String = opt[0]
+				if item != "crate_stack":
+					item = _pick_variant(item)
+				_add_prop_at_cell(item, cell, Vector2(10, 5))
+				break
+
+
+func _build_roof(interior: Rect2i, tone: String, post_positions: Array,
+		ruined: bool) -> void:
 	# Modular roof, one module per cell/edge by explicit formula:
 	#   tile   at map_to_local(cell)          + (0, -wall_h)
 	#   fascia at cell center + edge offset   + (0, -wall_h)  (south/east)
@@ -317,10 +408,15 @@ func _build_roof(interior: Rect2i, tone: String, post_positions: Array) -> void:
 	roof.position = _floor_layer.map_to_local(south_corner) + Vector2(0, 24)
 	var lift := Vector2(0, -float(_wall_h))
 
+	var ruin_corner := interior.end - Vector2i(1, 1)
 	for y in range(interior.position.y, interior.end.y):
 		for x in range(interior.position.x, interior.end.x):
 			var cell := Vector2i(x, y)
-			var tile := _prop_sprite("roof_tile_%s_%d" % [tone, _rng.randi_range(0, 1)])
+			var tile_name := "roof_tile_%s_%d" % [tone, _rng.randi_range(0, 1)]
+			if ruined and Vector2(cell - ruin_corner).length() < 3.0 and _rng.randf() < 0.6:
+				# collapsed roof section over the broken corner
+				tile_name = "roof_tile_%s_broken_%d" % [tone, _rng.randi_range(0, 1)]
+			var tile := _prop_sprite(tile_name)
 			tile.position = _floor_layer.map_to_local(cell) - roof.position + lift
 			roof.add_child(tile)
 			var sides: Array[String] = []
@@ -382,14 +478,7 @@ func _place_fixed_props() -> void:
 	_add_prop_at_cell("crate_0", Vector2i(17, 16))
 	_add_prop_at_cell("tires_0", Vector2i(20, 11))
 	_add_prop_at_cell("rubble_1", Vector2i(21, 16))
-	_add_prop_at_cell("cylinder_0", Vector2i(15, 12))
-	# building interiors
-	_add_prop_at_cell("crate_1", Vector2i(10, 10))
-	_add_prop_at_cell("crate_3", Vector2i(14, 12))
-	_add_prop_at_cell("barrel_2", Vector2i(12, 13))
-	_add_prop_at_cell("crate_2", Vector2i(32, 35))
-	_add_prop_at_cell("crate_0", Vector2i(35, 37))
-	_add_prop_at_cell("pallet_0", Vector2i(33, 36))
+	_add_prop_at_cell("cylinder_0", Vector2i(16, 12))
 
 
 func _scatter_props() -> void:

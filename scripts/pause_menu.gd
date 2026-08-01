@@ -9,6 +9,7 @@ var _dim: ColorRect
 var _main_panel: PanelContainer
 var _resume_btn: Button
 var _settings: SettingsPanel
+var _keybinds: KeybindsPanel
 
 
 func _ready() -> void:
@@ -57,7 +58,13 @@ func _ready() -> void:
 	_settings = SettingsPanel.new()
 	_settings.visible = false
 	_settings.closed.connect(_show_main)
+	_settings.keybinds_requested.connect(_show_keybinds)
 	center.add_child(_settings)
+
+	_keybinds = KeybindsPanel.new()
+	_keybinds.visible = false
+	_keybinds.closed.connect(_show_settings)
+	center.add_child(_keybinds)
 
 	visible = false
 	add_to_group("pause_menu")
@@ -78,6 +85,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	get_viewport().set_input_as_handled()
 	if not visible:
 		open()
+	elif _keybinds.visible:
+		_show_settings()
 	elif _settings.visible:
 		_show_main()
 	else:
@@ -103,10 +112,18 @@ func close() -> void:
 func _show_main() -> void:
 	_main_panel.visible = true
 	_settings.visible = false
+	_keybinds.visible = false
 	_resume_btn.grab_focus()
 
 
 func _show_settings() -> void:
 	_main_panel.visible = false
 	_settings.visible = true
+	_keybinds.visible = false
 	_settings.focus_first()
+
+
+func _show_keybinds() -> void:
+	_main_panel.visible = false
+	_settings.visible = false
+	_keybinds.visible = true

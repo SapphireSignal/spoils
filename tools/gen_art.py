@@ -217,6 +217,19 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
     elif kind == "dirt_blend":
         region = _floor_base(c, rng, CONC_BASE, CONC_D1, CONC_L1, 0.05, 0.02)
         speckle(c, rng, region, [C("341c27"), C("4d2b32")], [0.13, 0.09])
+    elif kind == "wood":
+        # interior plank floor: boards run along one iso axis, seams + grain
+        region = {(x, y) for y in range(32) for x in range(64) if in_diamond(x, y)}
+        tones = [C("4d2b32"), C("341c27"), C("602c2c")]
+        for (x, y) in region:
+            board = (x + 2 * y) // 8
+            col = tones[(board * 7 + variant * 3) % 3]
+            if (x + 2 * y) % 8 == 0:
+                col = C("241527")  # board seam
+            elif rng.random() < 0.05:
+                col = C("241527")  # grain/knots
+            c.set(x, y, col)
+
     elif kind == "asphalt":
         _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.06, 0.03)
     elif kind == "asphalt_line":
@@ -239,6 +252,7 @@ FLOOR_TILES = [
     ("dirt_blend_0", ("dirt_blend", 0)), ("dirt_blend_1", ("dirt_blend", 1)),
     ("asphalt_0", ("asphalt", 0)), ("asphalt_1", ("asphalt", 1)),
     ("asphalt_line", ("asphalt_line", 0)),
+    ("wood_0", ("wood", 0)), ("wood_1", ("wood", 1)), ("wood_2", ("wood", 2)),
 ]
 
 def make_floors_atlas() -> tuple[Image.Image, dict[str, list[int]]]:
@@ -415,9 +429,9 @@ def wall_piece_inventory() -> dict[str, tuple[Canvas, tuple, list]]:
 # small overhang so it caps the walls exactly; fascia trim on the lower edges,
 # vents/hatch baked in. The game fades it for the interior reveal.
 
-ROOF_TONES = {  # different shades of "black" per building
+ROOF_TONES = {  # both black (user call), subtly distinct
     "charcoal": ("151d28", "10141f", "394a50"),
-    "umber": ("241527", "10141f", "4d2b32"),
+    "pitch": ("10141f", "090a14", "202e37"),
 }
 
 # Modular roof system (user direction: modular prefabs + explicit placement
@@ -492,6 +506,30 @@ def make_roof_corner(tone: str) -> tuple[Canvas, tuple, list | None]:
         for x in range(x0, x1 + 1):
             c.set(2 + x, 2 + i, lite_col if i == 0 else base_col)
     return c, (10, 6), None
+
+def make_roof_tile_broken(tone: str, variant: int) -> tuple[Canvas, tuple, list | None]:
+    """Roof tile with a collapsed hole — exposed joists across the gap."""
+    rng = random.Random(f"{SEED}:roofbrk:{tone}:{variant}")
+    base, origin, collider = make_roof_tile(tone, 0)
+    c = base
+    _, dark_col, lite_col = (C(n) for n in ROOF_TONES[tone])
+    hole = blob(rng, 32 + rng.randint(-8, 8), 16 + rng.randint(-4, 4),
+                rng.randint(60, 110),
+                {(x, y) for y in range(32) for x in range(64) if in_diamond(x, y)})
+    for (x, y) in hole:
+        c.set(x, y, (0, 0, 0, 0))
+    for (x, y) in list(hole):  # torn edge
+        for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+            if (nx, ny) not in hole and c.get(nx, ny)[3] > 0 and (nx + ny) % 2 == 0:
+                c.set(nx, ny, lite_col)
+    # joists spanning the hole
+    ys = sorted({y for (_, y) in hole})
+    if ys:
+        for jy in range(ys[0] + 2, ys[-1], 5):
+            for (x, y) in hole:
+                if y == jy or y == jy + 1:
+                    c.set(x, y, C("341c27") if y == jy else C("241527"))
+    return c, origin, collider
 
 def make_roof_vent() -> tuple[Canvas, tuple, list | None]:
     c = Canvas(24, 22)
@@ -838,6 +876,129 @@ def draw_pillar(rng: random.Random, kind: str) -> tuple[Canvas, tuple, list]:
     c.outline_auto()
     return c, (9, h + 4), ["circle", 6.0]
 
+# ------------------------------------------------------------ furniture -----
+# Interior dressing so buildings read as lived-in places, not empty shells.
+
+def make_couch() -> tuple[Canvas, tuple, list]:
+    c = Canvas(50, 42)
+    seat_top, seat_l, seat_r = C("752438"), C("411d31"), C("241527")
+    bottoms = iso_prism(c, 3, 12, 44, 22, 8, seat_top, seat_l, seat_r)
+    # backrest along the NE edge (faces the camera across the seat)
+    for i in range(22):
+        x0, x1 = small_diamond_rows(44, 22)[i]
+        for x in range(x1 - 3, x1 + 1):
+            for y in range(12 + i - 10, 12 + i + 2):
+                c.set(3 + x, y, seat_l if x < x1 - 1 else seat_r)
+    # cushion seams on the seat
+    for x in range(10, 40, 10):
+        for y in range(12 + small_diamond_rows(44, 22)[10][0] // 2, 30):
+            if c.get(3 + x, y)[3] > 0 and (x + y) % 2 == 0:
+                c.set(3 + x, y, seat_r)
+    c.outline_auto()
+    return c, (25, 33), ["diamond", 23.0, 12.0]
+
+def make_cabinet() -> tuple[Canvas, tuple, list]:
+    c = Canvas(30, 46)
+    wood_t, wood_l, wood_r = C("602c2c"), C("4d2b32"), C("341c27")
+    bottoms = iso_prism(c, 2, 3, 24, 12, 28, wood_t, wood_l, wood_r)
+    for x in range(24):  # door split + knobs
+        y = bottoms[x]
+        if x == 12:
+            c.vline(2 + x, y + 3, y + 26, C("241527"))
+    c.set(2 + 10, bottoms[10] + 13, C("de9e41"))
+    c.set(2 + 14, bottoms[14] + 13, C("de9e41"))
+    c.outline_auto()
+    return c, (14, 40), ["diamond", 13.0, 7.0]
+
+def make_tv_stand() -> tuple[Canvas, tuple, list]:
+    c = Canvas(34, 38)
+    bottoms = iso_prism(c, 2, 20, 28, 14, 8, C("4d2b32"), C("341c27"), C("241527"))
+    # tv on top: dark slab, screen facing SW with a glint
+    tv = iso_prism(c, 7, 6, 16, 8, 12, C("151d28"), C("202e37"), C("10141f"))
+    for x in range(2, 16):
+        for y in range(tv[x] + 2, tv[x] + 11):
+            if x < 9:
+                c.set(7 + x, y, C("253a5e"))
+        if 3 <= x <= 6:
+            c.set(7 + x, tv[x] + 3 + x - 3, C("3c5e8b"))  # screen glint
+    c.outline_auto()
+    return c, (17, 34), ["diamond", 15.0, 8.0]
+
+def make_table() -> tuple[Canvas, tuple, list]:
+    c = Canvas(30, 30)
+    rows = small_diamond_rows(24, 12)
+    for i, (x0, x1) in enumerate(rows):  # top slab, floating on legs
+        for x in range(x0, x1 + 1):
+            c.set(3 + x, 4 + i, C("602c2c") if i else C("7a4841"))
+    for i, (x0, x1) in enumerate(rows):
+        for x in range(x0, x1 + 1):
+            if 4 + i + 2 <= 18:
+                pass
+    for lx, ly in ((6, 15), (24, 15), (15, 20)):  # legs
+        c.vline(lx, ly - 4, ly + 6, C("341c27"))
+    c.outline_auto()
+    return c, (15, 24), ["diamond", 13.0, 7.0]
+
+def make_chair() -> tuple[Canvas, tuple, list]:
+    c = Canvas(18, 28)
+    bottoms = iso_prism(c, 3, 12, 12, 6, 6, C("602c2c"), C("4d2b32"), C("341c27"))
+    for i in range(6):  # backrest on the NE side
+        x0, x1 = small_diamond_rows(12, 6)[i]
+        for x in range(x1 - 1, x1 + 1):
+            for y in range(12 + i - 8, 12 + i):
+                c.set(3 + x, y, C("4d2b32"))
+    c.outline_auto()
+    return c, (9, 21), ["circle", 4.0]
+
+def make_bookshelf() -> tuple[Canvas, tuple, list]:
+    rng = random.Random(f"{SEED}:bookshelf")
+    c = Canvas(32, 44)
+    bottoms = iso_prism(c, 2, 3, 24, 12, 26, C("4d2b32"), C("341c27"), C("241527"))
+    book_cols = [C("752438"), C("25562e"), C("3c5e8b"), C("602c2c"), C("819796")]
+    for shelf in range(3):  # shelves with book spines on the lit face
+        for x in range(2, 12):
+            y = bottoms[x] + 4 + shelf * 8
+            c.set(2 + x, y + 4, C("241527"))
+            if rng.random() < 0.85:
+                col = book_cols[rng.randrange(len(book_cols))]
+                c.vline(2 + x, y + 1, y + 3, col)
+    c.outline_auto()
+    return c, (15, 38), ["diamond", 14.0, 7.0]
+
+def make_crate_stack() -> tuple[Canvas, tuple, list]:
+    rng = random.Random(f"{SEED}:cratestack")
+    base, base_origin, _ = draw_crate(rng, 28, 12, 0, False, True)
+    top, _, _ = draw_crate(rng, 24, 10, 1, True, False)
+    c = Canvas(36, 46)
+    c.img.alpha_composite(base.img, (2, 16))
+    c.px = c.img.load()
+    c.img.alpha_composite(top.img, (5, 0))
+    c.px = c.img.load()
+    return c, (18, 16 + base_origin[1]), ["diamond", 15.0, 8.0]
+
+def make_rack() -> tuple[Canvas, tuple, list]:
+    """Industrial shelving: two uprights, two loaded levels."""
+    rng = random.Random(f"{SEED}:rack")
+    c = Canvas(60, 58)
+    steel, steel_d = C("394a50"), C("202e37")
+    # levels: thin slabs at two heights
+    for level_y in (14, 32):
+        rows = small_diamond_rows(52, 26)
+        for i, (x0, x1) in enumerate(rows):
+            for x in range(x0, x1 + 1):
+                c.set(4 + x, level_y + i // 2, steel if i % 2 else steel_d)
+    # uprights
+    for ux in (6, 30, 54):
+        c.vline(ux, 12, 52, steel_d)
+        c.vline(ux + 1, 12, 52, steel)
+    # boxes on levels
+    for (bx, by, tone) in ((10, 2, 0), (28, 6, 1), (40, 0, 0), (16, 20, 1), (36, 22, 0)):
+        box, _, _ = draw_crate(rng, 24, 10, tone, rng.random() < 0.3, False)
+        c.img.alpha_composite(box.img, (bx, by))
+        c.px = c.img.load()
+    c.outline_auto()
+    return c, (30, 50), ["diamond", 28.0, 12.0]
+
 def prop_inventory() -> tuple[dict, dict]:
     """Returns ({name: (canvas, origin, collider)}, {family: [names]})."""
     props: dict = {}
@@ -877,6 +1038,16 @@ def prop_inventory() -> tuple[dict, dict]:
     for i, kind in enumerate(("tall", "snapped", "fallen")):
         rng = random.Random(f"{SEED}:pillar:{i}")
         fam("pillar", i, draw_pillar(rng, kind))
+
+    # interior dressing (not scattered; placed by the builder)
+    props["couch"] = make_couch()
+    props["cabinet"] = make_cabinet()
+    props["tv_stand"] = make_tv_stand()
+    props["table"] = make_table()
+    props["chair"] = make_chair()
+    props["bookshelf"] = make_bookshelf()
+    props["crate_stack"] = make_crate_stack()
+    props["rack"] = make_rack()
     return props, families
 
 def make_shadow() -> Canvas:
@@ -919,8 +1090,8 @@ SIDE_SWING = {0: 0, 1: -2, 2: -1, 3: 0, 4: 2, 5: 1, 6: 0}
 FRONT_SWING = {0: 0, 1: 1, 2: 1, 3: 0, 4: -1, 5: -1, 6: 0}
 
 
-def draw_head(c: Canvas, view: str, bob: int) -> None:
-    y0 = 10 + bob
+def draw_head(c: Canvas, view: str, bob: int, crouch: bool = False) -> None:
+    y0 = (15 if crouch else 10) + bob
     if view == "front":
         c.rect(CX - 4, y0, CX + 3, y0 + 2, HAIR)
         c.vline(CX + 3, y0, y0 + 2, HAIR_D)
@@ -973,8 +1144,9 @@ def draw_head(c: Canvas, view: str, bob: int) -> None:
         c.rect(CX - 4, y0 + 7, CX + 3, y0 + 7, HAIR_D)
 
 
-def draw_torso(c: Canvas, view: str, bob: int) -> None:
-    y0, y1 = 18 + bob, 27 + bob
+def draw_torso(c: Canvas, view: str, bob: int, crouch: bool = False) -> None:
+    y0 = (23 if crouch else 18) + bob
+    y1 = (30 if crouch else 27) + bob
     x0, x1 = CX - 4, CX + 3
     c.rect(x0, y0, x1, y1, JKT)
     c.hline(x0, x1, y0, JKT_L)
@@ -993,8 +1165,8 @@ def draw_torso(c: Canvas, view: str, bob: int) -> None:
     c.hline(CX - 4, CX + 3, y1 + 2, PANT_D)
 
 
-def draw_pack(c: Canvas, view: str, bob: int) -> None:
-    y0 = 19 + bob
+def draw_pack(c: Canvas, view: str, bob: int, crouch: bool = False) -> None:
+    y0 = (24 if crouch else 19) + bob
     if view == "back":
         c.rect(CX - 3, y0, CX + 2, y0 + 8, PACK)
         c.rect(CX - 3, y0 + 6, CX + 2, y0 + 8, PACK_D)
@@ -1009,72 +1181,90 @@ def draw_pack(c: Canvas, view: str, bob: int) -> None:
         c.vline(CX - 6, y0 + 1, y0 + 7, PACK_D)
 
 
-def draw_arms(c: Canvas, view: str, bob: int, frame: int) -> None:
+def draw_arms(c: Canvas, view: str, bob: int, frame: int, crouch: bool = False) -> None:
     # both arms the same jacket tone: asymmetric arm shading reads as a bug
     # at this size, and mirrored direction rows make it jump sides
     # the torso spans CX-4..CX+3 (even width on an odd center), so arm columns
     # must be placed off the body EDGES to be symmetric, not off CX
-    y0 = 19 + bob
+    y0 = (24 if crouch else 19) + bob
+    arm_len = 6 if crouch else 8
     if view in ("front", "back"):
         swing = FRONT_SWING[frame]
         for side, sw in ((-1, swing), (1, -swing)):
             x = (CX - 6) if side < 0 else (CX + 4)
             yy = y0 + (1 if sw > 0 else 0)
-            c.rect(x, yy, x + 1, yy + 8, JKT)
-            c.rect(x, yy + 9, x + 1, yy + 10, SKIN if view == "front" else SKIN_SH)
+            c.rect(x, yy, x + 1, yy + arm_len, JKT)
+            c.rect(x, yy + arm_len + 1, x + 1, yy + arm_len + 2,
+                   SKIN if view == "front" else SKIN_SH)
     elif view in ("front34", "back34"):
         swing = FRONT_SWING[frame]
         for side, sw in ((-1, swing), (1, -swing)):
             x = ((CX - 5) if side < 0 else (CX + 4)) + sw
-            c.rect(x, y0, x + 1, y0 + 8, JKT)
-            c.rect(x, y0 + 9, x + 1, y0 + 10, SKIN)
+            c.rect(x, y0, x + 1, y0 + arm_len, JKT)
+            c.rect(x, y0 + arm_len + 1, x + 1, y0 + arm_len + 2, SKIN)
     else:
         x = CX + 1 + SIDE_SWING[frame]
-        c.rect(x, y0, x + 1, y0 + 8, JKT)
-        c.rect(x, y0 + 9, x + 1, y0 + 10, SKIN)
+        c.rect(x, y0, x + 1, y0 + arm_len, JKT)
+        c.rect(x, y0 + arm_len + 1, x + 1, y0 + arm_len + 2, SKIN)
 
 
-def draw_legs(c: Canvas, view: str, frame: int) -> None:
+def draw_legs(c: Canvas, view: str, frame: int, crouch: bool = False) -> None:
+    # crouch: legs start lower (bent under the dropped torso), wider stance
+    leg_top = 33 if crouch else 28
     if view in ("front", "front34", "back", "back34"):
         lifts = STEP_LIFT[frame]
-        for (x0, lift, pcol) in ((CX - 4, lifts[0], PANT), (CX + 1, lifts[1], PANT_D)):
+        spread = 1 if crouch else 0
+        for (x0, lift, pcol) in ((CX - 4 - spread, lifts[0], PANT),
+                                 (CX + 1 + spread, lifts[1], PANT_D)):
+            lift = min(lift, 1) if crouch else lift
             dy = -lift
-            c.rect(x0, 28, x0 + 2, 33 + dy, pcol)
+            c.rect(x0, leg_top, x0 + 2, 33 + dy, pcol)
             c.rect(x0, 34 + dy, x0 + 2, 36 + dy, BOOT)
             c.hline(x0, x0 + 2, FEET + dy, BOOT_D)
     else:
         front_dx, back_dx, front_lift, back_lift = SIDE_STRIDE[frame]
+        if crouch:
+            front_dx += 2   # bent knees: legs offset forward under the body
+            back_dx -= 1
+            front_lift = min(front_lift, 1)
+            back_lift = min(back_lift, 1)
         for dx, lift, pcol, bcol in ((back_dx, back_lift, PANT_D, BOOT),
                                      (front_dx, front_lift, PANT, BOOT)):
             x0 = CX - 1 + dx
-            c.rect(x0, 28, x0 + 2, 33 - lift, pcol)
+            c.rect(x0, leg_top, x0 + 2, 33 - lift, pcol)
             c.rect(x0, 34 - lift, x0 + 2, 36 - lift, bcol)
             toe = x0 + (3 if dx >= 0 else 2)
             c.hline(x0, toe, FEET - lift, BOOT_D)
 
 
-def draw_char_frame(view: str, frame: int) -> Canvas:
+def draw_char_frame(view: str, frame: int, crouch: bool = False) -> Canvas:
     c = Canvas(32, 40)
     bob = BOB[frame]
+    if crouch:
+        bob = maxi_bob(bob)
     if view in ("back", "back34"):
-        draw_legs(c, view, frame)
-        draw_torso(c, view, bob)
-        draw_arms(c, view, bob, frame)
-        draw_pack(c, view, bob)
-        draw_head(c, view, bob)
+        draw_legs(c, view, frame, crouch)
+        draw_torso(c, view, bob, crouch)
+        draw_arms(c, view, bob, frame, crouch)
+        draw_pack(c, view, bob, crouch)
+        draw_head(c, view, bob, crouch)
     elif view == "side":
-        draw_pack(c, view, bob)
-        draw_legs(c, view, frame)
-        draw_torso(c, view, bob)
-        draw_arms(c, view, bob, frame)
-        draw_head(c, view, bob)
+        draw_pack(c, view, bob, crouch)
+        draw_legs(c, view, frame, crouch)
+        draw_torso(c, view, bob, crouch)
+        draw_arms(c, view, bob, frame, crouch)
+        draw_head(c, view, bob, crouch)
     else:
-        draw_legs(c, view, frame)
-        draw_torso(c, view, bob)
-        draw_arms(c, view, bob, frame)
-        draw_head(c, view, bob)
+        draw_legs(c, view, frame, crouch)
+        draw_torso(c, view, bob, crouch)
+        draw_arms(c, view, bob, frame, crouch)
+        draw_head(c, view, bob, crouch)
     c.outline_auto()
     return c
+
+
+def maxi_bob(bob: int) -> int:
+    return max(bob, -1)  # crouch keeps the bob subtle
 
 DIR_VIEWS = [
     ("E", "side", False), ("SE", "front34", False), ("S", "front", False),
@@ -1082,12 +1272,12 @@ DIR_VIEWS = [
     ("N", "back", False), ("NE", "back34", False),
 ]
 
-def make_char_sheet() -> Image.Image:
+def make_char_sheet(crouch: bool = False) -> Image.Image:
     cols = 1 + WALK_FRAMES
     sheet = Image.new("RGBA", (cols * 32, 8 * 40), (0, 0, 0, 0))
     for row, (_, view, mirrored) in enumerate(DIR_VIEWS):
         for frame in range(cols):
-            fc = draw_char_frame(view, frame)
+            fc = draw_char_frame(view, frame, crouch)
             if mirrored:
                 fc = fc.mirrored()
             sheet.paste(fc.img, (frame * 32, row * 40))
@@ -1121,19 +1311,26 @@ def _render_word(word: str, upper_col, lower_col) -> Image.Image:
     return text
 
 def make_title() -> Image.Image:
-    """Big lowercase wordmark for the main menu, two-tone + drop shadow."""
+    """Big lowercase wordmark + outlined tagline, baked as one image (the
+    bitmap font can't outline at runtime and the plain tagline was unreadable
+    over bright backdrops)."""
     text = _render_word("spoils", C("ebede9"), C("819796"))
-    scale = 6
+    scale = 7
     big = text.resize((text.width * scale, text.height * scale), Image.NEAREST)
-    title = Image.new("RGBA", (big.width + 4, big.height + 10), (0, 0, 0, 0))
+    tag = _render_word("loot. extract. survive.", C("c7cfcc"), C("819796"))
+    tag2 = tag.resize((tag.width * 2, tag.height * 2), Image.NEAREST)
+    width = max(big.width + 4, tag2.width)
+    title = Image.new("RGBA", (width, big.height + 10 + tag2.height), (0, 0, 0, 0))
     shadow = Image.new("RGBA", big.size, (0, 0, 0, 0))
     spx, bpx = shadow.load(), big.load()
     for y in range(big.height):
         for x in range(big.width):
             if bpx[x, y][3] > 0:
                 spx[x, y] = (9, 10, 20, 140)
-    title.paste(shadow, (4, 8), shadow)
-    title.paste(big, (0, 0), big)
+    bx = (width - big.width - 4) // 2
+    title.paste(shadow, (bx + 4, 8), shadow)
+    title.paste(big, (bx, 0), big)
+    title.paste(tag2, ((width - tag2.width) // 2, big.height + 8), tag2)
     return title
 
 # ---------------------------------------------------------- menu backdrops ---
@@ -1279,17 +1476,18 @@ def make_scene_scrapyard(props: dict) -> tuple[Canvas, Canvas]:
     c.rect(rx + 14, ry + 12, rx + 30, ry + 22, C("090a14"))     # eye slot
     c.set(rx + 20, ry + 16, C("cf573c"))
     c.set(rx + 21, ry + 16, C("cf573c"))
-    # sign pole + dark panel (lit text lives on the overlay)
+    # sign pole + dark panel (lit text lives on the overlay), sized to fit
     sx, sy = 150, 120
-    c.rect(sx + 60, sy + 46, sx + 66, 360, C("151d28"))
-    c.rect(sx - 8, sy - 8, sx + 136, sy + 46, C("10141f"))
-    c.rect(sx - 8, sy - 8, sx + 136, sy - 6, C("394a50"))
     word = _render_word("spoils", C("411d31"), C("411d31"))  # off-state text
-    ghost = word.resize((word.width * 4, word.height * 4), Image.NEAREST)
+    ghost = word.resize((word.width * 3, word.height * 3), Image.NEAREST)
+    var_w = ghost.width
+    c.rect(sx + var_w // 2 - 3, sy + ghost.height + 4, sx + var_w // 2 + 3, 360, C("151d28"))
+    c.rect(sx - 8, sy - 8, sx + var_w + 18, sy + ghost.height + 4, C("10141f"))
+    c.rect(sx - 8, sy - 8, sx + var_w + 18, sy - 6, C("394a50"))
     _paste(c, ghost, sx + 6, sy - 2)
     # neon overlay: the lit sign text + halo, flickered at runtime
     lit = _render_word("spoils", C("df84a5"), C("c65197"))
-    lit_big = lit.resize((lit.width * 4, lit.height * 4), Image.NEAREST)
+    lit_big = lit.resize((lit.width * 3, lit.height * 3), Image.NEAREST)
     ov = Canvas(lit_big.width + 16, lit_big.height + 16)
     _paste(ov, lit_big, 8, 8)
     opx = ov.img.load()
@@ -1427,6 +1625,7 @@ def main() -> None:
     for tone in ROOF_TONES:
         for v in range(2):
             entries[f"roof_tile_{tone}_{v}"] = make_roof_tile(tone, v)
+            entries[f"roof_tile_{tone}_broken_{v}"] = make_roof_tile_broken(tone, v)
         entries[f"roof_fascia_{tone}_s"] = make_roof_fascia(tone, "x")
         entries[f"roof_fascia_{tone}_e"] = make_roof_fascia(tone, "y")
         entries[f"roof_eave_{tone}_n"] = make_roof_eave(tone, "n")
@@ -1453,6 +1652,9 @@ def main() -> None:
     sheet = make_char_sheet()
     assert_palette(sheet, "char")
     sheet.save(OUT / "char.png")
+    crouch_sheet = make_char_sheet(crouch=True)
+    assert_palette(crouch_sheet, "char_crouch")
+    crouch_sheet.save(OUT / "char_crouch.png")
     manifest["char"] = {
         "frame": [32, 40], "cols": 1 + WALK_FRAMES, "origin": [16, 37],
         "dirs": [d for d, _, _ in DIR_VIEWS],

@@ -18,23 +18,84 @@ const RESOLUTIONS: Array[Vector2i] = [
 # at the largest whole-number pixel scale (no letterbox, no fractional blur)
 const BASE_VIEW := Vector2i(640, 360)
 
+# rebindable actions and their default physical keys
+const BIND_ACTIONS: Array[String] = [
+	"move_up", "move_down", "move_left", "move_right",
+	"interact", "crouch", "reload", "flashlight",
+	"slot_primary", "slot_secondary", "slot_melee",
+]
+const BIND_LABELS := {
+	"move_up": "move up", "move_down": "move down",
+	"move_left": "move left", "move_right": "move right",
+	"interact": "interact", "crouch": "crouch",
+	"reload": "reload", "flashlight": "flashlight",
+	"slot_primary": "primary weapon", "slot_secondary": "secondary weapon",
+	"slot_melee": "melee weapon",
+}
+const DEFAULT_BINDS := {
+	"move_up": KEY_W, "move_down": KEY_S, "move_left": KEY_A, "move_right": KEY_D,
+	"interact": KEY_F, "crouch": KEY_CTRL, "reload": KEY_R, "flashlight": KEY_E,
+	"slot_primary": KEY_1, "slot_secondary": KEY_2, "slot_melee": KEY_3,
+}
+# arrows stay as secondary movement keys while on default binds
+const ARROW_EXTRAS := {
+	"move_up": KEY_UP, "move_down": KEY_DOWN,
+	"move_left": KEY_LEFT, "move_right": KEY_RIGHT,
+}
+
 var display_mode := DISPLAY_BORDERLESS
 var resolution := 0
 var quality := 2       # 0 low, 1 medium, 2 high
 var max_fps := 0       # 0 = uncapped
 var vsync := true
 var show_fps := false
+var binds: Dictionary = {}  # action -> physical keycode
 
 var _fps_label: Label
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	for action in BIND_ACTIONS:
+		binds[action] = DEFAULT_BINDS[action]
 	_load()
 	_build_fps_overlay()
 	get_window().size_changed.connect(_update_scale)
 	apply_all()
+	apply_binds()
 	_update_scale()
+
+
+func apply_binds() -> void:
+	for action in BIND_ACTIONS:
+		InputMap.action_erase_events(action)
+		var event := InputEventKey.new()
+		event.physical_keycode = binds[action]
+		InputMap.action_add_event(action, event)
+		if ARROW_EXTRAS.has(action) and binds[action] == DEFAULT_BINDS[action]:
+			var arrow := InputEventKey.new()
+			arrow.physical_keycode = ARROW_EXTRAS[action]
+			InputMap.action_add_event(action, arrow)
+
+
+func set_bind(action: String, physical_keycode: int) -> void:
+	binds[action] = physical_keycode
+	apply_binds()
+	_save()
+
+
+func reset_binds() -> void:
+	for action in BIND_ACTIONS:
+		binds[action] = DEFAULT_BINDS[action]
+	apply_binds()
+	_save()
+
+
+func bind_label(action: String) -> String:
+	var code: int = binds[action]
+	var keycode := DisplayServer.keyboard_get_keycode_from_physical(code)
+	var label := OS.get_keycode_string(keycode)
+	return label if label != "" else OS.get_keycode_string(code)
 
 
 func _process(_delta: float) -> void:
@@ -115,6 +176,8 @@ func _load() -> void:
 	max_fps = int(cfg.get_value("video", "max_fps", max_fps))
 	vsync = bool(cfg.get_value("video", "vsync", vsync))
 	show_fps = bool(cfg.get_value("video", "show_fps", show_fps))
+	for action in BIND_ACTIONS:
+		binds[action] = int(cfg.get_value("input", action, binds[action]))
 
 
 func _save() -> void:
@@ -125,4 +188,6 @@ func _save() -> void:
 	cfg.set_value("video", "max_fps", max_fps)
 	cfg.set_value("video", "vsync", vsync)
 	cfg.set_value("video", "show_fps", show_fps)
+	for action in BIND_ACTIONS:
+		cfg.set_value("input", action, binds[action])
 	cfg.save(PATH)

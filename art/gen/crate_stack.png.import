@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bn6t05vb2s6aa"
-path="res://.godot/imported/roof_corner_umber.png-178c3dee62d84acc09770f2ce761f7d4.ctex"
+uid="uid://cbuovrie8cffk"
+path="res://.godot/imported/crate_stack.png-5c4f48a6f103b81765c954e9d24eb17f.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/gen/roof_corner_umber.png"
-dest_files=["res://.godot/imported/roof_corner_umber.png-178c3dee62d84acc09770f2ce761f7d4.ctex"]
+source_file="res://art/gen/crate_stack.png"
+dest_files=["res://.godot/imported/crate_stack.png-5c4f48a6f103b81765c954e9d24eb17f.ctex"]
 
 [params]
 

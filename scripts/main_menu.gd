@@ -37,10 +37,22 @@ var _title: TextureRect
 var _title_base_y := 0.0
 var _buttons: VBoxContainer
 var _settings: SettingsPanel
+var _keybinds: KeybindsPanel
 var _changelog: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.0", ["keybinds screen in settings: rebind every key",
+		"crouch on ctrl: lower profile, slower movement, crouched sprites",
+		"interact, reload, flashlight and weapon slot keys registered",
+		"house and warehouse are different sizes, doors always visible",
+		"wooden floors in the house, dark screed in the warehouse",
+		"furniture: couch, tv, cabinet, bookshelf, table, chairs",
+		"warehouse racks and stacked stock - all randomized placement",
+		"broken roof sections over the ruined corner", "all roofs black",
+		"bigger title with a readable outlined tagline",
+		"vsync now greys out the fps cap (it drives the frame rate)",
+		"settings window is a fixed, slightly wider size"]],
 	["v0.5.6", ["all walls and corners symmetrical again",
 		"slim wall tops - the wide cap looked like a lid on a thin wall",
 		"roof eaves now overhang and fully cover the wall tops",
@@ -137,7 +149,10 @@ func _process(delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_action_pressed("ui_cancel"):
 		return
-	if _settings.visible:
+	if _keybinds.visible:
+		get_viewport().set_input_as_handled()
+		_close_keybinds()
+	elif _settings.visible:
 		get_viewport().set_input_as_handled()
 		_close_settings()
 	elif _changelog.visible:
@@ -302,17 +317,6 @@ func _build_ui() -> void:
 	_title_base_y = _title.offset_top
 	root.add_child(_title)
 
-	var tagline := Label.new()
-	tagline.text = "loot. extract. survive."
-	tagline.anchor_left = 0.5
-	tagline.anchor_right = 0.5
-	tagline.offset_left = -160
-	tagline.offset_right = 160
-	tagline.offset_top = 126
-	tagline.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	tagline.add_theme_color_override("font_color", UITheme.TEXT_DIM)
-	root.add_child(tagline)
-
 	_buttons = VBoxContainer.new()
 	_buttons.anchor_left = 0.5
 	_buttons.anchor_right = 0.5
@@ -330,11 +334,21 @@ func _build_ui() -> void:
 	_settings = SettingsPanel.new()
 	_settings.visible = false
 	_settings.closed.connect(_close_settings)
+	_settings.keybinds_requested.connect(_open_keybinds)
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	center.add_child(_settings)
 	root.add_child(center)
+
+	_keybinds = KeybindsPanel.new()
+	_keybinds.visible = false
+	_keybinds.closed.connect(_close_keybinds)
+	var kb_center := CenterContainer.new()
+	kb_center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	kb_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	kb_center.add_child(_keybinds)
+	root.add_child(kb_center)
 
 	# same look as every other button (a flat/dim version was invisible on
 	# the darker backdrops)
@@ -349,7 +363,7 @@ func _build_ui() -> void:
 	root.add_child(changelog_btn)
 
 	var version := Label.new()
-	version.text = "pre-alpha v0.5.6"
+	version.text = "pre-alpha v0.6.0"
 	version.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	version.offset_left = -130
 	version.offset_top = -16
@@ -438,3 +452,13 @@ func _open_settings() -> void:
 func _close_settings() -> void:
 	_settings.visible = false
 	_buttons.visible = true
+
+
+func _open_keybinds() -> void:
+	_settings.visible = false
+	_keybinds.visible = true
+
+
+func _close_keybinds() -> void:
+	_keybinds.visible = false
+	_settings.visible = true

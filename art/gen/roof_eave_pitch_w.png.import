@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cipq4w08kjhb"
-path="res://.godot/imported/roof_fascia_umber_e.png-debfd4b0e24a8a8b4a85bbe6f6d11b0c.ctex"
+uid="uid://cygfxcp81nt7o"
+path="res://.godot/imported/roof_eave_pitch_w.png-2bf1067285ad3d627f47b0d2fa4ca590.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/gen/roof_fascia_umber_e.png"
-dest_files=["res://.godot/imported/roof_fascia_umber_e.png-debfd4b0e24a8a8b4a85bbe6f6d11b0c.ctex"]
+source_file="res://art/gen/roof_eave_pitch_w.png"
+dest_files=["res://.godot/imported/roof_eave_pitch_w.png-2bf1067285ad3d627f47b0d2fa4ca590.ctex"]
 
 [params]
 

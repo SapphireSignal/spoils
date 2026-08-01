@@ -37,7 +37,7 @@ gun-feel goals from *Destiny* — punchy weapons and color-coded loot, at
 
 | Interior reveal | The overlook |
 | :---: | :---: |
-| ![Walls and roof fade when inside](shots/v051_inside.png) | ![Menu backdrop](shots/v050_bd3.png) |
+| ![Walls and roof fade when inside](shots/v060_house.png) | ![Menu backdrop](shots/v050_bd3.png) |
 
 ## How to play
 

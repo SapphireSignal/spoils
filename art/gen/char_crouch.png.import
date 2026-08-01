@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dgx23ak1b8oe6"
-path="res://.godot/imported/roof_eave_umber_n.png-0a34b97489c888d7e90f9d4c87887d95.ctex"
+uid="uid://bhxbvvyaf2xbt"
+path="res://.godot/imported/char_crouch.png-9831c3eb4f4d00a4f09cd853e2ad9543.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/gen/roof_eave_umber_n.png"
-dest_files=["res://.godot/imported/roof_eave_umber_n.png-0a34b97489c888d7e90f9d4c87887d95.ctex"]
+source_file="res://art/gen/char_crouch.png"
+dest_files=["res://.godot/imported/char_crouch.png-9831c3eb4f4d00a4f09cd853e2ad9543.ctex"]
 
 [params]
 

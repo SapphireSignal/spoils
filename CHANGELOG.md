@@ -1,8 +1,32 @@
-﻿# Changelog
+# Changelog
 
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.0] — 2026-07-31
+
+### Added
+- **Keybinds screen** (settings → keybinds): every action rebindable — click a
+  key, press the new one; reset to defaults; persisted. Actions: movement
+  (WASD), interact (F), crouch (Ctrl), reload (R), flashlight (E), weapon
+  slots (1/2/3). Reload/flashlight/interact/slots activate in later milestones.
+- **Crouch** (hold Ctrl): dedicated crouched sprite sheet in all 8 directions,
+  55% movement speed, slower step cycle.
+- **Real interiors**: the house has wooden plank floors and furniture (couch
+  facing the TV, cabinet, bookshelf, table, chairs); the warehouse has a dark
+  screed floor, shelving racks along the back wall and randomized stacked
+  stock. Interior placement is randomized, not hand-placed.
+- Broken roof sections (exposed joists) over the warehouse's ruined corner.
+
+### Changed
+- Buildings are different sizes now (small house, big warehouse) and both
+  doors are on camera-visible sides.
+- All roofs are black (two subtle shades); the purple-ish tone is gone.
+- Main menu: bigger title with the tagline baked in and outlined (it was
+  unreadable over bright scenes); the neon scrapyard sign is smaller.
+- VSync ON greys out the FPS cap slider and shows the display refresh instead.
+- Settings window has a fixed, slightly wider size (no more resizing when
+  value text changes).
 ## [0.5.6] — 2026-07-31
 
 ### Fixed

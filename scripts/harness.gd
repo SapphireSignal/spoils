@@ -83,6 +83,20 @@ func _smoke() -> void:
 		var moved := player.position.x - start.x
 		if moved < 40.0:
 			failures.append("player barely moved (dx=%.1f after 0.8s)" % moved)
+		# crouch: slower and using the crouch sheet
+		start = player.position
+		Input.action_press("crouch")
+		Input.action_press("move_right")
+		await get_tree().create_timer(0.8).timeout
+		Input.action_release("move_right")
+		Input.action_release("crouch")
+		var crouch_moved := player.position.x - start.x
+		if crouch_moved >= moved * 0.85:
+			failures.append("crouch not slower (dx=%.1f vs %.1f)" % [crouch_moved, moved])
+		# keybinds registered
+		for action in Settings.BIND_ACTIONS:
+			if InputMap.action_get_events(action).is_empty():
+				failures.append("action '%s' has no bound key" % action)
 		if floor_layer != null:
 			# walk into the map border from just inside it: must be stopped
 			player.position = floor_layer.map_to_local(Vector2i(4, 4))
@@ -161,6 +175,8 @@ func _shot(shot_name: String) -> void:
 		var face_player := get_tree().current_scene.get_node_or_null("World/Player")
 		if face_player != null and dirs.has(_shot_face):
 			face_player.set("_dir_index", dirs.find(_shot_face))
+	if "--crouch" in OS.get_cmdline_user_args():
+		Input.action_press("crouch")
 	if _shot_menu != "":
 		var menu := get_tree().get_first_node_in_group("pause_menu") as PauseMenu
 		if menu != null:
