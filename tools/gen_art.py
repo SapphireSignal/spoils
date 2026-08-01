@@ -23,6 +23,7 @@ never hardcodes shapes. Runtime scaling/rotation is deliberately NOT used —
 it breaks the pixel grid; variation is baked at generation time instead.
 """
 import json
+import math
 import random
 from pathlib import Path
 
@@ -676,7 +677,6 @@ def draw_barrel(rng: random.Random, style: str, h: int, r: int,
         # a REAL iso cylinder (the old front-view drum read completely flat
         # next to the 3D vehicles): elliptical top face, walls hanging from
         # the ellipse's curve, hoops that follow the same curvature
-        import math as _math
         c = Canvas(2 * r + 6, h + r + 6)
         cx = r + 3
         top_cy = r // 2 + 2
@@ -684,7 +684,7 @@ def draw_barrel(rng: random.Random, style: str, h: int, r: int,
 
         def edge_dy(dx: int) -> int:
             f = 1.0 - (dx * dx) / float(r * r)
-            return int(round(_math.sqrt(max(0.0, f)) * ell_h))
+            return int(round(math.sqrt(max(0.0, f)) * ell_h))
 
         # top face: full ellipse — lid fill, lit near rim, dark far rim
         for dx in range(-r, r + 1):
@@ -759,7 +759,6 @@ def draw_cylinder(rng: random.Random, color: str, h: int,
     if not toppled:
         # upright tank as a true iso cylinder: elliptical shoulder, domed
         # cap with a curved highlight, walls hanging off the ellipse curve
-        import math as _math
         r = 5
         c = Canvas(2 * r + 6, h + 12)
         cx = r + 3
@@ -767,7 +766,7 @@ def draw_cylinder(rng: random.Random, color: str, h: int,
 
         def edge_dy(dx: int) -> int:
             f = 1.0 - (dx * dx) / float(r * r)
-            return int(round(_math.sqrt(max(0.0, f)) * (r // 2 + 1)))
+            return int(round(math.sqrt(max(0.0, f)) * (r // 2 + 1)))
 
         for dx in range(-r, r + 1):  # domed cap above the shoulder ellipse
             dy = edge_dy(dx)
@@ -832,14 +831,13 @@ def draw_tires(rng: random.Random, count: int, single: bool) -> tuple[Canvas, tu
     # tire stack as stacked tori: each tire is an ellipse ring with a side
     # wall; the top one shows its tread ellipse AND the dark hole through
     # the middle — that hole is what sells the 3D (user: everything 3D)
-    import math as _math
     c = Canvas(32, 17 + 5 * count)
     cx = 15
     r_out = 11
 
     def ell(dx: int, r: int) -> int:
         f = 1.0 - (dx * dx) / float(r * r)
-        return int(round(_math.sqrt(max(0.0, f)) * (r * 0.45)))
+        return int(round(math.sqrt(max(0.0, f)) * (r * 0.45)))
 
     for i in range(count):
         jx = rng.randint(-1, 1)
@@ -869,7 +867,7 @@ def draw_tires(rng: random.Random, count: int, single: bool) -> tuple[Canvas, tu
     c.outline_auto()
     return c, (15, 8 + 5 * count + 4), ["circle", 7.0 if count > 1 else 6.0]
 
-def draw_pallet(rng: random.Random, broken: bool, stacked: bool) -> tuple[Canvas, tuple, list]:
+def draw_pallet(broken: bool, stacked: bool) -> tuple[Canvas, tuple, list]:
     c = Canvas(38, 28)
     layers = 2 if stacked else 1
     for layer in range(layers):
@@ -1028,7 +1026,7 @@ def draw_pillar(rng: random.Random, kind: str) -> tuple[Canvas, tuple, list]:
 def make_couch() -> tuple[Canvas, tuple, list]:
     c = Canvas(50, 46)
     seat_top, seat_l, seat_r = C("752438"), C("411d31"), C("241527")
-    bottoms = iso_prism(c, 3, 12, 44, 22, 8, seat_top, seat_l, seat_r)
+    iso_prism(c, 3, 12, 44, 22, 8, seat_top, seat_l, seat_r)
     # backrest along the NE edge (faces the camera across the seat)
     for i in range(22):
         x0, x1 = small_diamond_rows(44, 22)[i]
@@ -1060,7 +1058,7 @@ def make_tv_stand() -> tuple[Canvas, tuple, list]:
     # tall enough for the full base: the old 38px canvas cut the stand's
     # bottom rows clean off (user screenshot)
     c = Canvas(34, 46)
-    bottoms = iso_prism(c, 2, 20, 28, 14, 8, C("4d2b32"), C("341c27"), C("241527"))
+    iso_prism(c, 2, 20, 28, 14, 8, C("4d2b32"), C("341c27"), C("241527"))
     # tv on top: dark slab, screen facing SW with a glint
     tv = iso_prism(c, 7, 6, 16, 8, 12, C("151d28"), C("202e37"), C("10141f"))
     for x in range(2, 16):
@@ -1078,10 +1076,6 @@ def make_table() -> tuple[Canvas, tuple, list]:
     for i, (x0, x1) in enumerate(rows):  # top slab, floating on legs
         for x in range(x0, x1 + 1):
             c.set(3 + x, 4 + i, C("602c2c") if i else C("7a4841"))
-    for i, (x0, x1) in enumerate(rows):
-        for x in range(x0, x1 + 1):
-            if 4 + i + 2 <= 18:
-                pass
     for lx, ly in ((6, 15), (24, 15), (15, 20)):  # legs
         c.vline(lx, ly - 4, ly + 6, C("341c27"))
     c.outline_auto()
@@ -1089,7 +1083,7 @@ def make_table() -> tuple[Canvas, tuple, list]:
 
 def make_chair() -> tuple[Canvas, tuple, list]:
     c = Canvas(18, 28)
-    bottoms = iso_prism(c, 3, 12, 12, 6, 6, C("602c2c"), C("4d2b32"), C("341c27"))
+    iso_prism(c, 3, 12, 12, 6, 6, C("602c2c"), C("4d2b32"), C("341c27"))
     for i in range(6):  # backrest on the NE side
         x0, x1 = small_diamond_rows(12, 6)[i]
         for x in range(x1 - 1, x1 + 1):
@@ -1780,7 +1774,6 @@ def make_light_radial() -> Image.Image:
 
 def make_light_cone() -> Image.Image:
     """Flashlight cone pointing +x, origin at the left-center edge."""
-    import math
     size = 256
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     px = img.load()
@@ -1860,11 +1853,10 @@ def make_signal_rings() -> list[Image.Image]:
         px = img.load()
         r, g, b, _ = C("73bed3")
         steps = max(24, radius * 8)
-        import math as _math
         for i in range(steps):
-            a = i / steps * 2 * _math.pi
-            x = int(size / 2 + _math.cos(a) * radius)
-            y = int(size / 2 + _math.sin(a) * radius * 0.55)  # iso-squashed
+            a = i / steps * 2 * math.pi
+            x = int(size / 2 + math.cos(a) * radius)
+            y = int(size / 2 + math.sin(a) * radius * 0.55)  # iso-squashed
             if 0 <= x < size and 0 <= y < size:
                 px[x, y] = (r, g, b, 210)
         rings.append(img)
@@ -2080,8 +2072,7 @@ def prop_inventory() -> tuple[dict, dict]:
         rng = random.Random(f"{SEED}:tires:{i}")
         fam("tires", i, draw_tires(rng, (3, 2, 1, 1)[i], single=(i == 3)))
     for i in range(3):
-        rng = random.Random(f"{SEED}:pallet:{i}")
-        fam("pallet", i, draw_pallet(rng, broken=(i == 1), stacked=(i == 2)))
+        fam("pallet", i, draw_pallet(broken=(i == 1), stacked=(i == 2)))
     for i in range(2):
         rng = random.Random(f"{SEED}:dumpster:{i}")
         fam("dumpster", i, draw_dumpster(rng, lid_open=(i == 1)))
@@ -2349,7 +2340,7 @@ def draw_char_frame(view: str, frame: int, crouch: bool = False) -> Canvas:
     c = Canvas(32, 40)
     bob = BOB[frame]
     if crouch:
-        bob = maxi_bob(bob)
+        bob = max(bob, -1)  # crouch keeps the bob subtle
     if view in ("back", "back34"):
         draw_legs(c, view, frame, crouch)
         draw_torso(c, view, bob, crouch)
@@ -2369,10 +2360,6 @@ def draw_char_frame(view: str, frame: int, crouch: bool = False) -> Canvas:
         draw_head(c, view, bob, crouch)
     c.outline_auto()
     return c
-
-
-def maxi_bob(bob: int) -> int:
-    return max(bob, -1)  # crouch keeps the bob subtle
 
 DIR_VIEWS = [
     ("E", "side", False), ("SE", "front34", False), ("S", "front", False),
@@ -2611,10 +2598,6 @@ def make_title() -> tuple[Image.Image, Image.Image, Image.Image]:
 
 SCENE_W, SCENE_H = 960, 544
 
-def _scene_base() -> Canvas:
-    c = Canvas(SCENE_W, SCENE_H)
-    return c
-
 def _dither_fill(c: Canvas, x0: int, y0: int, x1: int, y1: int, col, density: float,
                  rng: random.Random) -> None:
     for y in range(y0, y1 + 1):
@@ -2641,10 +2624,10 @@ def _paste(c: Canvas, img: Image.Image, x: int, y: int) -> None:
     c.img.alpha_composite(img, (x, y))
     c.px = c.img.load()
 
-def make_scene_hoard(props: dict) -> Canvas:
+def make_scene_hoard() -> Canvas:
     """Concept 1: the master hoard — treasure vault with a lit chest."""
     rng = random.Random(f"{SEED}:scene:hoard")
-    c = _scene_base()
+    c = Canvas(SCENE_W, SCENE_H)
     _vgrad(c, [(140, C("090a14")), (330, C("10141f")), (SCENE_H, C("241527"))])
     # cave floor
     for y in range(360, SCENE_H):
@@ -2714,7 +2697,7 @@ def make_scene_hoard(props: dict) -> Canvas:
 def make_scene_scrapyard(props: dict) -> tuple[Canvas, Canvas]:
     """Concept 2: neon scrapyard. Returns (base, neon overlay for flicker)."""
     rng = random.Random(f"{SEED}:scene:scrap")
-    c = _scene_base()
+    c = Canvas(SCENE_W, SCENE_H)
     _vgrad(c, [(200, C("090a14")), (340, C("10141f")), (SCENE_H, C("151d28"))])
     # junk skyline
     for x in range(0, SCENE_W, 3):
@@ -2781,7 +2764,7 @@ def make_scene_scrapyard(props: dict) -> tuple[Canvas, Canvas]:
 def make_scene_overlook(props: dict, char_sheet: Image.Image) -> tuple[Canvas, Canvas]:
     """Concept 4: the overlook. Returns (base, drifting cloud strip)."""
     rng = random.Random(f"{SEED}:scene:overlook")
-    c = _scene_base()
+    c = Canvas(SCENE_W, SCENE_H)
     _vgrad(c, [(150, C("151d28")), (230, C("1e1d39")), (300, C("253a5e")),
                (330, C("3c5e8b")), (SCENE_H, C("202e37"))])
     # pale sun through the murk
@@ -2947,10 +2930,8 @@ def main() -> None:
     floors.save(OUT / "floors.png")
     manifest["floors"] = coords
 
-    entries: dict = {}
-    props, families = prop_inventory()
-    for name, entry in props.items():
-        entries[name] = entry  # 3-tuples, or 4 with light coords (vehicles)
+    # entries: 3-tuples, or 4 with light coords (vehicles)
+    entries, families = prop_inventory()
     for name, piece in wall_piece_inventory().items():
         entries[name] = piece
     for tone in ROOF_TONES:
@@ -3038,7 +3019,7 @@ def main() -> None:
     make_studio_word().save(OUT / "studio_word.png")
 
     # rotating main-menu backdrops (+ their animated overlay layers)
-    scene_hoard = make_scene_hoard(entries)
+    scene_hoard = make_scene_hoard()
     assert_palette(scene_hoard.img, "menu_hoard")
     scene_hoard.img.save(OUT / "menu_hoard.png")
     scrap_base, scrap_neon = make_scene_scrapyard(entries)

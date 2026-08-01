@@ -44,7 +44,6 @@ var _was_moving := false
 var _light: PointLight2D
 var _hurt_rect: ColorRect
 var _hurt_left := 0.0
-var _window: Window
 var _floor_layer: TileMapLayer
 var _surface_kinds: Dictionary = {}  # atlas coords -> footstep kind
 var _prev_anim_step := -1
@@ -102,7 +101,6 @@ func _init() -> void:
 
 
 func _ready() -> void:
-	_window = get_window()
 	var hurt_layer := CanvasLayer.new()
 	hurt_layer.layer = 80
 	_hurt_rect = ColorRect.new()
@@ -143,8 +141,6 @@ func set_flashlight(on: bool) -> void:
 func setup_surfaces(floor_layer: TileMapLayer, kinds: Dictionary) -> void:
 	_floor_layer = floor_layer
 	_surface_kinds = kinds
-
-
 
 
 func _footstep() -> void:
@@ -225,11 +221,11 @@ func _process(delta: float) -> void:
 		_zoom_view = c
 	_zoom_view = move_toward(_zoom_view, c, delta * maxf(4.0, absf(c - _zoom_view) * 10.0))
 	camera.zoom = Vector2(_zoom_view / s, _zoom_view / s)
-	var snapped := (global_position * c).round() / c
-	var visual_err := snapped - global_position
+	var snapped_pos := (global_position * c).round() / c
+	var visual_err := snapped_pos - global_position
 	_sprite.position = visual_err
 	_shadow.position = visual_err
-	camera.global_position = _camera_target(snapped, c)
+	camera.global_position = _camera_target(snapped_pos, c)
 	_animate(input_vec, delta)
 
 

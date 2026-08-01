@@ -236,42 +236,45 @@ func _finish_smoke(failures: Array[String]) -> void:
 		get_tree().quit(1)
 
 
+func _find_player() -> Player:
+	return get_tree().current_scene.get_node_or_null("World/Player") as Player
+
+
+func _apply_env_flags() -> void:
+	# --weather=rain / --tod=<0..1> — shared by --shot and --perf
+	var environment := get_tree().get_first_node_in_group("environment")
+	if environment == null:
+		return
+	for arg in OS.get_cmdline_user_args():
+		if arg == "--weather=rain":
+			environment.call("force_weather", true)
+		elif arg.begins_with("--tod="):
+			environment.call("force_time", float(arg.trim_prefix("--tod=")))
+
+
 func _shot(shot_name: String) -> void:
 	if _shot_scene != "menu":
 		await _ensure_game_scene()
 	for i in 6:
 		await get_tree().process_frame
+	var player := _find_player()
 	if _shot_at != "":
 		var parts := _shot_at.split(",")
-		var main := get_tree().current_scene
-		var player := main.get_node_or_null("World/Player") as Player
-		var floor_layer := main.get_node_or_null("Floor") as TileMapLayer
+		var floor_layer := get_tree().current_scene.get_node_or_null("Floor") as TileMapLayer
 		if player != null and floor_layer != null and parts.size() == 2:
 			player.position = floor_layer.map_to_local(
 				Vector2i(int(parts[0]), int(parts[1])))
-	if _shot_face != "":
+	if player != null and _shot_face != "":
 		var dirs := ["E", "SE", "S", "SW", "W", "NW", "N", "NE"]
-		var face_player := get_tree().current_scene.get_node_or_null("World/Player")
-		if face_player != null and dirs.has(_shot_face):
-			face_player.set("_dir_index", dirs.find(_shot_face))
+		if dirs.has(_shot_face):
+			player._dir_index = dirs.find(_shot_face)
 	if "--crouch" in OS.get_cmdline_user_args():
 		Input.action_press("crouch")
-	if "--prone" in OS.get_cmdline_user_args():
-		var prone_player := get_tree().current_scene.get_node_or_null("World/Player") as Player
-		if prone_player != null:
-			prone_player.prone = true
-	if "--flashlight" in OS.get_cmdline_user_args():
-		var lit_player := get_tree().current_scene.get_node_or_null("World/Player") as Player
-		if lit_player != null:
-			lit_player.set_flashlight(true)
-	for arg in OS.get_cmdline_user_args():
-		if arg.begins_with("--weather=") or arg.begins_with("--tod="):
-			var environment := get_tree().get_first_node_in_group("environment")
-			if environment != null:
-				if arg == "--weather=rain":
-					environment.call("force_weather", true)
-				elif arg.begins_with("--tod="):
-					environment.call("force_time", float(arg.trim_prefix("--tod=")))
+	if player != null and "--prone" in OS.get_cmdline_user_args():
+		player.prone = true
+	if player != null and "--flashlight" in OS.get_cmdline_user_args():
+		player.set_flashlight(true)
+	_apply_env_flags()
 	if _shot_menu != "":
 		var menu := get_tree().get_first_node_in_group("pause_menu") as PauseMenu
 		if menu != null:
@@ -302,18 +305,11 @@ func _perf() -> void:
 	## Frame pacing probe: build the district, settle, then sample 6 seconds
 	## of real frames and report the average and the worst hitch.
 	await _ensure_game_scene()
-	for arg in OS.get_cmdline_user_args():  # same scene flags as --shot
-		if arg == "--weather=rain" or arg.begins_with("--tod="):
-			var environment := get_tree().get_first_node_in_group("environment")
-			if environment != null:
-				if arg == "--weather=rain":
-					environment.call("force_weather", true)
-				else:
-					environment.call("force_time", float(arg.trim_prefix("--tod=")))
-		elif arg == "--flashlight":
-			var lit := get_tree().current_scene.get_node_or_null("World/Player") as Player
-			if lit != null:
-				lit.set_flashlight(true)
+	_apply_env_flags()  # same scene flags as --shot
+	if "--flashlight" in OS.get_cmdline_user_args():
+		var player := _find_player()
+		if player != null:
+			player.set_flashlight(true)
 	for i in 40:
 		await get_tree().process_frame
 	var frames := 0

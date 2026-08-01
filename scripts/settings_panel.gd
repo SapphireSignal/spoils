@@ -124,12 +124,12 @@ func _row(label_text: String, control: Control) -> HBoxContainer:
 	return row
 
 
-func _cycle_button(options: Array, get_index: Callable, set_index: Callable) -> Button:
+func _cycle_button(options: Array, getter: Callable, setter: Callable) -> Button:
 	var button := Button.new()
-	button.text = str(options[get_index.call()])
+	button.text = str(options[getter.call()])
 	button.pressed.connect(func() -> void:
-		var next: int = (int(get_index.call()) + 1) % options.size()
-		set_index.call(next)
+		var next: int = (int(getter.call()) + 1) % options.size()
+		setter.call(next)
 		button.text = str(options[next]))
 	return button
 
@@ -151,9 +151,5 @@ func _update_fps_row() -> void:
 		_fps_value.text = "synced (%dhz)" % roundi(DisplayServer.screen_get_refresh_rate())
 		_fps_value.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	else:
-		_fps_value.text = _fps_cap_text(Settings.max_fps)
+		_fps_value.text = "uncapped" if Settings.max_fps == 0 else str(Settings.max_fps)
 		_fps_value.add_theme_color_override("font_color", UITheme.TEXT)
-
-
-func _fps_cap_text(cap: int) -> String:
-	return "uncapped" if cap == 0 else str(cap)

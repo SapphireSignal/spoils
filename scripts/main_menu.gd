@@ -358,7 +358,6 @@ func _build_scenes() -> void:
 	_smog.texture = TEX_DUST
 	_smog.amount = 30
 	_smog.lifetime = 11.0
-	_smog.preprocess = 0.0
 	_smog.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
 	_smog.emission_rect_extents = Vector2(460, 60)
 	_smog.position = Vector2(0, 200)
@@ -390,7 +389,6 @@ func _build_scenes() -> void:
 	_dust.texture = TEX_DUST
 	_dust.amount = 24
 	_dust.lifetime = 8.0
-	_dust.preprocess = 0.0
 	_dust.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
 	_dust.emission_rect_extents = Vector2(460, 200)
 	_dust.direction = Vector2(1, 0.1)

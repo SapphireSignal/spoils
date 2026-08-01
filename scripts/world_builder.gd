@@ -103,10 +103,8 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 		"ysort": _ysort,
 		"floor": _floor_layer,
 		"spawn": spawn,
-		"bounds": _map_rect(),
 		"map_rect": _map_rect(),
 		"map_center": (top_c + bottom_c) / 2.0,
-		"map_half_h": (bottom_c.y - top_c.y) / 2.0,
 		# f-metric value of the barricade ring (|dx|/2 + |dy| from center);
 		# crossing it puts you in sniper country
 		"barrier_f": 32.0 * ((float(MAP_W) - 1.0) * 0.5 - float(BARRIER_INSET)),
@@ -500,6 +498,20 @@ const _DOOR_OUTWARD := {"yp": Vector2i(0, 1), "xp": Vector2i(1, 0)}
 const _DOOR_ALONG := {"yp": Vector2i(1, 0), "xp": Vector2i(0, 1)}
 
 
+func _edge_sides(cell: Vector2i, interior: Rect2i) -> Array[String]:
+	# which perimeter sides of the interior this cell sits on
+	var sides: Array[String] = []
+	if cell.x == interior.position.x:
+		sides.append("xn")
+	if cell.x == interior.end.x - 1:
+		sides.append("xp")
+	if cell.y == interior.position.y:
+		sides.append("yn")
+	if cell.y == interior.end.y - 1:
+		sides.append("yp")
+	return sides
+
+
 func _build_shell(plot: Dictionary) -> void:
 	var rect: Rect2i = plot["rect"]
 	var style: String = plot["style"]
@@ -528,15 +540,7 @@ func _build_shell(plot: Dictionary) -> void:
 			var cell := Vector2i(x, y)
 			_occupied[cell] = true
 			_set_tile(cell, floor_tile)
-			var sides: Array[String] = []
-			if x == interior.position.x:
-				sides.append("xn")
-			if x == interior.end.x - 1:
-				sides.append("xp")
-			if y == interior.position.y:
-				sides.append("yn")
-			if y == interior.end.y - 1:
-				sides.append("yp")
+			var sides := _edge_sides(cell, interior)
 			await _tick()
 			for side in sides:
 				var center := _floor_layer.map_to_local(cell)
@@ -611,32 +615,22 @@ func _yard_fits(yard: Rect2i) -> bool:
 
 func _build_roof(interior: Rect2i, tone: String, post_positions: Array,
 		ruined: bool) -> void:
-	var south_corner := interior.end - Vector2i(1, 1)
+	var south_corner := interior.end - Vector2i(1, 1)  # position anchor AND ruin bite corner
 	var roof := RoofReveal.new()
 	roof.cells = interior
 	roof.position = _floor_layer.map_to_local(south_corner) + Vector2(0, 24)
 	var lift := Vector2(0, -float(_wall_h))
-	var ruin_corner := interior.end - Vector2i(1, 1)
 	for y in range(interior.position.y, interior.end.y):
 		await _tick()
 		for x in range(interior.position.x, interior.end.x):
 			var cell := Vector2i(x, y)
 			var tile_name := "roof_tile_%s_%d" % [tone, _rng.randi_range(0, 1)]
-			if ruined and Vector2(cell - ruin_corner).length() < 3.0 and _rng.randf() < 0.6:
+			if ruined and Vector2(cell - south_corner).length() < 3.0 and _rng.randf() < 0.6:
 				tile_name = "roof_tile_%s_broken_%d" % [tone, _rng.randi_range(0, 1)]
 			var tile := _prop_sprite(tile_name)
 			tile.position = _floor_layer.map_to_local(cell) - roof.position + lift
 			roof.add_child(tile)
-			var sides: Array[String] = []
-			if x == interior.position.x:
-				sides.append("xn")
-			if x == interior.end.x - 1:
-				sides.append("xp")
-			if y == interior.position.y:
-				sides.append("yn")
-			if y == interior.end.y - 1:
-				sides.append("yp")
-			for side in sides:
+			for side in _edge_sides(cell, interior):
 				var module := ""
 				match side:
 					"yp": module = "roof_fascia_%s_s" % tone
@@ -816,15 +810,15 @@ func _place_barricades() -> void:
 	var lo := BARRIER_INSET
 	var hi_x := MAP_W - 1 - BARRIER_INSET
 	var hi_y := MAP_H - 1 - BARRIER_INSET
-	await _ring_side("x", lo, lo, hi_x, true)
-	await _ring_side("x", hi_y, lo, hi_x, false)
-	await _ring_side("y", lo, lo + 2, hi_y - 2, false)
-	await _ring_side("y", hi_x, lo + 2, hi_y - 2, true)
+	await _ring_side("x", lo, lo, hi_x)
+	await _ring_side("x", hi_y, lo, hi_x)
+	await _ring_side("y", lo, lo + 2, hi_y - 2)
+	await _ring_side("y", hi_x, lo + 2, hi_y - 2)
 	await _place_bodies()
 	await _dress_buffer()
 
 
-func _ring_side(axis: String, fixed: int, from: int, to: int, _far: bool) -> void:
+func _ring_side(axis: String, fixed: int, from: int, to: int) -> void:
 	# a REAL barrier line: one dominant piece repeated in runs (a municipal
 	# line is made of the same barrier over and over), a second design mixed
 	# in sparingly, the odd one knocked askew or flat, uneven spacing

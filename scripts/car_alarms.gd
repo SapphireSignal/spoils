@@ -38,7 +38,7 @@ func _rearm() -> void:
 
 func _process(delta: float) -> void:
 	_time += delta
-	if _player != null and not _player.dead:
+	if not _player.dead:
 		var ppos := _player.global_position
 		for entry in _entries:
 			if entry["fired"]:
@@ -64,7 +64,6 @@ func _process(delta: float) -> void:
 		if done:
 			_active.remove_at(i)
 		i -= 1
-	set_process(_player != null)
 
 
 func _fire(car: Node2D, lights: Array) -> void:

@@ -138,6 +138,7 @@ func apply_all() -> void:
 			size = DisplayServer.screen_get_size()
 		if DisplayServer.window_get_size() != size:
 			DisplayServer.window_set_size(size)
+			@warning_ignore("integer_division")
 			DisplayServer.window_set_position(DisplayServer.screen_get_position()
 				+ (DisplayServer.screen_get_size() - size) / 2)
 	Engine.max_fps = max_fps

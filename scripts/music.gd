@@ -107,6 +107,7 @@ func _render() -> void:
 		# over the loop, so the seam is silent)
 		var s := (sin(TAU * 55.0 * t) + sin(TAU * 55.25 * t)) * 0.055
 		# pads: current chord swells in and out inside its own window
+		@warning_ignore("integer_division")
 		var seg := i / chord_samples
 		var ts := float(i % chord_samples) / chord_samples
 		var pad_env := smoothstep(0.0, 0.3, ts) * (1.0 - smoothstep(0.7, 1.0, ts))
