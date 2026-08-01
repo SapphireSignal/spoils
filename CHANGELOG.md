@@ -3,6 +3,27 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.40] — 2026-08-01
+
+### Fixed
+- **The snipers kept shooting while you rode the freight out** (user
+  report). Boarding now stands the edge guard down, the same way paying
+  the toll warden does — riding out past the wire is a legitimate exit,
+  not a death sentence. You earned it by catching the train.
+
+### Changed
+- **The first freight arrives 20 seconds in**, not 45 — the old wait read
+  as the train being late (user). The five-minute cycle after that is
+  unchanged.
+- **It carries its own light**, because it runs at night: a headlamp
+  throwing down the rails ahead of it and a warm spill out of the cab
+  windows.
+- **Steam breathes off the stack** — slow while she stands in the yard,
+  much harder once she's pulling away.
+- **mara's radio is small and upper-centre** instead of a large panel in
+  the top-left corner, which pulled the eye off the world every time she
+  keyed up (user).
+
 ## [0.6.39] — 2026-08-01
 
 ### Fixed

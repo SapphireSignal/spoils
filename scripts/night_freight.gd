@@ -12,7 +12,8 @@ extends Node2D
 signal extracted(method: String)
 
 const PERIOD := 300.0          # five real minutes between arrivals
-const FIRST_ARRIVAL := 45.0    # the first one comes early enough to catch
+const FIRST_ARRIVAL := 20.0    # the first one comes early enough to catch
+                               # (45 s read as "late" from inside a raid)
 const ARRIVE_TIME := 9.0       # the slide into the yard
 const WAIT_TIME := 60.0        # one real minute standing
 const WARN_LEAD := 18.0        # whistle this long before it appears
@@ -35,6 +36,9 @@ var _player: Player
 var _radio: Radio
 var _notice: Label
 var _countdown: Label
+var _steam_tex: Texture2D
+var _steam_timer := 0.0
+var _puffs: Array[Dictionary] = []
 
 
 func _radio_say(text: String) -> void:
@@ -72,6 +76,25 @@ func setup(stop_pos: Vector2, player: Player, radio: Radio) -> void:
 		sprite.position = (-RAIL_DIR * back).round()
 		add_child(sprite)
 		back += 104.0
+
+	# it runs at night, so it has to carry its own light: a headlamp
+	# throwing down the rails, and a warm spill out of the cab windows
+	var lamp := PointLight2D.new()
+	lamp.texture = load("res://art/gen/light_cone.png")
+	lamp.offset = Vector2(128.0, 0.0)
+	lamp.color = Color("e7d5b3")
+	lamp.energy = 1.25
+	lamp.rotation = RAIL_DIR.angle() + PI      # it points the way it came
+	lamp.position = Vector2(-46.0, -18.0)
+	add_child(lamp)
+	var cab := PointLight2D.new()
+	cab.texture = load("res://art/gen/light_radial.png")
+	cab.color = Color("e8c170")
+	cab.energy = 0.75
+	cab.texture_scale = 0.7
+	cab.position = Vector2(18.0, -26.0)
+	add_child(cab)
+	_steam_tex = load("res://art/gen/fog_1.png")
 	add_to_group("trains")
 
 	var layer := CanvasLayer.new()
@@ -129,11 +152,19 @@ func board() -> void:
 	_player.board_ride(self, Vector2(0.0, -18.0))
 	_count_left = float(DEPART_COUNT)
 	Sfx.play_door(false)
+	# riding out past the wire is a LEGITIMATE exit — the marksmen were
+	# still shooting at the train (user report). Same stand-down the toll
+	# gate buys, except this one you earned by catching the freight.
+	var guard := get_tree().current_scene.get_node_or_null("EdgeGuard")
+	if guard != null:
+		guard.set("stood_down", true)
 	_radio_say("good. stay down and stay in the car until she's clear of "
 		+ "the wire. see you at the depot, magpie.")
 
 
 func _process(delta: float) -> void:
+	if state != AWAY and state != GONE:
+		_steam(delta)
 	if state == GONE:
 		return
 	_clock += delta
@@ -193,6 +224,36 @@ func _process(delta: float) -> void:
 					_speed = 0.0
 					position = _stop_pos - RAIL_DIR * 2600.0
 					state = AWAY
+
+
+func _steam(delta: float) -> void:
+	## the stack breathes while she stands, and works harder pulling away
+	_steam_timer -= delta
+	if _steam_timer <= 0.0:
+		_steam_timer = 0.55 if state != DEPARTING else 0.16
+		var puff := Sprite2D.new()
+		puff.texture = _steam_tex
+		puff.modulate = Color(0.804, 0.851, 0.839, 0.0)
+		puff.position = Vector2(-14.0, -44.0) \
+			+ Vector2(randf_range(-2.0, 2.0), randf_range(-2.0, 2.0))
+		puff.z_index = 9
+		add_child(puff)
+		_puffs.append({"sprite": puff, "age": 0.0})
+	var i := _puffs.size() - 1
+	while i >= 0:
+		var puff: Dictionary = _puffs[i]
+		var sprite := puff["sprite"] as Sprite2D
+		puff["age"] = float(puff["age"]) + delta
+		var age: float = puff["age"]
+		if age >= 2.4:
+			sprite.queue_free()
+			_puffs.remove_at(i)
+		else:
+			var t := age / 2.4
+			sprite.position += Vector2(-7.0, -20.0) * delta
+			sprite.scale = Vector2.ONE * (0.45 + t * 1.1)
+			sprite.modulate.a = 0.5 * (1.0 - t) * minf(1.0, age * 4.0)
+		i -= 1
 
 
 func _tick_countdown(delta: float) -> void:

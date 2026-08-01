@@ -66,6 +66,13 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.40", ["the snipers stop shooting once youre riding the freight",
+		"out - catching it is a real way out, not a death sentence",
+		"the first train now comes 20 seconds in, not 45",
+		"it carries a headlamp down the rails and a warm cab glow,",
+		"and steam breathes off the stack - harder when it pulls",
+		"maras radio sits small and centred instead of filling",
+		"the top left corner"]],
 	["v0.6.39", ["the freight engine was missing its back end - the same",
 		"bug the cars had. it has a proper wall now, with marker",
 		"lamps and a cab window"]],

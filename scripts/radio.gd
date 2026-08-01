@@ -29,27 +29,34 @@ func _ready() -> void:
 	root.theme = UITheme.get_theme()
 	add_child(root)
 
+	# upper CENTRE, and small: a big panel in the corner pulled the eye
+	# away from the world every time she keyed up (user call)
 	_panel = PanelContainer.new()
-	_panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	_panel.offset_left = 12
-	_panel.offset_top = 12
+	_panel.anchor_left = 0.5
+	_panel.anchor_right = 0.5
+	_panel.anchor_top = 0.13
+	_panel.anchor_bottom = 0.13
+	_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
 	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_panel.modulate.a = 0.0
 	root.add_child(_panel)
 	var margin := MarginContainer.new()
 	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 7)
+		margin.add_theme_constant_override("margin_" + side, 5)
 	_panel.add_child(margin)
 	var rows := VBoxContainer.new()
 	rows.add_theme_constant_override("separation", 2)
 	margin.add_child(rows)
 	_who = Label.new()
-	_who.text = "mara  -  radio"
+	_who.text = "mara"
+	_who.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_who.add_theme_color_override("font_color", UITheme.ACCENT)
 	rows.add_child(_who)
 	_line = Label.new()
 	_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_line.custom_minimum_size = Vector2(310, 0)
+	_line.custom_minimum_size = Vector2(240, 0)
+	_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_line.add_theme_color_override("font_color", UITheme.TEXT)
 	rows.add_child(_line)
 
