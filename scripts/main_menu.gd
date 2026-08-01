@@ -67,6 +67,9 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.48", ["bus shelters stopped parking half-in the road at",
+		"crossings - any shelter whose roof would reach the",
+		"crossing asphalt simply doesnt get built there"]],
 	["v0.6.47", ["settings grew a volume page: master, music, effects",
 		"and ambient each get their own slider - changes apply",
 		"live and stick between sessions"]],

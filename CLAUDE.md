@@ -192,7 +192,9 @@ then ANOTHER SWEEP; then final handoff.
    reasoning; verify EMPIRICALLY against that shot this time.
 2. **Roads shouldn't be a symmetrical grid** — some areas with no roads,
    and broken road ends with rubble where they cut off.
-3. **Bus shelters land on sidewalk CORNERS**, half in the road.
+3. ~~Bus shelters half in the road at crossings~~ **DONE v0.6.48**
+   (_shelter_overhangs: crossing road within 2 cells along the run →
+   the piece is dropped, rolls burn identically).
 4. **Interior lights at night**, some flickering, cable visibly pathed
    to the power box (see the standing cable rule below).
 5. **Pines shed nothing** — by design (v0.6.31 excluded conifers so they

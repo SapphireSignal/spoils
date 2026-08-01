@@ -3,6 +3,19 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.48] — 2026-08-01 — shelters off the crossings
+
+### Fixed
+- **Bus shelters no longer hang into the crossing road.** A shelter is
+  ~1.5 cells long, and the strip cell nearest an intersection still
+  has the corner walk cell between itself and the asphalt — so a
+  placement there put the roof and glass over the road (user report,
+  queue item). Placement rolls burn identically (fixed district safe);
+  a shelter whose span would reach a crossing road within two cells
+  along its run is simply dropped. Verified at the toll-road crossing:
+  the offending shelter is gone, the legitimate one is untouched, and
+  everything else in the frame is pixel-identical.
+
 ## [0.6.47] — 2026-08-01 — the volume page
 
 ### Added

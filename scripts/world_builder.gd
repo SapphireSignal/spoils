@@ -2528,8 +2528,14 @@ func _place_street_furniture() -> void:
 		var axis: String = "y" if str(_sidewalk[cell]) == "v" else "x"
 		var roll := _rng.randf()
 		if roll < 0.012 and since_shelter > 14:
-			_add_prop_at_cell("shelter_%s_%d" % [axis,
+			var shelter := _add_prop_at_cell("shelter_%s_%d" % [axis,
 				0 if _rng.randf() < 0.7 else 1], cell, Vector2(2, 1))
+			# a shelter is longer than its cell: on the strip cell beside
+			# an intersection it hangs half into the CROSSING road (user
+			# report). The rolls burn identically — the piece just
+			# doesn't stay where its span would reach asphalt.
+			if _shelter_overhangs(cell, axis):
+				shelter.queue_free()
 			since_shelter = 0
 		elif roll < 0.042 and since_bench > 8:
 			_add_prop_at_cell("bench_%s_%d" % [axis,
@@ -2544,6 +2550,18 @@ func _place_street_furniture() -> void:
 			_add_prop_at_cell("newsbox_%d" % _rng.randi_range(0, 1), cell,
 				Vector2(3, 2))
 			since_news = 0
+
+
+func _shelter_overhangs(cell: Vector2i, axis: String) -> bool:
+	# the piece runs ~1.5 cells long along its axis — a crossing road
+	# within TWO cells along the run puts the roof and glass over the
+	# asphalt (the closest strip cell to a crossing still has the corner
+	# walk cell between itself and the road, so one cell isn't enough)
+	var step := Vector2i(1, 0) if axis == "x" else Vector2i(0, 1)
+	for k in [1, 2, -1, -2]:
+		if _on_road(cell + step * k):
+			return true
+	return false
 
 
 func _place_foliage() -> void:
