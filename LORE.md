@@ -64,14 +64,45 @@ menu guitar as score. Harness always skips (like the splash).
    photo into the jacket. mara: "transit tonight. in through the drain.
    out before the fog lifts." (names the district as ONE JOB of many;
    seeds the M2 tunnels)
-8. 1:36–1:50 "the walk" — side-view long shot, magpie through dawn mist to
-   the fence line, quiet real footsteps, slips through a gap.
-9. 1:50–2:05 "the transition" — camera rises behind magpie at the empty
-   crossroads; dawn mist whites the frame; the title "spoils" breathes in
-   the fog; mist thins onto the REAL generated district already running,
-   camera settles to game zoom on the player at spawn. Controls just work.
-   No prompt. (The district builds asynchronously behind shots 7–8 using
-   the deploy tech — the film ends ON the live world.)
+8. 1:36–1:50 "the drain" — side-view long shot, magpie through dawn mist
+   along the OUTSIDE of the fence line, quiet real footsteps; kneels at a
+   roadside manhole, slides the cover, drops in. (matches mara's brief —
+   you enter the way you'll leave)
+9. 1:50–2:05 "the transition" — inside the wire: a manhole cover slides
+   open at the empty crossroads, magpie climbs up into the mist; camera
+   rises behind them; dawn fog whites the frame; the title "spoils"
+   breathes in it once; the mist thins onto the REAL generated district
+   already running — the player character standing beside that same open
+   drain. Controls just work. No prompt. (The district builds
+   asynchronously behind shots 7–8 using the deploy tech; the tutorial
+   raid uses a HAND-VERIFIED PINNED SEED so the route below is dependable;
+   the film's last painted frame matches the game's first real frame.)
+
+## the walk-in (first-raid tutorial, M2 deliverable)
+
+Diegetic, no popups, no banner — mara's radio subtitles teach; tiny
+lowercase corner hints appear ONLY if the player stalls (a few seconds of
+inaction), so good players never see UI. Runs on the pinned tutorial seed
+(house with door near spawn, dark interior, drain nearby), then fresh
+seeds forever after.
+
+1. land at the open drain — silence; stall-hint "wasd to move" only if idle
+2. "that door. f." — the existing door prompt does the work
+3. "dark in there. light." — flashlight on e in a genuinely dark interior
+4. the first WEAPON on a table inside — "she's yours now. dry-fire once —
+   it's safe here." — mouse aim + one shot into shelf cans (destructibles)
+5. staged distant warden crack on the way out — "get low." — crouch/prone
+   behind a car; fear teaches stances
+6. "fog's lifting. out the way you came." — F on the drain ladder, short
+   dark tunnel, ladder up beyond the wire
+7. epilogue (5 s, letterboxed): the den doorway, kettle weighing the take,
+   mara: "and that's the job." — THEN the main menu fades in for the first
+   time ever (the menu = the den = home; deploy now means something)
+
+Flags: seen_intro + done_walkin in settings.cfg; any key skips the film;
+pause menu offers "skip the walk-in" during the first raid; harness skips
+all of it. Future absorption: M4 adds one loot beat ("pocket anything that
+shines"); M3 turns the staged crack into a real patrol to hide from.
 
 Flow: first boot = splash → film → raid. Every later boot = splash → menu.
 Seen-flag persisted via settings (user://settings.cfg).
