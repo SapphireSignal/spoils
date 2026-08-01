@@ -3,6 +3,13 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.5.5] — 2026-07-31
+
+### Changed
+- Buttons are deep burgundy now — clearly visible over every menu backdrop
+  (the old gray-blue blended into the darker scenes).
+- The changelog link is a dim flat footer link, matching the version label.
+- In-game changelog entries expanded with more detail per version.
 ## [0.5.4] — 2026-07-31
 
 ### Added
@@ -203,4 +210,5 @@ Milestone 1: the walkable world. First playtest build.
 - Self-verification harness: headless smoke test (`--smoke`) and screenshot
   capture (`--shot=<name>`).
 - `Play.bat` one-click launcher.
+
 

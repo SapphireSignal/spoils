@@ -1,4 +1,4 @@
-extends Node2D
+﻿extends Node2D
 ## Main menu. Generated backdrop scenes rotate with a slow crossfade,
 ## each with its own living detail:
 ##   hoard      - gold sparkles rising past the buttons
@@ -41,24 +41,53 @@ var _changelog: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
-	["v0.5.4", ["changelog viewer (this!)", "smoother return to menu from a raid"]],
-	["v0.5.3", ["roofs rebuilt from modular pieces - clean corners everywhere"]],
-	["v0.5.2", ["roofs sit flush on walls", "roof only hides when actually inside",
-		"red brick + gray masonry buildings, two roof shades", "back-view neck fixed"]],
-	["v0.5.1", ["clean floating menu buttons", "first sounds: button hover blips",
-		"walls always stay visible", "one doorway per building",
-		"hair + symmetric arms", "main menu button while paused"]],
-	["v0.5.0", ["text crisp for real (font bug found)", "new lowercase pixel font",
-		"real thin walls with door frames", "rotating menu backdrops"]],
-	["v0.4.0", ["first main menu", "pixel font everywhere",
-		"roofs + walk-inside reveal", "every prop got variations",
-		"resolution setting"]],
-	["v0.3.0", ["pause menu + settings", "fullscreen fills the whole screen"]],
-	["v0.2.1", ["smooth motion on high-refresh monitors", "fullscreen by default"]],
-	["v0.2.0", ["smooth ground, no tile grid", "brick buildings",
-		"props with real variety", "better walk animation"]],
-	["v0.1.1", ["fixed the play shortcut"]],
-	["v0.1.0", ["the first build: a walkable ruined block"]],
+	["v0.5.5", ["more detail in this changelog",
+		"new burgundy buttons that stand out on every backdrop",
+		"changelog link dimmed to match the footer"]],
+	["v0.5.4", ["changelog viewer (this!)",
+		"menu art stays loaded so returning from a raid does not hitch",
+		"only the first backdrop pre-warms its particles"]],
+	["v0.5.3", ["roofs rebuilt from modular pieces placed by exact formula",
+		"one roof tile per floor cell + trim pieces on the eaves",
+		"wall caps now tuck under the roof instead of poking past it",
+		"corner posts sit flush in the roofline - clean corners everywhere"]],
+	["v0.5.2", ["roofs sit flush on the walls (were overhanging)",
+		"roof only hides when you are actually inside the walls",
+		"buildings are different materials: red brick vs gray masonry",
+		"the two roofs are different shades of black",
+		"back-view neck fixed and verified with an in-game capture"]],
+	["v0.5.1", ["menu buttons: no box around them, slightly see-through",
+		"first sounds in the game: soft hover + click blips, made by code",
+		"walls always stay visible inside buildings (no see-through)",
+		"one doorway per building (a frame post was splitting it in two)",
+		"character has hair now instead of the beanie",
+		"arms are truly symmetric", "main menu button on the pause screen"]],
+	["v0.5.0", ["text crisp for real - found the font bug that blurred all ui",
+		"new lowercase-only pixel font, no capitals anywhere",
+		"buildings became real thin walls with door frames and posts",
+		"three rotating menu backdrops with sparkles, neon and clouds",
+		"treasure vault, scrapyard and cliff overlook scenes"]],
+	["v0.4.0", ["first main menu with a live background",
+		"first pixel font for the ui", "roofs + walk-inside roof reveal",
+		"every prop family got real variations: sizes, damage, fallen poses",
+		"barrels, crates, cylinders, tires, pallets, dumpsters, rubble, pillars",
+		"resolution option in settings", "fps counter moved and restyled"]],
+	["v0.3.0", ["pause menu on esc with settings and quit",
+		"display mode, fps cap slider, vsync, show fps",
+		"settings save and reload on launch",
+		"fullscreen fills the whole screen at crisp pixel scale"]],
+	["v0.2.1", ["motion updates every frame - smooth on 240hz monitors",
+		"camera locked to whole pixels: no more shimmer while walking",
+		"fullscreen by default"]],
+	["v0.2.0", ["ground is one smooth surface, no more tile grid",
+		"buildings rebuilt in brick with windows",
+		"props got distinct shapes instead of recolors",
+		"6-frame walk cycle with real leg movement"]],
+	["v0.1.1", ["fixed the play shortcut not launching"]],
+	["v0.1.0", ["the first build: a walkable ruined block",
+		"iso world, roads, two buildings, scattered props",
+		"8-direction movement and collision",
+		"all art generated from a 46-color palette"]],
 ]
 
 
@@ -302,18 +331,22 @@ func _build_ui() -> void:
 	center.add_child(_settings)
 	root.add_child(center)
 
+	# subtle footer link, dim like the version label beside it
 	var changelog_btn := Button.new()
 	changelog_btn.text = "changelog"
+	changelog_btn.flat = true
 	changelog_btn.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	changelog_btn.offset_left = -86
 	changelog_btn.offset_top = -40
 	changelog_btn.offset_right = -6
 	changelog_btn.offset_bottom = -20
+	changelog_btn.add_theme_color_override("font_color", UITheme.TEXT_DIM)
+	changelog_btn.add_theme_color_override("font_hover_color", UITheme.TEXT_BRIGHT)
 	changelog_btn.pressed.connect(_open_changelog)
 	root.add_child(changelog_btn)
 
 	var version := Label.new()
-	version.text = "pre-alpha v0.5.4"
+	version.text = "pre-alpha v0.5.5"
 	version.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	version.offset_left = -130
 	version.offset_top = -16
