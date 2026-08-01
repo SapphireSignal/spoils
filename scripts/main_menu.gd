@@ -50,6 +50,16 @@ var _changelog: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.1", ["loading yard by the warehouse: stall lines, pickup trucks",
+		"boxes in the truck beds, stray stock around the yard",
+		"crouch: hold or toggle option next to its keybind",
+		"warehouse floor is a green sealed screed now",
+		"racks + crate stacks: messy randomized loads, nothing identical",
+		"roof corner caps flush, trim lines continue through corners",
+		"gold in the vault falls down the light shaft",
+		"menu buttons exactly centered, smaller static tagline",
+		"silver shine sweeps the title",
+		"version plan: 0.7 guns, 0.8 enemies, 0.9 raid loop, 1.0 full game"]],
 	["v0.6.0", ["keybinds screen in settings: rebind every key",
 		"crouch on ctrl: lower profile, slower movement, crouched sprites",
 		"interact, reload, flashlight and weapon slot keys registered",
@@ -414,8 +424,10 @@ func _build_ui() -> void:
 	changelog_btn.pressed.connect(_open_changelog)
 	root.add_child(changelog_btn)
 
+	# single source of truth: the corner label always shows the newest
+	# changelog entry's version, so the two can never drift apart again
 	var version := Label.new()
-	version.text = "pre-alpha v0.6.1"
+	version.text = "pre-alpha %s" % str(CHANGELOG_ENTRIES[0][0])
 	version.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	version.offset_left = -130
 	version.offset_top = -16
