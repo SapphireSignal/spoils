@@ -3,6 +3,37 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.17] — 2026-08-01
+
+### Added
+- **Morning fog**: soft-alpha mist puffs (3 sprites, gen_art `make_fog_puffs`)
+  drift through a dawn window (~0.10–0.38 of the day). The builder marks fog
+  spots (5% of forest cells + road spots every ~9 cells); the environment
+  keeps a 32-puff pool that spawns only near the view (0.25 s refresh,
+  ≤3/frame), pushes each puff with a per-morning wind, and dissolves it
+  ~90 px past its anchor. Forcing a time of day prefills 90 sim iterations
+  so screenshots show a settled bank.
+- **Falling leaves**: 25% of oaks shed; a 22-leaf pool spawns near the view
+  (one per 0.5–1.4 s), each leaf falling 2.2–3.8 s in one of three patterns
+  (sway / zigzag / wind-drift, 2 flutter frames) and fading over its last
+  stretch.
+
+### Changed
+- **Days are 10 minutes** (was 20; user call — 8 stays on the table) and
+  **nights are properly hard to see** (user: "that's why we have a
+  flashlight"): deep-night floor dropped to (0.085, 0.095, 0.24), night is
+  ~26% of the loop via new gradient offsets, nightfall leans blue-violet,
+  and lamps + flashlight now come up from 0.64 of the day.
+- **Audio fades** (user calls): raid tracks end on a 4 s fade tail instead
+  of a hard stop, with 24–38 s breaths between tracks ("like 30 secs");
+  the rain wash slews in/out at 6 dB/s and sits quieter (−49..−34 dB);
+  thunder is quieter (−24..−18 dB) and follows the flash faster
+  (0.15–0.5 s).
+- **Harness**: the world probe prints FOG lines (nearest/spots/active/near);
+  `--shot` re-applies env flags after the camera settles so the fog prefill
+  anchors to the framed view; headless runs fall back to a 640×360 assumed
+  view when the window reports a degenerate size.
+
 ## [0.6.16] — 2026-08-01
 
 ### Changed

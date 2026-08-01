@@ -82,6 +82,14 @@ var _changelog_list: VBoxContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.17", ["morning fog: mist banks drift through the woods and roads at dawn",
+		"the oaks shed leaves now - watch them flutter down on the wind",
+		"a full day is 10 minutes now, down from 20",
+		"nights are properly dark - you will want the flashlight",
+		"raid tracks bow out with a gentle fade instead of stopping dead",
+		"about thirty seconds of quiet between raid tracks",
+		"rain eases in and out instead of switching on, and sits quieter",
+		"thunder cracks sooner after the flash, and softer"]],
 	["v0.6.16", ["raid music: your three picks rotate randomly, never twice in a row",
 		"music plays from raid start until you die - no more random cuts",
 		"a music folder in the game directory holds the whole audition list",
