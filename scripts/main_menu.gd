@@ -66,6 +66,10 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.21", ["the bushes grew up - big enough to disappear into",
+		"(hiding from people in them comes with the people)",
+		"half the woods turned: an autumn grove of orange oaks",
+		"red leaves fall only there - green trees drop green now"]],
 	["v0.6.20", ["you spawn in the safehouse now - same squat house every raid,",
 		"fenced and pyloned, near the south of the map",
 		"cars drive free on the cursor now, not locked to directions",

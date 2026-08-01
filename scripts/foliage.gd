@@ -6,9 +6,8 @@ extends Node
 ## rotation, so the grid stays clean. Registered by the builder via
 ## main.gd, driven at render rate.
 
-const RADIUS := 17.0                  # generous: brushing the clump counts
-                                      # (14 needed a dead-center stand — the
-                                      # user walked through and saw nothing)
+const RADIUS := 24.0                  # scaled with the BIG hide-in bushes
+                                      # (they're cover now, not garnish)
 
 var _bushes: Array[Dictionary] = []   # {node, sprite, base_x, inside, settle}
 var _player: Player

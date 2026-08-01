@@ -69,7 +69,9 @@ var _traffic_cells: Array[Vector2i] = []
 var _zone_salt := 0                  # per-build salt for the weathering zones
 var _bush_nodes: Array[Node2D] = []  # registered with the Foliage manager
 var _fog_spots := PackedVector2Array()   # dawn-fog anchors (woods + roads)
-var _leaf_trees := PackedVector2Array()  # canopy points of shedder oaks
+var _leaf_trees := PackedVector2Array()  # green shedder canopies
+var _leaf_trees_red := PackedVector2Array()  # the autumn grove's shedders
+var _autumn_rect := Rect2i()             # east half of the woods turns
 
 # zoning (v0.6.18): the district is PLACES now, not sprawl
 var _zones: Dictionary = {}          # block Vector2i(bx,by) -> zone name
@@ -173,6 +175,7 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 		"walk_cells": _sidewalk.size(),
 		"fog_spots": _fog_spots,
 		"leaf_trees": _leaf_trees,
+		"leaf_trees_red": _leaf_trees_red,
 		"uppers": _uppers,
 		"cars": _cars,
 		"zones": _zone_summary(),
@@ -873,6 +876,12 @@ func _plan_depot_block(b: Vector2i) -> void:
 
 
 func _plan_comms_corner(b: Vector2i) -> void:
+	# (the same forest block also donates its EAST half to autumn)
+	var forest_r: Rect2i = _block_rects[b]
+	_autumn_rect = Rect2i(
+		Vector2i(forest_r.get_center().x, forest_r.position.y - 2),
+		Vector2i(forest_r.end.x - forest_r.get_center().x + 3,
+			forest_r.size.y + 4))
 	# the relay lives at the WOODS' edge now (user: "near some empty space
 	# ... by some trees at least") — a clearing carved from a forest-block
 	# corner, trees crowding its fence
@@ -2291,26 +2300,30 @@ func _place_trees() -> void:
 			continue
 		var roll := _rng.randf()
 		if roll < 0.28:
-			var variant := _pick_variant("tree")
+			var autumn := _autumn_rect.has_point(cell as Vector2i)
+			var variant := _pick_variant("tree_autumn" if autumn else "tree")
 			var node := _add_prop_at_cell(variant, cell as Vector2i, Vector2(12, 6))
-			_maybe_shed_leaves(variant, node)
+			_maybe_shed_leaves(variant, node, autumn)
 		elif roll < 0.33:
 			_add_prop_at_cell(_pick_variant("stick"), cell as Vector2i, Vector2(14, 7))
 		await _tick()
 
 
-func _maybe_shed_leaves(variant: String, node: Node2D) -> void:
-	# HALF of every tree sheds now (user upgraded the ask twice: from a
-	# few oaks to "half of all the bushes/trees" on screen)
+func _maybe_shed_leaves(variant: String, node: Node2D, red: bool = false) -> void:
+	# HALF of every tree sheds; the autumn grove sheds RED, everything
+	# green sheds green (user: "the green only has green")
 	assert(variant != "")
 	if _rng.randf() < 0.5:
-		_leaf_trees.append(node.position + Vector2(0, -30.0))
+		if red:
+			_leaf_trees_red.append(node.position + Vector2(0, -30.0))
+		else:
+			_leaf_trees.append(node.position + Vector2(0, -30.0))
 
 
 func _maybe_shed_bush(node: Node2D) -> void:
-	# bushes join in, dropping from lower crowns
+	# bushes join in, dropping from their (now much taller) crowns
 	if _rng.randf() < 0.5:
-		_leaf_trees.append(node.position + Vector2(0, -10.0))
+		_leaf_trees.append(node.position + Vector2(0, -16.0))
 
 
 func _place_lone_trees() -> void:

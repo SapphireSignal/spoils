@@ -3962,6 +3962,48 @@
         4.0
       ]
     },
+    "tree_autumn_0": {
+      "size": [
+        34,
+        40
+      ],
+      "origin": [
+        15,
+        37
+      ],
+      "collider": [
+        "circle",
+        5.5
+      ]
+    },
+    "tree_autumn_1": {
+      "size": [
+        28,
+        36
+      ],
+      "origin": [
+        15,
+        33
+      ],
+      "collider": [
+        "circle",
+        5.5
+      ]
+    },
+    "tree_autumn_2": {
+      "size": [
+        32,
+        34
+      ],
+      "origin": [
+        16,
+        31
+      ],
+      "collider": [
+        "circle",
+        5.5
+      ]
+    },
     "street_lamp": {
       "size": [
         26,
@@ -4276,34 +4318,34 @@
     },
     "bush_0": {
       "size": [
-        19,
-        14
+        33,
+        24
       ],
       "origin": [
-        9,
-        12
+        16,
+        22
       ],
       "collider": null
     },
     "bush_1": {
       "size": [
-        23,
-        16
+        39,
+        28
       ],
       "origin": [
-        11,
-        14
+        19,
+        26
       ],
       "collider": null
     },
     "bush_2": {
       "size": [
-        19,
-        14
+        33,
+        25
       ],
       "origin": [
-        9,
-        12
+        16,
+        23
       ],
       "collider": null
     },
@@ -6690,6 +6732,11 @@
       "tree_6",
       "tree_7",
       "tree_8"
+    ],
+    "tree_autumn": [
+      "tree_autumn_0",
+      "tree_autumn_1",
+      "tree_autumn_2"
     ],
     "street_lamp_dead": [
       "street_lamp_dead_0",

@@ -3,6 +3,19 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.21] — 2026-08-01
+
+### Changed
+- **Big bushes** (user: "make them alot bigger please so the user can hide
+  in there against enemies or something later"): 16-24 px clumps → 30-42 px
+  chest-height mounds; rustle radius 17→24; still walk-through by design —
+  they're concealment now, ready for M3's human enemies.
+- **The autumn grove** (user: red leaves were falling off green trees): the
+  forest block's east half turns — new autumn oak family (orange/red
+  canopies), and leaf fall is color-true: autumn shedders drop the two new
+  red leaf sprites, everything green drops only green. The comms relay
+  clearing sits right against it.
+
 ## [0.6.20] — 2026-08-01
 
 ### Added

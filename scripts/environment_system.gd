@@ -77,19 +77,23 @@ var _fog_refresh := 0.0
 var _fog_alive := 0                 # capped vs nearby spots — never a wall
 
 # falling leaves: a few shedder oaks flutter one leaf at a time
-var _leaf_trees := PackedVector2Array()
+var _leaf_trees := PackedVector2Array()      # green shedders
+var _leaf_trees_red := PackedVector2Array()  # the autumn grove
 var _leaf_sprites: Array[Sprite2D] = []
 var _leaf_state: Array[Dictionary] = []
+var _leaf_tex: Array[Texture2D] = []         # 0-1 green, 2-3 autumn red
 var _leaf_timer := 0.0
-var _leaf_near: Array[int] = []      # shedders near the view, kept fresh
+var _leaf_near: Array[int] = []      # near-view shedders (>=100000 = red)
 var _leaf_refresh := 0.0
 
 
 func setup(root: Node2D, floor_layer: TileMapLayer, puddle_spots: Array,
 		roofs: Array, fog_spots := PackedVector2Array(),
-		leaf_trees := PackedVector2Array()) -> void:
+		leaf_trees := PackedVector2Array(),
+		leaf_trees_red := PackedVector2Array()) -> void:
 	_fog_spots = fog_spots
 	_leaf_trees = leaf_trees
+	_leaf_trees_red = leaf_trees_red
 	# setup is async (pool creation yields) — _process must not run until
 	# everything below exists
 	set_process(false)
@@ -176,9 +180,11 @@ func setup(root: Node2D, floor_layer: TileMapLayer, puddle_spots: Array,
 	leaf_layer.name = "Leaves"
 	leaf_layer.z_index = 45
 	root.add_child(leaf_layer)
+	for i in 4:
+		_leaf_tex.append(load("res://art/gen/leaves_%d.png" % i))
 	for i in LEAF_COUNT:
 		var sprite := Sprite2D.new()
-		sprite.texture = load("res://art/gen/leaves_%d.png" % (i % 3))
+		sprite.texture = _leaf_tex[i % 2]   # green until a spawn says otherwise
 		sprite.hframes = 2
 		sprite.visible = false
 		leaf_layer.add_child(sprite)
@@ -417,12 +423,19 @@ func _update_leaves(delta: float) -> void:
 				if absf(tree.x - near_center.x) <= near_view.x \
 						and absf(tree.y - near_center.y) <= near_view.y:
 					_leaf_near.append(ti)
+			for ti in _leaf_trees_red.size():
+				var red_tree := _leaf_trees_red[ti]
+				if absf(red_tree.x - near_center.x) <= near_view.x \
+						and absf(red_tree.y - near_center.y) <= near_view.y:
+					_leaf_near.append(100000 + ti)
 	_leaf_timer -= delta
 	if _leaf_timer <= 0.0 and not _leaf_near.is_empty():
 		# quick drip: with half the greenery shedding, several visible
 		# trees should be dropping at any moment (user call)
 		_leaf_timer = randf_range(0.22, 0.55)
-		var tree := _leaf_trees[_leaf_near[randi_range(0, _leaf_near.size() - 1)]]
+		var pick := _leaf_near[randi_range(0, _leaf_near.size() - 1)]
+		var red := pick >= 100000
+		var tree := _leaf_trees_red[pick - 100000] if red else _leaf_trees[pick]
 		for i in LEAF_COUNT:
 			if not _leaf_state[i]["active"]:
 				var state := _leaf_state[i]
@@ -432,7 +445,9 @@ func _update_leaves(delta: float) -> void:
 				state["pattern"] = randi_range(0, 2)
 				state["origin"] = tree + Vector2(
 					randf_range(-11.0, 11.0), randf_range(-8.0, 2.0))
-				_leaf_sprites[i].visible = true
+				var sprite := _leaf_sprites[i]
+				sprite.texture = _leaf_tex[(2 if red else 0) + randi_range(0, 1)]
+				sprite.visible = true
 				break
 	for i in LEAF_COUNT:
 		var state := _leaf_state[i]

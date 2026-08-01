@@ -1898,7 +1898,7 @@ def make_tree(kind: str, variant: int) -> tuple[Canvas, tuple, list]:
         cropped, origin = crop_canvas(c, (cx, feet + 1))
         return cropped, origin, ["circle", 5.5]
 
-    if kind == "oak":
+    if kind in ("oak", "autumn"):
         trunk_len = rng.randint(11, 15)
         trunk_top = feet - trunk_len
         lean = rng.choice((-1, 0, 0, 1))
@@ -1922,16 +1922,22 @@ def make_tree(kind: str, variant: int) -> tuple[Canvas, tuple, list]:
                     d = ((x - ox_) / a) ** 2 + ((y - oy_) / b) ** 2
                     if d < 1.0 + rng.uniform(-0.14, 0.05):
                         pts.add((x, y))
+        autumn = kind == "autumn"
+        base_leaf = C("884b2b") if autumn else C("19332d")
+        rim_leaf = C("da863e") if autumn else C("25562e")
+        spark_leaf = C("de9e41") if autumn else C("468232")
+        accent_leaf = C("cf573c") if autumn else C("25562e")
+        under_leaf = C("602c2c") if autumn else C("10141f")
         for (x, y) in pts:
-            col = C("19332d")
+            col = base_leaf
             if (x - 1, y) not in pts or (x, y - 1) not in pts:
-                col = C("25562e") if x < cx + lean else C("10141f")
+                col = rim_leaf if x < cx + lean else under_leaf
             elif rng.random() < 0.10:
-                col = C("25562e")
+                col = accent_leaf
             elif rng.random() < 0.05:
-                col = C("468232")   # bright leaf sparks
+                col = spark_leaf    # bright leaf sparks
             elif (x, y + 1) not in pts:
-                col = C("10141f")   # dark under-rim
+                col = under_leaf    # dark under-rim
             c.set(x, y, col)
         c.outline_auto()
         cropped, origin = crop_canvas(c, (cx, feet + 1))
@@ -1965,8 +1971,11 @@ def make_tree(kind: str, variant: int) -> tuple[Canvas, tuple, list]:
 def draw_bush(rng: random.Random, variant: int) -> tuple[Canvas, tuple, list | None]:
     """A leafy clump the player can push through — no collider. The game's
     Foliage manager wiggles it and fades it while you're inside."""
-    w = rng.choice((16, 20, 24))
-    h = w // 2 + rng.randint(1, 3)
+    # BIG clumps now (user: "make them alot bigger please so the user can
+    # hide in there against enemies or something later") — chest-height
+    # mounds a raider can disappear into, not garnish
+    w = rng.choice((30, 36, 42))
+    h = w // 2 + rng.randint(3, 6)
     c = Canvas(w + 8, h + 10)
     cx = c.w // 2
     cy = h // 2 + 4
@@ -3633,6 +3642,8 @@ def prop_inventory() -> tuple[dict, dict]:
         fam("tree", 4 + i, make_tree("oak", i))
     for i in range(2):
         fam("tree", 7 + i, make_tree("dead", i))
+    for i in range(3):
+        fam("tree_autumn", i, make_tree("autumn", i))
     props["street_lamp"] = make_street_lamp("working")
     fam("street_lamp_dead", 0, make_street_lamp("dead_bent"))
     fam("street_lamp_dead", 1, make_street_lamp("dead_smashed"))
@@ -5230,7 +5241,10 @@ def make_fog_puffs() -> list[Image.Image]:
 def make_leaves() -> list[Image.Image]:
     """Falling-leaf strips: 2 flutter frames per color (green, bright,
     dry). Tiny palette sprites the environment tumbles off shedder oaks."""
-    combos = [("25562e", "19332d"), ("468232", "25562e"), ("884b2b", "602c2c")]
+    # indexes 0-1: green canopy leaves. 2-3: AUTUMN reds — only the autumn
+    # grove drops those (user: "the green only has green")
+    combos = [("25562e", "19332d"), ("468232", "25562e"),
+              ("cf573c", "884b2b"), ("da863e", "602c2c")]
     out: list[Image.Image] = []
     for (a, b) in combos:
         ca, cb = C(a), C(b)

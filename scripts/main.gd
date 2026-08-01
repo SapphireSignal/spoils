@@ -98,7 +98,8 @@ func _build_world() -> void:
 	var environment := EnvironmentSystem.new()
 	add_child(environment)
 	await environment.setup(self, _floor_layer, info["puddle_spots"], _roofs,
-		info["fog_spots"], info["leaf_trees"])
+		info["fog_spots"], info["leaf_trees"],
+		info.get("leaf_trees_red", PackedVector2Array()))
 	# anti-banding film: breaks the day-cycle's uniform 8-bit tint steps into
 	# per-pixel grain (a slow full-screen fade otherwise visibly "clicks")
 	var dither_layer := CanvasLayer.new()
