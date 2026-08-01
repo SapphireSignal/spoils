@@ -516,6 +516,11 @@ then `godot_console --headless --path . --import`.
 
 ## Additional never-regress rules (learned 2026-08-01, the hard way)
 
+- **VISIBLE POWER CABLES** (user call 2026-08-01, standing rule): anything
+  in the world that needs electricity must SHOW where it gets it — a
+  cable pathed from the fixture to the building's exterior power box.
+  Interior lights first; every future powered appliance the same.
+  Never a device that is simply on with no wire.
 - **CLUTTER VARIATION vs PROCEDURAL GENERATION** (user call 2026-08-01):
   breaking visual repetition is REQUIRED; generating layout is BANNED.
   Use the helpers, don't hand-roll: python `bake_lean()` (baked shear —
