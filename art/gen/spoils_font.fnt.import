@@ -2,12 +2,13 @@
 
 importer="font_data_bmfont"
 type="FontFile"
-uid="uid://1m17n5bcy605"
-valid=false
+uid="uid://bmwg2a88kwiy"
+path="res://.godot/imported/spoils_font.fnt-18fa247ca6f1748698f6f6754ed2f87c.fontdata"
 
 [deps]
 
 source_file="res://art/gen/spoils_font.fnt"
+dest_files=["res://.godot/imported/spoils_font.fnt-18fa247ca6f1748698f6f6754ed2f87c.fontdata"]
 
 [params]
 

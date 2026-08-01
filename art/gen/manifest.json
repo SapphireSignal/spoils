@@ -526,724 +526,584 @@
         5.0
       ]
     },
-    "wall_brick_a_m0000": {
+    "seg_brick_a_x": {
       "size": [
-        66,
-        74
+        48,
+        66
       ],
       "origin": [
-        33,
-        57
+        24,
+        56
       ],
       "collider": [
-        "diamond",
-        32.0,
-        16.0
+        "poly",
+        [
+          -13.6,
+          -12.8,
+          18.4,
+          3.2,
+          13.6,
+          12.8,
+          -18.4,
+          -3.2
+        ]
       ]
     },
-    "wall_brick_a_m1000": {
+    "seg_brick_a_x_win_0": {
       "size": [
-        66,
-        74
+        48,
+        66
       ],
       "origin": [
-        33,
-        57
+        24,
+        56
       ],
       "collider": [
-        "diamond",
-        32.0,
-        16.0
+        "poly",
+        [
+          -13.6,
+          -12.8,
+          18.4,
+          3.2,
+          13.6,
+          12.8,
+          -18.4,
+          -3.2
+        ]
       ]
     },
-    "wall_brick_a_m0100": {
+    "seg_brick_a_x_win_1": {
       "size": [
-        66,
-        74
+        48,
+        66
       ],
       "origin": [
-        33,
-        57
+        24,
+        56
       ],
       "collider": [
-        "diamond",
-        32.0,
-        16.0
+        "poly",
+        [
+          -13.6,
+          -12.8,
+          18.4,
+          3.2,
+          13.6,
+          12.8,
+          -18.4,
+          -3.2
+        ]
       ]
     },
-    "wall_brick_a_m1100": {
+    "seg_brick_a_x_win_2": {
       "size": [
-        66,
-        74
+        48,
+        66
       ],
       "origin": [
-        33,
-        57
+        24,
+        56
       ],
       "collider": [
-        "diamond",
-        32.0,
-        16.0
+        "poly",
+        [
+          -13.6,
+          -12.8,
+          18.4,
+          3.2,
+          13.6,
+          12.8,
+          -18.4,
+          -3.2
+        ]
       ]
     },
-    "wall_brick_a_m0010": {
+    "seg_brick_a_x_broken_0": {
       "size": [
-        66,
-        74
+        48,
+        66
       ],
       "origin": [
-        33,
-        57
+        24,
+        56
       ],
       "collider": [
-        "diamond",
-        32.0,
-        16.0
+        "poly",
+        [
+          -13.6,
+          -12.8,
+          18.4,
+          3.2,
+          13.6,
+          12.8,
+          -18.4,
+          -3.2
+        ]
       ]
     },
-    "wall_brick_a_m1010": {
+    "seg_brick_a_x_broken_1": {
       "size": [
-        66,
-        74
+        48,
+        66
       ],
       "origin": [
-        33,
-        57
+        24,
+        56
       ],
       "collider": [
-        "diamond",
-        32.0,
-        16.0
+        "poly",
+        [
+          -13.6,
+          -12.8,
+          18.4,
+          3.2,
+          13.6,
+          12.8,
+          -18.4,
+          -3.2
+        ]
       ]
     },
-    "wall_brick_a_m0110": {
+    "seg_brick_a_y": {
       "size": [
-        66,
-        74
+        48,
+        66
       ],
       "origin": [
-        33,
-        57
+        24,
+        56
       ],
       "collider": [
-        "diamond",
-        32.0,
-        16.0
+        "poly",
+        [
+          -18.4,
+          3.2,
+          13.6,
+          -12.8,
+          18.4,
+          -3.2,
+          -13.6,
+          12.8
+        ]
       ]
     },
-    "wall_brick_a_m1110": {
+    "seg_brick_a_y_win_0": {
       "size": [
-        66,
-        74
+        48,
+        66
       ],
       "origin": [
-        33,
-        57
+        24,
+        56
       ],
       "collider": [
-        "diamond",
-        32.0,
-        16.0
+        "poly",
+        [
+          -18.4,
+          3.2,
+          13.6,
+          -12.8,
+          18.4,
+          -3.2,
+          -13.6,
+          12.8
+        ]
       ]
     },
-    "wall_brick_a_m0001": {
+    "seg_brick_a_y_win_1": {
       "size": [
-        66,
-        74
+        48,
+        66
       ],
       "origin": [
-        33,
-        57
+        24,
+        56
       ],
       "collider": [
-        "diamond",
-        32.0,
-        16.0
+        "poly",
+        [
+          -18.4,
+          3.2,
+          13.6,
+          -12.8,
+          18.4,
+          -3.2,
+          -13.6,
+          12.8
+        ]
       ]
     },
-    "wall_brick_a_m1001": {
+    "seg_brick_a_y_win_2": {
       "size": [
-        66,
-        74
+        48,
+        66
       ],
       "origin": [
-        33,
-        57
+        24,
+        56
       ],
       "collider": [
-        "diamond",
-        32.0,
-        16.0
+        "poly",
+        [
+          -18.4,
+          3.2,
+          13.6,
+          -12.8,
+          18.4,
+          -3.2,
+          -13.6,
+          12.8
+        ]
       ]
     },
-    "wall_brick_a_m0101": {
+    "seg_brick_a_y_broken_0": {
       "size": [
-        66,
-        74
+        48,
+        66
       ],
       "origin": [
-        33,
-        57
+        24,
+        56
       ],
       "collider": [
-        "diamond",
-        32.0,
-        16.0
+        "poly",
+        [
+          -18.4,
+          3.2,
+          13.6,
+          -12.8,
+          18.4,
+          -3.2,
+          -13.6,
+          12.8
+        ]
       ]
     },
-    "wall_brick_a_m1101": {
+    "seg_brick_a_y_broken_1": {
       "size": [
-        66,
-        74
+        48,
+        66
       ],
       "origin": [
-        33,
-        57
+        24,
+        56
       ],
       "collider": [
-        "diamond",
-        32.0,
-        16.0
+        "poly",
+        [
+          -18.4,
+          3.2,
+          13.6,
+          -12.8,
+          18.4,
+          -3.2,
+          -13.6,
+          12.8
+        ]
       ]
     },
-    "wall_brick_a_m0011": {
+    "post_brick_a": {
       "size": [
-        66,
-        74
+        18,
+        62
       ],
       "origin": [
-        33,
-        57
+        8,
+        48
       ],
       "collider": [
-        "diamond",
-        32.0,
-        16.0
+        "circle",
+        4.0
       ]
     },
-    "wall_brick_a_m1011": {
+    "seg_brick_b_x": {
       "size": [
-        66,
-        74
+        48,
+        66
       ],
       "origin": [
-        33,
-        57
+        24,
+        56
       ],
       "collider": [
-        "diamond",
-        32.0,
-        16.0
+        "poly",
+        [
+          -13.6,
+          -12.8,
+          18.4,
+          3.2,
+          13.6,
+          12.8,
+          -18.4,
+          -3.2
+        ]
       ]
     },
-    "wall_brick_a_m0111": {
+    "seg_brick_b_x_win_0": {
       "size": [
-        66,
-        74
+        48,
+        66
       ],
       "origin": [
-        33,
-        57
+        24,
+        56
       ],
       "collider": [
-        "diamond",
-        32.0,
-        16.0
+        "poly",
+        [
+          -13.6,
+          -12.8,
+          18.4,
+          3.2,
+          13.6,
+          12.8,
+          -18.4,
+          -3.2
+        ]
       ]
     },
-    "wall_brick_a_m1111": {
+    "seg_brick_b_x_win_1": {
       "size": [
-        66,
-        74
+        48,
+        66
       ],
       "origin": [
-        33,
-        57
+        24,
+        56
       ],
       "collider": [
-        "diamond",
-        32.0,
-        16.0
+        "poly",
+        [
+          -13.6,
+          -12.8,
+          18.4,
+          3.2,
+          13.6,
+          12.8,
+          -18.4,
+          -3.2
+        ]
       ]
     },
-    "wall_brick_a_win_x_0": {
+    "seg_brick_b_x_win_2": {
       "size": [
-        66,
-        74
+        48,
+        66
       ],
       "origin": [
-        33,
-        57
+        24,
+        56
       ],
       "collider": [
-        "diamond",
-        32.0,
-        16.0
+        "poly",
+        [
+          -13.6,
+          -12.8,
+          18.4,
+          3.2,
+          13.6,
+          12.8,
+          -18.4,
+          -3.2
+        ]
       ]
     },
-    "wall_brick_a_win_y_0": {
+    "seg_brick_b_x_broken_0": {
       "size": [
-        66,
-        74
+        48,
+        66
       ],
       "origin": [
-        33,
-        57
+        24,
+        56
       ],
       "collider": [
-        "diamond",
-        32.0,
-        16.0
+        "poly",
+        [
+          -13.6,
+          -12.8,
+          18.4,
+          3.2,
+          13.6,
+          12.8,
+          -18.4,
+          -3.2
+        ]
       ]
     },
-    "wall_brick_a_win_x_1": {
+    "seg_brick_b_x_broken_1": {
       "size": [
-        66,
-        74
+        48,
+        66
       ],
       "origin": [
-        33,
-        57
+        24,
+        56
       ],
       "collider": [
-        "diamond",
-        32.0,
-        16.0
+        "poly",
+        [
+          -13.6,
+          -12.8,
+          18.4,
+          3.2,
+          13.6,
+          12.8,
+          -18.4,
+          -3.2
+        ]
       ]
     },
-    "wall_brick_a_win_y_1": {
+    "seg_brick_b_y": {
       "size": [
-        66,
-        74
+        48,
+        66
       ],
       "origin": [
-        33,
-        57
+        24,
+        56
       ],
       "collider": [
-        "diamond",
-        32.0,
-        16.0
+        "poly",
+        [
+          -18.4,
+          3.2,
+          13.6,
+          -12.8,
+          18.4,
+          -3.2,
+          -13.6,
+          12.8
+        ]
       ]
     },
-    "wall_brick_a_win_x_2": {
+    "seg_brick_b_y_win_0": {
       "size": [
-        66,
-        74
+        48,
+        66
       ],
       "origin": [
-        33,
-        57
+        24,
+        56
       ],
       "collider": [
-        "diamond",
-        32.0,
-        16.0
+        "poly",
+        [
+          -18.4,
+          3.2,
+          13.6,
+          -12.8,
+          18.4,
+          -3.2,
+          -13.6,
+          12.8
+        ]
       ]
     },
-    "wall_brick_a_win_y_2": {
+    "seg_brick_b_y_win_1": {
       "size": [
-        66,
-        74
+        48,
+        66
       ],
       "origin": [
-        33,
-        57
+        24,
+        56
       ],
       "collider": [
-        "diamond",
-        32.0,
-        16.0
+        "poly",
+        [
+          -18.4,
+          3.2,
+          13.6,
+          -12.8,
+          18.4,
+          -3.2,
+          -13.6,
+          12.8
+        ]
       ]
     },
-    "wall_brick_a_broken_a": {
+    "seg_brick_b_y_win_2": {
       "size": [
-        66,
-        74
+        48,
+        66
       ],
       "origin": [
-        33,
-        57
+        24,
+        56
       ],
       "collider": [
-        "diamond",
-        32.0,
-        16.0
+        "poly",
+        [
+          -18.4,
+          3.2,
+          13.6,
+          -12.8,
+          18.4,
+          -3.2,
+          -13.6,
+          12.8
+        ]
       ]
     },
-    "wall_brick_a_broken_b": {
+    "seg_brick_b_y_broken_0": {
       "size": [
-        66,
-        74
+        48,
+        66
       ],
       "origin": [
-        33,
-        57
+        24,
+        56
       ],
       "collider": [
-        "diamond",
-        32.0,
-        16.0
+        "poly",
+        [
+          -18.4,
+          3.2,
+          13.6,
+          -12.8,
+          18.4,
+          -3.2,
+          -13.6,
+          12.8
+        ]
       ]
     },
-    "wall_brick_b_m0000": {
+    "seg_brick_b_y_broken_1": {
       "size": [
-        66,
-        74
+        48,
+        66
       ],
       "origin": [
-        33,
-        57
+        24,
+        56
       ],
       "collider": [
-        "diamond",
-        32.0,
-        16.0
+        "poly",
+        [
+          -18.4,
+          3.2,
+          13.6,
+          -12.8,
+          18.4,
+          -3.2,
+          -13.6,
+          12.8
+        ]
       ]
     },
-    "wall_brick_b_m1000": {
+    "post_brick_b": {
       "size": [
-        66,
-        74
+        18,
+        62
       ],
       "origin": [
-        33,
-        57
+        8,
+        48
       ],
       "collider": [
-        "diamond",
-        32.0,
-        16.0
-      ]
-    },
-    "wall_brick_b_m0100": {
-      "size": [
-        66,
-        74
-      ],
-      "origin": [
-        33,
-        57
-      ],
-      "collider": [
-        "diamond",
-        32.0,
-        16.0
-      ]
-    },
-    "wall_brick_b_m1100": {
-      "size": [
-        66,
-        74
-      ],
-      "origin": [
-        33,
-        57
-      ],
-      "collider": [
-        "diamond",
-        32.0,
-        16.0
-      ]
-    },
-    "wall_brick_b_m0010": {
-      "size": [
-        66,
-        74
-      ],
-      "origin": [
-        33,
-        57
-      ],
-      "collider": [
-        "diamond",
-        32.0,
-        16.0
-      ]
-    },
-    "wall_brick_b_m1010": {
-      "size": [
-        66,
-        74
-      ],
-      "origin": [
-        33,
-        57
-      ],
-      "collider": [
-        "diamond",
-        32.0,
-        16.0
-      ]
-    },
-    "wall_brick_b_m0110": {
-      "size": [
-        66,
-        74
-      ],
-      "origin": [
-        33,
-        57
-      ],
-      "collider": [
-        "diamond",
-        32.0,
-        16.0
-      ]
-    },
-    "wall_brick_b_m1110": {
-      "size": [
-        66,
-        74
-      ],
-      "origin": [
-        33,
-        57
-      ],
-      "collider": [
-        "diamond",
-        32.0,
-        16.0
-      ]
-    },
-    "wall_brick_b_m0001": {
-      "size": [
-        66,
-        74
-      ],
-      "origin": [
-        33,
-        57
-      ],
-      "collider": [
-        "diamond",
-        32.0,
-        16.0
-      ]
-    },
-    "wall_brick_b_m1001": {
-      "size": [
-        66,
-        74
-      ],
-      "origin": [
-        33,
-        57
-      ],
-      "collider": [
-        "diamond",
-        32.0,
-        16.0
-      ]
-    },
-    "wall_brick_b_m0101": {
-      "size": [
-        66,
-        74
-      ],
-      "origin": [
-        33,
-        57
-      ],
-      "collider": [
-        "diamond",
-        32.0,
-        16.0
-      ]
-    },
-    "wall_brick_b_m1101": {
-      "size": [
-        66,
-        74
-      ],
-      "origin": [
-        33,
-        57
-      ],
-      "collider": [
-        "diamond",
-        32.0,
-        16.0
-      ]
-    },
-    "wall_brick_b_m0011": {
-      "size": [
-        66,
-        74
-      ],
-      "origin": [
-        33,
-        57
-      ],
-      "collider": [
-        "diamond",
-        32.0,
-        16.0
-      ]
-    },
-    "wall_brick_b_m1011": {
-      "size": [
-        66,
-        74
-      ],
-      "origin": [
-        33,
-        57
-      ],
-      "collider": [
-        "diamond",
-        32.0,
-        16.0
-      ]
-    },
-    "wall_brick_b_m0111": {
-      "size": [
-        66,
-        74
-      ],
-      "origin": [
-        33,
-        57
-      ],
-      "collider": [
-        "diamond",
-        32.0,
-        16.0
-      ]
-    },
-    "wall_brick_b_m1111": {
-      "size": [
-        66,
-        74
-      ],
-      "origin": [
-        33,
-        57
-      ],
-      "collider": [
-        "diamond",
-        32.0,
-        16.0
-      ]
-    },
-    "wall_brick_b_win_x_0": {
-      "size": [
-        66,
-        74
-      ],
-      "origin": [
-        33,
-        57
-      ],
-      "collider": [
-        "diamond",
-        32.0,
-        16.0
-      ]
-    },
-    "wall_brick_b_win_y_0": {
-      "size": [
-        66,
-        74
-      ],
-      "origin": [
-        33,
-        57
-      ],
-      "collider": [
-        "diamond",
-        32.0,
-        16.0
-      ]
-    },
-    "wall_brick_b_win_x_1": {
-      "size": [
-        66,
-        74
-      ],
-      "origin": [
-        33,
-        57
-      ],
-      "collider": [
-        "diamond",
-        32.0,
-        16.0
-      ]
-    },
-    "wall_brick_b_win_y_1": {
-      "size": [
-        66,
-        74
-      ],
-      "origin": [
-        33,
-        57
-      ],
-      "collider": [
-        "diamond",
-        32.0,
-        16.0
-      ]
-    },
-    "wall_brick_b_win_x_2": {
-      "size": [
-        66,
-        74
-      ],
-      "origin": [
-        33,
-        57
-      ],
-      "collider": [
-        "diamond",
-        32.0,
-        16.0
-      ]
-    },
-    "wall_brick_b_win_y_2": {
-      "size": [
-        66,
-        74
-      ],
-      "origin": [
-        33,
-        57
-      ],
-      "collider": [
-        "diamond",
-        32.0,
-        16.0
-      ]
-    },
-    "wall_brick_b_broken_a": {
-      "size": [
-        66,
-        74
-      ],
-      "origin": [
-        33,
-        57
-      ],
-      "collider": [
-        "diamond",
-        32.0,
-        16.0
-      ]
-    },
-    "wall_brick_b_broken_b": {
-      "size": [
-        66,
-        74
-      ],
-      "origin": [
-        33,
-        57
-      ],
-      "collider": [
-        "diamond",
-        32.0,
-        16.0
+        "circle",
+        4.0
       ]
     },
     "roof_tile_0": {

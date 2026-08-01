@@ -3,6 +3,37 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.5.0] — 2026-07-31
+
+### Fixed
+- **The blurry UI text, for real this time.** The bitmap font had silently
+  failed to import once (its atlas was briefly missing during regeneration),
+  and the engine cached the failure and fell back to its default vector font —
+  which is what was blurry. The import is fixed and font subpixel positioning
+  is disabled, so text now renders pixel-perfect. Verified with OS-level
+  screenshots of the actual screen output.
+- Roof/wall corner misalignment: roofs covered the wall tiles and fought them
+  in draw order (the south corner's roof vanished entirely). Roofs now cover
+  exactly the interior, tucked inside the parapet.
+- Interior reveal leaves no ghost tint — the roof fades fully invisible.
+
+### Changed
+- **Buildings are real thin-walled architecture now**, not rows of full-tile
+  blocks: slim brick wall segments along tile edges, corner and door-frame
+  posts, varied window sizes, jagged broken sections. Interiors show proper
+  inner wall faces, dollhouse-style.
+- **New UI font**: lowercase-only proportional pixel type (capitals render as
+  lowercase by design), used everywhere including the wordmark.
+- When inside a building, the camera-facing walls also fade to 30% so nothing
+  in the interior hides behind them.
+
+### Added
+- **Four rotating main-menu backdrops** (crossfade every 20 s), each alive:
+  a treasure-vault hoard with rising gold sparkles, a neon scrapyard with a
+  flickering sign and drifting smog, a lamplit safehouse cross-section, and a
+  cliff-edge overlook with drifting clouds over a dead city. The gameplay map
+  is no longer the menu background.
+
 ## [0.4.0] — 2026-07-31
 
 The presentation update.

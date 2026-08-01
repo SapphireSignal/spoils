@@ -1,73 +1,73 @@
 extends Node2D
-## Main menu. The background IS the game world: the real map with a slow
-## drifting camera, dust motes, a raider walking his patrol, and a vignette.
+## Main menu. Four generated backdrop scenes rotate with a slow crossfade,
+## each with its own living detail:
+##   hoard      - gold sparkles rising past the buttons
+##   scrapyard  - flickering neon sign + drifting smog
+##   safehouse  - warm lamp glow, breathing
+##   overlook   - clouds drifting over a dead city, dust on the wind
 ## DEPLOY starts the raid.
 
-const CAM_PATH: Array[Vector2i] = [
-	Vector2i(12, 11), Vector2i(20, 20), Vector2i(24, 30),
-	Vector2i(32, 36), Vector2i(24, 30), Vector2i(20, 20),
-]
-const CAM_SPEED := 10.0
-const WALKER_PATH_X := 23  # walks road A up and down
-const WALKER_SPEED := 55.0
+const SCENE_SECONDS := 20.0
+const FADE_SECONDS := 1.4
 
-var _world_info: Dictionary = {}
-var _camera: Camera2D
-var _cam_pos := Vector2.ZERO
-var _cam_target_index := 0
+var _scenes: Array[Node2D] = []
+var _scene_index := 0
+var _rotate_timer := 0.0
+var _fade_tween: Tween
+var _time := 0.0
+
+var _neon: Sprite2D
+var _lamp_glow: Sprite2D
+var _clouds_a: Sprite2D
+var _clouds_b: Sprite2D
+var _sparkles: CPUParticles2D
+var _smog: CPUParticles2D
+var _dust: CPUParticles2D
+
 var _title: TextureRect
 var _title_base_y := 0.0
-var _time := 0.0
-var _walker: Sprite2D
-var _walker_going := 1.0
-var _walker_anim := 0.0
 var _buttons: PanelContainer
 var _settings: SettingsPanel
 
 
 func _ready() -> void:
-	var builder := WorldBuilder.new()
-	_world_info = builder.build(self)
-
-	_camera = Camera2D.new()
-	var floor_layer: TileMapLayer = _world_info["floor"]
-	_cam_pos = floor_layer.map_to_local(CAM_PATH[0])
-	_camera.position = _cam_pos.round()
-	add_child(_camera)
-	_camera.make_current()
-
-	_spawn_walker(floor_layer)
-	_build_dust()
+	add_to_group("main_menu")
+	var camera := Camera2D.new()
+	add_child(camera)
+	camera.make_current()
+	_build_scenes()
 	_build_ui()
+	_activate(0, true)
+
+
+func show_backdrop(index: int) -> void:  # harness hook for screenshots
+	_activate(clampi(index, 0, _scenes.size() - 1), true)
+	_rotate_timer = 0.0
 
 
 func _process(delta: float) -> void:
 	_time += delta
+	_rotate_timer += delta
+	if _rotate_timer >= SCENE_SECONDS:
+		_rotate_timer = 0.0
+		_activate((_scene_index + 1) % _scenes.size(), false)
 
-	# slow cinematic drift between waypoints
-	var floor_layer: TileMapLayer = _world_info["floor"]
-	var target := floor_layer.map_to_local(CAM_PATH[_cam_target_index])
-	var to_target := target - _cam_pos
-	if to_target.length() < 4.0:
-		_cam_target_index = (_cam_target_index + 1) % CAM_PATH.size()
-	else:
-		_cam_pos += to_target.normalized() * CAM_SPEED * delta
-	_camera.position = _cam_pos.round()
-
-	# title breathes
 	_title.position.y = _title_base_y + roundf(sin(_time * 1.3) * 2.0)
 
-	# the raider walks his patrol along the road
-	var going_to := floor_layer.map_to_local(
-		Vector2i(WALKER_PATH_X, 42 if _walker_going > 0 else 8))
-	var dir := (going_to - _walker.position).normalized()
-	_walker.position += dir * WALKER_SPEED * delta
-	if _walker.position.distance_to(going_to) < 8.0:
-		_walker_going *= -1.0
-	_walker_anim += delta
-	var row := 3 if _walker_going > 0 else 7  # SW out, NE back
-	var frame := 1 + (int(_walker_anim * 10.0) % 6)
-	_walker.frame = row * 7 + frame
+	# per-scene life
+	if _neon.visible:
+		var flick := 1.0
+		if fmod(_time, 7.3) < 0.4:
+			flick = 0.15 if fmod(_time * 31.0, 1.0) < 0.5 else 0.9
+		elif fmod(_time * 13.0, 1.0) < 0.06:
+			flick = 0.55
+		_neon.modulate.a = flick
+	if _lamp_glow.visible:
+		_lamp_glow.modulate.a = 0.8 + 0.13 * sin(_time * 2.1) + 0.07 * sin(_time * 7.7)
+	if _clouds_a.visible:
+		var w := 960.0
+		_clouds_a.position.x = wrapf(_clouds_a.position.x - 3.5 * delta, -w, w)
+		_clouds_b.position.x = _clouds_a.position.x + (w if _clouds_a.position.x < 0 else -w)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -76,38 +76,142 @@ func _unhandled_input(event: InputEvent) -> void:
 		_close_settings()
 
 
-func _spawn_walker(floor_layer: TileMapLayer) -> void:
-	_walker = Sprite2D.new()
-	_walker.texture = load("res://art/gen/char.png")
-	_walker.hframes = 7
-	_walker.vframes = 8
-	_walker.offset = Vector2(0, -17)
-	_walker.position = floor_layer.map_to_local(Vector2i(WALKER_PATH_X, 16))
-	(_world_info["ysort"] as Node2D).add_child(_walker)
+# ------------------------------------------------------------- backdrops ----
+
+func _backdrop(scene_root: Node2D, texture_name: String) -> Sprite2D:
+	var sprite := Sprite2D.new()
+	sprite.texture = load("res://art/gen/%s.png" % texture_name)
+	scene_root.add_child(sprite)
+	return sprite
 
 
-func _build_dust() -> void:
-	var dust := CPUParticles2D.new()
-	dust.texture = load("res://art/gen/dust.png")
-	dust.amount = 40
-	dust.lifetime = 9.0
-	dust.preprocess = 9.0
-	dust.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
-	dust.emission_rect_extents = Vector2(460, 300)
-	dust.direction = Vector2(1, -0.25)
-	dust.spread = 20.0
-	dust.gravity = Vector2.ZERO
-	dust.initial_velocity_min = 5.0
-	dust.initial_velocity_max = 14.0
-	dust.color = Color("a8b5b2", 0.35)
+func _build_scenes() -> void:
+	# 1: the master hoard
+	var hoard := Node2D.new()
+	_backdrop(hoard, "menu_hoard")
+	_sparkles = CPUParticles2D.new()
+	_sparkles.texture = load("res://art/gen/dust.png")
+	_sparkles.amount = 26
+	_sparkles.lifetime = 7.0
+	_sparkles.preprocess = 7.0
+	_sparkles.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	_sparkles.emission_rect_extents = Vector2(220, 40)
+	_sparkles.position = Vector2(0, 130)
+	_sparkles.direction = Vector2(0, -1)
+	_sparkles.spread = 12.0
+	_sparkles.gravity = Vector2.ZERO
+	_sparkles.initial_velocity_min = 8.0
+	_sparkles.initial_velocity_max = 20.0
+	_sparkles.color = Color("e8c170")
+	_sparkles.color_ramp = _fade_ramp()
+	hoard.add_child(_sparkles)
+	add_child(hoard)
+	_scenes.append(hoard)
+
+	# 2: the neon scrapyard
+	var scrap := Node2D.new()
+	_backdrop(scrap, "menu_scrapyard")
+	_neon = Sprite2D.new()
+	_neon.texture = load("res://art/gen/menu_scrapyard_neon.png")
+	_neon.centered = false
+	_neon.position = Vector2(-480 + 148, -272 + 110)  # over the dark sign panel
+	scrap.add_child(_neon)
+	_smog = CPUParticles2D.new()
+	_smog.texture = load("res://art/gen/dust.png")
+	_smog.amount = 30
+	_smog.lifetime = 11.0
+	_smog.preprocess = 11.0
+	_smog.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	_smog.emission_rect_extents = Vector2(460, 60)
+	_smog.position = Vector2(0, 200)
+	_smog.direction = Vector2(0.2, -1)
+	_smog.spread = 25.0
+	_smog.gravity = Vector2.ZERO
+	_smog.initial_velocity_min = 6.0
+	_smog.initial_velocity_max = 14.0
+	_smog.scale_amount_min = 2.0
+	_smog.scale_amount_max = 4.0
+	_smog.color = Color("577277", 0.4)
+	_smog.color_ramp = _fade_ramp()
+	scrap.add_child(_smog)
+	add_child(scrap)
+	_scenes.append(scrap)
+
+	# 3: the abandoned safehouse
+	var safe := Node2D.new()
+	_backdrop(safe, "menu_safehouse")
+	_lamp_glow = Sprite2D.new()
+	_lamp_glow.texture = load("res://art/gen/menu_safehouse_glow.png")
+	_lamp_glow.position = Vector2(220, 110)  # over the desk lamp
+	safe.add_child(_lamp_glow)
+	add_child(safe)
+	_scenes.append(safe)
+
+	# 4: the overlook
+	var overlook := Node2D.new()
+	_backdrop(overlook, "menu_overlook")
+	_clouds_a = Sprite2D.new()
+	_clouds_a.texture = load("res://art/gen/menu_overlook_clouds.png")
+	_clouds_a.position = Vector2(0, -180)
+	overlook.add_child(_clouds_a)
+	_clouds_b = Sprite2D.new()
+	_clouds_b.texture = _clouds_a.texture
+	_clouds_b.position = Vector2(960, -180)
+	overlook.add_child(_clouds_b)
+	_dust = CPUParticles2D.new()
+	_dust.texture = load("res://art/gen/dust.png")
+	_dust.amount = 24
+	_dust.lifetime = 8.0
+	_dust.preprocess = 8.0
+	_dust.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	_dust.emission_rect_extents = Vector2(460, 200)
+	_dust.direction = Vector2(1, 0.1)
+	_dust.spread = 10.0
+	_dust.gravity = Vector2.ZERO
+	_dust.initial_velocity_min = 18.0
+	_dust.initial_velocity_max = 40.0
+	_dust.color = Color("819796", 0.4)
+	_dust.color_ramp = _fade_ramp()
+	overlook.add_child(_dust)
+	add_child(overlook)
+	_scenes.append(overlook)
+
+	for scene in _scenes:
+		scene.modulate.a = 0.0
+		scene.visible = false
+
+
+func _fade_ramp() -> Gradient:
 	var ramp := Gradient.new()
 	ramp.set_color(0, Color(1, 1, 1, 0))
-	ramp.add_point(0.15, Color(1, 1, 1, 1))
-	ramp.add_point(0.85, Color(1, 1, 1, 1))
+	ramp.add_point(0.2, Color(1, 1, 1, 1))
+	ramp.add_point(0.8, Color(1, 1, 1, 1))
 	ramp.set_color(1, Color(1, 1, 1, 0))
-	dust.color_ramp = ramp
-	_camera.add_child(dust)
+	return ramp
 
+
+func _activate(index: int, instant: bool) -> void:
+	var prev := _scenes[_scene_index]
+	var next := _scenes[index]
+	_scene_index = index
+	next.visible = true
+	if _fade_tween != null:
+		_fade_tween.kill()
+	if instant:
+		next.modulate.a = 1.0
+		for scene in _scenes:
+			if scene != next:
+				scene.visible = false
+				scene.modulate.a = 0.0
+		return
+	_fade_tween = create_tween().set_parallel(true)
+	_fade_tween.tween_property(next, "modulate:a", 1.0, FADE_SECONDS)
+	if prev != next:
+		_fade_tween.tween_property(prev, "modulate:a", 0.0, FADE_SECONDS)
+		_fade_tween.chain().tween_callback(func() -> void: prev.visible = false)
+
+
+# ------------------------------------------------------------------- ui ------
 
 func _build_ui() -> void:
 	var layer := CanvasLayer.new()
@@ -127,24 +231,25 @@ func _build_ui() -> void:
 
 	_title = TextureRect.new()
 	_title.texture = load("res://art/gen/title.png")
+	var tw := float(_title.texture.get_width())
 	_title.anchor_left = 0.5
 	_title.anchor_right = 0.5
-	_title.offset_left = -117
-	_title.offset_right = 117
-	_title.offset_top = 56
-	_title.offset_bottom = 120
+	_title.offset_left = -tw / 2.0
+	_title.offset_right = tw / 2.0
+	_title.offset_top = 52
+	_title.offset_bottom = 52 + _title.texture.get_height()
 	_title.stretch_mode = TextureRect.STRETCH_KEEP
 	_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_title_base_y = _title.offset_top
 	root.add_child(_title)
 
 	var tagline := Label.new()
-	tagline.text = "L O O T .   E X T R A C T .   S U R V I V E ."
+	tagline.text = "loot. extract. survive."
 	tagline.anchor_left = 0.5
 	tagline.anchor_right = 0.5
 	tagline.offset_left = -160
 	tagline.offset_right = 160
-	tagline.offset_top = 128
+	tagline.offset_top = 126
 	tagline.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	tagline.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	root.add_child(tagline)
@@ -158,11 +263,11 @@ func _build_ui() -> void:
 	_buttons.offset_right = 85
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 7)
-	var deploy := _menu_button(box, "DEPLOY", func() -> void:
+	var deploy := _menu_button(box, "deploy", func() -> void:
 		get_tree().change_scene_to_file("res://scenes/main.tscn"))
 	deploy.add_theme_color_override("font_color", UITheme.ACCENT)
-	_menu_button(box, "SETTINGS", _open_settings)
-	_menu_button(box, "QUIT", func() -> void: get_tree().quit())
+	_menu_button(box, "settings", _open_settings)
+	_menu_button(box, "quit", func() -> void: get_tree().quit())
 	_buttons.add_child(box)
 	root.add_child(_buttons)
 	deploy.grab_focus()
@@ -177,7 +282,7 @@ func _build_ui() -> void:
 	root.add_child(center)
 
 	var version := Label.new()
-	version.text = "PRE-ALPHA  V0.4.0"
+	version.text = "pre-alpha v0.5.0"
 	version.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	version.offset_left = -130
 	version.offset_top = -16

@@ -10,6 +10,7 @@ extends Node
 var _shot_menu := ""
 var _shot_scene := "game"
 var _shot_at := ""
+var _shot_backdrop := -1
 
 
 func _ready() -> void:
@@ -22,6 +23,8 @@ func _ready() -> void:
 			_shot_scene = arg.trim_prefix("--scene=")
 		elif arg.begins_with("--at="):
 			_shot_at = arg.trim_prefix("--at=")
+		elif arg.begins_with("--backdrop="):
+			_shot_backdrop = int(arg.trim_prefix("--backdrop="))
 	for arg in args:
 		if arg == "--smoke":
 			_smoke.call_deferred()
@@ -157,6 +160,10 @@ func _shot(shot_name: String) -> void:
 				menu.open_settings()
 			else:
 				menu.open()
+	if _shot_backdrop >= 0:
+		var main_menu := get_tree().get_first_node_in_group("main_menu")
+		if main_menu != null:
+			main_menu.call("show_backdrop", _shot_backdrop)
 	for i in 40:
 		await get_tree().process_frame
 	var image := get_viewport().get_texture().get_image()

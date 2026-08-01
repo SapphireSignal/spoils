@@ -94,7 +94,7 @@ func _build_fps_overlay() -> void:
 	_fps_label.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	_fps_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_fps_label.add_theme_font_override("font", UITheme.font())
-	_fps_label.add_theme_font_size_override("font_size", 8)
+	_fps_label.add_theme_font_size_override("font_size", 9)
 	_fps_label.add_theme_color_override("font_color", UITheme.GOOD)
 	_fps_label.add_theme_color_override("font_shadow_color", UITheme.SHADOW)
 	_fps_label.add_theme_constant_override("shadow_offset_x", 1)

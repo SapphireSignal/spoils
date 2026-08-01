@@ -135,10 +135,18 @@ than being scattered through UI/input code — so a server can own them later. N
   - Prop sprites, origins, collision shapes and variant families come from
     `art/gen/manifest.json`; the game hardcodes none of it. Props vary per
     instance (parameterized generators, incl. fallen/toppled poses).
-  - Buildings: neighbor-masked brick wall pieces, varied windows, tar roofs with
-    a RoofReveal group that fades when the player's tile is inside the footprint.
-  - Boot scene is the main menu (`scenes/menu.tscn`) — live world background.
-    Harness auto-switches to the game scene for smoke/shots (`--scene=menu` to stay).
+  - Buildings: THIN edge-wall segments (not full-tile blocks) + corner/door
+    posts, varied windows, tar roofs. RoofReveal fades the roof to zero AND
+    the camera-facing walls to 30% while the player is inside.
+  - Font: lowercase-only proportional bitmap font; uppercase codepoints map to
+    lowercase glyphs (user wants no capitals anywhere). If the .fnt ever fails
+    to import, delete its .import + .godot/imported cache and reimport —
+    Godot caches import failures for unchanged files (cost us a whole "blurry
+    text" investigation).
+  - Boot scene is the main menu (`scenes/menu.tscn`): four generated backdrop
+    scenes rotate with crossfades (hoard / neon scrapyard / safehouse /
+    overlook), each with an animated layer. Harness: `--scene=menu` stays on
+    the menu, `--backdrop=N` picks a scene, `--at=X,Y` teleports the player.
 
 ## 7. Self-verification requirements (non-negotiable)
 

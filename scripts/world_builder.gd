@@ -164,7 +164,7 @@ func _prop_sprite(prop_name: String) -> Sprite2D:
 	return sprite
 
 
-func _add_prop(prop_name: String, pos: Vector2) -> void:
+func _add_prop(prop_name: String, pos: Vector2) -> Node2D:
 	var info: Dictionary = _manifest["props"][prop_name]
 	var collider: Variant = info["collider"]
 
@@ -183,6 +183,14 @@ func _add_prop(prop_name: String, pos: Vector2) -> void:
 				Vector2(0, -half_h), Vector2(half_w, 0),
 				Vector2(0, half_h), Vector2(-half_w, 0)])
 			body.add_child(poly)
+		elif shape_kind == "poly":
+			var flat: Array = spec[1]
+			var points := PackedVector2Array()
+			for i in range(0, flat.size(), 2):
+				points.append(Vector2(float(flat[i]), float(flat[i + 1])))
+			var poly := CollisionPolygon2D.new()
+			poly.polygon = points
+			body.add_child(poly)
 		else:
 			var cs := CollisionShape2D.new()
 			var circle := CircleShape2D.new()
@@ -193,6 +201,7 @@ func _add_prop(prop_name: String, pos: Vector2) -> void:
 	node.position = pos
 	node.add_child(_prop_sprite(prop_name))
 	_ysort.add_child(node)
+	return node
 
 
 func _add_prop_at_cell(prop_name: String, cell: Vector2i,
@@ -209,77 +218,112 @@ func _pick_variant(family: String) -> String:
 	return names[_rng.randi_range(0, names.size() - 1)]
 
 
-# mask bit order must match tools/gen_art.py: xn, xp, yn, yp
-const _MASK_OFFSETS := [Vector2i(-1, 0), Vector2i(1, 0), Vector2i(0, -1), Vector2i(0, 1)]
-
 func _place_buildings() -> void:
+	# doors: (interior cell, side) edges left open
 	_build_shell(BUILDING_A, "brick_a",
-		[Vector2i(BUILDING_A.end.x - 1, 10), Vector2i(BUILDING_A.end.x - 1, 11)], false)
+		[[Vector2i(BUILDING_A.end.x - 2, 10), "xp"], [Vector2i(BUILDING_A.end.x - 2, 11), "xp"]],
+		false)
 	_build_shell(BUILDING_B, "brick_b",
-		[Vector2i(33, BUILDING_B.position.y), Vector2i(34, BUILDING_B.position.y)], true)
+		[[Vector2i(33, BUILDING_B.position.y + 1), "yn"], [Vector2i(34, BUILDING_B.position.y + 1), "yn"]],
+		true)
+
+
+# edge midpoint offset and segment sprite axis per side of a cell
+const _EDGE_OFFSET := {
+	"yp": Vector2(-16, 8), "yn": Vector2(16, -8),
+	"xp": Vector2(16, 8), "xn": Vector2(-16, -8),
+}
+const _EDGE_AXIS := {"yp": "x", "yn": "x", "xp": "y", "xn": "y"}
+# endpoints of each edge relative to the cell center (for corner/jamb posts)
+const _EDGE_VERTS := {
+	"yp": [Vector2(-32, 0), Vector2(0, 16)], "yn": [Vector2(32, 0), Vector2(0, -16)],
+	"xp": [Vector2(0, 16), Vector2(32, 0)], "xn": [Vector2(0, -16), Vector2(-32, 0)],
+}
 
 
 func _build_shell(rect: Rect2i, style: String, doors: Array, ruined: bool) -> void:
-	var full: Dictionary = {}
-	var broken: Array[Vector2i] = []
-	var collapsed: Array[Vector2i] = []
-	var ruin_corner: Vector2i = rect.end - Vector2i(1, 1)
+	var interior: Rect2i = rect.grow(-1)
+	var ruin_corner: Vector2i = interior.end - Vector2i(1, 1)
+	var posts: Dictionary = {}  # rounded Vector2 -> true
+	var near_walls: Array[Node2D] = []  # camera-facing walls, faded when inside
 
+	for y in range(interior.position.y, interior.end.y):
+		for x in range(interior.position.x, interior.end.x):
+			var cell := Vector2i(x, y)
+			_occupied[cell] = true  # keep random scatter out of interiors
+			var sides: Array[String] = []
+			if x == interior.position.x:
+				sides.append("xn")
+			if x == interior.end.x - 1:
+				sides.append("xp")
+			if y == interior.position.y:
+				sides.append("yn")
+			if y == interior.end.y - 1:
+				sides.append("yp")
+			for side in sides:
+				var is_door := false
+				for door in doors:
+					if door[0] == cell and door[1] == side:
+						is_door = true
+				var center := _floor_layer.map_to_local(cell)
+				var verts: Array = _EDGE_VERTS[side]
+				if is_door:
+					for v in verts:  # door jamb posts
+						posts[(center + (v as Vector2)).round()] = true
+					continue
+				var axis: String = _EDGE_AXIS[side]
+				var piece := "seg_%s_%s" % [style, axis]
+				if ruined and Vector2(cell - ruin_corner).length() < 3.0:
+					if _rng.randf() < 0.25:
+						for v in verts:  # collapsed gap: posts mark the stumps
+							posts[(center + (v as Vector2)).round()] = true
+						continue
+					piece = "seg_%s_%s_broken_%d" % [style, axis, _rng.randi_range(0, 1)]
+				elif _rng.randf() < 0.3:
+					piece = "seg_%s_%s_win_%d" % [style, axis, _rng.randi_range(0, 2)]
+				var node := _add_prop(piece, center + (_EDGE_OFFSET[side] as Vector2))
+				if side == "yp" or side == "xp":
+					near_walls.append(node)
+
+	# posts at the four outer corners of the shell
+	var corner_cells := [
+		[interior.position, Vector2(0, -16)],
+		[Vector2i(interior.end.x - 1, interior.position.y), Vector2(32, 0)],
+		[interior.end - Vector2i(1, 1), Vector2(0, 16)],
+		[Vector2i(interior.position.x, interior.end.y - 1), Vector2(-32, 0)],
+	]
+	for entry in corner_cells:
+		var pos := _floor_layer.map_to_local(entry[0] as Vector2i) + (entry[1] as Vector2)
+		posts[pos.round()] = true
+	for pos in posts:
+		_add_prop("post_%s" % style, pos as Vector2)
+
+	# the wall ring cells are plain ground now, but keep scatter off them
 	for y in range(rect.position.y, rect.end.y):
 		for x in range(rect.position.x, rect.end.x):
-			var cell := Vector2i(x, y)
-			var edge: bool = (x == rect.position.x or x == rect.end.x - 1
-				or y == rect.position.y or y == rect.end.y - 1)
-			if not edge:
-				_occupied[cell] = true
-				continue
-			if cell in doors:
-				_occupied[cell] = true
-				continue
-			if ruined and Vector2(cell - ruin_corner).length() < 3.5:
-				if _rng.randf() < 0.3:
-					collapsed.append(cell)
-				else:
-					broken.append(cell)
-				continue
-			full[cell] = true
+			_occupied[Vector2i(x, y)] = true
 
-	for cell in full:
-		var bits := ""
-		for off in _MASK_OFFSETS:
-			bits += "1" if full.has(cell + off) else "0"
-		var piece := "wall_%s_m%s" % [style, bits]
-		if bits == "1100" and _rng.randf() < 0.3:
-			piece = "wall_%s_win_x_%d" % [style, _rng.randi_range(0, 2)]
-		elif bits == "0011" and _rng.randf() < 0.3:
-			piece = "wall_%s_win_y_%d" % [style, _rng.randi_range(0, 2)]
-		_add_prop_at_cell(piece, cell)
-	for cell in broken:
-		var suffix := "a" if _rng.randf() < 0.5 else "b"
-		_add_prop_at_cell("wall_%s_broken_%s" % [style, suffix], cell)
-	for cell in collapsed:
-		_add_prop_at_cell(_pick_variant("rubble"), cell)
-
-	_build_roof(rect)
+	_build_roof(rect, interior, near_walls)
 
 
-func _build_roof(rect: Rect2i) -> void:
-	# roof sits just below the parapet coping; a RoofReveal group fades it
-	# when the player is inside (mechanic: interior reveal)
-	var south_corner := rect.end - Vector2i(1, 1)
+func _build_roof(rect: Rect2i, interior: Rect2i, near_walls: Array[Node2D]) -> void:
+	# roof covers ONLY the interior, tucked inside the wall coping (parapet);
+	# a RoofReveal group fades it out when the player is inside
+	var south_corner := interior.end - Vector2i(1, 1)
 	var roof := RoofReveal.new()
 	roof.cells = rect
-	roof.position = _floor_layer.map_to_local(south_corner) + Vector2(0, -8)
+	roof.near_walls = near_walls
+	# y-sort: after interior props (<= +5 jitter), before south wall segments (+8)
+	roof.position = _floor_layer.map_to_local(south_corner) + Vector2(0, 6)
 	var lift := Vector2(0, -(float(_wall_h) - 6.0))
-	for y in range(rect.position.y, rect.end.y):
-		for x in range(rect.position.x, rect.end.x):
+	for y in range(interior.position.y, interior.end.y):
+		for x in range(interior.position.x, interior.end.x):
 			var sprite := _prop_sprite("roof_tile_%d" % _rng.randi_range(0, 1))
 			sprite.position = _floor_layer.map_to_local(Vector2i(x, y)) - roof.position + lift
 			roof.add_child(sprite)
-	var inner := rect.grow(-1)
 	for i in 2:
-		var cell := Vector2i(_rng.randi_range(inner.position.x, inner.end.x - 1),
-			_rng.randi_range(inner.position.y, inner.end.y - 1))
+		var cell := Vector2i(_rng.randi_range(interior.position.x, interior.end.x - 1),
+			_rng.randi_range(interior.position.y, interior.end.y - 1))
 		var deco := _prop_sprite("roof_vent" if i == 0 else "roof_hatch")
 		deco.position = _floor_layer.map_to_local(cell) - roof.position + lift
 		roof.add_child(deco)
@@ -297,8 +341,8 @@ func _place_perimeter() -> void:
 				_add_prop_at_cell(_pick_variant("rubble"), cell)
 			elif roll < 0.42:
 				var style := "brick_a" if _rng.randf() < 0.5 else "brick_b"
-				var suffix := "a" if _rng.randf() < 0.5 else "b"
-				_add_prop_at_cell("wall_%s_broken_%s" % [style, suffix], cell)
+				var axis := "x" if _rng.randf() < 0.5 else "y"
+				_add_prop_at_cell("seg_%s_%s_broken_%d" % [style, axis, _rng.randi_range(0, 1)], cell)
 
 
 func _place_fixed_props() -> void:

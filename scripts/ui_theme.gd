@@ -38,7 +38,7 @@ static func _flat(bg: Color, border: Color, margin: int = 6) -> StyleBoxFlat:
 static func _build() -> Theme:
 	var theme := Theme.new()
 	theme.default_font = font()
-	theme.default_font_size = 8
+	theme.default_font_size = 9
 
 	var btn_normal := _flat(Color("202e37"), Color("394a50"))
 	btn_normal.content_margin_top = 5
