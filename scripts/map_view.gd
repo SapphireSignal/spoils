@@ -98,6 +98,8 @@ func _build_poi_list(info: Dictionary) -> void:
 		"gallery": "the gallery - fresh paint on old walls",
 		"scrapyard": "the scrapyard - wrecks, machines, and one crane",
 		"safehouse": "home base - you wake up here every raid",
+		"lz": "the lift - green smoke, and a bird if you can pay for it",
+		"toll gate": "the toll gate - the warden sells his blind eye",
 	}
 	var poi: Dictionary = info.get("poi", {})
 	for key in poi:

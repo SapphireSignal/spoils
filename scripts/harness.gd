@@ -389,6 +389,10 @@ func _shot(shot_name: String) -> void:
 			select_scene.call("_open_map_select")
 			select_scene.call("_select_transit")
 	for arg in OS.get_cmdline_user_args():
+		if arg == "--toll":
+			var dialog := get_tree().current_scene.get_node_or_null("TollDialog")
+			if dialog != null:
+				dialog.call("open")
 		if arg.begins_with("--extract="):
 			# jump straight to the debrief with a sample ledger, so the
 			# screen can be judged before enemies exist to fill it

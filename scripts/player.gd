@@ -312,6 +312,8 @@ func _interact() -> void:
 		(best as Stairs).use()
 	elif best is DriveableCar:
 		(best as DriveableCar).enter(self)
+	elif best is TollGate:
+		(best as TollGate).use()
 
 
 func _animate(input_vec: Vector2, delta: float) -> void:

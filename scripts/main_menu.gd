@@ -66,6 +66,13 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.30", ["the toll gate: a warden in a booth on the south road,",
+		"a boom across the asphalt, and a man who will talk",
+		"until you pay him",
+		"pull up in a car and press f - his window opens with",
+		"his face in it. keep replying and he never runs out",
+		"pay the fee and the boom goes up, the snipers look",
+		"away, and you drive out past the wire to extract"]],
 	["v0.6.29", ["clutter looks dumped now, not placed: crates, tires,",
 		"barrels and rubble come in many more versions, each",
 		"leaning its own way and worn its own way",

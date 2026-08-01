@@ -3,6 +3,37 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.30] — 2026-08-01
+
+### Added
+- **Extract 2: THE TOLL GATE** (user design). Where the middle road
+  breaches the wire on the south side there is now a booth with a lit
+  serving window, a warden visible inside it, and a striped boom lying
+  across the asphalt. Pull up **in a car** and press F — F at the wheel
+  talks to him instead of getting out, because the whole point of the
+  gate is that you drive to it — or walk up; either way the prompt
+  offers it, and the prompt is the permission (v0.6.28's rule).
+- **His window.** A portrait panel with his face, whatever he's decided
+  to tell you, and three answers: a **reply button that shows the line
+  you'd actually say** and changes every time, **pay 30 to extract**,
+  and **back away**. He has 26 lines and 14 replies, never repeats
+  twice running, and **never runs out** — he will talk about the eleven
+  gates he's worked, his brother on the harbor gate, the raider who
+  cried at this window, and how much he's made off people like you. He
+  never says what the wardens are actually FOR (LORE.md hard rule 3).
+- **Paying opens the crossing**: the boom goes up, the edge snipers
+  **stand down** (`EdgeGuard.stood_down`), and the toll extract arms
+  beyond the wire — drive out down the road and the green counter runs,
+  then the debrief. `Raid.money` is a stub (120 a raid) until the stash
+  and the economy land in M4; the pay button disables and shows what
+  you have when you're short.
+- New art: the toll booth (lit window, counter, the man inside), the
+  boom in raised and lowered states, and the warden's 48×48 portrait —
+  peaked cap with a brass badge, a scar through one eyebrow, and a
+  mouth that has said no ten thousand times.
+- The toll gate and the landing zone are both named POIs on the map now.
+- Harness: `--toll` opens his window for review.
+
 ## [0.6.29] — 2026-08-01
 
 ### Changed

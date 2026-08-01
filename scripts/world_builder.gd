@@ -100,6 +100,8 @@ var _map_marks: Array = []           # [cell, kind] static marks for the map
 var _map_trees: Array[Vector3i] = [] # (x, y, autumn) — every planted tree,
                                      # so the baked map shows the woods
 var _lz_rect := Rect2i()             # the lift's clearing
+var _toll_gate: Node2D = null        # the warden's crossing
+var _toll_cell := Vector2i.ZERO
 var _extracts: Array[Dictionary] = []  # ways out, handed to Extraction
 var _window_cells: Dictionary = {}   # (x, y, side_id) -> true where a wall
                                      # segment carries glass
@@ -216,9 +218,11 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 				_safehouse_rect.size.x, _safehouse_rect.size.y],
 			"lz": [_lz_rect.position.x, _lz_rect.position.y,
 				_lz_rect.size.x, _lz_rect.size.y],
+			"toll gate": [_toll_cell.x - 2, _toll_cell.y - 2, 5, 5],
 			"rail_row": _rail_row,
 		},
 		"extracts": _extracts,
+		"toll_gate": _toll_gate,
 	}
 
 
@@ -2532,6 +2536,39 @@ func _place_barricades() -> void:
 	await _ring_side("y", hi_x, lo + 2, hi_y - 2)
 	await _place_bodies()
 	await _dress_buffer()
+	await _place_toll_gate()
+
+
+func _place_toll_gate() -> void:
+	# THE TOLL GATE: where a road breaches the wire on the south side, a
+	# booth, a boom, and a warden who is a business. Paying him opens this
+	# crossing and the extract sits out past the line.
+	var road: Vector2i = _roads_v[_roads_v.size() / 2]
+	var gate_x := road.x + 1
+	var gate_y := MAP_H - 1 - BARRIER_INSET       # the south ring line
+	var booth_cell := Vector2i(gate_x + 3, gate_y)
+	var gate := TollGate.new()
+	gate.position = _floor_layer.map_to_local(booth_cell).round()
+	# the boom spans the ROAD, so it has to travel along the map's x axis
+	# (4 cells west of the booth) — a straight screen offset lands it on
+	# the shoulder instead of across the asphalt
+	gate.setup(_manifest, Vector2(-4.0 * 32.0, -4.0 * 16.0))
+	_ysort.add_child(gate)
+	for dx in range(-1, 2):
+		for dy in range(-1, 2):
+			_occupied[booth_cell + Vector2i(dx, dy)] = true
+	_toll_gate = gate
+	_toll_cell = booth_cell
+	# the way out sits BEYOND the wire, straight down the road — you drive
+	# out through the buffer and the counter runs (user spec)
+	_extracts.append({
+		"name": "the toll gate",
+		"kind": "toll",
+		"pos": _floor_layer.map_to_local(Vector2i(gate_x, gate_y + 16)),
+		"radius": 240.0,
+		"auto": false,
+	})
+	_map_marks.append([booth_cell, "toll"])
 
 
 func _ring_side(axis: String, fixed: int, from: int, to: int) -> void:

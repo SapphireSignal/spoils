@@ -32,6 +32,7 @@ var _round_vel: Array[Vector2] = []
 var _round_age: Array[float] = []
 var _pending: Array[float] = []  # countdowns to the volley's staggered shots
 var _round_tex: Texture2D        # cached once — not re-fetched per shot
+var stood_down := false          # the toll was paid: this stretch looks away
 
 
 func setup(player: Player, world: Node2D, map_center: Vector2, barrier_f: float) -> void:
@@ -78,7 +79,9 @@ func _process(delta: float) -> void:
 			_pending.remove_at(pi_)
 			_spawn_round()
 		pi_ -= 1
-	if _player == null or _player.dead:
+	if _player == null or _player.dead or stood_down:
+		# paying the warden buys exactly this: the guns stop caring while
+		# you drive out past the line
 		_leave_zone()
 		return
 	var u := _player.global_position - _map_center

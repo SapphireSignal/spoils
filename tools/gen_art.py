@@ -3863,6 +3863,183 @@ def make_smoker_sheet() -> tuple[Canvas, tuple, list | None]:
     sheet.px = sheet.img.load()
     return sheet, (14, 34), None
 
+def make_toll_booth() -> tuple[Canvas, tuple, list]:
+    """The warden's booth on the district edge: a small hut with a lit
+    serving window, a counter shelf, a shift light over it, and the man
+    himself visible inside. Built like every other prop — iso box with a
+    top face, a lit north-west wall and a shaded east one."""
+    rng = random.Random(f"{SEED}:tollbooth")
+    c = Canvas(72, 84)
+    ox, oy = 10, 60          # the booth's south corner
+    w, d, h = 26, 13, 30
+    # the two visible walls
+    for i in range(w):
+        x = ox + i
+        base = oy + i // 2
+        for k in range(h):
+            col = C("577277") if k > h - 4 else C("819796")
+            if (i + k) % 11 == 0:
+                col = C("394a50")            # panel seams
+            c.set(x, base - k, col)
+    for j in range(d):
+        x = ox + w - 1 + j
+        base = oy + (w - 1) // 2 - j // 2
+        for k in range(h):
+            c.set(x, base - k, C("394a50") if k > h - 4 else C("577277"))
+    # the roof: a flat top face with a lip
+    for i in range(w):
+        for j in range(d):
+            x = ox + i + j
+            y = oy + i // 2 - j // 2 - h
+            c.set(x, y, C("a8b5b2") if (i + j) % 9 else C("819796"))
+    for i in range(w):                        # roof lip, catching light
+        c.set(ox + i, oy + i // 2 - h + 1, C("c7cfcc"))
+    # the serving window: a dark opening with a warm light inside
+    win_x0, win_y0 = ox + 5, oy + 2 - h + 12
+    for i in range(15):
+        for k in range(11):
+            x = win_x0 + i
+            y = win_y0 + i // 2 + k
+            c.set(x, y, C("151d28") if k > 1 else C("090a14"))
+    for i in range(15):                       # the counter shelf
+        c.set(win_x0 + i, win_y0 + i // 2 + 11, C("884b2b"))
+        c.set(win_x0 + i, win_y0 + i // 2 + 12, C("602c2c"))
+    # the warden, shoulders and head, sitting in the dark of the window
+    hx, hy = win_x0 + 6, win_y0 + 6
+    for i in range(9):                        # shoulders
+        c.set(hx - 3 + i, hy + 4 + (i // 3), C("202e37"))
+        c.set(hx - 3 + i, hy + 5 + (i // 3), C("172038"))
+    for i in range(6):                        # head
+        for k in range(5):
+            c.set(hx - 2 + i, hy - 1 + k, C("d7b594"))
+    for i in range(7):                        # his cap
+        c.set(hx - 3 + i, hy - 2, C("202e37"))
+        c.set(hx - 3 + i, hy - 3, C("394a50"))
+    c.set(hx, hy + 1, C("151d28"))            # eyes
+    c.set(hx + 2, hy + 1, C("151d28"))
+    # the shift light over the window
+    c.set(ox + 12, oy + 6 - h + 6, C("de9e41"))
+    c.set(ox + 13, oy + 6 - h + 6, C("e8c170"))
+    for _ in range(rng.randint(2, 4)):        # weathering
+        c.set(ox + rng.randrange(2, w - 2), oy + rng.randrange(4, h - 6),
+              C("394a50"))
+    c.outline_auto()
+    cr, orr = crop_canvas(c, (ox + w // 2 + d // 2, oy + w // 4 + 4))
+    return cr, orr, ["diamond", 15.0, 8.0]
+
+
+def make_toll_barrier(raised: bool) -> tuple[Canvas, tuple, list | None]:
+    """The boom across the road: a striped pole on a counterweight post.
+    Down means pay up; up means somebody already did."""
+    c = Canvas(72, 68)
+    px, py = 8, 50
+    for k in range(14):                       # the post
+        c.set(px, py - k, C("577277"))
+        c.set(px + 1, py - k, C("394a50"))
+    c.set(px, py - 14, C("819796"))
+    if raised:
+        # the boom stands up: vertical, stripes reading top to bottom
+        for k in range(34):
+            col = C("cf573c") if (k // 5) % 2 == 0 else C("c7cfcc")
+            c.set(px + 3, py - 12 - k, col)
+            c.set(px + 4, py - 12 - k, col if k % 5 else C("a53030"))
+    else:
+        # the boom lies across the road on the iso axis
+        for i in range(46):
+            col = C("cf573c") if (i // 7) % 2 == 0 else C("c7cfcc")
+            y = py - 11 + i // 2
+            c.set(px + 3 + i, y, col)
+            c.set(px + 3 + i, y + 1, C("a53030") if (i // 7) % 2 == 0
+                  else C("819796"))
+        for k in range(4):                    # the far rest post
+            c.set(px + 48, py - 11 + 23 + k, C("394a50"))
+    c.outline_auto()
+    cr, orr = crop_canvas(c, (px, py))
+    return cr, orr, None
+
+
+def make_warden_portrait() -> tuple[Canvas, tuple, list | None]:
+    """His face for the dialogue window. A warden who has sat this gate a
+    long time: peaked cap, a jaw that has said no ten thousand times, and
+    eyes that are already counting your bag. Drawn as a solid portrait —
+    lit from the north-west like everything else."""
+    rng = random.Random(f"{SEED}:warden:face")
+    c = Canvas(48, 48)
+    # backing plate so the portrait reads as a framed photo
+    for y in range(48):
+        for x in range(48):
+            c.set(x, y, C("172038") if (x + y) % 17 else C("202e37"))
+    cx = 24
+    # neck and collar
+    for y in range(36, 45):
+        for x in range(cx - 6, cx + 6):
+            c.set(x, y, C("ad7757") if y < 39 else C("202e37"))
+    for x in range(cx - 11, cx + 11):         # shoulders
+        c.set(x, 43, C("394a50"))
+        c.set(x, 44, C("202e37"))
+    c.set(cx - 7, 42, C("de9e41"))            # a collar pin, badge brass
+    c.set(cx - 6, 42, C("e8c170"))
+    # the head: a solid mass, lit left, shaded right
+    for y in range(11, 39):
+        span = 11
+        if y < 14:
+            span = 8 + (y - 11)
+        elif y > 34:
+            span = 11 - (y - 34) * 2
+        for x in range(cx - span, cx + span):
+            col = C("ad7757")                 # the face's own tone
+            if x > cx + span - 4:
+                col = C("7a4841")             # shaded cheek
+            elif x < cx - span + 3:
+                col = C("d7b594")             # lit edge, north-west
+            c.set(x, y, col)
+    # the cap: a hard band with a peak over the brow
+    for y in range(4, 13):
+        for x in range(cx - 13, cx + 13):
+            col = C("253a5e") if y < 10 else C("172038")
+            if y < 6 and abs(x - cx) < 10:
+                col = C("3c5e8b")             # crown catching light
+            c.set(x, y, col)
+    for x in range(cx - 15, cx + 14):         # the peak
+        c.set(x, 13, C("10141f"))
+        c.set(x, 14, C("151d28"))
+    c.set(cx - 1, 8, C("de9e41"))             # cap badge
+    c.set(cx, 8, C("e8c170"))
+    c.set(cx + 1, 8, C("de9e41"))
+    c.set(cx, 9, C("884b2b"))
+    # brow shadow, eyes, and the look
+    for x in range(cx - 10, cx + 10):
+        c.set(x, 16, C("7a4841"))
+    for (ex, lit) in ((cx - 6, True), (cx + 4, False)):
+        for i in range(4):
+            c.set(ex + i, 18, C("ebede9") if lit else C("c7cfcc"))
+            c.set(ex + i, 19, C("151d28") if i in (1, 2) else C("a8b5b2"))
+        c.set(ex - 1, 17, C("7a4841"))
+    for x in range(cx - 8, cx - 2):           # eyebrows, drawn low
+        c.set(x, 16, C("341c27"))
+    for x in range(cx + 3, cx + 9):
+        c.set(x, 16, C("341c27"))
+    # nose, and a mouth set in a flat mean line
+    for y in range(21, 27):
+        c.set(cx, y, C("d7b594"))
+        c.set(cx + 1, y, C("7a4841"))
+    c.set(cx - 1, 27, C("7a4841"))
+    c.set(cx + 2, 27, C("7a4841"))
+    for x in range(cx - 6, cx + 6):
+        c.set(x, 31, C("7a4841"))
+    c.set(cx - 7, 30, C("7a4841"))            # the corner that never lifts
+    c.set(cx + 6, 32, C("7a4841"))
+    # a scar through one eyebrow, and stubble as patches (never dots)
+    for k in range(5):
+        c.set(cx + 6 + k // 2, 13 + k, C("d7b594"))
+    for _ in range(rng.randint(5, 7)):
+        sx = cx + rng.randint(-9, 9)
+        sy = 30 + rng.randint(0, 6)
+        for dx in range(rng.randint(2, 4)):
+            c.set(sx + dx, sy, C("7a4841"))
+    return c, (24, 24), None
+
+
 def make_helicopter() -> tuple[Canvas, tuple, list | None]:
     """The bird that lifts you out: a 3-frame sheet, rotor turning. Seen
     from above and to the side like everything else — fuselage with a lit
@@ -4219,6 +4396,10 @@ def prop_inventory() -> tuple[dict, dict]:
     props["smoker"] = make_smoker_sheet()
     props["chalkboard"] = make_chalkboard()
     props["helicopter"] = make_helicopter()
+    props["toll_booth"] = make_toll_booth()
+    props["toll_barrier"] = make_toll_barrier(False)
+    props["toll_barrier_open"] = make_toll_barrier(True)
+    props["warden_portrait"] = make_warden_portrait()
     props["lz_marker"] = make_lz_marker()
     props["floor_edge_x"] = make_floor_edge("x")
     props["floor_edge_y"] = make_floor_edge("y")
@@ -5953,7 +6134,10 @@ def main() -> None:
     # Grid modules that abut by design are exempt.
     _EDGE_OK = ("roof_tile_", "roof_fascia_", "roof_eave_", "roof_corner_",
                 "seg_", "seg2_", "post_", "post2_", "door_", "ui_grabber",
-                "floor_edge_")
+                "floor_edge_",
+                # UI art, not world sprites: a portrait plate is meant to
+                # fill its frame edge to edge
+                "warden_portrait")
     clipped = []
     for name, entry in entries.items():
         if any(name.startswith(p) for p in _EDGE_OK):

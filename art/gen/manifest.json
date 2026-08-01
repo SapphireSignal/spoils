@@ -5611,6 +5611,54 @@
       ],
       "collider": null
     },
+    "toll_booth": {
+      "size": [
+        42,
+        56
+      ],
+      "origin": [
+        21,
+        48
+      ],
+      "collider": [
+        "diamond",
+        15.0,
+        8.0
+      ]
+    },
+    "toll_barrier": {
+      "size": [
+        53,
+        34
+      ],
+      "origin": [
+        2,
+        16
+      ],
+      "collider": null
+    },
+    "toll_barrier_open": {
+      "size": [
+        9,
+        50
+      ],
+      "origin": [
+        2,
+        47
+      ],
+      "collider": null
+    },
+    "warden_portrait": {
+      "size": [
+        48,
+        48
+      ],
+      "origin": [
+        24,
+        24
+      ],
+      "collider": null
+    },
     "lz_marker": {
       "size": [
         76,

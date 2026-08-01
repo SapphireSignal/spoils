@@ -170,6 +170,12 @@ func _process(delta: float) -> void:
 		Sfx.set_engine(0.3 if engine_on else 0.0)
 		return
 	if Input.is_action_just_pressed("interact"):
+		# pulled up at the warden's window? talk to him instead of getting
+		# out — the whole point of the gate is that you drive to it
+		var gate := _nearest_toll_gate()
+		if gate != null:
+			gate.use()
+			return
 		exit_car()
 		return
 	if Input.is_action_just_pressed("flashlight"):
@@ -236,6 +242,17 @@ func _process(delta: float) -> void:
 	if _player != null and _player.zoom_combined != 0:
 		c = float(_player.zoom_combined)
 	_sprite.position = (global_position * c).round() / c - global_position
+
+
+func _nearest_toll_gate() -> TollGate:
+	for node in get_tree().get_nodes_in_group("toll_gates"):
+		var gate := node as TollGate
+		if gate == null or not gate.can_use():
+			continue
+		if gate.global_position.distance_to(global_position) \
+				< TollGate.INTERACT_RANGE:
+			return gate
+	return null
 
 
 func _spawn_crash_smoke() -> void:

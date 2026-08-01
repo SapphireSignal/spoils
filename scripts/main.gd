@@ -24,6 +24,7 @@ var _car_hint: RichTextLabel
 var _car_hint_until := 0.0
 var _was_driving := false
 var _extract_screen: ExtractScreen
+var _toll_dialog: TollDialog
 
 
 func _ready() -> void:
@@ -163,6 +164,19 @@ func _build_world() -> void:
 			beacon.position = z["pos"] as Vector2
 			ysort.add_child(beacon)
 	extraction.extracted.connect(_on_extracted)
+	# the warden's crossing: his window, and what paying him buys
+	var toll: TollGate = info.get("toll_gate", null)
+	if toll != null:
+		_toll_dialog = TollDialog.new()
+		_toll_dialog.name = "TollDialog"
+		add_child(_toll_dialog)
+		toll.wants_dialog.connect(_toll_dialog.open)
+		_toll_dialog.paid.connect(func() -> void:
+			toll.open_barrier()
+			extraction.arm("toll")
+			var edge := get_node_or_null("EdgeGuard") as EdgeGuard
+			if edge != null:
+				edge.stood_down = true)
 	Raid.begin()
 	await get_tree().process_frame
 	Music.play_raid()  # sparse ambient with long silences, -26 dB
@@ -307,6 +321,16 @@ func _update_prompt() -> void:
 		if d < 42.0 * 42.0 and d < best_d:
 			best_d = d
 			best = car
+	# the toll warden answers from a car's length away — you pull UP to
+	# his window, you don't get out and knock
+	for node in get_tree().get_nodes_in_group("toll_gates"):
+		var gate := node as TollGate
+		if gate == null or not gate.can_use():
+			continue
+		var d := gate.global_position.distance_squared_to(_player.global_position)
+		if d < TollGate.INTERACT_RANGE * TollGate.INTERACT_RANGE and d < best_d:
+			best_d = d
+			best = gate
 	if best == null:
 		_prompt.visible = false
 		_prompt_target = null
@@ -327,6 +351,8 @@ func _update_prompt() -> void:
 			var going_up := _player_upper != (best as Stairs).upper_index
 			_prompt.text = "press %s to go %s" % [key,
 				"upstairs" if going_up else "back down"]
+		elif best is TollGate:
+			_prompt.text = "press %s to talk to the warden" % key
 		else:
 			_prompt.text = "press %s to enter the car" % key
 	# pin the label just above the target, following it on screen

@@ -10,6 +10,10 @@ extends Node
 
 var running := false
 var xp := 0
+# STUB currency until the stash and the economy land in M4: you start a
+# raid with a little walking-around money so the toll gate is usable.
+# When the stash arrives this moves there and persists between raids.
+var money := 120
 var kills: Array[Dictionary] = []    # {name, player, bone, at (seconds)}
 var haul: Array[Dictionary] = []     # {name, count} — the stash lands in M4
 
@@ -20,6 +24,7 @@ var _ended_at := 0.0
 func begin() -> void:
 	running = true
 	xp = 0
+	money = 120
 	kills.clear()
 	haul.clear()
 	_started_ms = Time.get_ticks_msec()
