@@ -97,6 +97,11 @@ var _comms_rect := Rect2i()          # the relay compound
 var _gallery_rect := Rect2i()        # the graffiti gallery corner
 var _scrap_rect := Rect2i()          # the scrapyard block
 var _map_marks: Array = []           # [cell, kind] static marks for the map
+var _map_trees: Array[Vector3i] = [] # (x, y, autumn) — every planted tree,
+                                     # so the baked map shows the woods
+var _window_cells: Dictionary = {}   # (x, y, side_id) -> true where a wall
+                                     # segment carries glass
+const _EDGE_SIDE_IDS := {"yp": 0, "yn": 1, "xp": 2, "xn": 3}
 var _spark_house := -1               # which house got the broken power box
 var _safehouse_rect := Rect2i()      # the spawn safehouse
 var _uppers: Array[Dictionary] = []  # second-story registries for main.gd
@@ -542,6 +547,22 @@ func _plan_plots() -> void:
 				_plan_comms_corner(b)
 			"open":
 				_plan_gallery_corner(b)
+	# GUARANTEE upstairs homes: a fixed district must always hold real
+	# two-story houses — the 45% dice CAN roll a bungalow-only town, and
+	# with one permanent map that would be forever (it nearly was)
+	var two_story := 0
+	var upgrade_candidates: Array[int] = []
+	for i in _plots.size():
+		var story_plot: Dictionary = _plots[i]
+		if story_plot["kind"] == "house" and not story_plot.get("safehouse", false):
+			if int(story_plot["stories"]) == 2:
+				two_story += 1
+			elif not bool(story_plot["ruined"]):
+				upgrade_candidates.append(i)
+	_shuffle(upgrade_candidates)
+	while two_story < 4 and not upgrade_candidates.is_empty():
+		_plots[upgrade_candidates.pop_back()]["stories"] = 2
+		two_story += 1
 	# one house per district gets the sparking power box (quest fodder)
 	var house_indices: Array[int] = []
 	for i in _plots.size():
@@ -703,13 +724,15 @@ func _place_safehouse_ring() -> void:
 	for plot in _plots:
 		if plot.get("safehouse", false):
 			door_out = plot["door_out"]
-	for x in range(ring.position.x, ring.end.x, 2):
+	# SPARSER ring (user: "we dont need that many"): every third cell,
+	# corners pinned by the pillars — reads guarded, not caged
+	for x in range(ring.position.x, ring.end.x, 3):
 		await _tick()
 		if absi(x - door_out.x) > 2:
 			_fence_piece(Vector2i(x, ring.position.y), "x")
 		if absi(x - door_out.x) > 2 or ring.end.y - 1 != door_out.y + 1:
 			_fence_piece(Vector2i(x, ring.end.y - 1), "x")
-	for y in range(ring.position.y + 1, ring.end.y - 1, 2):
+	for y in range(ring.position.y + 1, ring.end.y - 1, 3):
 		await _tick()
 		_fence_piece(Vector2i(ring.position.x, y), "y")
 		_fence_piece(Vector2i(ring.end.x - 1, y), "y")
@@ -718,6 +741,52 @@ func _place_safehouse_ring() -> void:
 		if not _occupied.has(corner):
 			_add_prop_at_cell("pillar_%d" % _rng.randi_range(0, 1), corner,
 				Vector2(3, 2))
+	# the parking pad (user request): a small asphalt apron with a stall
+	# line and one car off the ring — east side first, west as fallback.
+	# The pad car never arms its alarm; it reads as YOURS.
+	var pad := Rect2i(ring.end.x + 1, ring.position.y + 2, 4, 4)
+	if not _pad_clear(pad):
+		pad.position.x = ring.position.x - 5
+	if _pad_clear(pad):
+		for y in range(pad.position.y, pad.end.y):
+			for x in range(pad.position.x, pad.end.x):
+				var pcell := Vector2i(x, y)
+				if x - pad.position.x == 1 and y < pad.end.y - 1:
+					_set_tile(pcell, "asphalt_stall")
+				else:
+					_set_tile(pcell, "asphalt_%d" % _rng.randi_range(0, 1))
+		var pad_fam := "vehicle_ne" if pad.position.x > ring.end.x \
+			else "vehicle_nw"
+		var pad_variant := _pick_variant(pad_fam)
+		var pad_pos := _floor_layer.map_to_local(Vector2i(
+			pad.position.x + 1, pad.position.y + 1)) + Vector2(
+			_rng.randf_range(-3.0, 3.0), _rng.randf_range(-2.0, 2.0))
+		if pad_variant.ends_with("_5") or pad_variant.ends_with("_6"):
+			_add_prop(pad_variant, pad_pos)
+		else:
+			_spawn_driveable(pad_variant,
+				pad_fam.trim_prefix("vehicle_"), pad_pos)
+		for y in range(pad.position.y, pad.end.y):
+			for x in range(pad.position.x, pad.end.x):
+				_occupied[Vector2i(x, y)] = true
+		_map_marks.append([pad.get_center(), "car"])
+
+
+func _pad_clear(pad: Rect2i) -> bool:
+	# a parking pad needs honest ground: no roads, rails, walks, woods,
+	# claimed cells, or another plot breathing on it
+	for y in range(pad.position.y, pad.end.y):
+		for x in range(pad.position.x, pad.end.x):
+			var cell := Vector2i(x, y)
+			if _on_road(cell) or _rail_cells.has(cell) or _ballast.has(cell) \
+					or _sidewalk.has(cell) or _plaza.has(cell) \
+					or _apron.has(cell) or _occupied.has(cell) \
+					or _forest.has(cell):
+				return false
+	for plot in _plots:
+		if (plot["rect"] as Rect2i).grow(1).intersects(pad):
+			return false
+	return true
 
 
 func _plan_town_block(b: Vector2i, with_court: bool) -> void:
@@ -1062,26 +1131,24 @@ func _paint_terrain() -> void:
 				# center (user: "the yellow line seems a bit off")
 				if cw != "":
 					tile_name = "crosswalk_%s" % cw
-				elif road_v >= 0 and road_h < 0 and cell.x == road_v + 1 \
-						and _rng.randf() < 0.96:
-					tile_name = "asphalt_line"
-				elif road_v >= 0 and road_h < 0 and cell.x == road_v + 2 \
-						and _rng.randf() < 0.96:
-					tile_name = "asphalt_line_b"
-				elif road_h >= 0 and road_v < 0 and cell.y == road_h + 1 \
-						and _rng.randf() < 0.96:
-					tile_name = "asphalt_line_h"
-				elif road_h >= 0 and road_v < 0 and cell.y == road_h + 2 \
-						and _rng.randf() < 0.96:
-					tile_name = "asphalt_line_h_b"
+				elif road_v >= 0 and road_h < 0 and (cell.x == road_v + 1 \
+						or cell.x == road_v + 2) and _dash_here(cell.y, road_v):
+					tile_name = "asphalt_line" if cell.x == road_v + 1 \
+						else "asphalt_line_b"
+				elif road_h >= 0 and road_v < 0 and (cell.y == road_h + 1 \
+						or cell.y == road_h + 2) and _dash_here(cell.x, road_h):
+					tile_name = "asphalt_line_h" if cell.y == road_h + 1 \
+						else "asphalt_line_h_b"
 				elif _rng.randf() < 0.006:
 					tile_name = "manhole_0"
 				elif _rng.randf() < 0.045:
 					tile_name = "asphalt_crack_%d" % _rng.randi_range(0, 1)
 				elif _rng.randf() < 0.02:
 					tile_name = "asphalt_hole_%d" % _rng.randi_range(0, 1)
-			elif _sidewalk.has(cell) and not is_forest and not is_dirt \
+			elif _sidewalk.has(cell) and not is_forest \
 					and _cell_inset(cell) >= BARRIER_INSET - 2:
+				# sidewalks BEAT dirt trails (a trail used to paint straight
+				# across the slabs — the "overlapping road" screenshot)
 				# walkway slabs: mostly intact, some cracked open (the broken
 				# tile eats through to the dirt and grows weeds)
 				var sw_roll := _rng.randf()
@@ -1103,6 +1170,13 @@ func _paint_terrain() -> void:
 					tile_name = "dirt_blend_%d" % _rng.randi_range(0, 2)
 			_set_tile(cell, tile_name)
 		await _tick()
+
+
+func _dash_here(along: int, road_pos: int) -> bool:
+	# BOTH half-tiles of a center dash exist or neither: the old per-cell
+	# rolls left orphan halves reading as off-center dashes (user
+	# screenshot). Deterministic per (position, road); gaps stay rare.
+	return posmod(hash(Vector3i(along, road_pos, _zone_salt)), 100) < 96
 
 
 func _touches(cell: Vector2i, field: Dictionary) -> bool:
@@ -1336,6 +1410,10 @@ func _build_shell(plot: Dictionary) -> void:
 				elif _rng.randf() < (0.42 if stories == 2 else 0.3):
 					piece = "%s_%s_%s_win_%d" % [seg_prefix, style, axis2,
 						_rng.randi_range(0, 2)]
+					# remember where the glass is: power boxes must never
+					# hang under a window (user call)
+					_window_cells[Vector3i(cell.x, cell.y,
+						(_EDGE_SIDE_IDS[side] as int))] = true
 				_add_prop(piece, center + (_EDGE_OFFSET[side] as Vector2))
 
 	var corner_cells := [
@@ -1558,30 +1636,51 @@ func _furnish_warehouse(interior: Rect2i, pocket: Array[Vector2i],
 
 func _furnish_school(interior: Rect2i, pocket: Array[Vector2i],
 		collect: Array[Node2D] = []) -> void:
-	# the ground hall: paired desks in loose rows, shelves on the back wall
+	# a real classroom (user request): the chalkboard on the front wall, a
+	# teacher's desk under it, then rows of desk+chair PAIRS all facing the
+	# board, shelves along the back. NOTE: never gate on _occupied here —
+	# the shell marks its whole interior occupied before furnishing (that
+	# silent gate left the school empty for two versions).
 	var p := interior.position
+	var used: Dictionary = {}
+	# the board hangs on the interior face of the north wall, centered-ish
+	var board_cell := Vector2i(clampi(p.x + interior.size.x / 2,
+		p.x + 1, interior.end.x - 2), p.y)
+	if board_cell in pocket:
+		board_cell.x += 2
+	collect.append(_add_prop_at_cell("chalkboard", board_cell, Vector2(2, 0)))
+	used[board_cell] = true
+	# the teacher's desk, one row in, off the board's shoulder
+	var teacher := Vector2i(board_cell.x + (1 if _rng.randf() < 0.5 else -1),
+		p.y + 1)
+	if interior.grow(-1).has_point(teacher) and teacher not in pocket:
+		collect.append(_add_prop_at_cell("table", teacher, Vector2(4, 2)))
+		used[teacher] = true
+	# desk rows: chair SOUTH of each desk, every pair facing the board
+	var y := p.y + 3
+	while y < interior.end.y - 1:
+		var x := p.x + 1 + _rng.randi_range(0, 1)
+		while x < interior.end.x - 1:
+			var desk := Vector2i(x, y)
+			var chair := Vector2i(x, y + 1)
+			if desk not in pocket and chair not in pocket \
+					and not used.has(desk) and not used.has(chair) \
+					and interior.has_point(chair) and chair.y < interior.end.y:
+				collect.append(_add_prop_at_cell("table", desk, Vector2(4, 2)))
+				collect.append(_add_prop_at_cell("chair", chair, Vector2(4, 2)))
+				used[desk] = true
+				used[chair] = true
+			x += _rng.randi_range(2, 3)
+		y += 3
+	# shelves along the back wall, clear of the door pocket
 	var wall_cells: Array[Vector2i] = []
 	for x in range(interior.position.x + 1, interior.end.x - 1):
-		var cell := Vector2i(x, p.y)
-		if cell not in pocket:
+		var cell := Vector2i(x, interior.end.y - 1)
+		if cell not in pocket and not used.has(cell):
 			wall_cells.append(cell)
 	_shuffle(wall_cells)
 	for i in mini(2, wall_cells.size()):
 		collect.append(_add_prop_at_cell("bookshelf", wall_cells[i], Vector2(5, 2)))
-	var rows := _rng.randi_range(2, 3)
-	for row in rows:
-		var y := p.y + 2 + row * 2
-		if y >= interior.end.y - 1:
-			break
-		var x := p.x + 1 + _rng.randi_range(0, 1)
-		while x < interior.end.x - 2:
-			var desk := Vector2i(x, y)
-			var chair := Vector2i(x + 1, y)
-			if desk not in pocket and chair not in pocket \
-					and not _occupied.has(desk) and not _occupied.has(chair):
-				collect.append(_add_prop_at_cell("table", desk, Vector2(5, 3)))
-				collect.append(_add_prop_at_cell("chair", chair, Vector2(5, 3)))
-			x += _rng.randi_range(3, 4)
 
 
 func _build_upper(interior: Rect2i, stairs_cell: Vector2i, kind: String,
@@ -1599,12 +1698,12 @@ func _build_upper(interior: Rect2i, stairs_cell: Vector2i, kind: String,
 	_ysort.add_child(upper)
 
 	var atlas: Texture2D = load("res://art/gen/floors.png")
+	# WOOD upstairs in EVERY building — the school's screed-over-screed
+	# melted into the ground room at night ("theres no second floor");
+	# classroom parquet reads instantly at any hour
 	var upper_tile := "wood_%d" % _rng.randi_range(0, 4)
-	if kind != "house":
-		upper_tile = "screed_%d" % _rng.randi_range(0, 3)
 	if upper_tile == ground_floor_tile:
-		upper_tile = "wood_%d" % ((int(upper_tile.substr(5)) + 1) % 5) \
-			if kind == "house" else "screed_%d" % ((int(upper_tile.substr(7)) + 1) % 4)
+		upper_tile = "wood_%d" % ((int(upper_tile.substr(5)) + 1) % 5)
 	var tc: Array = _floor_coords[upper_tile]
 	for y in range(interior.position.y, interior.end.y):
 		for x in range(interior.position.x, interior.end.x):
@@ -1620,6 +1719,30 @@ func _build_upper(interior: Rect2i, stairs_cell: Vector2i, kind: String,
 			tile.position = _floor_layer.map_to_local(cell) - upper.position \
 				+ Vector2(0.0, -float(_story_h))
 			upper.add_child(tile)
+
+	# the slab lip: a dark edge along the south and east borders — the
+	# plane needs a silhouette or it melts into the room below (user:
+	# "the floor is not showing up when im on the second floor")
+	var edge_x_tex: Texture2D = load("res://art/gen/floor_edge_x.png")
+	var edge_y_tex: Texture2D = load("res://art/gen/floor_edge_y.png")
+	for x in range(interior.position.x, interior.end.x):
+		var lip := Sprite2D.new()
+		lip.texture = edge_x_tex
+		lip.centered = false
+		lip.offset = Vector2(-32, -16)
+		lip.position = _floor_layer.map_to_local(
+			Vector2i(x, interior.end.y - 1)) - upper.position \
+			+ Vector2(0.0, -float(_story_h))
+		upper.add_child(lip)
+	for y in range(interior.position.y, interior.end.y):
+		var lip2 := Sprite2D.new()
+		lip2.texture = edge_y_tex
+		lip2.centered = false
+		lip2.offset = Vector2(-32, -16)
+		lip2.position = _floor_layer.map_to_local(
+			Vector2i(interior.end.x - 1, y)) - upper.position \
+			+ Vector2(0.0, -float(_story_h))
+		upper.add_child(lip2)
 
 	# the stairs themselves (ground object, tall enough to arrive upstairs)
 	var stairs_info: Dictionary = _manifest["props"]["stairs"]
@@ -2050,10 +2173,17 @@ func _place_power_boxes() -> void:
 		var door_cell: Vector2i = plot["door_cell"]
 		var interior: Rect2i = (plot["rect"] as Rect2i).grow(-1)
 		var along: Vector2i = _DOOR_ALONG[door_side]
-		var box_cell := door_cell + along * 2
-		if not interior.has_point(box_cell):
-			box_cell = door_cell - along * 2
-		if not interior.has_point(box_cell):
+		var side_id: int = _EDGE_SIDE_IDS[door_side]
+		var box_cell := Vector2i(-99, -99)
+		for step in [2, -2, 3, -3, 1, -1]:
+			var cand: Vector2i = door_cell + along * step
+			# on the wall, inside the room, NEVER under a window (user:
+			# "i dont want it underneath a window")
+			if interior.has_point(cand) and not _window_cells.has(
+					Vector3i(cand.x, cand.y, side_id)):
+				box_cell = cand
+				break
+		if box_cell.x < -90:
 			continue
 		var axis: String = _EDGE_AXIS[door_side]
 		var broken := i == _spark_house
@@ -2385,6 +2515,8 @@ func _place_trees() -> void:
 			var variant := _pick_variant("tree_autumn" if autumn else "tree")
 			var node := _add_prop_at_cell(variant, cell as Vector2i, Vector2(12, 6))
 			_maybe_shed_leaves(variant, node, autumn)
+			_map_trees.append(Vector3i((cell as Vector2i).x, (cell as Vector2i).y,
+				1 if autumn else 0))
 		elif roll < 0.33:
 			_add_prop_at_cell(_pick_variant("stick"), cell as Vector2i, Vector2(14, 7))
 		await _tick()
@@ -2449,6 +2581,7 @@ func _place_lone_trees() -> void:
 					_set_tile(ncell, "grass_blend_%d" % _rng.randi_range(0, 1))
 		var lone_variant := _pick_variant("tree")
 		_maybe_shed_leaves(lone_variant, _add_prop_at_cell(lone_variant, cell, Vector2(10, 5)))
+		_map_trees.append(Vector3i(cell.x, cell.y, 0))
 		if _rng.randf() < 0.5:
 			var scell := cell + Vector2i(_rng.randi_range(-1, 1), _rng.randi_range(-1, 1))
 			if not _occupied.has(scell) and not _on_road(scell):
@@ -2598,8 +2731,11 @@ func _bake_map_image() -> Image:
 		for x in MAP_W:
 			var cell := Vector2i(x, y)
 			var col := Color("202e37")
-			if _cell_inset(cell) < BARRIER_INSET:
+			var map_inset := _cell_inset(cell)
+			if map_inset < BARRIER_INSET - 1:
 				col = Color("10141f")            # sniper country, faded out
+			elif map_inset < BARRIER_INSET:
+				col = Color("4f5b66")            # the barricade ring itself
 			elif _rail_cross.has(cell) or _rail_cells.has(cell):
 				col = Color("341c27")
 			elif _ballast.has(cell):
@@ -2627,6 +2763,17 @@ func _bake_map_image() -> Image:
 				var edge: bool = x == rect.position.x or x == rect.end.x - 1 \
 					or y == rect.position.y or y == rect.end.y - 1
 				img.set_pixel(x, y, fill.darkened(0.25) if edge else fill)
+	for t in _map_trees:                         # the woods, color-true
+		img.set_pixel(t.x, t.y, Color("602c2c") if t.z == 1 else Color("25562e"))
+	for plot in _plots:                          # home base pops bright
+		if plot.get("safehouse", false):
+			var r: Rect2i = plot["rect"]
+			for x in range(r.position.x, r.end.x):
+				img.set_pixel(x, r.position.y, Color("c7cfcc"))
+				img.set_pixel(x, r.end.y - 1, Color("c7cfcc"))
+			for y in range(r.position.y, r.end.y):
+				img.set_pixel(r.position.x, y, Color("c7cfcc"))
+				img.set_pixel(r.end.x - 1, y, Color("c7cfcc"))
 	for mark in _map_marks:                      # static machine marks
 		var cell: Vector2i = mark[0]
 		if cell.x >= 0 and cell.y >= 0 and cell.x < MAP_W and cell.y < MAP_H:

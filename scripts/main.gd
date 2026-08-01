@@ -20,7 +20,7 @@ var _prompt_target: Node2D
 var _prompt_open := false
 var _uppers: Array = []
 var _player_upper := -1        # index into _uppers while on a second story
-var _car_hint: Label
+var _car_hint: RichTextLabel
 var _car_hint_until := 0.0
 var _was_driving := false
 
@@ -199,16 +199,22 @@ func _build_prompt() -> void:
 	_prompt.add_theme_color_override("font_color", UITheme.TEXT)
 	_prompt.visible = false
 	layer.add_child(_prompt)
-	# the driving crash course, shown for a few seconds after you get in
-	_car_hint = Label.new()
+	# the driving crash course — the KEYS pop amber against dim text and
+	# the card hangs around longer (user: "make the buttons distinct from
+	# the description... last a bit longer")
+	_car_hint = RichTextLabel.new()
 	_car_hint.theme = UITheme.get_theme()
-	_car_hint.add_theme_color_override("font_color", UITheme.TEXT)
-	_car_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_car_hint.text = "q to start engine\nclick left click to make the car follow your cursor\nclick again to stop\ne for headlights\nf to exit car"
+	_car_hint.bbcode_enabled = true
+	_car_hint.fit_content = true
+	_car_hint.scroll_active = false
+	_car_hint.autowrap_mode = TextServer.AUTOWRAP_OFF
+	_car_hint.custom_minimum_size = Vector2(460, 0)
+	_car_hint.text = "[center][color=#de9e41]q[/color] [color=#819796]engine[/color]     [color=#de9e41]left click[/color] [color=#819796]follow the cursor / stop[/color]     [color=#de9e41]e[/color] [color=#819796]lights[/color]     [color=#de9e41]f[/color] [color=#819796]step out[/color][/center]"
 	_car_hint.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	_car_hint.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_car_hint.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_car_hint.offset_bottom = -26
+	_car_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_car_hint.visible = false
 	layer.add_child(_car_hint)
 	add_child(layer)
@@ -324,7 +330,7 @@ func _process(delta: float) -> void:
 	# the driving crash course pops for a few seconds whenever you get in
 	var now_driving := _player.driving != null
 	if now_driving and not _was_driving:
-		_car_hint_until = Time.get_ticks_msec() / 1000.0 + 7.0
+		_car_hint_until = Time.get_ticks_msec() / 1000.0 + 12.0
 	_was_driving = now_driving
 	if _car_hint != null:
 		_car_hint.visible = now_driving \

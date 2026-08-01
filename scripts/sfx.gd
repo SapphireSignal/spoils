@@ -71,9 +71,23 @@ func _ready() -> void:
 	_engine_player = AudioStreamPlayer.new()
 	_engine_player.volume_db = -80.0
 	add_child(_engine_player)
+	# the engine bed gets its own low-passed bus: at speed the loop plays
+	# pitched up and the recording's hiss climbs into earshot ("static at
+	# full speed" — user report). The filter keeps only the engine body.
+	var engine_bus := AudioServer.bus_count
+	AudioServer.add_bus(engine_bus)
+	AudioServer.set_bus_name(engine_bus, "engine")
+	AudioServer.set_bus_send(engine_bus, "Master")
+	var lowpass := AudioEffectLowPassFilter.new()
+	lowpass.cutoff_hz = 5200.0
+	AudioServer.add_bus_effect(engine_bus, lowpass)
+	_engine_player.bus = "engine"
 	_car_player = AudioStreamPlayer.new()
 	_car_player.volume_db = -13.0
 	add_child(_car_player)
+	_bump_player = AudioStreamPlayer.new()
+	add_child(_bump_player)
+	_car_bump = _synth_bump()
 	_thunder_player = AudioStreamPlayer.new()
 	add_child(_thunder_player)
 	_heavy_thread = Thread.new()
@@ -167,6 +181,9 @@ func set_rain(intensity: float) -> void:
 var _engine_player: AudioStreamPlayer
 var _car_player: AudioStreamPlayer
 var _engine_db := -60.0
+var _engine_pitch := 1.0
+var _bump_player: AudioStreamPlayer
+var _car_bump: AudioStreamWAV
 var _engine_target := 0.0   # intensity 0..1; Sfx slews it DOWN on its own
                             # (the loop once played forever after an exit —
                             # nobody was calling set_engine anymore)
@@ -178,6 +195,15 @@ func play_car_door(open: bool) -> void:
 	_car_player.volume_db = -19.0
 	_car_player.stream = _car_door_open if open else _car_door_close
 	_car_player.play()
+
+
+func play_car_bump(intensity: float) -> void:
+	# a car meeting something it shouldn't — subtle always (standing
+	# rule): -22 dB scrape up to -18 dB flat-out, tiny pitch spread
+	_bump_player.volume_db = lerpf(-22.0, -18.0, clampf(intensity, 0.0, 1.0))
+	_bump_player.pitch_scale = randf_range(0.92, 1.08)
+	_bump_player.stream = _car_bump
+	_bump_player.play()
 
 
 func play_engine_start() -> void:
@@ -214,7 +240,13 @@ func _process(delta: float) -> void:
 		_engine_player.stop()
 		return
 	_engine_player.volume_db = _engine_db
-	_engine_player.pitch_scale = 0.9 + 0.35 * _engine_target
+	# pitch follows the throttle SMOOTHLY, capped lower: per-frame
+	# pitch_scale micro-jumps zipper into crackle at 240 Hz (the "static"
+	# at full speed), and the higher the pitch the harsher the loop
+	var want_pitch := 0.9 + 0.26 * _engine_target
+	_engine_pitch = move_toward(_engine_pitch, want_pitch, delta * 0.6)
+	if absf(_engine_player.pitch_scale - _engine_pitch) > 0.004:
+		_engine_player.pitch_scale = _engine_pitch
 
 
 func alarm_stream() -> AudioStreamWAV:
@@ -334,6 +366,29 @@ func _render_heavy() -> void:
 func _apply_heavy(rain: AudioStreamWAV, alarm: AudioStreamWAV) -> void:
 	_rain_loop = rain
 	_alarm = alarm
+
+
+func _synth_bump() -> AudioStreamWAV:
+	## A dull body thump with a hint of metal rattle — short, soft, never
+	## a movie crash (user: "really subtle").
+	var count := int(0.16 * RATE)
+	var data := PackedByteArray()
+	data.resize(count * 2)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash("spoils-carbump")
+	var phase := 0.0
+	var prev := 0.0
+	for i in count:
+		var t := float(i) / count
+		var env := minf(float(i) / (0.003 * RATE), 1.0) * pow(1.0 - t, 2.6)
+		phase += TAU * lerpf(96.0, 54.0, t) / RATE
+		var body := sin(phase) * 0.8
+		var n := rng.randf_range(-1.0, 1.0)
+		var rattle := (n * 0.5 + prev * 0.5) * 0.35 * pow(1.0 - t, 5.0)
+		prev = n
+		var s := (body + rattle) * env * 0.5
+		data.encode_s16(i * 2, int(clampf(s, -1.0, 1.0) * 32767.0))
+	return _wav(data)
 
 
 func _synth_rain_bed() -> AudioStreamWAV:

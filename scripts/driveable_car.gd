@@ -43,6 +43,8 @@ var _busy := false              # a door swing is in flight
 var _turn_left := 0.0
 var _click_held := false
 var _lights: Array[PointLight2D] = []
+var _crash_cool := 0.0          # one thump per hit, not one per frame
+var _dust_tex: Texture2D
 
 
 func _collider_points(variant: String) -> PackedVector2Array:
@@ -86,6 +88,7 @@ func setup(start_variant: String, start_heading: String, manifest: Dictionary) -
 		add_child(light)
 		_lights.append(light)
 	_aim_lights()
+	_dust_tex = load("res://art/gen/dust.png")
 	add_to_group("cars")
 	set_process(false)
 
@@ -182,10 +185,16 @@ func _process(delta: float) -> void:
 		if to_cursor.length() < ARRIVE_DIST:
 			speed = move_toward(speed, 0.0, BRAKE * delta)   # you're there
 		else:
-			# FREE-ANGLE drive (user: "it can move around freely right?"):
-			# the car moves on the true cursor vector; the sprite just
-			# shows whichever of its four baked facings fits best
-			_drive_dir = to_cursor.normalized()
+			# FREE-ANGLE drive with STEERING INERTIA (user: "add some sort
+			# of physics"): the car CARVES toward the cursor instead of
+			# snapping — the turn tightens as you slow, like a real wheel
+			var want_dir := to_cursor.normalized()
+			if _drive_dir == Vector2.ZERO:
+				_drive_dir = want_dir
+			else:
+				var turn_rate := 3.2 + 2.8 * (1.0 - absf(speed) / MAX_SPEED)
+				_drive_dir = _drive_dir.slerp(want_dir,
+					minf(1.0, delta * turn_rate)).normalized()
 			_turn_left -= delta
 			var want := ""
 			var best_dot := -2.0
@@ -194,7 +203,10 @@ func _process(delta: float) -> void:
 				if d > best_dot:
 					best_dot = d
 					want = h
-			if want != heading and _turn_left <= 0.0:
+			# facing swaps keep a little hysteresis so the sprite never
+			# flickers between two diagonals mid-carve
+			if want != heading and _turn_left <= 0.0 and best_dot > \
+					(DIRS[heading] as Vector2).normalized().dot(_drive_dir) + 0.06:
 				_turn_left = TURN_COOLDOWN
 				heading = want
 				_apply_variant(_base_variant_name())
@@ -205,8 +217,17 @@ func _process(delta: float) -> void:
 		speed = move_toward(speed, 0.0, COAST * delta)
 
 	velocity = _drive_dir * speed
+	var pre_speed := absf(speed)
 	move_and_slide()
+	_crash_cool = maxf(0.0, _crash_cool - delta)
 	if get_slide_collision_count() > 0:
+		if pre_speed > 60.0 and _crash_cool <= 0.0:
+			_crash_cool = 0.6
+			# every real hit gets a soft metal thump (user ask); SMOKE is
+			# reserved for full-speed crashes only
+			Sfx.play_car_bump(pre_speed / MAX_SPEED)
+			if pre_speed >= MAX_SPEED * 0.85:
+				_spawn_crash_smoke()
 		speed *= 0.35           # you hit something; the car noticed
 	Sfx.set_engine((0.3 + 0.7 * absf(speed) / MAX_SPEED) if engine_on else 0.0)
 
@@ -216,6 +237,29 @@ func _process(delta: float) -> void:
 	if _player != null and _player.zoom_combined != 0:
 		c = float(_player.zoom_combined)
 	_sprite.position = (global_position * c).round() / c - global_position
+
+
+func _spawn_crash_smoke() -> void:
+	# a small gray gasp off the point of impact — fire-and-forget tweens,
+	# so the puffs finish even if the driver steps out mid-drift
+	var hit := get_slide_collision(0)
+	var at := global_position
+	if hit != null:
+		at = hit.get_position()
+	for i in randi_range(4, 6):
+		var puff := Sprite2D.new()
+		puff.texture = _dust_tex
+		puff.modulate = Color("a8b5b2", 0.55)
+		puff.position = at + Vector2(randf_range(-5.0, 5.0),
+			randf_range(-4.0, 2.0))
+		get_parent().add_child(puff)
+		var dur := randf_range(0.8, 1.3)
+		var tw := puff.create_tween()
+		tw.set_parallel(true)
+		tw.tween_property(puff, "position", puff.position + Vector2(
+			randf_range(-10.0, 10.0), randf_range(-18.0, -9.0)), dur)
+		tw.tween_property(puff, "modulate:a", 0.0, dur)
+		tw.chain().tween_callback(puff.queue_free)
 
 
 func _aim_lights() -> void:

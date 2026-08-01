@@ -1969,39 +1969,64 @@ def make_tree(kind: str, variant: int) -> tuple[Canvas, tuple, list]:
     return cropped, origin, ["circle", 4.0]
 
 def draw_bush(rng: random.Random, variant: int) -> tuple[Canvas, tuple, list | None]:
-    """A leafy clump the player can push through — no collider. The game's
-    Foliage manager wiggles it and fades it while you're inside."""
-    # FULL-HEIGHT clumps (user: the character "can literally fit inside
-    # of it and hide") — taller than the standing sprite, real cover
+    """A leafy mound the player can vanish into — no collider. Built as a
+    MASS now (user: "they look flat"): lumpy crowns with lit and shaded
+    sides, a dark under-skirt, and a crown rim that catches the sky —
+    the angular-view illusion, not a front-view sticker."""
     w = rng.choice((40, 46, 52))
     h = w // 2 + rng.randint(14, 18)
-    c = Canvas(w + 8, h + 10)
+    c = Canvas(w + 10, h + 12)
     cx = c.w // 2
-    cy = h // 2 + 4
+    cy = h // 2 + 5
     pts: set = set()
     for dx in range(-w // 2, w // 2 + 1):
         e = 1.0 - (dx / (w / 2.0)) ** 2
         if e <= 0.0:
             continue
-        half = h / 2.0 * (e ** 0.5) * rng.uniform(0.82, 1.12)
+        half = h / 2.0 * (e ** 0.5) * rng.uniform(0.85, 1.1)
         for dy in range(int(-half), int(half) + 1):
             pts.add((cx + dx, cy + dy))
-    for (x, y) in pts:
-        col = C("19332d")
-        if (x - 1, y) not in pts or (x, y - 1) not in pts:
-            col = C("25562e")                        # lit north-west rim
-        elif (x, y + 1) not in pts:
-            col = C("10141f")                        # ground shadow rim
-        c.set(x, y, col)
-    for i in range(rng.randint(4, 7)):               # leaf-cluster highlights
-        x = cx + rng.randint(-w // 3, w // 3)
-        y = cy + rng.randint(-h // 3, 0)
-        c.set(x, y, C("468232"))
-        c.set(x + 1, y, C("25562e"))
+    skirt_y = cy + int(h * 0.30)
+    for (x, y) in pts:                               # body + under-skirt
+        c.set(x, y, C("10141f") if y >= skirt_y else C("19332d"))
+    # lumpy crowns: every foliage mass gets a lit NW shoulder and a
+    # shaded SE belly — the light model is what sells the volume
+    lumps = []
+    for i in range(rng.randint(3, 4)):
+        lumps.append((cx + rng.randint(-w // 3, w // 3),
+                      cy - h // 6 + rng.randint(-h // 6, h // 8),
+                      rng.randint(w // 6, w // 4)))
+    for (lx, ly, lr) in lumps:
+        ry = max(2, lr // 2)
+        for dy in range(-ry, ry + 1):
+            for dx in range(-lr, lr + 1):
+                if (dx / float(lr)) ** 2 + (dy / float(ry)) ** 2 > 1.0:
+                    continue
+                p = (lx + dx, ly + dy)
+                if p not in pts or p[1] >= skirt_y:
+                    continue
+                if dx - dy * 2 < -lr // 3:
+                    c.set(p[0], p[1], C("25562e"))   # lit toward the sky
+                elif dy > ry // 3:
+                    c.set(p[0], p[1], C("151d28"))   # its own under-shade
+        for k in range(rng.randint(2, 4)):           # bright shoulder caps
+            hx = lx - lr // 3 + rng.randint(-2, 2) + k
+            hy = ly - ry + rng.randint(0, 2)
+            if (hx, hy) in pts and hy < skirt_y:
+                c.set(hx, hy, C("468232"))
+                if (hx + 1, hy) in pts:
+                    c.set(hx + 1, hy, C("25562e"))
+    for (x, y) in pts:                               # crown rim, sky-lit
+        if (x, y - 1) not in pts and y < cy:
+            c.set(x, y, C("25562e"))
     if variant == 2:                                 # the berried one
         for i in range(5):
-            c.set(cx + rng.randint(-w // 3, w // 3),
-                  cy + rng.randint(0, h // 3), C("a53030"))
+            bx = cx + rng.randint(-w // 3, w // 3)
+            by = cy + rng.randint(-h // 4, 0)
+            if (bx, by) in pts:
+                c.set(bx, by, C("a53030"))
+                if (bx + 1, by) in pts:
+                    c.set(bx + 1, by, C("a53030"))
     c.set(cx, cy + h // 2 + 1, C("341c27"))          # a hint of stem
     c.outline_auto()
     cr, orr = crop_canvas(c, (cx, cy + h // 2 + 2))
@@ -2026,34 +2051,43 @@ def draw_tuft(rng: random.Random, variant: int) -> tuple[Canvas, tuple, list | N
 
 
 def draw_bench(rng: random.Random, broken: bool) -> tuple[Canvas, tuple, list]:
-    """Street bench along the (2,1) axis: metal frame, worn wood slats.
-    Sized so a seated raider's feet reach the ground (user: bigger)."""
-    c = Canvas(58, 48)
-    ox, oy = 10, 20
+    """Street bench along the (2,1) axis, drawn as a BOX now (user: "i
+    want them more 3d"): a real seat slab with a lit top face, a front
+    face and an underside shadow, a wood backrest with a bright top edge,
+    and legs with lit/shade sides."""
+    c = Canvas(62, 54)
+    ox, oy = 14, 24
     ln = 32
-    for i in range(ln):                              # four seat slats
+    for i in range(ln):
         x = ox + i
         by = oy + i // 2
-        for (s, col) in ((0, C("884b2b")), (2, C("602c2c")),
-                         (4, C("341c27")), (6, C("241527"))):
-            if broken and s == 2 and 11 < i < 19:
-                continue                             # a slat kicked out
-            c.set(x, by + s // 2, col)
-            c.set(x, by + s // 2 + 1 if s == 0 else by + s // 2, col)
-    for i in range(ln):                              # backrest rails
-        x = ox + i
-        c.set(x, oy + i // 2 - 9, C("394a50"))
-        c.set(x, oy + i // 2 - 8, C("202e37"))
-        c.set(x, oy + i // 2 - 4, C("394a50"))
+        # backrest slat: lit top edge over a wood face, gap to the seat
+        c.set(x, by - 9, C("884b2b"))
+        c.set(x, by - 8, C("602c2c"))
+        c.set(x, by - 7, C("602c2c"))
+        c.set(x, by - 6, C("341c27"))
+        # seat slab: grooved top face, front face, under-shadow
+        if broken and 11 < i < 19:
+            if i in (12, 18):                        # splintered ends
+                c.set(x, by, C("341c27"))
+            continue
+        groove = i % 8 == 7
+        c.set(x, by - 1, C("602c2c") if groove else C("884b2b"))
+        c.set(x, by, C("602c2c") if groove else C("884b2b"))
+        c.set(x, by + 1, C("602c2c"))
+        c.set(x, by + 2, C("341c27"))
+        c.set(x, by + 3, C("241527"))
     for (px_, lean) in ((ox + 2, 0), (ox + ln - 3, 0)):
         top = oy + (px_ - ox) // 2
-        for k in range(8):                           # legs
-            c.set(px_ + (k // 5 if broken and lean == 0 and px_ > ox + 4 else 0),
-                  top + 4 + k, C("202e37"))
-        for k in (9, 7, 5):                          # back posts up to the rails
+        for k in range(9):                           # legs: lit + shade side
+            dx = k // 5 if broken and lean == 0 and px_ > ox + 4 else 0
+            c.set(px_ + dx, top + 4 + k, C("394a50"))
+            c.set(px_ + dx + 1, top + 4 + k, C("202e37"))
+        for k in (9, 8, 7, 6, 5, 4, 3, 2):           # back posts to the rest
             c.set(px_, top - k, C("202e37"))
+        c.set(px_, top - 9, C("394a50"))             # post cap catches light
     c.outline_auto()
-    cr, orr = crop_canvas(c, (ox + ln // 2, oy + ln // 4 + 10))
+    cr, orr = crop_canvas(c, (ox + ln // 2, oy + ln // 4 + 11))
     return cr, orr, ["diamond", 15.0, 6.0]
 
 
@@ -3476,6 +3510,51 @@ def make_smoker_sheet() -> tuple[Canvas, tuple, list | None]:
     sheet.px = sheet.img.load()
     return sheet, (14, 34), None
 
+def make_chalkboard() -> tuple[Canvas, tuple, list | None]:
+    """The classroom board on the x-axis wall face: slate, chalk ghost
+    lines, the tray, two stubs of chalk nobody came back for."""
+    rng = random.Random(f"{SEED}:chalkboard")
+    c = Canvas(34, 36)
+    ox = 4
+    for i in range(26):                        # board follows the wall slope
+        x = ox + i
+        top = 5 + i // 2
+        c.set(x, top, C("151d28"))             # frame
+        for k in range(1, 12):
+            col = C("19332d")
+            if k < 3 and i < 20:
+                col = C("25562e")              # dusty sheen, upper left
+            c.set(x, top + k, col)
+        c.set(x, top + 12, C("151d28"))
+        c.set(x, top + 13, C("341c27"))        # the tray
+    for s in range(rng.randint(3, 4)):         # chalk ghost lines
+        sx = ox + 3 + rng.randrange(12)
+        sy = 8 + rng.randrange(6) + (sx - ox) // 2
+        for k in range(rng.randint(3, 6)):
+            c.set(sx + k, sy + k // 2, C("c7cfcc"))
+    for s in range(2):                         # chalk stubs on the tray
+        sx = ox + 5 + s * 9 + rng.randrange(3)
+        c.set(sx, 5 + (sx - ox) // 2 + 13, C("ebede9"))
+        c.set(sx + 1, 5 + (sx - ox) // 2 + 13, C("ebede9"))
+    c.outline_auto()
+    return c, (17, 33), None
+
+
+def make_floor_edge(axis: str) -> tuple[Canvas, tuple, list | None]:
+    """The second-story slab lip: a dark band under the tile's exposed
+    face so the upper floor reads as a DECK above the room instead of
+    dissolving into it (x = the SW edge, y = the SE edge)."""
+    c = Canvas(64, 36)
+    for t in range(32):
+        x = t if axis == "x" else 32 + t
+        edge_y = (16 + t // 2) if axis == "x" else (31 - t // 2)
+        # a LIT top edge over the shadow — dark-on-dark vanished at night
+        c.set(x, edge_y + 1, C("577277"))
+        c.set(x, edge_y + 2, C("151d28"))
+        c.set(x, edge_y + 3, C("090a14"))
+    return c, (32, 16), None
+
+
 def make_power_box(axis: str, broken: bool) -> tuple[Canvas, tuple, list | None]:
     """House power box on the wall face. Working: shut lid, meter, conduit.
     Broken: lid ajar, dangling wires, scorch — sparks come at runtime
@@ -3659,6 +3738,9 @@ def prop_inventory() -> tuple[dict, dict]:
     for i in range(4):
         fam("spray_cans", i, make_spray_cans(i))
     props["smoker"] = make_smoker_sheet()
+    props["chalkboard"] = make_chalkboard()
+    props["floor_edge_x"] = make_floor_edge("x")
+    props["floor_edge_y"] = make_floor_edge("y")
     # house power
     for axis in ("x", "y"):
         props[f"power_box_{axis}"] = make_power_box(axis, False)
@@ -5389,7 +5471,8 @@ def main() -> None:
     # canvas and got silently cut (tv stand, crate stacks... never again).
     # Grid modules that abut by design are exempt.
     _EDGE_OK = ("roof_tile_", "roof_fascia_", "roof_eave_", "roof_corner_",
-                "seg_", "seg2_", "post_", "post2_", "door_", "ui_grabber")
+                "seg_", "seg2_", "post_", "post2_", "door_", "ui_grabber",
+                "floor_edge_")
     clipped = []
     for name, entry in entries.items():
         if any(name.startswith(p) for p in _EDGE_OK):

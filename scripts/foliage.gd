@@ -46,6 +46,10 @@ func register(node: Node2D) -> void:
 func _process(delta: float) -> void:
 	var p := _player.global_position
 	var dead := _player.dead
+	# at the wheel the bushes still sway as the car plows through, but the
+	# leaf-brush sounds stay OFF — a car crossing a clump line fired them
+	# several times a second, which read as "static" (user report)
+	var muted := _player.driving != null
 	var r2 := RADIUS * RADIUS
 	var any_inside := false
 	for i in _sprites.size():
@@ -56,12 +60,13 @@ func _process(delta: float) -> void:
 		var sprite := _sprites[i]
 		if inside:
 			any_inside = true
-			if not was:
+			if not was and not muted:
 				_rustle(false)        # a real push through leaves (user:
 				                      # louder, like passing the trees)
 		elif was:
 			_settle[i] = 0.6          # rustles a moment after you leave
-			_rustle(true)             # softer brush on the way out
+			if not muted:
+				_rustle(true)         # softer brush on the way out
 		_inside[i] = 1 if inside else 0
 		sprite.modulate.a = move_toward(sprite.modulate.a,
 			HIDE_ALPHA if inside else 1.0, delta * 4.0)
@@ -81,7 +86,7 @@ func _process(delta: float) -> void:
 		else:
 			_sway_t[i] = randf() * SWAY_STEP * 4.0
 			sprite.position.x = _base_x[i]
-	_player.hidden_in_bush = any_inside
+	_player.hidden_in_bush = any_inside and not muted
 
 
 func _rustle(quiet: bool) -> void:

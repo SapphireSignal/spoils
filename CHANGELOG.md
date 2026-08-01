@@ -3,6 +3,78 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.23] — 2026-08-01
+
+### Changed
+- **THE MAP, rebuilt** (user: "make it something how a real triple a
+  senior dev would make it"): near-fullscreen window; the district view
+  opens at the largest whole zoom that fits the WHOLE playable district,
+  centered — centering DEFERS to the first draw (layout reports zero
+  sizes at open time; that panned the old first look into nowhere), and
+  the UI space is measured, never assumed 640×360 (expand-aspect makes
+  it 840×540 on the user's display). POI names draw ON the map with
+  backing chips (crowded labels yield), a pulsing "me" marker with its
+  label tracks the player in REALTIME, live car dots, drag-pan /
+  cursor-anchored zoom / tooltips kept, clock+weather bar, control
+  hints. World view: the transit tile is a REAL TextureButton showing a
+  live crop of the actual baked district — the old unhandled-input hit
+  test was swallowed by the panel ("i clicked on transit and nothing
+  happens") — with the sealed tiles on a self-centering board.
+- **Map bake**: every planted tree drawn color-true (the autumn grove
+  reads rust on the map), the barricade ring line, a bright safehouse
+  outline. Map-select screen: bigger tiles, district briefing + POI
+  list in the info column.
+- **Second stories, readable** (user: furniture "floating because
+  theres no second floor"): upper floors are WOOD everywhere (the
+  school's screed-over-screed vanished into the night), every upper
+  slab gets a LIT edge lip along its open borders, and a quota
+  guarantees ≥4 two-story houses — the fixed seed had rolled ZERO
+  (45% dice across ~15 homes; with one permanent map that would have
+  been forever). The school stood nearly empty since v0.6.19: its desks
+  were the only furniture gated on `_occupied`, which the shell sets
+  for its whole interior before furnishing.
+- **The classroom** (user request): chalkboard with chalk ghosts on the
+  front wall, a teacher's desk, desk+chair pairs in rows facing the
+  board, shelves at the back. Handled as quiet environmental
+  storytelling — a place evacuated six years ago.
+- **Safehouse yard**: a small parking pad off the ring (stall line, one
+  never-alarmed car — it reads as YOURS), the fence ring thinned to
+  every third cell, and power boxes never hang under a window anywhere
+  (window positions are tracked at shell build now).
+- **3D pass** (user: "make it all look visually 3d"): bushes rebuilt as
+  lit lumpy masses — crowns with lit/shaded sides, dark under-skirt,
+  sky-lit rim; benches rebuilt as boxes — grooved top face, front face,
+  under-shadow, two-tone legs. (The catalog-wide 3D pass shipped in
+  v0.6.9; these two were the stragglers. Circle anything else.)
+- **Driving feel** (user: "add some sort of physics"): steering
+  inertia — the car carves toward the cursor and turns tighten as you
+  slow; facing swaps get hysteresis (no diagonal flicker); every real
+  crash lands a soft synthesized body-thump (with cooldown) and
+  full-speed crashes puff smoke off the impact point; the controls card
+  lasts 12 s with amber KEYS distinct from dim descriptions.
+- **The static at full speed** (user report): the engine bed's pitch
+  was being micro-stepped 240×/s (zipper noise) and pitching the
+  recording's hiss into earshot — pitch is slewed and capped now and
+  the bed plays through a low-passed bus. Foliage also mutes its
+  leaf-brush sounds while driving (a car crossing a bush line
+  machine-gunned them into crackle).
+
+### Fixed
+- Dirt trails painted straight across sidewalks (the "overlapping road"
+  screenshot) — sidewalks win over trails now.
+- The center line's two half-tiles rolled independently, so ~8% of
+  dashes were orphan halves sitting off the road's middle (user
+  screenshot) — the halves live and die as a pair.
+
+Perf: 240 avg, worst 4.48 ms day / 4.63 ms storm-night, ~5.3k nodes.
+SMOKE PASS.
+
+### Next (vehicles, deliberately staged)
+- Sprites still swap between FOUR baked facings while motion is
+  free-angle. The 8-direction sheets (nose within 45° of the cursor)
+  need their own art round: ONE sample sedan sheet for user sign-off
+  first, then the fleet — the end-face saga earned that process.
+
 ## [0.6.22] — 2026-08-01
 
 ### Changed

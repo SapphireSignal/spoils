@@ -3825,6 +3825,39 @@
       ],
       "collider": null
     },
+    "chalkboard": {
+      "size": [
+        34,
+        36
+      ],
+      "origin": [
+        17,
+        33
+      ],
+      "collider": null
+    },
+    "floor_edge_x": {
+      "size": [
+        64,
+        36
+      ],
+      "origin": [
+        32,
+        16
+      ],
+      "collider": null
+    },
+    "floor_edge_y": {
+      "size": [
+        64,
+        36
+      ],
+      "origin": [
+        32,
+        16
+      ],
+      "collider": null
+    },
     "power_box_x": {
       "size": [
         20,
@@ -4363,11 +4396,11 @@
     "bush_1": {
       "size": [
         49,
-        47
+        45
       ],
       "origin": [
         24,
-        44
+        43
       ],
       "collider": null
     },
@@ -4418,11 +4451,11 @@
     "bench_x_0": {
       "size": [
         36,
-        39
+        40
       ],
       "origin": [
         18,
-        29
+        30
       ],
       "collider": [
         "diamond",
@@ -4433,11 +4466,11 @@
     "bench_y_0": {
       "size": [
         36,
-        39
+        40
       ],
       "origin": [
         17,
-        29
+        30
       ],
       "collider": [
         "diamond",
@@ -4448,11 +4481,11 @@
     "bench_x_1": {
       "size": [
         36,
-        39
+        40
       ],
       "origin": [
         18,
-        29
+        30
       ],
       "collider": [
         "diamond",
@@ -4463,11 +4496,11 @@
     "bench_y_1": {
       "size": [
         36,
-        39
+        40
       ],
       "origin": [
         17,
-        29
+        30
       ],
       "collider": [
         "diamond",

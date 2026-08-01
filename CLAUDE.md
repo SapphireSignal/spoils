@@ -7,8 +7,32 @@ This file carries everything a fresh session needs that isn't in those two.
 
 ## Where we are
 
-- **Version v0.6.22 SHIPPED** (26th release on 2026-08-01 — read
-  CHANGELOG.md for v0.6.19/20/21/22; all same-day). **v0.6.22 = THE FIXED
+- **Version v0.6.23 SHIPPED** (27th release on 2026-08-01 — read
+  CHANGELOG.md; all same-day). **v0.6.23 = THE REAL MAP + honest second
+  floors + car feel.** M-map rebuilt: fit-whole-district open at the
+  best whole zoom, POI labels ON the map (collision-yield), realtime
+  "me"+label, live car dots, REAL buttons (the old world-view hit test
+  was eaten by the panel — transit clicks did nothing); CENTERING DEFERS
+  to first draw (layout is zero-sized at _set_mode) and UI space is
+  MEASURED (expand-aspect → 840x540 on the user's display — never
+  assume 640x360); world view = live AtlasTexture crop of the bake on a
+  self-centering board. Bake: trees color-true + ring + safehouse
+  outline. Upper floors WOOD everywhere + lit floor_edge_x/y lips +
+  ≥4 two-story-house quota (transit-01 had rolled ZERO; school desks
+  were gated on _occupied, which the shell sets for its whole interior
+  — the school stood empty since v0.6.19). Classroom: chalkboard +
+  teacher desk + desk/chair pairs facing the board. Safehouse: parking
+  pad (_pad_clear, unalarmed car), ring thinned to step 3, power boxes
+  dodge windows district-wide (_window_cells). 3D bushes (lumpy lit
+  masses) + 3D box benches. Driving: steering-inertia slerp + facing
+  hysteresis + play_car_bump crash thump + full-speed smoke + 12s
+  amber-key RichTextLabel hint. Engine "static" fixed (pitch slew+cap
+  1.16, low-pass "engine" bus); foliage muted while driving. Trails
+  never cross sidewalks; dash halves paired (_dash_here). **NEXT
+  VEHICLE STEP (user ask, deliberately staged): 8-direction vehicle
+  sheets so the nose tracks the cursor at 45 degrees — build ONE sample
+  sedan sheet for user sign-off BEFORE converting the fleet (the
+  end-face saga earned that process).** **v0.6.22 = THE FIXED
   MAP** (user call, retroactive to day one: NO procedural rerolls, ever —
   quests will point at real addresses). DISTRICT_SEED "transit-01" in
   world_builder.gd IS the district (picked from a 5-seed audition: towns
@@ -50,13 +74,15 @@ This file carries everything a fresh session needs that isn't in those two.
   user picks a concept before any build (pipeline: --write-movie PNG
   frames 640x360 → 3x nearest → ffmpeg 1080p60 + davidkbd bed).
 - Watch-list: THE FIXED transit-01 LAYOUT (if the user dislikes THIS
-  district: audition more seeds, repin — never re-randomize), map size
-  (~100 diamond now), THE MAP window (layout/zoom/tooltips), map-select
-  screen, FREE-ANGLE driving feel + 190 top speed, safehouse spawn,
-  autumn grove, walk-in bush size + hide-fade + rustle level, slow-sway
-  speed, collision feel, scrapyard hall + gallery, smoker player-scale
-  read + bench size, spray-can spread, power-box sparks, prone/standing
-  size, den board text, splash SHATTER pacing, trails width, all sound
+  district: audition more seeds, repin — never re-randomize), THE NEW
+  MAP SCREEN (default zoom, label density, me-marker read), car FEEL
+  (carve rate, crash thump level, smoke amount), the 12s controls card,
+  wood upper floors + lit slab lip, the classroom, parking pad, thinned
+  safehouse ring, 3D bushes/benches read, map size (~100 diamond now),
+  map-select screen, 190 top speed, autumn grove, walk-in bush size +
+  hide-fade + rustle level, collision feel, scrapyard hall + gallery,
+  smoker player-scale read, spray-can spread, power-box sparks,
+  prone/standing size, den board text, splash SHATTER pacing, all sound
   levels, day length (8-min offer stands), night darkness.
 
 ## OPEN DECISIONS the user owes (next session: act on their pick)

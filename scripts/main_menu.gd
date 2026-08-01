@@ -66,6 +66,19 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.23", ["the map is real now: press m for the whole district,",
+		"every place named, and a little me that moves as you do",
+		"clicking transit works (it didnt - the window ate it)",
+		"second floors read like floors: wood, a lit edge, and",
+		"the town has proper two-story houses again",
+		"the school is a school: chalkboard, desks and chairs",
+		"safehouse: a parking pad, fewer fences, and the power",
+		"box walked away from the window",
+		"bushes and benches got real depth - masses, not stickers",
+		"driving: steering carves, crashes thump, smoke at full",
+		"speed, and the controls card is clearer and stays longer",
+		"the static at speed is gone. trails respect sidewalks.",
+		"the yellow line got its other half back"]],
 	["v0.6.22", ["the district is fixed now - one map, the same streets",
 		"every raid. learn it: quests will hand out addresses",
 		"the scrapyard got its warehouse back - the racks and",
@@ -806,7 +819,7 @@ func _build_map_select() -> PanelContainer:
 	# until their milestones unseal them.
 	var panel := PanelContainer.new()
 	panel.visible = false
-	panel.custom_minimum_size = Vector2(430, 240)
+	panel.custom_minimum_size = Vector2(500, 272)
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 14)
 	margin.add_theme_constant_override("margin_right", 14)
@@ -831,7 +844,7 @@ func _build_map_select() -> PanelContainer:
 	columns.add_child(tiles)
 	_ms_transit_frame = PanelContainer.new()
 	var transit_btn := Button.new()
-	transit_btn.custom_minimum_size = Vector2(96, 96)
+	transit_btn.custom_minimum_size = Vector2(120, 120)
 	transit_btn.icon = TEX_MAP_THUMB
 	transit_btn.expand_icon = true
 	transit_btn.pressed.connect(_select_transit)
@@ -839,10 +852,10 @@ func _build_map_select() -> PanelContainer:
 	tiles.add_child(_ms_transit_frame)
 	for i in 3:
 		var locked := PanelContainer.new()
-		locked.custom_minimum_size = Vector2(96, 96)
+		locked.custom_minimum_size = Vector2(120, 120)
 		var lock_rect := ColorRect.new()
 		lock_rect.color = Color("090a14", 0.85)   # blacked out
-		lock_rect.custom_minimum_size = Vector2(96, 96)
+		lock_rect.custom_minimum_size = Vector2(120, 120)
 		locked.add_child(lock_rect)
 		var q := Label.new()
 		q.text = "?"
@@ -855,7 +868,7 @@ func _build_map_select() -> PanelContainer:
 
 	var info := VBoxContainer.new()
 	info.add_theme_constant_override("separation", 6)
-	info.custom_minimum_size = Vector2(180, 0)
+	info.custom_minimum_size = Vector2(200, 0)
 	columns.add_child(info)
 	_ms_name = Label.new()
 	_ms_name.text = "select a district"
@@ -885,7 +898,7 @@ func _build_map_select() -> PanelContainer:
 
 func _select_transit() -> void:
 	_ms_name.text = "transit"
-	_ms_blurb.text = "the sealed transit district: a town and its courtyard, the school, a trainyard, the bus depot, a scrapyard, the comms relay - and the woods between them. snipers own the edge. bring a flashlight."
+	_ms_blurb.text = "the sealed transit district: a town and its courtyard, the school, a trainyard, the bus depot, a scrapyard, the comms relay - and the woods between them. snipers own the edge. bring a flashlight.\n\non the board: home base - courtyard - school - trainyard - depot - comms - gallery - scrapyard"
 	_ms_deploy.disabled = false
 
 
