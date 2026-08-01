@@ -31,6 +31,7 @@ var hp := MAX_HP
 var dead := false
 
 var _sprite: Sprite2D
+var _shadow: Sprite2D
 var _tex_stand: Texture2D
 var _tex_crouch: Texture2D
 var _dir_index := 2  # sheet rows are E,SE,S,SW,W,NW,N,NE — start facing S
@@ -47,11 +48,11 @@ var _window: Window
 func _init() -> void:
 	motion_mode = CharacterBody2D.MOTION_MODE_FLOATING
 
-	var shadow := Sprite2D.new()
-	shadow.texture = load("res://art/gen/shadow.png")
-	shadow.centered = false
-	shadow.offset = Vector2(-12, -6)
-	add_child(shadow)
+	_shadow = Sprite2D.new()
+	_shadow.texture = load("res://art/gen/shadow.png")
+	_shadow.centered = false
+	_shadow.offset = Vector2(-12, -6)
+	add_child(_shadow)
 
 	_tex_stand = load("res://art/gen/char.png")
 	_tex_crouch = load("res://art/gen/char_crouch.png")
@@ -97,7 +98,8 @@ func _ready() -> void:
 	_hurt_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hurt_layer.add_child(_hurt_rect)
 	add_child(hurt_layer)
-	camera.global_position = _camera_target()
+	var s := float(maxi(1, Settings.pixel_scale))
+	camera.global_position = _camera_target(global_position, s)
 	camera.make_current()
 
 
@@ -162,18 +164,29 @@ func _process(delta: float) -> void:
 		position = position.round()
 	_was_moving = moving
 
-	camera.global_position = _camera_target()
+	# ONE grid for everything on screen: the TRUE position stays continuous
+	# (never quantize it — that would inflate speed), but the RENDERED sprite
+	# parks on the screen-pixel grid, and the camera is defined off that same
+	# snapped point. Character-to-camera offset is therefore constant: the
+	# raider is pixel-welded to the screen, and the world scrolls on the
+	# identical grid. Two disagreeing grids read as shimmer/blur while
+	# walking (v0.6.4 lesson).
+	var s := float(maxi(1, Settings.pixel_scale))
+	var snapped := (global_position * s).round() / s
+	var visual_err := snapped - global_position
+	_sprite.position = visual_err
+	_shadow.position = visual_err
+	camera.global_position = _camera_target(snapped, s)
 	_animate(input_vec, delta)
 
 
-func _camera_target() -> Vector2:
-	var target := global_position + CAM_OFFSET
+func _camera_target(from: Vector2, s: float) -> Vector2:
+	var target := from + CAM_OFFSET
 	if _map_half_h > 0.0:
 		var view_half := Vector2(_window.content_scale_size) * 0.5
 		var limit := _map_half_h - (view_half.x * 0.5 + view_half.y)
 		target = _clamp_to_diamond(target, limit)
-	# snap to SCREEN pixels: whole-pixel on screen, sub-pixel in the world
-	var s := float(maxi(1, Settings.pixel_scale))
+	# back onto the screen-pixel grid (the clamp can land off-grid)
 	return (target * s).round() / s
 
 

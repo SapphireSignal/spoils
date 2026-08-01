@@ -50,6 +50,9 @@ var _changelog: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.4", ["fixed the blurry walk: character and camera share one pixel grid now",
+		"diagonal walking no longer shimmers the world",
+		"the character is pixel-locked to the screen while moving"]],
 	["v0.6.3", ["the map is 4x bigger again - and it has a name: transit",
 		"every deploy now builds a fresh district",
 		"walk to the true edge of the map - no early wall, no black void",

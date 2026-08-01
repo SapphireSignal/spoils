@@ -98,13 +98,17 @@ then `godot_console --headless --path . --import`.
 
 1. **User's display: 240 Hz, desktop 1680×1080 (stretched, non-native — do
    not relitigate it).** ALL motion updates in `_process` at render rate.
-   Rendering is NATIVE RES (`canvas_items` stretch + integer scale): the
-   camera snaps to SCREEN pixels — multiples of 1/Settings.pixel_scale world
-   px — so 120 px/s walking is exactly 1 screen px/frame at 240 Hz. Do NOT
-   "fix" the camera back to whole WORLD pixels: that halves scroll rate and
-   reads as "blurry/low fps walking" (v0.6.3 lesson). Static props/splashes
-   always sit on whole world pixels (_add_prop rounds); the player snaps to
-   the world grid when he stops moving. snap_2d_transforms_to_pixel stays ON.
+   Rendering is NATIVE RES (`canvas_items` stretch + integer scale) with ONE
+   EXPLICIT screen-pixel grid (multiples of 1/Settings.pixel_scale world px):
+   the player's TRUE position stays continuous, but each frame the rendered
+   sprite+shadow park on the grid and the camera is defined off that SAME
+   snapped point (constant character-to-camera offset — see player._process).
+   120 px/s walking = exactly 1 screen px/frame at 240 Hz. Do NOT round the
+   camera to whole WORLD pixels (halves scroll rate → "low fps walk", v0.6.3),
+   do NOT let camera and sprite round independently (shimmer, v0.6.4), and
+   snap_2d_transforms_to_pixel stays OFF — engine auto-snap fights the grid
+   at half-pixel positions. Static props/splashes sit on whole world pixels
+   (_add_prop rounds); the player settles to whole world px when idle.
 2. **Text**: only the generated lowercase bitmap font (no capitals anywhere,
    user preference). If text ever looks blurry: the .fnt import silently
    failed — delete `art/gen/spoils_font.fnt.import` + `.godot/imported/

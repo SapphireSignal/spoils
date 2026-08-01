@@ -3,6 +3,21 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.4] — 2026-08-01
+
+### Fixed
+- **Blurry/shimmering walk** (worst on diagonals): the camera snapped to the
+  screen-pixel grid but the character's sprite rendered at arbitrary
+  sub-pixel offsets between grid points, and the engine's
+  `snap_2d_transforms_to_pixel` was rounding transforms on its own terms at
+  half-pixel positions. Now the player's TRUE position stays continuous (no
+  speed distortion), but the rendered sprite+shadow park on the same
+  screen-pixel grid as the camera each frame, and the camera is defined off
+  that snapped point — the character-to-camera offset is constant, so the
+  raider is pixel-welded to the screen and the world scrolls on one coherent
+  grid. Engine auto-snap is OFF: every placement is explicit (static props on
+  whole world pixels, movers on the screen-pixel grid).
+
 ## [0.6.3] — 2026-08-01
 
 The transit update: the district got a name, real edges, real doors, real rain —
