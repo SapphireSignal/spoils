@@ -33,6 +33,7 @@ func _ready() -> void:
 		_raid_streams.append(s)
 	_player = AudioStreamPlayer.new()
 	_player.volume_db = -60.0
+	_player.bus = "music"   # the volume panel's music slider owns this bus
 	add_child(_player)
 	set_process(false)
 

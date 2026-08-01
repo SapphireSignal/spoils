@@ -56,6 +56,12 @@ var show_fps := false
 var crouch_toggle := false  # false = hold to crouch, true = toggle
 var binds: Dictionary = {}  # action -> physical keycode
 var pixel_scale := 1   # current integer window scale (world px -> screen px)
+# mix volumes, 0..1 — applied to audio buses, never to player volume_db
+# (fades and per-sound levels own those)
+var volume_master := 1.0
+var volume_music := 1.0
+var volume_sfx := 1.0
+var volume_ambient := 1.0
 
 var _fps_label: Label
 var _fps_frames := 0
@@ -64,6 +70,9 @@ var _fps_time := 0.0
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	# Settings autoloads before Sfx and Music, so the mix buses exist
+	# before any player asks to route through them
+	_ensure_audio_buses()
 	for action in BIND_ACTIONS:
 		binds[action] = DEFAULT_BINDS[action]
 	_load()
@@ -71,7 +80,52 @@ func _ready() -> void:
 	get_window().size_changed.connect(_update_scale)
 	apply_all()
 	apply_binds()
+	apply_volumes()
 	_update_scale()
+
+
+func _ensure_audio_buses() -> void:
+	for bus_name in ["music", "sfx", "ambient"]:
+		if AudioServer.get_bus_index(bus_name) == -1:
+			var i := AudioServer.bus_count
+			AudioServer.add_bus(i)
+			AudioServer.set_bus_name(i, bus_name)
+			AudioServer.set_bus_send(i, "Master")
+
+
+func apply_volumes() -> void:
+	_apply_bus("Master", volume_master)
+	_apply_bus("music", volume_music)
+	_apply_bus("sfx", volume_sfx)
+	_apply_bus("ambient", volume_ambient)
+
+
+func _apply_bus(bus_name: String, v: float) -> void:
+	var i := AudioServer.get_bus_index(bus_name)
+	if i == -1:
+		return
+	AudioServer.set_bus_volume_db(i, linear_to_db(maxf(v, 0.0001)))
+	AudioServer.set_bus_mute(i, v <= 0.001)
+
+
+func get_volume(which: String) -> float:
+	match which:
+		"master": return volume_master
+		"music": return volume_music
+		"sfx": return volume_sfx
+		"ambient": return volume_ambient
+	return 1.0
+
+
+func set_volume(which: String, v: float) -> void:
+	v = clampf(v, 0.0, 1.0)
+	match which:
+		"master": volume_master = v
+		"music": volume_music = v
+		"sfx": volume_sfx = v
+		"ambient": volume_ambient = v
+	apply_volumes()
+	_save()
 
 
 func apply_binds() -> void:
@@ -203,6 +257,10 @@ func _load() -> void:
 	crouch_toggle = bool(cfg.get_value("input", "crouch_toggle", crouch_toggle))
 	for action in BIND_ACTIONS:
 		binds[action] = int(cfg.get_value("input", action, binds[action]))
+	volume_master = clampf(float(cfg.get_value("audio", "master", volume_master)), 0.0, 1.0)
+	volume_music = clampf(float(cfg.get_value("audio", "music", volume_music)), 0.0, 1.0)
+	volume_sfx = clampf(float(cfg.get_value("audio", "sfx", volume_sfx)), 0.0, 1.0)
+	volume_ambient = clampf(float(cfg.get_value("audio", "ambient", volume_ambient)), 0.0, 1.0)
 
 
 func _save() -> void:
@@ -216,4 +274,8 @@ func _save() -> void:
 	cfg.set_value("input", "crouch_toggle", crouch_toggle)
 	for action in BIND_ACTIONS:
 		cfg.set_value("input", action, binds[action])
+	cfg.set_value("audio", "master", volume_master)
+	cfg.set_value("audio", "music", volume_music)
+	cfg.set_value("audio", "sfx", volume_sfx)
+	cfg.set_value("audio", "ambient", volume_ambient)
 	cfg.save(PATH)

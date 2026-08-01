@@ -56,6 +56,7 @@ var _shine: TextureRect
 var _buttons: VBoxContainer
 var _settings: SettingsPanel
 var _keybinds: KeybindsPanel
+var _volume: VolumePanel
 var _changelog: PanelContainer
 var _changelog_list: VBoxContainer
 var _map_select: PanelContainer
@@ -66,6 +67,9 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.47", ["settings grew a volume page: master, music, effects",
+		"and ambient each get their own slider - changes apply",
+		"live and stick between sessions"]],
 	["v0.6.46", ["the broken sparking power box is now always the",
 		"safehouses own - somebody should really fix that",
 		"maras radio popup is silent now - no more chirp when",
@@ -581,6 +585,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _keybinds.visible:
 		get_viewport().set_input_as_handled()
 		_close_keybinds()
+	elif _volume.visible:
+		get_viewport().set_input_as_handled()
+		_close_volume()
 	elif _settings.visible:
 		get_viewport().set_input_as_handled()
 		_close_settings()
@@ -865,6 +872,16 @@ func _build_ui() -> void:
 	kb_center.add_child(_keybinds)
 	root.add_child(kb_center)
 
+	_settings.volume_requested.connect(_open_volume)
+	_volume = VolumePanel.new()
+	_volume.visible = false
+	_volume.closed.connect(_close_volume)
+	var vol_center := CenterContainer.new()
+	vol_center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vol_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vol_center.add_child(_volume)
+	root.add_child(vol_center)
+
 	# same look as every other button (a flat/dim version was invisible on
 	# the darker backdrops)
 	var changelog_btn := Button.new()
@@ -1080,4 +1097,14 @@ func _open_keybinds() -> void:
 
 func _close_keybinds() -> void:
 	_keybinds.visible = false
+	_settings.visible = true
+
+
+func _open_volume() -> void:
+	_settings.visible = false
+	_volume.visible = true
+
+
+func _close_volume() -> void:
+	_volume.visible = false
 	_settings.visible = true

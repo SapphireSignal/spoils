@@ -177,9 +177,12 @@ c. ~~Safehouse power box always broken/sparking~~ **DONE v0.6.46**
 d. ~~No sound on mara's radio popup~~ **DONE v0.6.46** (both
    play_radio calls removed from radio.gd; Sfx.play_radio kept unused
    on purpose for M2's walk-in — delete it if M2 doesn't want it).
-e. **Volume panel in settings** — a "volume" button opening four
-   sliders: master, music, sound effects, ambient. Audio buses,
-   persisted, applied on boot.
+e. ~~Volume panel in settings~~ **DONE v0.6.47** — buses music/sfx/
+   ambient created by Settings (loads before Sfx/Music), engine bus
+   sends to ambient, sliders live in scripts/volume_panel.gd, both
+   menus host it, harness --menu=volume. NOTE for new sounds: set
+   `player.bus` — an unbussed player bypasses the mix and only obeys
+   master.
 Then the standing queue below (skip 1 — needs the user's photo; skip
 6/7 sample-sign-off items and the road-grid rework — need the user);
 then ANOTHER SWEEP; then final handoff.

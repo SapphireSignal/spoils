@@ -104,6 +104,7 @@ func _fire(car: Node2D, lights: Array) -> void:
 		audio.stream = stream
 		audio.max_distance = 900.0
 		audio.volume_db = -14.0   # quieter (user; the standing sound rule)
+		audio.bus = "sfx"
 		car.add_child(audio)
 		audio.play()
 		audio.finished.connect(audio.queue_free)

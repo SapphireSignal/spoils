@@ -6,6 +6,7 @@ extends PanelContainer
 
 signal closed
 signal keybinds_requested
+signal volume_requested
 
 var _display_btn: Button
 var _fps_value: Label
@@ -89,6 +90,11 @@ func _ready() -> void:
 			Settings.apply_all())))
 
 	box.add_child(_spacer(2))
+	var volume := Button.new()
+	volume.text = "volume"
+	volume.pressed.connect(func() -> void: volume_requested.emit())
+	box.add_child(volume)
+
 	var keybinds := Button.new()
 	keybinds.text = "keybinds"
 	keybinds.pressed.connect(func() -> void: keybinds_requested.emit())

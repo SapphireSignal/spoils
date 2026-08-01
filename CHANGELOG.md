@@ -3,6 +3,21 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.47] — 2026-08-01 — the volume page
+
+### Added
+- **Settings → volume** (user call): four sliders — master, music,
+  effects, ambient — applying live and persisting in settings.cfg.
+  Implemented as real audio buses (`music` / `sfx` / `ambient` routed
+  to Master, created by Settings before any audio autoload loads):
+  one-shots, steps, horns, car doors and the alarm ride `sfx`; the
+  rain bed, thunder and the engine loop (its low-passed bus now sends
+  to `ambient`) ride `ambient`; the music player rides `music`. Player
+  `volume_db` is never touched, so the music fades and every per-sound
+  level keep working underneath the mix. The pause menu and the main
+  menu both host the page; ESC steps back through it; harness:
+  `--menu=volume`.
+
 ## [0.6.46] — 2026-08-01 — the safehouse's problem, and a quieter mara
 
 ### Changed

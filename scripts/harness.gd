@@ -385,6 +385,8 @@ func _shot(shot_name: String) -> void:
 		if menu != null:
 			if _shot_menu == "settings":
 				menu.open_settings()
+			elif _shot_menu == "volume":
+				menu.open_volume()
 			else:
 				menu.open()
 	if _shot_backdrop >= 0:

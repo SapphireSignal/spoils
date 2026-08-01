@@ -58,15 +58,20 @@ func _ready() -> void:
 	_car_engine_off = load("res://assets/audio/car/car_engine_off.ogg")
 	_car_engine_loop = load("res://assets/audio/car/car_engine_loop.ogg")
 	_car_engine_loop.loop = true
+	# every player routes through a mix bus (volume panel, user call):
+	# one-shots and steps are "sfx", the weather/engine beds "ambient"
 	for i in 4:
 		var player := AudioStreamPlayer.new()
 		player.volume_db = -8.0
+		player.bus = "sfx"
 		add_child(player)
 		_players.append(player)
 	_step_player = AudioStreamPlayer.new()
+	_step_player.bus = "sfx"
 	add_child(_step_player)
 	_rain_player = AudioStreamPlayer.new()
 	_rain_player.volume_db = -80.0
+	_rain_player.bus = "ambient"
 	add_child(_rain_player)
 	_engine_player = AudioStreamPlayer.new()
 	_engine_player.volume_db = -80.0
@@ -77,23 +82,28 @@ func _ready() -> void:
 	var engine_bus := AudioServer.bus_count
 	AudioServer.add_bus(engine_bus)
 	AudioServer.set_bus_name(engine_bus, "engine")
-	AudioServer.set_bus_send(engine_bus, "Master")
+	# the engine bed is an ambient loop: it rides the ambient mix group
+	AudioServer.set_bus_send(engine_bus, "ambient")
 	var lowpass := AudioEffectLowPassFilter.new()
 	lowpass.cutoff_hz = 5200.0
 	AudioServer.add_bus_effect(engine_bus, lowpass)
 	_engine_player.bus = "engine"
 	_car_player = AudioStreamPlayer.new()
 	_car_player.volume_db = -13.0
+	_car_player.bus = "sfx"
 	add_child(_car_player)
 	_bump_player = AudioStreamPlayer.new()
+	_bump_player.bus = "sfx"
 	add_child(_bump_player)
 	_car_bump = _synth_bump()
 	_horn_player = AudioStreamPlayer.new()
+	_horn_player.bus = "sfx"
 	add_child(_horn_player)
 	_horn = _synth_horn()
 	_radio_open = _synth_squelch(true)
 	_radio_close = _synth_squelch(false)
 	_thunder_player = AudioStreamPlayer.new()
+	_thunder_player.bus = "ambient"
 	add_child(_thunder_player)
 	_heavy_thread = Thread.new()
 	_heavy_thread.start(_render_heavy)
