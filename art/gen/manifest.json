@@ -124,6 +124,14 @@
     "forest_2": [
       1,
       7
+    ],
+    "grass_blend_0": [
+      2,
+      7
+    ],
+    "grass_blend_1": [
+      3,
+      7
     ]
   },
   "props": {
@@ -1631,69 +1639,129 @@
       ],
       "collider": null
     },
+    "barricade_x_askew_0": {
+      "size": [
+        28,
+        27
+      ],
+      "origin": [
+        14,
+        21
+      ],
+      "collider": [
+        "diamond",
+        13.0,
+        6.0
+      ]
+    },
+    "barricade_y_askew_0": {
+      "size": [
+        28,
+        27
+      ],
+      "origin": [
+        13,
+        21
+      ],
+      "collider": [
+        "diamond",
+        13.0,
+        6.0
+      ]
+    },
+    "barricade_x_askew_1": {
+      "size": [
+        28,
+        18
+      ],
+      "origin": [
+        14,
+        17
+      ],
+      "collider": [
+        "diamond",
+        13.0,
+        6.0
+      ]
+    },
+    "barricade_y_askew_1": {
+      "size": [
+        28,
+        18
+      ],
+      "origin": [
+        13,
+        17
+      ],
+      "collider": [
+        "diamond",
+        13.0,
+        6.0
+      ]
+    },
     "body_0": {
       "size": [
-        21,
+        32,
         13
       ],
       "origin": [
-        10,
-        10
+        16,
+        9
       ],
       "collider": null
     },
     "body_1": {
       "size": [
-        21,
-        13
+        18,
+        26
       ],
       "origin": [
-        10,
-        10
+        7,
+        19
       ],
       "collider": null
     },
     "body_2": {
       "size": [
-        21,
-        13
+        18,
+        25
       ],
       "origin": [
         10,
-        10
+        19
       ],
       "collider": null
     },
     "body_3": {
       "size": [
-        21,
-        13
+        28,
+        22
       ],
       "origin": [
-        10,
-        10
+        13,
+        17
       ],
       "collider": null
     },
     "body_4": {
       "size": [
-        21,
-        13
+        30,
+        22
       ],
       "origin": [
-        10,
-        10
+        14,
+        17
       ],
       "collider": null
     },
     "body_5": {
       "size": [
-        21,
-        13
+        18,
+        25
       ],
       "origin": [
-        10,
-        10
+        7,
+        19
       ],
       "collider": null
     },
@@ -2656,6 +2724,14 @@
     "barricade_y_flat": [
       "barricade_y_flat_0",
       "barricade_y_flat_1"
+    ],
+    "barricade_x_askew": [
+      "barricade_x_askew_0",
+      "barricade_x_askew_1"
+    ],
+    "barricade_y_askew": [
+      "barricade_y_askew_0",
+      "barricade_y_askew_1"
     ],
     "body": [
       "body_0",

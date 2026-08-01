@@ -51,6 +51,14 @@ var _changelog_list: VBoxContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.7", ["the barricade line is a real line now: one piece repeated, worn",
+		"some barriers knocked askew, some flat, uneven gaps - not a sampler",
+		"past the line is bare dead concrete - the woods live inside the map",
+		"roads dead-end at the wreckage on the line",
+		"biomes blend: grass creeps onto touching concrete, dirt smears too",
+		"no more lone grass tiles - pockets and groves have real shapes",
+		"the fallen out past the line are full character-sized now",
+		"prone is beefier - same proportions as standing, all 8 directions"]],
 	["v0.6.6", ["go prone on z: flat on your stomach, crawling",
 		"prone is slower than crouch - low, slow, hard to spot",
 		"crouch input stands you back up out of prone",

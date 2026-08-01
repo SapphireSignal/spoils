@@ -3,6 +3,26 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.7] — 2026-08-01
+
+### Changed
+- **The barricade line reads as one barrier**: each stretch repeats a single
+  dominant jersey design (cracked variants as wear), fences demoted to
+  occasional accents, ~10% knocked visibly askew (new baked angled art), some
+  flat, clusters-then-gaps spacing, and every piece jittered off the line.
+- **The buffer past the line is bare dead district**: no forests, and roads
+  dead-end under the breach wreckage. Rubble, dead snags, litter, and the
+  fallen are all that's out there. All woods — treeline fringe, forests,
+  groves — live INSIDE the map (fringe growth is clamped at the ring).
+- **Biome blending**: new grass-creep transition tiles wherever concrete
+  touches woodland; the (previously unused) dirt blends wired up for path
+  edges; groves have a 5-cell minimum and lone trees grow small organic
+  pockets with blended rims — no more single green tiles or hard seams.
+- **Fallen raiders are character-sized**: bodies now draw through the same
+  lying-figure geometry as the player's prone sheet (which also got true
+  standing proportions — wider torso, full-size head, thicker limbs,
+  most noticeably on diagonals).
+
 ## [0.6.6] — 2026-08-01
 
 ### Added

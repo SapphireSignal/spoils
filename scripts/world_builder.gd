@@ -19,7 +19,8 @@ extends RefCounted
 const MAP_W := 320
 const MAP_H := 320
 const TILE := Vector2i(64, 32)
-const EDGE_FOREST := 34      # treeline: woods start just inside the barriers
+const EDGE_FOREST := 38      # content margin: gameplay stays inside the
+                             # treeline fringe (inset 31..38, inside the ring)
 const BARRIER_INSET := 31    # the barricade ring — the map's ADVERTISED edge.
 # Everything gameplay lives inside it; the 31-tile band beyond is sniper
 # country, deep enough that a player who ignores the warning dies (escalating
@@ -194,24 +195,30 @@ func _on_road(cell: Vector2i) -> bool:
 
 
 func _plan_forest() -> void:
-	for y in MAP_H:
-		for x in MAP_W:
-			if x < EDGE_FOREST or y < EDGE_FOREST \
-					or x >= MAP_W - EDGE_FOREST or y >= MAP_H - EDGE_FOREST:
-				var cell := Vector2i(x, y)
-				if not _on_road(cell):
-					_forest[cell] = true
-		await _tick()
-	# interior woods: big blobs AND small groves — trees live INSIDE the map,
-	# not just along its rim
-	var blobs: Array[Vector2i] = []
-	for i in 26:
-		blobs.append(Vector2i(_rng.randi_range(160, 520), 0))
-	for i in 90:
-		blobs.append(Vector2i(_rng.randi_range(2, 10), 1))
+	# ALL woods live INSIDE the map (user call): a blobby treeline fringe just
+	# inside the barricade ring, plus interior blobs and groves. The buffer
+	# past the line stays bare district. Seeds: (target, cx, cy).
+	var blobs: Array[Vector3i] = []
+	for i in 150:  # fringe clumps hugging the inside of the ring
+		var inset := BARRIER_INSET + _rng.randi_range(0, 6)
+		var along := _rng.randi_range(BARRIER_INSET, MAP_W - 1 - BARRIER_INSET)
+		var seed_cell := Vector2i(along, inset)
+		match _rng.randi_range(0, 3):
+			1: seed_cell = Vector2i(along, MAP_H - 1 - inset)
+			2: seed_cell = Vector2i(inset, along)
+			3: seed_cell = Vector2i(MAP_W - 1 - inset, along)
+		blobs.append(Vector3i(_rng.randi_range(6, 18), seed_cell.x, seed_cell.y))
+	for i in 26:   # interior woods
+		blobs.append(Vector3i(_rng.randi_range(160, 520),
+			_rng.randi_range(EDGE_FOREST + 6, MAP_W - EDGE_FOREST - 6),
+			_rng.randi_range(EDGE_FOREST + 6, MAP_H - EDGE_FOREST - 6)))
+	for i in 90:   # groves — min size 5 so grass never spawns as a lone tile
+		blobs.append(Vector3i(_rng.randi_range(5, 12),
+			_rng.randi_range(EDGE_FOREST + 6, MAP_W - EDGE_FOREST - 6),
+			_rng.randi_range(EDGE_FOREST + 6, MAP_H - EDGE_FOREST - 6)))
 	for blob in blobs:
-		var cx := _rng.randi_range(EDGE_FOREST + 6, MAP_W - EDGE_FOREST - 6)
-		var cy := _rng.randi_range(EDGE_FOREST + 6, MAP_H - EDGE_FOREST - 6)
+		var cx := blob.y
+		var cy := blob.z
 		if _on_road(Vector2i(cx, cy)):
 			continue
 		var target := blob.x
@@ -221,6 +228,8 @@ func _plan_forest() -> void:
 			var cell: Vector2i = frontier.pop_at(_rng.randi_range(0, frontier.size() - 1))
 			if _forest.has(cell) or _on_road(cell):
 				continue
+			if _cell_inset(cell) < BARRIER_INSET:
+				continue  # the woods stop AT the line — never leak into the buffer
 			if cell.x < 4 or cell.y < 4 or cell.x >= MAP_W - 4 or cell.y >= MAP_H - 4:
 				continue
 			_forest[cell] = true
@@ -311,13 +320,17 @@ func _paint_terrain() -> void:
 				tile_name = "stain_%d" % _rng.randi_range(0, 1)
 			elif roll < 0.055:
 				tile_name = "moss_0"
-			if _forest.has(cell):
+			var is_forest := _forest.has(cell)
+			var is_dirt := _dirt_path.has(cell)
+			if is_forest:
 				tile_name = "forest_%d" % _rng.randi_range(0, 2)
-			if _dirt_path.has(cell):
+			if is_dirt:
 				tile_name = "dirt_%d" % _rng.randi_range(0, 2)
 			var road_v := _road_v_at(cell)
 			var road_h := _road_h_at(cell)
-			if road_v >= 0 or road_h >= 0:
+			# roads DEAD-END at the barricade line: the buffer beyond is bare
+			# district, so the stubs stop under the wreckage (user call)
+			if (road_v >= 0 or road_h >= 0) and _cell_inset(cell) >= BARRIER_INSET - 2:
 				tile_name = "asphalt_%d" % _rng.randi_range(0, 1)
 				# center dashes — on BOTH road directions, never at crossings
 				if road_v >= 0 and road_h < 0 and cell.x == road_v + 1 \
@@ -326,8 +339,20 @@ func _paint_terrain() -> void:
 				elif road_h >= 0 and road_v < 0 and cell.y == road_h + 1 \
 						and _rng.randf() < 0.96:
 					tile_name = "asphalt_line_h"
+			elif not is_forest and not is_dirt:
+				# biome blending: concrete touching grass grows grass; concrete
+				# touching a dirt path picks up dirt — no hard tile seams
+				if _touches(cell, _forest):
+					tile_name = "grass_blend_%d" % _rng.randi_range(0, 1)
+				elif _touches(cell, _dirt_path):
+					tile_name = "dirt_blend_%d" % _rng.randi_range(0, 1)
 			_set_tile(cell, tile_name)
 		await _tick()
+
+
+func _touches(cell: Vector2i, field: Dictionary) -> bool:
+	return field.has(cell + Vector2i.RIGHT) or field.has(cell + Vector2i.LEFT) \
+		or field.has(cell + Vector2i.UP) or field.has(cell + Vector2i.DOWN)
 
 
 func _set_tile(cell: Vector2i, tile_name: String) -> void:
@@ -775,28 +800,79 @@ func _place_barricades() -> void:
 	await _ring_side("y", lo, lo + 2, hi_y - 2, false)
 	await _ring_side("y", hi_x, lo + 2, hi_y - 2, true)
 	await _place_bodies()
+	await _dress_buffer()
 
 
 func _ring_side(axis: String, fixed: int, from: int, to: int, _far: bool) -> void:
-	var i := from + _rng.randi_range(0, 2)
+	# a REAL barrier line: one dominant piece repeated in runs (a municipal
+	# line is made of the same barrier over and over), a second design mixed
+	# in sparingly, the odd one knocked askew or flat, uneven spacing
+	# (clusters then gaps), and every piece shoved a little off the line
+	# jerseys (family indices 0-1) always dominate — a concrete line reads as
+	# a BARRIER; the thin fences (indices 2-3) are occasional accents only
+	var names: Array = _families["barricade_%s" % axis]
+	var dominant: String = names[_rng.randi_range(0, 1)]
+	var second: String = names[_rng.randi_range(2, 3)]
+	var i := from + _rng.randi_range(0, 3)
 	while i <= to:
-		# x-running sides vary cx (cy fixed); y-running sides vary cy
-		var cell := Vector2i(i, fixed) if axis == "x" else Vector2i(fixed, i)
-		i += _rng.randi_range(2, 4)
+		var run := _rng.randi_range(2, 5)
+		for r in run:
+			if i > to:
+				break
+			var cell := Vector2i(i, fixed) if axis == "x" else Vector2i(fixed, i)
+			i += _rng.randi_range(1, 2)
+			await _tick()
+			if _occupied.has(cell):
+				continue
+			if _on_road(cell):
+				# the road breaches the line: wreckage shoved onto the stub
+				if _rng.randf() < 0.6:
+					_add_prop_at_cell(_pick_variant("barricade_%s_flat" % axis),
+						cell, Vector2(10, 5))
+				continue
+			var roll := _rng.randf()
+			var piece := dominant
+			if roll < 0.10:
+				piece = _pick_variant("barricade_%s_askew" % axis)
+			elif roll < 0.20:
+				piece = _pick_variant("barricade_%s_flat" % axis)
+			elif roll < 0.32:
+				piece = second
+			var pos := _floor_layer.map_to_local(cell) + Vector2(
+				_rng.randf_range(-7.0, 7.0), _rng.randf_range(-4.0, 4.0))
+			_add_prop(piece, pos)
+			_occupied[cell] = true
+		i += _rng.randi_range(3, 8)  # a gap — slip through somewhere
+
+
+func _dress_buffer() -> void:
+	# past the line: bare dead district — rubble, the odd snag, litter. No
+	# forests, no roads, nothing to loot. The emptiness IS the message.
+	var placed := 0
+	var attempts := 0
+	while placed < 90 and attempts < 1400:
+		attempts += 1
 		await _tick()
-		if _occupied.has(cell):
+		var depth := _rng.randi_range(4, BARRIER_INSET - 3)
+		var along := _rng.randi_range(4, MAP_W - 5)
+		var cell := Vector2i.ZERO
+		match _rng.randi_range(0, 3):
+			0: cell = Vector2i(along, depth)
+			1: cell = Vector2i(along, MAP_H - 1 - depth)
+			2: cell = Vector2i(depth, along)
+			3: cell = Vector2i(MAP_W - 1 - depth, along)
+		if _occupied.has(cell) or _on_road(cell) or _cell_inset(cell) >= BARRIER_INSET:
 			continue
-		if _on_road(cell):
-			if _rng.randf() < 0.55:
-				_add_prop_at_cell(_pick_variant("barricade_%s_flat" % axis), cell,
-					Vector2(10, 5))
-			continue
-		if _rng.randf() < 0.08:
-			continue  # a clean gap — you can always slip through somewhere
-		var fam := "barricade_" + axis
-		if _rng.randf() < 0.2:
-			fam += "_flat"
-		_add_prop_at_cell(_pick_variant(fam), cell, Vector2(5, 2))
+		var roll := _rng.randf()
+		if roll < 0.48:
+			_add_prop_at_cell(_pick_variant("rubble"), cell, Vector2(10, 5))
+		elif roll < 0.62:
+			_add_prop_at_cell("tree_%d" % _rng.randi_range(7, 8), cell, Vector2(10, 5))
+		elif roll < 0.8:
+			_add_prop_at_cell(_pick_variant("stick"), cell, Vector2(12, 6))
+		else:
+			_add_prop_at_cell(_pick_variant("trash"), cell, Vector2(12, 6))
+		placed += 1
 
 
 func _place_bodies() -> void:
@@ -840,21 +916,14 @@ func _add_lamp(cell: Vector2i) -> void:
 
 
 func _place_trees() -> void:
-	# density falls off past the barricades: full woods where the player
-	# lives, thinning into the sniper's buffer (which is scenery, not a hike)
+	# every forest cell is inside the map now — uniform woods density
 	for cell in _forest:
 		if _dirt_path.has(cell) or _occupied.has(cell):
 			continue
-		var inset := _cell_inset(cell as Vector2i)
-		var chance := 0.28
-		if inset < 12:
-			chance = 0.04
-		elif inset < 26:
-			chance = 0.12
 		var roll := _rng.randf()
-		if roll < chance:
+		if roll < 0.28:
 			_add_prop_at_cell(_pick_variant("tree"), cell as Vector2i, Vector2(12, 6))
-		elif roll < chance + 0.05 and inset >= 20:
+		elif roll < 0.33:
 			_add_prop_at_cell(_pick_variant("stick"), cell as Vector2i, Vector2(14, 7))
 		await _tick()
 
@@ -878,7 +947,23 @@ func _place_lone_trees() -> void:
 				break
 		if inside_plot or Vector2(cell - _spawn_cell).length() < 4.0:
 			continue
-		_set_tile(cell, "forest_%d" % _rng.randi_range(0, 2))
+		# a small organic grass pocket, not a lone green tile — painted after
+		# the terrain pass, so its concrete rim gets blend tiles here too
+		var pocket: Array[Vector2i] = [cell]
+		for extra in _rng.randi_range(1, 3):
+			var gcell := cell + Vector2i(_rng.randi_range(-1, 1), _rng.randi_range(-1, 1))
+			if not _occupied.has(gcell) and not _on_road(gcell) \
+					and not _forest.has(gcell):
+				pocket.append(gcell)
+		for pcell in pocket:
+			_set_tile(pcell, "forest_%d" % _rng.randi_range(0, 2))
+			_forest[pcell] = true
+		for pcell in pocket:
+			for off in [Vector2i.RIGHT, Vector2i.LEFT, Vector2i.UP, Vector2i.DOWN]:
+				var ncell: Vector2i = pcell + off
+				if not _forest.has(ncell) and not _dirt_path.has(ncell) \
+						and not _on_road(ncell) and not _occupied.has(ncell):
+					_set_tile(ncell, "grass_blend_%d" % _rng.randi_range(0, 1))
 		_add_prop_at_cell(_pick_variant("tree"), cell, Vector2(10, 5))
 		if _rng.randf() < 0.5:
 			var scell := cell + Vector2i(_rng.randi_range(-1, 1), _rng.randi_range(-1, 1))

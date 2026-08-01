@@ -84,9 +84,12 @@ that feel like Destiny, at 32 pixels tall.*
   hideout upgrades, limb damage, insurance.
 
 ### World rules (v0.6.3–v0.6.5 — keep true)
-- **The barricade ring IS the map edge** (randomized jersey barriers + fences,
-  some flat, gaps to slip through, wreckage where roads breach it). The world
-  visibly continues beyond it and there is no visible void, ever.
+- **The barricade ring IS the map edge**: per-stretch ONE dominant jersey
+  design repeated (real lines repeat), fences as accents, some askew/flat,
+  uneven spacing, wreckage where roads dead-end into it. Beyond the line:
+  BARE dead concrete (no woods, no roads) — rubble, snags, and the fallen.
+  All forests/groves live inside; biome edges use blend tiles. The world
+  visibly continues beyond the ring and there is no visible void, ever.
 - **The camera never clamps** — welded to the character everywhere (user call).
   The buffer band past the barricades is deep enough that escalating sniper
   fire (faster + near-perfect with depth) ends any trip before the true tile

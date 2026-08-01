@@ -245,6 +245,22 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
         region = _floor_base(c, rng, C("19332d"), C("341c27"), C("241527"), 0.11, 0.07)
         speckle(c, rng, region, [C("25562e"), C("4d2b32")], [0.035, 0.028])
 
+    elif kind == "grass_blend":
+        # transition tile: concrete with grass CREEPING onto it in clumps —
+        # placed automatically wherever concrete touches woodland, so biome
+        # edges blend instead of snapping tile-to-tile
+        region = _floor_base(c, rng, CONC_BASE, CONC_D1, CONC_L1, 0.028, 0.012)
+        for _ in range(rng.randint(4, 6)):
+            patch = blob(rng, 6 + rng.randrange(52), 4 + rng.randrange(24),
+                         rng.randint(8, 20), region)
+            for (x, y) in patch:
+                if rng.random() < 0.8:
+                    c.set(x, y, C("19332d") if rng.random() < 0.7 else C("25562e"))
+        for _ in range(10 + variant * 6):  # stray blades
+            x, y = 4 + rng.randrange(56), 2 + rng.randrange(28)
+            if (x, y) in region:
+                c.set(x, y, C("25562e"))
+
     elif kind == "asphalt_stall":
         # parking stall separator: pale worn line along the lower-left edge
         region = _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.04, 0.02)
@@ -288,6 +304,7 @@ FLOOR_TILES = [
     ("screed_0", ("screed", 0)), ("screed_1", ("screed", 1)),
     ("forest_0", ("forest", 0)), ("forest_1", ("forest", 1)),
     ("forest_2", ("forest", 2)),
+    ("grass_blend_0", ("grass_blend", 0)), ("grass_blend_1", ("grass_blend", 1)),
 ]
 
 def make_floors_atlas() -> tuple[Image.Image, dict[str, list[int]]]:
@@ -1408,71 +1425,33 @@ def make_tree(kind: str, variant: int) -> tuple[Canvas, tuple, list]:
     return cropped, origin, ["circle", 2.0]
 
 def make_body(variant: int) -> tuple[Canvas, tuple, list | None]:
-    """A fallen raider past the barricades — the sniper's warning, written in
-    bodies. Built from the player's proportions but randomized: jacket color,
-    hat or hair, sometimes a beard, sometimes the pack still on. Two poses
-    (face-up / face-down). Sparse placement is the builder's job."""
+    """A fallen raider past the barricades — drawn with the SAME lying-figure
+    geometry as the player's prone sheet, so bodies are exactly character
+    sized. Randomized: jacket color, hair or knit cap, beards, packs, pose."""
     rng = random.Random(f"{SEED}:body:{variant}")
     jackets = [("752438", "411d31"), ("3c5e8b", "253a5e"), ("577277", "394a50"),
-               ("884b2b", "602c2c"), ("7a4841", "4d2b32"), ("25562e", "19332d")]
+               ("884b2b", "602c2c"), ("7a4841", "4d2b32"), ("a53030", "752438")]
     jkt, jkt_d = (C(n) for n in jackets[variant % len(jackets)])
-    pant, boot = C("202e37"), C("10141f")
     hair_cols = ["4d2b32", "341c27", "602c2c", "819796"]
     hair = C(hair_cols[rng.randrange(len(hair_cols))])
-    has_hat = rng.random() < 0.4
-    has_beard = not has_hat and rng.random() < 0.45
-    has_pack = rng.random() < 0.35
-    face_down = rng.random() < 0.5
-    c = Canvas(30, 18)
-    ox, oy = 4, 6
-    # dried stain beneath (dark, subtle)
-    for i in range(rng.randint(4, 8)):
-        c.set(ox + 6 + rng.randint(-2, 6), oy + 6 + rng.randint(-1, 2), C("241527"))
-    # torso lying along the (2,1) diagonal
-    for i in range(9):
-        x = ox + 6 + i
-        y = oy + 2 + i // 2
-        c.set(x, y, jkt)
-        c.set(x, y + 1, jkt)
-        c.set(x, y + 2, jkt_d)
-    if has_pack:  # pack humped on the back
-        for i in range(4):
-            c.set(ox + 8 + i, oy + 1 + i // 2, C("7a4841" if variant % 2 else "4d2b32"))
-    # head at the upper end
-    hx, hy = ox + 4, oy + 1
-    for dx in range(3):
-        for dy in range(3):
-            c.set(hx + dx, hy + dy, C("d7b594") if not face_down else hair)
-    if face_down:
-        c.set(hx + 2, hy + 2, C("c09473"))  # sliver of cheek
-    else:
-        c.set(hx, hy, hair)                 # hair over the brow
-        c.set(hx + 1, hy, hair)
-        if has_beard:
-            c.set(hx + 1, hy + 2, C("c09473"))
-            c.set(hx + 2, hy + 2, hair)
-    if has_hat:  # knit cap in a spare color
+    hat = None
+    if rng.random() < 0.4:
         hat = C(["a53030", "de9e41", "394a50", "25562e"][rng.randrange(4)])
-        c.set(hx, hy, hat)
-        c.set(hx + 1, hy, hat)
-        c.set(hx + 2, hy, hat)
-        c.set(hx, hy + 1, hat)
-    # one arm flung out
-    adx = -1 if rng.random() < 0.5 else 1
-    for i in range(3):
-        c.set(ox + 7 + i * adx, oy + 5 + (1 if adx > 0 else -1) * (i // 2), jkt)
-    c.set(ox + 7 + 3 * adx, oy + 5 + (1 if adx > 0 else 0), C("d7b594"))
-    # legs: one straight, one bent
-    for i in range(4):
-        c.set(ox + 15 + i, oy + 7 + i // 2, pant)
-    c.set(ox + 19, oy + 9, boot)
-    c.set(ox + 20, oy + 9, boot)
-    bend = rng.randint(0, 1)
-    for i in range(3):
-        c.set(ox + 15 + i, oy + 9 + bend, pant)
-    c.set(ox + 18, oy + 10 + bend, boot)
+    colors = {
+        "jkt": jkt, "jkt_d": jkt_d, "pant": C("202e37"), "pant_d": C("151d28"),
+        "boot": C("10141f"), "hair": hair, "skin": C("d7b594"),
+        "skin_sh": C("c09473"), "pack": C("7a4841"), "pack_d": C("4d2b32"),
+    }
+    c = Canvas(32, 40)
+    view = ("side", "front", "diag_front")[rng.randrange(3)]
+    # dried stain beneath, dark and subtle
+    for i in range(rng.randint(5, 9)):
+        c.set(12 + rng.randint(-4, 6), 30 + rng.randint(-3, 2), C("241527"))
+    _lying_figure(c, view, rng.choice((-1, 0, 1)), 0, colors,
+                  hat=hat, beard=(hat is None and rng.random() < 0.45),
+                  has_pack=rng.random() < 0.35)
     c.outline_auto()
-    cr, orr = crop_canvas(c, (ox + 12, oy + 9))
+    cr, orr = crop_canvas(c, (16, 33))
     return cr, orr, None
 
 
@@ -1486,6 +1465,23 @@ def make_barricade(kind: str, state: str) -> tuple[Canvas, tuple, list | None]:
     LN = 28
     c = Canvas(LN + 14, 36)
     ox, oy = 4, 24
+
+    if kind == "jersey" and state.startswith("askew"):
+        # knocked off the line: the same barrier at a visibly wrong angle
+        slope = 0.85 if state == "askew_a" else 0.2
+        for i in range(LN - 4):
+            x = ox + i
+            by = oy + int(i * slope) - (4 if state == "askew_a" else 0)
+            for k in range(9):
+                col = CONC_BASE
+                if rng.random() < 0.06:
+                    col = CONC_D1
+                c.set(x, by - k, col)
+            c.set(x, by, CONC_D2)
+            c.set(x, by - 9, CONC_L1)
+        c.outline_auto()
+        cr, orr = crop_canvas(c, (ox + (LN - 4) // 2, oy + 6))
+        return cr, orr, ["diamond", 13.0, 6.0]
 
     if kind == "jersey":
         if state == "fallen":  # tipped onto its back: low flat slab
@@ -1915,6 +1911,10 @@ def prop_inventory() -> tuple[dict, dict]:
         art = make_barricade(kind, state)
         fam("barricade_x_flat", i, art)
         fam("barricade_y_flat", i, mirror_prop(art))
+    for i, state in enumerate(("askew_a", "askew_b")):
+        art = make_barricade("jersey", state)
+        fam("barricade_x_askew", i, art)
+        fam("barricade_y_askew", i, mirror_prop(art))
     for i in range(6):  # fallen raiders (half mirrored for pose variety)
         art = make_body(i)
         fam("body", i, mirror_prop(art) if i % 2 else art)
@@ -2156,102 +2156,136 @@ PRONE_VIEWS = [
     ("N", "back", False), ("NE", "diag_back", False),
 ]
 
+def _lying_figure(c: Canvas, view: str, phase: int, drag: int, colors: dict,
+                  hat=None, beard: bool = False, has_pack: bool = True) -> None:
+    """Shared lying-flat figure at TRUE character proportions (the standing
+    model is 8 wide with a 8x8 head — a prone body keeps that mass). Used by
+    the player's prone sheet AND the fallen raiders, so they always match.
+    phase: -1/0/1 crawl arm; drag: 0/1 body creep. colors: jkt/jkt_d/pant/
+    pant_d/boot/hair/skin/skin_sh/pack/pack_d."""
+    jkt, jkt_d = colors["jkt"], colors["jkt_d"]
+    pant, pant_d = colors["pant"], colors["pant_d"]
+    boot = colors["boot"]
+    hair, skin, skin_sh = colors["hair"], colors["skin"], colors["skin_sh"]
+    pack, pack_d = colors["pack"], colors["pack_d"]
+    head_top = hat if hat is not None else hair
+
+    if view == "side":  # facing E: head right, pack humped on the back
+        y = 28
+        c.rect(2, y + 3, 5, y + 5, boot)                 # boots trailing
+        c.rect(5, y + 2, 12, y + 5, pant)                # legs, leg-thick
+        c.hline(5, 12, y + 5, pant_d)
+        if phase > 0:
+            c.rect(7, y + 1, 9, y + 1, pant_d)           # a knee lifts
+        c.rect(12, y, 22, y + 5, jkt)                    # torso
+        c.hline(12, 22, y + 5, jkt_d)
+        c.vline(12, y, y + 4, jkt_d)
+        if has_pack:
+            c.rect(13, y - 3, 19, y, pack)               # pack rides the back
+            c.hline(13, 19, y - 3, pack_d)
+        c.rect(22 + drag, y, 28 + drag, y + 4, skin)     # head, standing-sized
+        c.rect(22 + drag, y - 2, 27 + drag, y + 1, head_top)
+        c.set(28 + drag, y + 3, skin_sh)
+        if beard:
+            c.rect(26 + drag, y + 4, 28 + drag, y + 4, hair)
+        reach = 30 if phase > 0 else 26                  # crawling arm
+        c.rect(23 + drag, y + 5, reach + drag, y + 6, jkt)
+        c.set(min(31, reach + drag + 1), y + 6, skin)
+
+    elif view == "front":  # facing S: head to camera, soles away
+        cx = CX
+        base = 16
+        for side_x in (cx - 4, cx + 1):                  # boots (far end)
+            c.rect(side_x, base, side_x + 2, base + 2, boot)
+        lift = 1 if phase > 0 else 0
+        c.rect(cx - 4, base + 3, cx - 2, base + 7, pant)
+        c.rect(cx + 1, base + 3 + lift, cx + 3, base + 7, pant_d)
+        c.rect(cx - 4, base + 7, cx + 3, base + 14, jkt)  # torso, full width
+        c.vline(cx - 4, base + 7, base + 14, jkt_d)
+        c.vline(cx + 3, base + 7, base + 14, jkt_d)
+        if has_pack:
+            c.rect(cx - 2, base + 8, cx + 1, base + 13, pack)
+            c.vline(cx + 1, base + 8, base + 13, pack_d)
+        arm_y = base + 13
+        c.rect(cx - 6, arm_y - (1 if phase > 0 else 0), cx - 5, arm_y + 3, jkt)
+        c.rect(cx + 4, arm_y - (1 if phase < 0 else 0), cx + 5, arm_y + 3, jkt)
+        c.set(cx - 6, arm_y + 4, skin)
+        c.set(cx + 5, arm_y + 4, skin)
+        c.rect(cx - 4, base + 15 + drag, cx + 3, base + 19 + drag, head_top)
+        c.hline(cx - 4, cx + 3, base + 20 + drag, skin_sh)  # brow sliver
+        if beard:
+            c.hline(cx - 2, cx + 1, base + 21 + drag, hair)
+
+    elif view == "back":  # facing N: head away (hair only), soles at camera
+        cx = CX
+        base = 15
+        c.rect(cx - 4, base + drag, cx + 3, base + 4 + drag, head_top)
+        arm_y = base + 4
+        c.rect(cx - 6, arm_y, cx - 5, arm_y + 4 - (1 if phase > 0 else 0), jkt)
+        c.rect(cx + 4, arm_y, cx + 5, arm_y + 4 - (1 if phase < 0 else 0), jkt)
+        c.set(cx - 6, arm_y - 1, skin)
+        c.set(cx + 5, arm_y - 1, skin)
+        c.rect(cx - 4, base + 5, cx + 3, base + 12, jkt)
+        c.vline(cx - 4, base + 5, base + 12, jkt_d)
+        c.vline(cx + 3, base + 5, base + 12, jkt_d)
+        if has_pack:
+            c.rect(cx - 2, base + 6, cx + 1, base + 11, pack)
+            c.vline(cx - 2, base + 6, base + 11, pack_d)
+        lift = 1 if phase > 0 else 0
+        c.rect(cx - 4, base + 12, cx - 2, base + 16, pant)
+        c.rect(cx + 1, base + 12, cx + 3, base + 16 - lift, pant_d)
+        for side_x in (cx - 4, cx + 1):                  # soles toward camera
+            c.rect(side_x, base + 17, side_x + 2, base + 19, boot)
+
+    elif view == "diag_front":  # facing SE: along the down-right diagonal
+        sx, sy = 4, 18
+        c.rect(sx, sy, sx + 2, sy + 2, boot)             # soles upper-left
+        for i in range(3):                               # legs, leg-thick
+            c.rect(sx + 2 + i * 2, sy + 1 + i, sx + 5 + i * 2, sy + 3 + i, pant)
+        for i in range(5):                               # torso, full mass
+            c.rect(sx + 7 + i * 2, sy + 3 + i, sx + 11 + i * 2, sy + 6 + i, jkt)
+        if has_pack:
+            for i in range(3):
+                c.rect(sx + 9 + i * 2, sy + 2 + i, sx + 12 + i * 2, sy + 4 + i, pack)
+        hx = sx + 17 + drag
+        hy = sy + 9 + drag // 2
+        c.rect(hx, hy, hx + 5, hy + 3, head_top)         # standing-sized head
+        c.rect(hx + 2, hy + 3, hx + 6, hy + 6, skin)
+        if beard:
+            c.rect(hx + 4, hy + 6, hx + 6, hy + 6, hair)
+        reach = 4 if phase > 0 else 2
+        c.rect(hx + 3, hy + 7, hx + 3 + reach, hy + 8, jkt)
+        c.set(min(31, hx + 4 + reach), hy + 8, skin)
+
+    else:  # diag_back — facing NE: head upper-right, soles lower-left
+        sx, sy = 4, 34
+        c.rect(sx, sy - 1, sx + 2, sy + 1, boot)         # soles lower-left
+        for i in range(3):
+            c.rect(sx + 2 + i * 2, sy - 3 - i, sx + 5 + i * 2, sy - 1 - i, pant)
+        for i in range(5):
+            c.rect(sx + 7 + i * 2, sy - 8 - i, sx + 11 + i * 2, sy - 5 - i, jkt)
+        if has_pack:
+            for i in range(3):
+                c.rect(sx + 8 + i * 2, sy - 9 - i, sx + 11 + i * 2, sy - 8 - i, pack)
+        hx = sx + 17 + drag
+        hy = sy - 15 - drag // 2
+        c.rect(hx, hy, hx + 5, hy + 3, head_top)         # hair only, facing away
+        reach = 4 if phase > 0 else 2
+        c.rect(hx + 2, hy - 2, hx + 2 + reach, hy - 1, jkt)
+        c.set(min(31, hx + 3 + reach), hy - 2, skin)
+
+
+PLAYER_LYING_COLORS = {
+    "jkt": JKT, "jkt_d": JKT_D, "pant": PANT, "pant_d": PANT_D, "boot": BOOT_D,
+    "hair": HAIR, "skin": SKIN, "skin_sh": SKIN_SH, "pack": PACK, "pack_d": PACK_D,
+}
+
 def draw_prone_frame(view: str, frame: int) -> Canvas:
     c = Canvas(32, 40)
     # crawl cycle: 0 = still; 1-3 pull with one arm, 4-6 with the other
     phase = 0 if frame == 0 else (1 if frame <= 3 else -1)
     drag = 1 if frame in (2, 3, 5, 6) else 0  # the body creeps mid-pull
-
-    if view == "side":  # facing E: head at the right end, pack humped on top
-        y = 30
-        c.rect(4, y + 3, 6, y + 4, BOOT_D)              # soles trailing
-        c.rect(6, y + 2, 12, y + 3, PANT)               # legs
-        c.set(7 + (1 if phase > 0 else 0), y + 1, PANT_D)  # a knee lifts
-        c.rect(12, y, 21, y + 4, JKT)                   # torso
-        c.hline(12, 21, y + 4, JKT_D)
-        c.rect(13, y - 2, 18, y, PACK)                  # pack rides the back
-        c.hline(13, 18, y - 2, PACK_D)
-        c.rect(21 + drag, y, 26 + drag, y + 3, SKIN)    # head
-        c.rect(21 + drag, y - 1, 25 + drag, y + 1, HAIR)  # hair over the brow
-        c.set(26 + drag, y + 2, SKIN_SH)
-        reach = 28 if phase > 0 else 24                 # crawling arm
-        c.rect(22 + drag, y + 3, reach + drag, y + 4, JKT)
-        c.set(reach + drag + 1, y + 4, SKIN)
-
-    elif view == "front":  # facing S: head toward the camera, soles away
-        cx = CX
-        base = 18
-        for side_x in (cx - 3, cx + 1):                 # boots first (far end)
-            c.rect(side_x, base, side_x + 2, base + 1, BOOT_D)
-        lift = 1 if phase > 0 else 0
-        c.rect(cx - 3, base + 2, cx - 1, base + 6, PANT)
-        c.rect(cx + 1, base + 2 + lift, cx + 3, base + 6, PANT_D)
-        c.rect(cx - 4, base + 6, cx + 3, base + 12, JKT)   # torso (back up)
-        c.vline(cx - 4, base + 6, base + 12, JKT_D)
-        c.vline(cx + 3, base + 6, base + 12, JKT_D)
-        c.rect(cx - 2, base + 7, cx + 1, base + 11, PACK)  # pack centered
-        c.vline(cx + 1, base + 7, base + 11, PACK_D)
-        arm_y = base + 12
-        c.rect(cx - 6, arm_y - phase if phase > 0 else arm_y, cx - 5, arm_y + 2, JKT)
-        c.rect(cx + 4, arm_y - (1 if phase < 0 else 0), cx + 5, arm_y + 2, JKT)
-        c.set(cx - 6, arm_y + 3, SKIN)
-        c.set(cx + 5, arm_y + 3, SKIN)
-        c.rect(cx - 3, base + 13 + drag, cx + 2, base + 16 + drag, HAIR)  # crown
-        c.hline(cx - 3, cx + 2, base + 17 + drag, SKIN_SH)  # brow sliver
-
-    elif view == "back":  # facing N: head away (hair only), soles at camera
-        cx = CX
-        base = 18
-        c.rect(cx - 3, base + drag, cx + 2, base + 3 + drag, HAIR)  # head far
-        arm_y = base + 3
-        c.rect(cx - 6, arm_y, cx - 5, arm_y + 3 - (phase if phase > 0 else 0), JKT)
-        c.rect(cx + 4, arm_y, cx + 5, arm_y + 3 - (1 if phase < 0 else 0), JKT)
-        c.set(cx - 6, arm_y - 1, SKIN)
-        c.set(cx + 5, arm_y - 1, SKIN)
-        c.rect(cx - 4, base + 4, cx + 3, base + 10, JKT)
-        c.vline(cx - 4, base + 4, base + 10, JKT_D)
-        c.vline(cx + 3, base + 4, base + 10, JKT_D)
-        c.rect(cx - 2, base + 5, cx + 1, base + 9, PACK)
-        c.vline(cx - 2, base + 5, base + 9, PACK_D)
-        lift = 1 if phase > 0 else 0
-        c.rect(cx - 3, base + 10, cx - 1, base + 14, PANT)
-        c.rect(cx + 1, base + 10, cx + 3, base + 14 - lift, PANT_D)
-        for side_x in (cx - 3, cx + 1):                 # soles toward camera
-            c.rect(side_x, base + 15, side_x + 2, base + 16, BOOT_D)
-
-    elif view == "diag_front":  # facing SE: body along the down-right diagonal
-        sx, sy = 7, 20
-        c.rect(sx, sy, sx + 2, sy + 1, BOOT_D)          # soles upper-left
-        for i in range(4):                              # legs stepped down
-            c.rect(sx + 2 + i * 2, sy + 1 + i, sx + 4 + i * 2, sy + 2 + i, PANT)
-        for i in range(4):                              # torso
-            c.rect(sx + 8 + i * 2, sy + 4 + i, sx + 11 + i * 2, sy + 6 + i, JKT)
-        for i in range(2):                              # pack on the up-side
-            c.rect(sx + 10 + i * 2, sy + 3 + i, sx + 12 + i * 2, sy + 4 + i, PACK)
-        hx = sx + 16 + drag
-        hy = sy + 9 + drag // 2
-        c.rect(hx, hy, hx + 3, hy + 2, HAIR)            # head lower-right
-        c.rect(hx + 1, hy + 2, hx + 4, hy + 4, SKIN)
-        reach = 3 if phase > 0 else 1
-        c.rect(hx + 2, hy + 4, hx + 2 + reach, hy + 5, JKT)
-        c.set(hx + 3 + reach, hy + 5, SKIN)
-
-    else:  # diag_back — facing NE: head upper-right, soles lower-left
-        sx, sy = 7, 32
-        c.rect(sx, sy, sx + 2, sy + 1, BOOT_D)          # soles lower-left
-        for i in range(4):
-            c.rect(sx + 2 + i * 2, sy - 2 - i, sx + 4 + i * 2, sy - 1 - i, PANT)
-        for i in range(4):
-            c.rect(sx + 8 + i * 2, sy - 7 - i, sx + 11 + i * 2, sy - 5 - i, JKT)
-        for i in range(2):
-            c.rect(sx + 9 + i * 2, sy - 8 - i, sx + 11 + i * 2, sy - 7 - i, PACK)
-        hx = sx + 16 + drag
-        hy = sy - 13 - drag // 2
-        c.rect(hx, hy, hx + 3, hy + 2, HAIR)            # hair only (facing away)
-        reach = 3 if phase > 0 else 1
-        c.rect(hx + 1, hy - 2, hx + 1 + reach, hy - 1, JKT)
-        c.set(hx + 2 + reach, hy - 2, SKIN)
-
+    _lying_figure(c, view, phase, drag, PLAYER_LYING_COLORS)
     c.outline_auto()
     return c
 
