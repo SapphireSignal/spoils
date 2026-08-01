@@ -7,10 +7,23 @@ This file carries everything a fresh session needs that isn't in those two.
 
 ## Where we are
 
-- **Version v0.6.11** (v0.6.10: car caps brightened to READ — invisible-dark
-  ≠ missing, wheel-arch bites fixed, attic-dark roof holes, sniper volleys,
-  zoom ladder to 6x w/ glide, no wide zoom; v0.6.11: 3D pass — iso pillars,
-  domed cylinders, tire tori, sloped rubble). Older (v0.6.6-v0.6.9: prone stance on Z,
+- **Version v0.6.12**, all committed/tagged/pushed (fifteen releases on
+  2026-08-01, v0.6.3 → v0.6.12 — read CHANGELOG.md for the full arc).
+
+## OPEN ITEM — resolve FIRST next session
+
+The user repeatedly reports vehicles "missing a part (front or back)".
+FIVE fixes attempted; real bugs found each time but the perception
+persists: (1) roof-plane checker holes filled, (2) raked windshield/trunk
+ramp gaps bridged, (3) end caps + far-end wraps added, (4) wheel-arch
+carve shrunk (it bit through 8px hoods/trunks) + broken-door reattached,
+(5) caps brightened → user said WORSE → reverted in v0.6.12 (dark caps
+kept; geometry fixes kept). A 6x two-facing truck sheet was sent; the
+user will CIRCLE the exact spot — wait for that image, fix precisely
+that, do NOT re-theorize. Sprite pixel-dumps prove the silhouettes are
+closed; the gap is perceptual, not geometric.
+
+## Recent-history context (v0.6.6-v0.6.11: prone stance on Z,
   splash screen + menu music + full audio suite, lattice-fence barricade
   line, 3D barrels, complete vehicles, wheel zoom ladder w/ edge
   auto-tighten, anti-banding dither film, clip audit in gen_art — generation
@@ -165,11 +178,35 @@ then `godot_console --headless --path . --import`.
 8. PowerShell 5.1 quirks: no `&&`; heredocs don't work (use the Bash tool for
    python heredocs, or scratchpad files); .bat files must be ASCII+CRLF; git
    line-ending warnings are normal noise; `git commit` exit 255 with warnings
-   still commits — verify with `git log`.
+   still commits — verify with `git log`. NEVER put double quotes inside a
+   commit-message here-string passed to git -m — PS 5.1 splits the argument
+   at the embedded quote (a commit silently failed and a tag landed on the
+   wrong commit; recovery: commit, `git tag -f`, force-push the tag).
 9. Costly-to-rediscover: Godot won't mode-switch displays (no exclusive-res
    change); stretch `viewport`+`integer` ignores `expand` (manual
    content_scale_size math in settings.gd); iso prisms need w == 2*d, d even;
    brick/pattern period must divide 64 for seam continuity.
+
+## Additional never-regress rules (learned 2026-08-01, the hard way)
+
+- The user perceives SINGLE 8-bit tint steps of slow full-screen fades: the
+  dither film overlay (main.gd, dither.png) exists for this — never remove.
+- Audio taste: SUBTLE always. Rain = quiet smooth wash (no pops — 0.4%%/sample
+  reads as crackle; no audible loops), footsteps distinct per surface but
+  quiet, alarm pulses need attack/release ramps (hard gating reads "static").
+- Lines of repeated infrastructure (barricades) = ONE dominant design with
+  wear, not per-piece variety ("every one different is weird"); lattice
+  fences dominant, jerseys accents; uneven spacing + off-line jitter.
+- Everything must read 3D ("angular view illusion"): iso top faces, curved
+  hoops/shoulders, lit/shade faces — no front-view flat props. The gen
+  CLIP AUDIT fails the build on canvas-edge content: keep it.
+- Boxes (crates/stacks/pallets) only near warehouses/yards, never open
+  streets. Roads never parallel-hug the barricade ring. Broken roof holes
+  are attic-dark, never transparent.
+- Zoom: whole-factor ladder only (native..6x), glide between stops, NO
+  wider-than-native view (was "too OP").
+- Deploy + boot: time-budgeted work only (~2.4ms/frame); the one remaining
+  ~30ms frame is the menu→game scene swap itself (documented, accepted).
 
 ## User preferences (communication & product)
 
