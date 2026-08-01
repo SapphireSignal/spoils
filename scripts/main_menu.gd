@@ -66,6 +66,10 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.46", ["the broken sparking power box is now always the",
+		"safehouses own - somebody should really fix that",
+		"maras radio popup is silent now - no more chirp when",
+		"she keys up or drops off"]],
 	["v0.6.45", ["your car finally faces the way youre driving - the",
 		"left-right sprites had the body drawn one way, the",
 		"lights painted the other way, and the pair swapped",

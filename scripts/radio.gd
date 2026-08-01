@@ -3,11 +3,12 @@ extends CanvasLayer
 ## mara on the duty radio.
 ##
 ## There is no voice acting in SPOILS and there isn't going to be one by
-## accident — bespoke lines can't be sourced from a sound library. So the
-## radio is sold the way radio actually sounds: the mic SQUELCH keying up,
-## her words, the squelch keying down, and a thin carrier hiss under it.
-## She writes like a dispatcher because she was one — clipped, procedural,
-## uses your callsign, never exclaims. That's the performance.
+## accident — bespoke lines can't be sourced from a sound library. The
+## popup is SILENT (user call 2026-08-01: no sound when it appears or
+## disappears — the squelch is gone; Sfx.play_radio still exists if M2
+## ever wants it back). The writing is the performance: she writes like
+## a dispatcher because she was one — clipped, procedural, uses your
+## callsign, never exclaims.
 ##
 ## Reusable on purpose: the walk-in tutorial in M2 is entirely her voice.
 
@@ -74,7 +75,6 @@ func _speak(text: String) -> void:
 	_line.text = text
 	_left = HOLD
 	_panel.modulate.a = 1.0
-	Sfx.play_radio(true)
 
 
 func _process(delta: float) -> void:
@@ -84,7 +84,6 @@ func _process(delta: float) -> void:
 	if _left <= FADE:
 		_panel.modulate.a = maxf(0.0, _left / FADE)
 	if _left <= 0.0:
-		Sfx.play_radio(false)
 		_panel.modulate.a = 0.0
 		if not _queue.is_empty():
 			await get_tree().create_timer(0.5).timeout

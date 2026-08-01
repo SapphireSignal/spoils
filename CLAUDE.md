@@ -171,10 +171,12 @@ a. ~~Vehicles face where they drive~~ **DONE v0.6.45** — root cause:
 b. ~~Instant WASD car facing~~ **DONE v0.6.45** — carve/slerp/
    hysteresis/TURN_COOLDOWN deleted; input vector → nearest of 8,
    applied immediately.
-c. **Safehouse power box ALWAYS the broken/sparking one** (repair
-   quest later hangs off it). Burn the old rng pick so layout holds.
-d. **No sound on mara's radio popup** — remove the appear sound AND
-   the disappear sound (whatever Sfx call it is).
+c. ~~Safehouse power box always broken/sparking~~ **DONE v0.6.46**
+   (roll burned, _spark_house pinned to the safehouse plot; verified
+   in-shot: lid-ajar box arcing left of the spawn door).
+d. ~~No sound on mara's radio popup~~ **DONE v0.6.46** (both
+   play_radio calls removed from radio.gd; Sfx.play_radio kept unused
+   on purpose for M2's walk-in — delete it if M2 doesn't want it).
 e. **Volume panel in settings** — a "volume" button opening four
    sliders: master, music, sound effects, ambient. Audio buses,
    persisted, applied on boot.

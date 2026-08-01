@@ -3,6 +3,18 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.46] — 2026-08-01 — the safehouse's problem, and a quieter mara
+
+### Changed
+- **The broken, sparking power box is always the safehouse's** (user
+  call — a repair quest hangs off it later). The old random pick still
+  rolls so the fixed district doesn't reshuffle; the spark just lives
+  on the spawn house wall now, lid ajar, arcing beside the door.
+- **Mara's radio popup is silent** (user call): the squelch on appear
+  and the squelch on disappear are both gone. `Sfx.play_radio` itself
+  is kept for M2's walk-in in case a subtle version is ever wanted
+  back.
+
 ## [0.6.45] — 2026-08-01 — the car faces where it drives
 
 User report (before sleep): driving left showed the truck — and the

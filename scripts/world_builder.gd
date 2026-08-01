@@ -604,7 +604,14 @@ func _plan_plots() -> void:
 		if _plots[i]["kind"] == "house":
 			house_indices.append(i)
 	if not house_indices.is_empty():
-		_spark_house = house_indices[_rng.randi_range(0, house_indices.size() - 1)]
+		# the roll still burns so the fixed district doesn't reshuffle, but
+		# the sparking box is ALWAYS the safehouse's — the repair quest
+		# hangs off it (user call 2026-08-01)
+		var _burned := _rng.randi_range(0, house_indices.size() - 1)
+		for i in _plots.size():
+			if _plots[i].get("safehouse", false):
+				_spark_house = i
+				break
 	# every plot rolls its door NOW so the village paths can find them
 	for plot in _plots:
 		var interior: Rect2i = (plot["rect"] as Rect2i).grow(-1)
