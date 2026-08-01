@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bendgmks50wm5"
-path="res://.godot/imported/menu_scrapyard_neon.png-06d0fba25394f537c71e367c3e7c2358.ctex"
+uid="uid://ibj3x2iphk7r"
+path="res://.godot/imported/menu_den_glow.png-520acc632e4ec15ed0deb26d33eebeb1.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/gen/menu_scrapyard_neon.png"
-dest_files=["res://.godot/imported/menu_scrapyard_neon.png-06d0fba25394f537c71e367c3e7c2358.ctex"]
+source_file="res://art/gen/menu_den_glow.png"
+dest_files=["res://.godot/imported/menu_den_glow.png-520acc632e4ec15ed0deb26d33eebeb1.ctex"]
 
 [params]
 

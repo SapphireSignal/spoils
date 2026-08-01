@@ -3,6 +3,38 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.15] — 2026-08-01
+
+### Changed
+- **Three new living menu backdrops** (user's picks, replacing hoard/
+  scrapyard/overlook): **the den** — kettle, verne and mara at home in
+  two-tone light (candle vs radio), the job board pinning every district
+  with transit ringed red; **the drain** — the tunnel under the district,
+  side-on, one god-ray from an open manhole, ladder, raider cache;
+  **the storm** — the whole sealed city under a cloud deck. Every scene is
+  alive at runtime: breathing candle glow and dancing VU needles and rig
+  LEDs and ashtray smoke (den); sinking dust motes, a breathing ray, drips
+  that ring the water (drain); rain that gusts on strikes, double-flash
+  lightning that edge-lights the skyline, forked bolts, delayed real
+  thunder, and building windows that flicker, brown out, die and struggle
+  back (storm). Backdrop indices for the harness: 0=den 1=drain 2=storm.
+- **In-raid music** (user request): three sparse loops from "The Last"
+  pack (dongxiao / harp / guitar) at -26 dB with 70–180 s of silence
+  between tracks — felt more than heard. Menu keeps its guitar theme.
+- **The dot-grit is dead everywhere** (user call): per-pixel speckle
+  replaced by small solid wear patches across every floor tile, banded
+  cel light in the menu paintings, wavy solid gradient seams, structured
+  dirt (ruts, clods, stones). The invisible 1/255 anti-banding film stays
+  — it is imperceptible and prevents visible day-cycle tint stepping.
+- **More baked variety everywhere** (user request): asphalt 2→4, screed
+  2→4, house wood 3→5, forest 3→4, dirt 3→4, sidewalks 2→4 (+2 broken),
+  blends +1 each, crack/stain/moss +1 each, roof tiles 2→4 per tone, and
+  plain WALL SEGMENTS now roll among three variants per style/axis so
+  long walls never repeat one image.
+- Note for future sessions: menu screenshots have ALWAYS reported absurd
+  fps in the corner counter (historical shots show "1 fps"); it is a
+  capture-harness artifact, not a menu regression.
+
 ## [0.6.14] — 2026-08-01
 
 ### Changed

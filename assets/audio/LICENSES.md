@@ -6,8 +6,10 @@ ping, rain bed, car alarm) is synthesized at runtime and needs no license.
 
 ## menu music
 
-- `music/menu_theme.ogg` — "guitar 01 (loopeable)" from **"the last"
-  post-apocalyptic/ambient music asset pack by davidkbd**
+- `music/menu_theme.ogg` — "guitar 01 (loopeable)", and
+  `music/raid_0..2.ogg` — "dongxiao 01" / "harp 01" / "guitar 06"
+  (loopeable), all from **"the last" post-apocalyptic/ambient music asset
+  pack by davidkbd**
   https://davidkbd.itch.io/the-last-post-apocalypticambient-music-asset-pack
   license: **cc-by 4.0** — credit: *music by davidkbd*.
   the rest of the pack is a good fit for later milestones (raid ambience,

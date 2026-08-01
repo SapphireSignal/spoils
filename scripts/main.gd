@@ -124,6 +124,7 @@ func _build_world() -> void:
 
 	add_child(PauseMenu.new())
 	await get_tree().process_frame
+	Music.play_raid()  # sparse ambient with long silences, -26 dB
 	world_info = info  # publish LAST: the harness polls this to detect readiness
 
 	var tween := create_tween()

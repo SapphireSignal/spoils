@@ -375,28 +375,28 @@ func _paint_terrain() -> void:
 			var zone2 := posmod(hash(Vector3i((cell.x + 4) >> 3, (cell.y + 4) >> 3,
 				_zone_salt ^ 0x5bd1)), 100)
 			if zone < 24 and zone2 < 60 and _rng.randf() < 0.6:
-				tile_name = "concrete_worn_%d" % _rng.randi_range(0, 1)
+				tile_name = "concrete_worn_%d" % _rng.randi_range(0, 2)
 			elif zone >= 76 and zone2 >= 40 and _rng.randf() < 0.6:
-				tile_name = "concrete_damp_%d" % _rng.randi_range(0, 1)
+				tile_name = "concrete_damp_%d" % _rng.randi_range(0, 2)
 			var roll := _rng.randf()
 			if roll < 0.03:
-				tile_name = "crack_%d" % _rng.randi_range(0, 2)
+				tile_name = "crack_%d" % _rng.randi_range(0, 3)
 			elif roll < 0.045:
-				tile_name = "stain_%d" % _rng.randi_range(0, 1)
+				tile_name = "stain_%d" % _rng.randi_range(0, 2)
 			elif roll < 0.055:
-				tile_name = "moss_0"
+				tile_name = "moss_%d" % _rng.randi_range(0, 1)
 			var is_forest := _forest.has(cell)
 			var is_dirt := _dirt_path.has(cell)
 			if is_forest:
-				tile_name = "forest_%d" % _rng.randi_range(0, 2)
+				tile_name = "forest_%d" % _rng.randi_range(0, 3)
 			if is_dirt:
-				tile_name = "dirt_%d" % _rng.randi_range(0, 2)
+				tile_name = "dirt_%d" % _rng.randi_range(0, 3)
 			var road_v := _road_v_at(cell)
 			var road_h := _road_h_at(cell)
 			# roads DEAD-END at the barricade line: the buffer beyond is bare
 			# district, so the stubs stop under the wreckage (user call)
 			if (road_v >= 0 or road_h >= 0) and _cell_inset(cell) >= BARRIER_INSET - 2:
-				tile_name = "asphalt_%d" % _rng.randi_range(0, 1)
+				tile_name = "asphalt_%d" % _rng.randi_range(0, 3)
 				var cw := _crosswalk_at(cell, road_v, road_h)
 				# crosswalks at the crossings, center dashes elsewhere (on
 				# BOTH road directions, never at crossings), the odd manhole
@@ -415,17 +415,18 @@ func _paint_terrain() -> void:
 				# walkway slabs: mostly intact, some cracked open (the broken
 				# tile eats through to the dirt and grows weeds)
 				if _rng.randf() < 0.13:
-					tile_name = "sidewalk_%s_broken_0" % str(_sidewalk[cell])
+					tile_name = "sidewalk_%s_broken_%d" % [str(_sidewalk[cell]),
+						_rng.randi_range(0, 1)]
 				else:
 					tile_name = "sidewalk_%s_%d" % [str(_sidewalk[cell]),
-						_rng.randi_range(0, 1)]
+						_rng.randi_range(0, 3)]
 			elif not is_forest and not is_dirt:
 				# biome blending: concrete touching grass grows grass; concrete
 				# touching a dirt path picks up dirt — no hard tile seams
 				if _touches(cell, _forest):
-					tile_name = "grass_blend_%d" % _rng.randi_range(0, 1)
+					tile_name = "grass_blend_%d" % _rng.randi_range(0, 2)
 				elif _touches(cell, _dirt_path):
-					tile_name = "dirt_blend_%d" % _rng.randi_range(0, 1)
+					tile_name = "dirt_blend_%d" % _rng.randi_range(0, 2)
 			_set_tile(cell, tile_name)
 		await _tick()
 
@@ -606,8 +607,8 @@ func _build_shell(plot: Dictionary) -> void:
 
 	# ONE floor for the whole building — per-cell variants made interiors a
 	# patchwork of mismatched tiles (user call: uniform flooring per house)
-	var floor_tile := ("wood_%d" % _rng.randi_range(0, 2)) if kind == "house" \
-		else ("screed_%d" % _rng.randi_range(0, 1))
+	var floor_tile := ("wood_%d" % _rng.randi_range(0, 4)) if kind == "house" \
+		else ("screed_%d" % _rng.randi_range(0, 3))
 
 	for y in range(interior.position.y, interior.end.y):
 		for x in range(interior.position.x, interior.end.x):
@@ -629,7 +630,12 @@ func _build_shell(plot: Dictionary) -> void:
 						center + (_EDGE_OFFSET[side] as Vector2))
 					continue
 				var axis2: String = _EDGE_AXIS[side]
-				var piece := "seg_%s_%s" % [style, axis2]
+				# plain segments roll among three variants, weighted to the
+				# base look so long walls vary without reading as patchwork
+				var seg_roll := _rng.randf()
+				var seg_suffix := "" if seg_roll < 0.5 \
+					else ("_v1" if seg_roll < 0.75 else "_v2")
+				var piece := "seg_%s_%s%s" % [style, axis2, seg_suffix]
 				if ruined and Vector2(cell - ruin_corner).length() < 3.0:
 					if _rng.randf() < 0.25:
 						for v in verts:
@@ -698,7 +704,7 @@ func _build_roof(interior: Rect2i, tone: String, post_positions: Array,
 		await _tick()
 		for x in range(interior.position.x, interior.end.x):
 			var cell := Vector2i(x, y)
-			var tile_name := "roof_tile_%s_%d" % [tone, _rng.randi_range(0, 1)]
+			var tile_name := "roof_tile_%s_%d" % [tone, _rng.randi_range(0, 3)]
 			if ruined and Vector2(cell - south_corner).length() < 3.0 and _rng.randf() < 0.6:
 				tile_name = "roof_tile_%s_broken_%d" % [tone, _rng.randi_range(0, 1)]
 			var tile := _prop_sprite(tile_name)

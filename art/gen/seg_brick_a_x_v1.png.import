@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://mjll24kcnoyn"
-path="res://.godot/imported/menu_scrapyard.png-2fe9694743d42ccd3954b9ec5d63ae0c.ctex"
+uid="uid://bhcmi8xbnjciw"
+path="res://.godot/imported/seg_brick_a_x_v1.png-4b9def1df06ce73d1d98f93e20ae0a23.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/gen/menu_scrapyard.png"
-dest_files=["res://.godot/imported/menu_scrapyard.png-2fe9694743d42ccd3954b9ec5d63ae0c.ctex"]
+source_file="res://art/gen/seg_brick_a_x_v1.png"
+dest_files=["res://.godot/imported/seg_brick_a_x_v1.png-4b9def1df06ce73d1d98f93e20ae0a23.ctex"]
 
 [params]
 

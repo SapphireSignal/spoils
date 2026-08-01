@@ -11,16 +11,32 @@ const FADE_SECONDS := 1.4
 
 # preloaded once for the process lifetime: re-entering the menu from the game
 # must not re-decode these (that decode was a visible 1-2 frame hitch)
-const TEX_HOARD := preload("res://art/gen/menu_hoard.png")
-const TEX_SCRAP := preload("res://art/gen/menu_scrapyard.png")
-const TEX_SCRAP_NEON := preload("res://art/gen/menu_scrapyard_neon.png")
-const TEX_OVERLOOK := preload("res://art/gen/menu_overlook.png")
-const TEX_CLOUDS := preload("res://art/gen/menu_overlook_clouds.png")
+const TEX_DEN := preload("res://art/gen/menu_den.png")
+const TEX_DEN_GLOW := preload("res://art/gen/menu_den_glow.png")
+const TEX_DEN_NEEDLES := preload("res://art/gen/menu_den_needles.png")
+const TEX_DRAIN := preload("res://art/gen/menu_drain.png")
+const TEX_DRAIN_RAY := preload("res://art/gen/menu_drain_ray.png")
+const TEX_DRAIN_RIPPLE := preload("res://art/gen/menu_drain_ripple.png")
+const TEX_STORM := preload("res://art/gen/menu_storm.png")
+const TEX_STORM_LIT := preload("res://art/gen/menu_storm_lit.png")
+const TEX_BOLTS: Array[Texture2D] = [
+	preload("res://art/gen/menu_storm_bolt_0.png"),
+	preload("res://art/gen/menu_storm_bolt_1.png"),
+]
+const TEX_WINS: Array[Texture2D] = [
+	preload("res://art/gen/menu_storm_win_0.png"),
+	preload("res://art/gen/menu_storm_win_1.png"),
+	preload("res://art/gen/menu_storm_win_2.png"),
+]
+const TEX_RAIN := preload("res://art/gen/rain_streak.png")
 const TEX_DUST := preload("res://art/gen/dust.png")
 const TEX_VIGNETTE := preload("res://art/gen/vignette.png")
 const TEX_TITLE := preload("res://art/gen/title.png")
 const TEX_SHINE := preload("res://art/gen/title_shine.png")
 const TEX_TAGLINE := preload("res://art/gen/tagline.png")
+
+# painting-space -> scene-space (backdrops are 960x544, centered on origin)
+const PC := Vector2(-480, -272)
 
 const SHINE_PERIOD := 6.0   # seconds between gleams
 const SHINE_SWEEP := 0.9    # gleam travel time
@@ -32,12 +48,27 @@ var _rotate_timer := 0.0
 var _fade_tween: Tween
 var _time := 0.0
 
-var _neon: Sprite2D
-var _clouds_a: Sprite2D
-var _clouds_b: Sprite2D
-var _sparkles: CPUParticles2D
-var _smog: CPUParticles2D
-var _dust: CPUParticles2D
+# den life
+var _candle_glow: Sprite2D
+var _needles: Array[Sprite2D] = []
+var _leds: Array[Sprite2D] = []
+# drain life
+var _ray: Sprite2D
+var _ripples: Array[Sprite2D] = []
+var _ripple_t: Array[float] = []
+var _ripple_age: Array[float] = []
+var _drip: Sprite2D
+var _drip_t := 0.0
+# storm life
+var _rain: CPUParticles2D
+var _storm_lit: Sprite2D
+var _flash_rect: ColorRect
+var _bolt: Sprite2D
+var _wins: Array[Sprite2D] = []
+var _win_state: Array[Dictionary] = []
+var _strike_at := 0.0
+var _flash_a := 0.0
+var _thunder_at := -1.0
 
 var _title: TextureRect
 var _title_base_y := 0.0
@@ -51,6 +82,16 @@ var _changelog_list: VBoxContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.15", ["three new living menu backdrops: the den, the drain, the storm",
+		"the den: kettle, verne and mara at home - candle vs radio glow",
+		"the job board pins every district - transit ringed red, tonight's job",
+		"the drain: one shaft of light, dust sinking, drips ringing the water",
+		"the storm: the sealed city under lightning, rain, real thunder",
+		"building windows flicker, brown out, die, struggle back - all live",
+		"quiet music drifts through raids now - sparse tracks, long silences",
+		"the dot-grit is gone everywhere: clean surfaces, honest wear",
+		"dirt paths show ruts and clods instead of red noise",
+		"more tile and wall variety so nothing repeats down a long street"]],
 	["v0.6.14", ["the map is half the size - a tight district, no more hiking",
 		"sidewalks line many roads, slab by slab, some cracked open with weeds",
 		"crosswalks at every intersection, worn down to almost nothing",
@@ -303,18 +344,13 @@ func _process(delta: float) -> void:
 	else:
 		_shine_clip.visible = false
 
-	# per-scene life
-	if _neon.visible:
-		var flick := 1.0
-		if fmod(_time, 7.3) < 0.4:
-			flick = 0.15 if fmod(_time * 31.0, 1.0) < 0.5 else 0.9
-		elif fmod(_time * 13.0, 1.0) < 0.06:
-			flick = 0.55
-		_neon.modulate.a = flick
-	if _clouds_a.visible:
-		var w := 960.0
-		_clouds_a.position.x = wrapf(_clouds_a.position.x - 3.5 * delta, -w, w)
-		_clouds_b.position.x = _clouds_a.position.x + (w if _clouds_a.position.x < 0 else -w)
+	# per-scene life (also during crossfades — anything visible stays alive)
+	if _scenes[0].visible:
+		_tick_den()
+	if _scenes[1].visible:
+		_tick_drain(delta)
+	if _scenes[2].visible:
+		_tick_storm(delta)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -341,88 +377,241 @@ func _backdrop(scene_root: Node2D, texture: Texture2D) -> Sprite2D:
 
 
 func _build_scenes() -> void:
-	# 1: the master hoard
-	var hoard := Node2D.new()
-	_backdrop(hoard, TEX_HOARD)
-	# gold dust FALLING down the light shaft onto the pile (user call)
-	_sparkles = CPUParticles2D.new()
-	_sparkles.texture = TEX_DUST
-	_sparkles.amount = 30
-	_sparkles.lifetime = 12.0
-	_sparkles.preprocess = 12.0
-	_sparkles.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
-	_sparkles.emission_rect_extents = Vector2(70, 10)
-	_sparkles.position = Vector2(0, -250)
-	_sparkles.direction = Vector2(0, 1)
-	_sparkles.spread = 8.0
-	_sparkles.gravity = Vector2(0, 6)
-	_sparkles.initial_velocity_min = 18.0
-	_sparkles.initial_velocity_max = 34.0
-	_sparkles.color = Color("e8c170")
-	_sparkles.color_ramp = _fade_ramp()
-	hoard.add_child(_sparkles)
-	add_child(hoard)
-	_scenes.append(hoard)
+	# 1: THE DEN — candle breathing, needles dancing, smoke, rig LEDs
+	var den := Node2D.new()
+	_backdrop(den, TEX_DEN)
+	_candle_glow = Sprite2D.new()
+	_candle_glow.texture = TEX_DEN_GLOW
+	_candle_glow.position = PC + Vector2(150, 344)
+	var add_mat := CanvasItemMaterial.new()
+	add_mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	_candle_glow.material = add_mat
+	den.add_child(_candle_glow)
+	for pos in [Vector2(746, 262), Vector2(814, 272)]:
+		var needle := Sprite2D.new()
+		needle.texture = TEX_DEN_NEEDLES
+		needle.hframes = 3
+		needle.position = PC + pos
+		den.add_child(needle)
+		_needles.append(needle)
+	for pos in [Vector2(760, 312), Vector2(860, 372)]:
+		var led := Sprite2D.new()
+		led.texture = TEX_DUST
+		led.modulate = Color("73bed3")
+		led.position = PC + pos
+		den.add_child(led)
+		_leds.append(led)
+	var smoke := CPUParticles2D.new()
+	smoke.texture = TEX_DUST
+	smoke.amount = 5
+	smoke.lifetime = 7.0
+	smoke.preprocess = 7.0
+	smoke.position = PC + Vector2(334, 372)
+	smoke.direction = Vector2(-0.15, -1)
+	smoke.spread = 9.0
+	smoke.gravity = Vector2(0, -3)
+	smoke.initial_velocity_min = 4.0
+	smoke.initial_velocity_max = 8.0
+	smoke.color = Color("577277", 0.35)
+	smoke.color_ramp = _fade_ramp()
+	den.add_child(smoke)
+	add_child(den)
+	_scenes.append(den)
 
-	# 2: the neon scrapyard
-	var scrap := Node2D.new()
-	_backdrop(scrap, TEX_SCRAP)
-	_neon = Sprite2D.new()
-	_neon.texture = TEX_SCRAP_NEON
-	_neon.centered = false
-	_neon.position = Vector2(-480 + 148, -272 + 110)  # over the dark sign panel
-	scrap.add_child(_neon)
-	_smog = CPUParticles2D.new()
-	_smog.texture = TEX_DUST
-	_smog.amount = 30
-	_smog.lifetime = 11.0
-	_smog.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
-	_smog.emission_rect_extents = Vector2(460, 60)
-	_smog.position = Vector2(0, 200)
-	_smog.direction = Vector2(0.2, -1)
-	_smog.spread = 25.0
-	_smog.gravity = Vector2.ZERO
-	_smog.initial_velocity_min = 6.0
-	_smog.initial_velocity_max = 14.0
-	_smog.scale_amount_min = 2.0
-	_smog.scale_amount_max = 4.0
-	_smog.color = Color("577277", 0.4)
-	_smog.color_ramp = _fade_ramp()
-	scrap.add_child(_smog)
-	add_child(scrap)
-	_scenes.append(scrap)
+	# 2: THE DRAIN — the ray breathes, motes sink, drips ring the water
+	var drain := Node2D.new()
+	_backdrop(drain, TEX_DRAIN)
+	_ray = Sprite2D.new()
+	_ray.texture = TEX_DRAIN_RAY
+	_ray.position = PC + Vector2(615, 287)
+	_ray.material = add_mat
+	drain.add_child(_ray)
+	var motes := CPUParticles2D.new()
+	motes.texture = TEX_DUST
+	motes.amount = 13
+	motes.lifetime = 10.0
+	motes.preprocess = 10.0
+	motes.position = PC + Vector2(615, 200)
+	motes.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	motes.emission_rect_extents = Vector2(20, 150)
+	motes.direction = Vector2(0, 1)
+	motes.spread = 4.0
+	motes.gravity = Vector2(0, 4)
+	motes.initial_velocity_min = 3.0
+	motes.initial_velocity_max = 8.0
+	motes.color = Color("a8b5b2", 0.5)
+	motes.color_ramp = _fade_ramp()
+	drain.add_child(motes)
+	for pos in [Vector2(608, 514), Vector2(646, 524)]:
+		var ripple := Sprite2D.new()
+		ripple.texture = TEX_DRAIN_RIPPLE
+		ripple.hframes = 3
+		ripple.position = PC + pos
+		ripple.visible = false
+		drain.add_child(ripple)
+		_ripples.append(ripple)
+		_ripple_t.append(randf_range(0.5, 2.5))
+		_ripple_age.append(-1.0)
+	_drip = Sprite2D.new()
+	_drip.texture = TEX_RAIN
+	_drip.modulate = Color("a8b5b2", 0.8)
+	_drip.visible = false
+	drain.add_child(_drip)
+	add_child(drain)
+	_scenes.append(drain)
 
-	# 3: the overlook
-	var overlook := Node2D.new()
-	_backdrop(overlook, TEX_OVERLOOK)
-	_clouds_a = Sprite2D.new()
-	_clouds_a.texture = TEX_CLOUDS
-	_clouds_a.position = Vector2(0, -180)
-	overlook.add_child(_clouds_a)
-	_clouds_b = Sprite2D.new()
-	_clouds_b.texture = _clouds_a.texture
-	_clouds_b.position = Vector2(960, -180)
-	overlook.add_child(_clouds_b)
-	_dust = CPUParticles2D.new()
-	_dust.texture = TEX_DUST
-	_dust.amount = 24
-	_dust.lifetime = 8.0
-	_dust.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
-	_dust.emission_rect_extents = Vector2(460, 200)
-	_dust.direction = Vector2(1, 0.1)
-	_dust.spread = 10.0
-	_dust.gravity = Vector2.ZERO
-	_dust.initial_velocity_min = 18.0
-	_dust.initial_velocity_max = 40.0
-	_dust.color = Color("819796", 0.4)
-	_dust.color_ramp = _fade_ramp()
-	overlook.add_child(_dust)
-	add_child(overlook)
-	_scenes.append(overlook)
+	# 3: STORM OVER THE CORDON — rain, strikes, bolts, windows that flicker
+	var storm := Node2D.new()
+	_backdrop(storm, TEX_STORM)
+	for i in TEX_WINS.size():
+		var win := Sprite2D.new()
+		win.texture = TEX_WINS[i]
+		storm.add_child(win)
+		_wins.append(win)
+		_win_state.append({"mode": "on", "t": randf_range(2.0, 6.0)})
+	_storm_lit = Sprite2D.new()
+	_storm_lit.texture = TEX_STORM_LIT
+	_storm_lit.modulate.a = 0.0
+	storm.add_child(_storm_lit)
+	_bolt = Sprite2D.new()
+	_bolt.texture = TEX_BOLTS[0]
+	_bolt.visible = false
+	_bolt.material = add_mat
+	storm.add_child(_bolt)
+	_rain = CPUParticles2D.new()
+	_rain.texture = TEX_RAIN
+	_rain.amount = 110
+	_rain.lifetime = 1.1
+	_rain.preprocess = 1.1
+	_rain.position = Vector2(30, -300)
+	_rain.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	_rain.emission_rect_extents = Vector2(560, 8)
+	_rain.direction = Vector2(-0.1, 1)
+	_rain.spread = 2.0
+	_rain.gravity = Vector2(0, 240)
+	_rain.initial_velocity_min = 430.0
+	_rain.initial_velocity_max = 560.0
+	_rain.color = Color("253a5e", 0.55)
+	storm.add_child(_rain)
+	add_child(storm)
+	_scenes.append(storm)
+	_strike_at = randf_range(4.0, 9.0)
 
 	for scene in _scenes:
 		scene.modulate.a = 0.0
 		scene.visible = false
+
+
+func _tick_den() -> void:
+	var a := 0.82 + 0.14 * sin(_time * 6.7) + 0.05 * sin(_time * 17.3)
+	if fmod(_time, 9.1) < 0.35:                     # the flame gutters
+		a *= 0.45
+	_candle_glow.modulate.a = clampf(a, 0.0, 1.0)
+	for i in _needles.size():
+		var wob := sin(_time * (7.0 + i * 1.7) + i * 2.6) + sin(_time * 3.1 + i)
+		_needles[i].frame = clampi(roundi(wob * 0.8 + 1.0), 0, 2)
+	for i in _leds.size():
+		_leds[i].visible = fmod(_time + i * 1.3, 3.7 + i) < 2.8
+
+
+func _tick_drain(delta: float) -> void:
+	_ray.modulate.a = 0.86 + 0.12 * sin(_time * 0.8)
+	for i in _ripples.size():
+		if _ripple_age[i] >= 0.0:
+			_ripple_age[i] += delta
+			var f := int(_ripple_age[i] / 0.3)
+			if f > 2:
+				_ripples[i].visible = false
+				_ripple_age[i] = -1.0
+				_ripple_t[i] = randf_range(1.6, 4.5)
+			else:
+				_ripples[i].frame = f
+		else:
+			_ripple_t[i] -= delta
+			if _ripple_t[i] <= 0.0:
+				_ripple_age[i] = 0.0
+				_ripples[i].visible = true
+				_ripples[i].frame = 0
+	_drip_t -= delta                                # one drip at a time
+	if _drip_t <= 0.0 and not _drip.visible:
+		_drip_t = randf_range(2.5, 6.0)
+		_drip.visible = true
+		_drip.position = PC + Vector2(608, 110)
+	if _drip.visible:
+		_drip.position.y += 900.0 * delta
+		if _drip.position.y >= PC.y + 508.0:        # hits the water: ring it
+			_drip.visible = false
+			_ripple_age[0] = 0.0
+			_ripples[0].visible = true
+			_ripples[0].frame = 0
+
+
+func _tick_storm(delta: float) -> void:
+	_strike_at -= delta
+	if _strike_at <= 0.0:
+		_strike_at = randf_range(7.0, 16.0)
+		_do_strike()
+	_flash_rect.color.a = _flash_a if _scene_index == 2 else 0.0
+	_storm_lit.modulate.a = clampf(_flash_a * 2.6, 0.0, 1.0)
+	if _thunder_at > 0.0:
+		_thunder_at -= delta
+		if _thunder_at <= 0.0:
+			_thunder_at = -1.0
+			Sfx.play_thunder()
+	_rain.gravity.x = -900.0 * _flash_a             # gusts when the sky cracks
+	for i in _wins.size():                          # windows LIVE: flicker,
+		var st := _win_state[i]                     # brown out, die, revive
+		st["t"] = float(st["t"]) - delta
+		var win := _wins[i]
+		match str(st["mode"]):
+			"on":
+				win.modulate.a = 0.9
+				if float(st["t"]) <= 0.0:
+					var r := randf()
+					if r < 0.5:
+						st["mode"] = "flick"
+						st["t"] = 0.35
+					elif r < 0.75:
+						st["mode"] = "dim"
+						st["t"] = randf_range(0.4, 0.9)
+					elif r < 0.92:
+						st["mode"] = "off"
+						st["t"] = randf_range(2.5, 8.0)
+					else:
+						st["mode"] = "dead"       # gone until the scene returns
+						st["t"] = 9999.0
+			"flick":
+				win.modulate.a = 0.9 if fmod(_time * 24.0 + i, 1.0) < 0.55 else 0.15
+				if float(st["t"]) <= 0.0:
+					st["mode"] = "on"
+					st["t"] = randf_range(2.0, 7.0)
+			"dim":
+				win.modulate.a = 0.35
+				if float(st["t"]) <= 0.0:
+					st["mode"] = "on"
+					st["t"] = randf_range(2.0, 7.0)
+			_:
+				win.modulate.a = 0.0
+				if str(st["mode"]) == "off" and float(st["t"]) <= 0.0:
+					st["mode"] = "flick"          # struggles back to life
+					st["t"] = 0.4
+
+
+func _do_strike() -> void:
+	var tween := create_tween()
+	tween.tween_property(self, "_flash_a", 0.30, 0.05)
+	tween.tween_property(self, "_flash_a", 0.05, 0.09)
+	tween.tween_property(self, "_flash_a", 0.24, 0.05)
+	tween.tween_property(self, "_flash_a", 0.0, 0.45)
+	if randf() < 0.5:
+		_bolt.texture = TEX_BOLTS[randi_range(0, 1)]
+		_bolt.position = PC + Vector2(randf_range(140.0, 820.0), 260.0)
+		_bolt.visible = true
+		var bolt := _bolt
+		get_tree().create_timer(0.12).timeout.connect(func() -> void:
+			if is_instance_valid(bolt):
+				bolt.visible = false)
+	_thunder_at = randf_range(0.6, 1.4)
 
 
 func _fade_ramp() -> Gradient:
@@ -439,6 +628,11 @@ func _activate(index: int, instant: bool) -> void:
 	var next := _scenes[index]
 	_scene_index = index
 	next.visible = true
+	if index == 2:  # the storm resets: windows back on, first strike soon
+		for i in _win_state.size():
+			_win_state[i] = {"mode": "on", "t": randf_range(2.0, 6.0)}
+		_strike_at = randf_range(3.0, 8.0)
+		_flash_a = 0.0
 	if _fade_tween != null:
 		_fade_tween.kill()
 	if instant:
@@ -472,6 +666,12 @@ func _build_ui() -> void:
 	vignette.stretch_mode = TextureRect.STRETCH_SCALE
 	vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(vignette)
+
+	_flash_rect = ColorRect.new()  # the storm's lightning washes the frame
+	_flash_rect.color = Color("a4dddb", 0.0)
+	_flash_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_flash_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(_flash_rect)
 
 	_title = TextureRect.new()
 	_title.texture = TEX_TITLE

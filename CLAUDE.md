@@ -7,8 +7,18 @@ This file carries everything a fresh session needs that isn't in those two.
 
 ## Where we are
 
-- **Version v0.6.14**, all committed/tagged/pushed (seventeen releases on
-  2026-08-01, v0.6.3 → v0.6.14 — read CHANGELOG.md for the full arc).
+- **Version v0.6.15**, all committed/tagged/pushed (eighteen releases on
+  2026-08-01, v0.6.3 → v0.6.15 — read CHANGELOG.md for the full arc).
+- v0.6.15: menu backdrops = den/drain/storm (LIVING: candle/needles/LEDs/
+  smoke; ray/motes/drips; rain/strikes/bolts/thunder/flickering windows —
+  scene coords use PC offset const, backdrop 0/1/2), raid music (music.gd
+  play_raid: 3 tracks -26dB, 70-180s gaps, never same twice), NO-DOTS
+  texture language (speckle()=1-3 small solid patches; menu light =
+  banded cel; dirt = ruts/clods/stones), variants expanded everywhere +
+  wall segs roll 3 variants (seg_..._v1/_v2, weighted 50/25/25).
+  KNOWN ARTIFACT: menu screenshots always read 1-20 fps in the corner —
+  capture-harness quirk since forever (old shots show "1 fps"); the real
+  menu holds refresh. Do NOT chase it.
 - v0.6.14 = "the streets update": map HALVED (ring inset 31→72, playable
   ~176², counts rebalanced, nodes ~11k), sidewalks + worn crosswalks +
   manholes + dead traffic lights (5 damage states, mirrored per corner),
@@ -129,7 +139,11 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
 - `scripts/main.gd` — deploy screen ("deploying to transit", animated
   dots) → texture prewarm → awaited async world build → environment → edge
   guard → pause menu; death fade → respawn. `scripts/main_menu.gd` — 3
-  rotating backdrops, title shine, changelog viewer. `scripts/settings.gd` —
+  rotating LIVING backdrops (0=den w/ the traders + job board, 1=drain,
+  2=storm; painting coords via the PC offset const; per-scene ticks drive
+  candle/needles/LEDs/smoke, ray/motes/drips, rain/strikes/bolts/thunder
+  + window-flicker state machines), title shine, changelog viewer.
+  `scripts/settings.gd` —
   display/res/quality/fps/vsync/show-fps + rebindable keys + pixel_scale (the
   integer window scale) + 0.2s-window fps counter. `scripts/keybinds_panel.gd`,
   `scripts/settings_panel.gd`, `scripts/pause_menu.gd`, `scripts/ui_theme.gd`
@@ -139,10 +153,12 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   RECORDINGS under assets/audio/ for per-surface footsteps
   (play_step(kind, quiet), -22/-27dB) and thunder — licenses in
   assets/audio/LICENSES.md, DESIGN.md §5 amended; rain+alarm still render
-  on a Thread), `scripts/music.gd` (menu theme = licensed guitar loop
-  "The Last" by DavidKBD at -18dB, loop=true set at runtime, play_menu/
-  stop_menu fades; 46 more pack tracks re-downloadable for later
-  milestones), `scripts/splash.gd` + `scenes/splash.tscn` (SapphireSignal
+  on a Thread), `scripts/music.gd` (menu theme = licensed guitar loop at
+  -18dB; RAID mode since v0.6.15: play_raid()/stop_raid() — dongxiao/
+  harp/guitar loops at -26dB, one at a time, 70-180s silences, never the
+  same twice; main.gd starts it post-build, menu _ready switches back;
+  42 more pack tracks re-downloadable), `scripts/splash.gd` +
+  `scenes/splash.tscn` (SapphireSignal
   studio card — THE BOOT SCENE; harness args skip it instantly),
   `scripts/car_alarms.gd` (armed intact cars: proximity alarm + flashing
   light overlays from manifest "lights" coords, once per car until death),
@@ -235,6 +251,13 @@ then `godot_console --headless --path . --import`.
 - Everything must read 3D ("angular view illusion"): iso top faces, curved
   hoops/shoulders, lit/shade faces — no front-view flat props. The gen
   CLIP AUDIT fails the build on canvas-edge content: keep it.
+- **NO single-pixel dot noise anywhere** (user call 2026-08-01: "remove
+  those little dots everywhere"): texture = structural detail (joints,
+  cracks, ruts, mortar) + a few SMALL solid wear patches (speckle() bakes
+  1-3 blobs, ~old coverage — the first cut at 3x read as camo clutter,
+  retuned) + smooth-alpha light overlays. Menu paintings use banded cel
+  light, wavy solid gradient seams. ONE exception: the 1/255 anti-banding
+  dither film in main.gd — imperceptible, load-bearing, never remove.
 - Boxes (crates/stacks/pallets) only near warehouses/yards, never open
   streets. Roads never parallel-hug the barricade ring. Broken roof holes
   are attic-dark, never transparent.

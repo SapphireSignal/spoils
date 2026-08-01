@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://ccllutik2wuri"
-path="res://.godot/imported/menu_hoard.png-387c26aef665ddb616fb7cdb69a77958.ctex"
+uid="uid://cn8175j1vvefq"
+path="res://.godot/imported/menu_storm_bolt_0.png-f157bdaa2c55537dca9462eb551afff8.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/gen/menu_hoard.png"
-dest_files=["res://.godot/imported/menu_hoard.png-387c26aef665ddb616fb7cdb69a77958.ctex"]
+source_file="res://art/gen/menu_storm_bolt_0.png"
+dest_files=["res://.godot/imported/menu_storm_bolt_0.png-f157bdaa2c55537dca9462eb551afff8.ctex"]
 
 [params]
 

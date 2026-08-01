@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bb0e7dwi7yty2"
-path="res://.godot/imported/menu_overlook_clouds.png-b8f11f132aa6775f2630ca2daca14b10.ctex"
+uid="uid://bhrwn4wxjx1ut"
+path="res://.godot/imported/menu_storm_win_0.png-c4b3463ab1b0008a8583df649d6cf5d0.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/gen/menu_overlook_clouds.png"
-dest_files=["res://.godot/imported/menu_overlook_clouds.png-b8f11f132aa6775f2630ca2daca14b10.ctex"]
+source_file="res://art/gen/menu_storm_win_0.png"
+dest_files=["res://.godot/imported/menu_storm_win_0.png-c4b3463ab1b0008a8583df649d6cf5d0.ctex"]
 
 [params]
 

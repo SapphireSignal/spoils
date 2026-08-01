@@ -146,14 +146,29 @@ CONC_D2, CONC_D1, CONC_BASE, CONC_L1, CONC_L2 = (
     C("151d28"), C("202e37"), C("394a50"), C("577277"), C("819796"))
 
 def speckle(c: Canvas, rng: random.Random, region, colors: list[tuple], probs: list[float]) -> None:
-    for (x, y) in region:
-        r = rng.random()
-        acc = 0.0
-        for col, p in zip(colors, probs):
-            acc += p
-            if r < acc:
-                c.set(x, y, col)
-                break
+    """Organic wear PATCHES, not dot noise (user call 2026-08-01: no little
+    dots anywhere, ever). Each color covers roughly prob*3 of the region as
+    a few soft blob-shaped patches — reads as stains and wear instead of
+    static. Same signature as the old per-pixel speckle so every call site
+    stays valid."""
+    pts = list(region)
+    if not pts:
+        return
+    area = len(pts)
+    for col, p in zip(colors, probs):
+        # QUIET wear: roughly the old coverage, but as 1-3 small soft
+        # patches instead of scattered pixels (the first cut at 3x coverage
+        # with 14-40px blobs turned every tile into camo clutter)
+        want = int(area * min(0.2, p * 0.9))
+        placed = 0
+        patches = 0
+        while placed < want and patches < 3:
+            cx, cy = pts[rng.randrange(area)]
+            patch = blob(rng, cx, cy, rng.randint(6, 16), region)
+            for (qx, qy) in patch:
+                c.set(qx, qy, col)
+            placed += max(6, len(patch))
+            patches += 1
 
 def blob(rng: random.Random, cx: int, cy: int, n: int, region: set) -> set:
     out = set()
@@ -223,7 +238,28 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
         region = _floor_base(c, rng, CONC_BASE, CONC_D1, CONC_L1, 0.075, 0.008)
         speckle(c, rng, region, [CONC_D2, C("19332d")], [0.03, 0.012])
     elif kind == "dirt":
-        _floor_base(c, rng, C("341c27"), C("241527"), C("4d2b32"), 0.045, 0.07)
+        # packed soil with STRUCTURE, not dots: rut dashes worn along the
+        # path, clod clusters, the odd stone (flat maroon read as a dead
+        # red stripe once the old speckle went away)
+        region = _floor_base(c, rng, C("341c27"), C("241527"), C("4d2b32"),
+                             0.02, 0.02)
+        for i in range(rng.randint(10, 14)):
+            x = 6 + rng.randrange(52)
+            y = 4 + rng.randrange(24)
+            for k in range(rng.randint(3, 7)):     # rut dash, iso-slanted
+                q = (x - k, y + (k >> 1))
+                if q in region:
+                    c.set(q[0], q[1], C("241527"))
+        for i in range(rng.randint(4, 7)):         # clods
+            x = 6 + rng.randrange(52)
+            y = 4 + rng.randrange(24)
+            for q in ((x, y), (x + 1, y), (x, y + 1)):
+                if q in region:
+                    c.set(q[0], q[1], C("4d2b32") if q[1] == y else C("241527"))
+        for i in range(rng.randint(2, 4)):         # stones
+            q = (6 + rng.randrange(52), 4 + rng.randrange(24))
+            if q in region:
+                c.set(q[0], q[1], C("394a50"))
     elif kind == "dirt_blend":
         region = _floor_base(c, rng, CONC_BASE, CONC_D1, CONC_L1, 0.032, 0.014)
         speckle(c, rng, region, [C("341c27"), C("4d2b32")], [0.09, 0.06])
@@ -235,16 +271,14 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
             board = (x + 2 * y) // 8
             col = tones[(board * 7 + variant * 3) % 3]
             if (x + 2 * y) % 8 == 0:
-                col = C("241527")  # board seam
-            elif rng.random() < 0.02:
-                col = C("241527")  # sparse grain — a whole house repeats this
-            c.set(x, y, col)       # tile, so baked features must stay subtle
+                col = C("241527")  # board seam (grain dots removed — no dot
+            c.set(x, y, col)       # noise anywhere, user call)
 
     elif kind == "screed":
         # warehouse floor: smooth finished concrete, one uniform surface.
         # A building uses ONE screed variant for every cell, so the tile must
         # be feature-free: any baked blob would repeat like wallpaper
-        if variant == 1:
+        if variant % 2 == 1:
             _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.012, 0.03)
         else:
             _floor_base(c, rng, CONC_BASE, CONC_D1, CONC_L1, 0.012, 0.03)
@@ -373,24 +407,37 @@ FLOOR_TILES = [
     ("concrete_2", ("concrete", 2)), ("concrete_3", ("concrete", 3)),
     ("concrete_4", ("concrete", 4)), ("concrete_5", ("concrete", 5)),
     ("crack_0", ("crack", 0)), ("crack_1", ("crack", 1)), ("crack_2", ("crack", 2)),
-    ("stain_0", ("stain", 0)), ("stain_1", ("stain", 1)),
-    ("moss_0", ("moss", 0)),
+    ("crack_3", ("crack", 3)),
+    ("stain_0", ("stain", 0)), ("stain_1", ("stain", 1)), ("stain_2", ("stain", 2)),
+    ("moss_0", ("moss", 0)), ("moss_1", ("moss", 1)),
     ("dirt_0", ("dirt", 0)), ("dirt_1", ("dirt", 1)), ("dirt_2", ("dirt", 2)),
+    ("dirt_3", ("dirt", 3)),
     ("dirt_blend_0", ("dirt_blend", 0)), ("dirt_blend_1", ("dirt_blend", 1)),
+    ("dirt_blend_2", ("dirt_blend", 2)),
     ("asphalt_0", ("asphalt", 0)), ("asphalt_1", ("asphalt", 1)),
+    ("asphalt_2", ("asphalt", 2)), ("asphalt_3", ("asphalt", 3)),
     ("asphalt_line", ("asphalt_line", 0)), ("asphalt_line_h", ("asphalt_line_h", 0)),
     ("wood_0", ("wood", 0)), ("wood_1", ("wood", 1)), ("wood_2", ("wood", 2)),
+    ("wood_3", ("wood", 3)), ("wood_4", ("wood", 4)),
     ("asphalt_stall", ("asphalt_stall", 0)),
     ("screed_0", ("screed", 0)), ("screed_1", ("screed", 1)),
+    ("screed_2", ("screed", 2)), ("screed_3", ("screed", 3)),
     ("forest_0", ("forest", 0)), ("forest_1", ("forest", 1)),
-    ("forest_2", ("forest", 2)),
+    ("forest_2", ("forest", 2)), ("forest_3", ("forest", 3)),
     ("grass_blend_0", ("grass_blend", 0)), ("grass_blend_1", ("grass_blend", 1)),
+    ("grass_blend_2", ("grass_blend", 2)),
     ("concrete_worn_0", ("concrete_worn", 0)), ("concrete_worn_1", ("concrete_worn", 1)),
+    ("concrete_worn_2", ("concrete_worn", 2)),
     ("concrete_damp_0", ("concrete_damp", 0)), ("concrete_damp_1", ("concrete_damp", 1)),
+    ("concrete_damp_2", ("concrete_damp", 2)),
     ("sidewalk_v_0", ("sidewalk_v", 0)), ("sidewalk_v_1", ("sidewalk_v", 1)),
+    ("sidewalk_v_2", ("sidewalk_v", 2)), ("sidewalk_v_3", ("sidewalk_v", 3)),
     ("sidewalk_h_0", ("sidewalk_h", 0)), ("sidewalk_h_1", ("sidewalk_h", 1)),
+    ("sidewalk_h_2", ("sidewalk_h", 2)), ("sidewalk_h_3", ("sidewalk_h", 3)),
     ("sidewalk_v_broken_0", ("sidewalk_v_broken", 0)),
+    ("sidewalk_v_broken_1", ("sidewalk_v_broken", 1)),
     ("sidewalk_h_broken_0", ("sidewalk_h_broken", 0)),
+    ("sidewalk_h_broken_1", ("sidewalk_h_broken", 1)),
     ("crosswalk_v", ("crosswalk_v", 0)), ("crosswalk_h", ("crosswalk_h", 0)),
     ("manhole_0", ("manhole", 0)),
 ]
@@ -449,8 +496,9 @@ def _seg_brick(rng: random.Random, base, mortar, i: int, fy: int) -> tuple:
     return base
 
 def make_wall_segment(style: str, axis: str, window_variant: int = -1,
-                      broken_seed: int = -1) -> tuple[Canvas, tuple, list]:
-    rng = random.Random(f"{SEED}:seg:{style}:{axis}:{window_variant}:{broken_seed}")
+                      broken_seed: int = -1, variant: int = 0) -> tuple[Canvas, tuple, list]:
+    rng = random.Random(
+        f"{SEED}:seg:{style}:{axis}:{window_variant}:{broken_seed}:{variant}")
     base_col, mortar_col = (C(n) for n in BRICK_STYLES[style][axis])
     # canvas: 32 wide edge + coping overhang + outline margins
     c = Canvas(48, 66)
@@ -554,7 +602,12 @@ def wall_piece_inventory() -> dict[str, tuple[Canvas, tuple, list]]:
     pieces: dict[str, tuple[Canvas, tuple, list]] = {}
     for style in BRICK_STYLES:
         for axis in ("x", "y"):
+            # THREE plain variants per style/axis: long walls reused one
+            # image and the repetition showed (user: no obvious patterns)
             pieces[f"seg_{style}_{axis}"] = make_wall_segment(style, axis)
+            for sv in (1, 2):
+                pieces[f"seg_{style}_{axis}_v{sv}"] = make_wall_segment(
+                    style, axis, -1, -1, sv)
             for v in range(len(SEG_WINDOWS)):
                 pieces[f"seg_{style}_{axis}_win_{v}"] = make_wall_segment(style, axis, v)
             for b in range(2):
@@ -2786,224 +2839,904 @@ def _dither_fill(c: Canvas, x0: int, y0: int, x1: int, y1: int, col, density: fl
             if rng.random() < density:
                 c.set(x, y, col)
 
-def _vgrad(c: Canvas, bands: list[tuple]) -> None:
-    """bands: [(until_y, color)] — vertical bands with dithered borders."""
+def _vgrad(c: Canvas, bands: list[tuple], rng: random.Random | None = None,
+           seam: int = 26) -> None:
+    """bands: [(until_y, color)] — vertical bands. Seams blend over a WIDE
+    noisy zone (probability ramp) so the sky reads as a gradient, not
+    stripes — the old 6px ordered dither still striped at menu scale."""
     prev_y = 0
     for bi, (until_y, col) in enumerate(bands):
         for y in range(prev_y, until_y):
             for x in range(SCENE_W):
                 c.set(x, y, col)
-        if bi + 1 < len(bands):  # dither the seam into the next band
-            nxt = bands[bi + 1][1]
-            for y in range(until_y - 6, until_y + 6):
-                for x in range(SCENE_W):
-                    if (x * 7 + y * 13) % 11 < (y - (until_y - 6)):
-                        c.set(x, y, nxt)
         prev_y = until_y
+    if rng is None:
+        rng = random.Random(f"{SEED}:vgrad")
+    # WAVY solid seams, no dot-dither (user call: no little dots anywhere):
+    # each band boundary is a slow organic curve instead of a straight line
+    for bi in range(len(bands) - 1):
+        until_y, col = bands[bi]
+        nxt = bands[bi + 1][1]
+        t1 = rng.uniform(70.0, 150.0)
+        t2 = rng.uniform(23.0, 47.0)
+        p1 = rng.uniform(0.0, math.tau)
+        p2 = rng.uniform(0.0, math.tau)
+        for x in range(SCENE_W):
+            edge = until_y + int(seam * 0.7 * math.sin(x / t1 + p1)
+                                 + seam * 0.3 * math.sin(x / t2 + p2))
+            for y in range(min(edge, until_y), max(edge, until_y)):
+                c.set(x, y, nxt if edge < until_y else col)
 
 def _paste(c: Canvas, img: Image.Image, x: int, y: int) -> None:
     c.img.alpha_composite(img, (x, y))
     c.px = c.img.load()
 
-def make_scene_hoard() -> Canvas:
-    """Concept 1: the master hoard — treasure vault with a lit chest."""
-    rng = random.Random(f"{SEED}:scene:hoard")
+def _skyline_row(c: Canvas, rng: random.Random, y_base: int, h_lo: int, h_hi: int,
+                 col, w_lo: int = 18, w_hi: int = 44, gap_lo: int = 2,
+                 gap_hi: int = 10) -> list[tuple[int, int, int]]:
+    """One receding row of building silhouettes; returns (x0, x1, top) blocks.
+    Every roofline is ROLLED (flat / notched / slanted / stepped, antennas,
+    water tanks, sagging corners) — the old uniform crenellation read as one
+    repeating castle wall."""
+    blocks: list[tuple[int, int, int]] = []
+    x = -rng.randint(0, 20)
+    while x < SCENE_W:
+        w = rng.randint(w_lo, w_hi)
+        h = rng.randint(h_lo, h_hi)
+        top = y_base - h
+        style = rng.randrange(5)
+        notch_p = rng.choice((5, 7, 9))
+        slant = rng.uniform(-0.25, 0.25)
+        sag = rng.randint(2, 5) if rng.random() < 0.25 else 0
+        for xx in range(max(0, x), min(SCENE_W, x + w)):
+            i = xx - x
+            step = 0
+            if style == 1 and (i // notch_p) % 2:
+                step = 3
+            elif style == 2:
+                step = int(i * slant) if slant > 0 else int((w - i) * -slant)
+            elif style == 3 and i > w * 0.6:
+                step = 4
+            if sag and (i < 3 or i > w - 4):
+                step += sag
+            for y in range(top + step, y_base + 2):
+                c.set(xx, y, col)
+        if rng.random() < 0.30:  # antenna mast
+            ax = x + rng.randint(2, max(3, w - 3))
+            if 0 <= ax < SCENE_W:
+                for y in range(top - rng.randint(5, 14), top):
+                    c.set(ax, y, col)
+        if rng.random() < 0.18 and w > 24:  # rooftop water tank
+            tx = x + rng.randint(3, w - 12)
+            c.rect(tx, top - 6, tx + 8, top - 1, col)
+            c.set(tx + 1, top, col)
+            c.set(tx + 7, top, col)
+        blocks.append((max(0, x), min(SCENE_W, x + w), top))
+        x += w + rng.randint(gap_lo, gap_hi)
+    return blocks
+
+
+def make_scene_drain() -> tuple[Canvas, Image.Image, Canvas]:
+    """Menu 1 — THE DRAIN, side-on like a stage (the one-point perspective
+    version never stopped reading as floating rings and a black pyramid):
+    a flat brick wall the full width of the frame, a ceiling line, one
+    shaft of light falling from an open manhole to the walkway, black
+    water along the bottom, the tunnel swallowing itself into a dark
+    arch at the left edge. Returns (base, god-ray overlay (soft alpha),
+    3-frame drip-ripple strip)."""
+    rng = random.Random(f"{SEED}:scene:drain")
     c = Canvas(SCENE_W, SCENE_H)
-    _vgrad(c, [(140, C("090a14")), (330, C("10141f")), (SCENE_H, C("241527"))])
-    # cave floor
-    for y in range(360, SCENE_H):
+    SHAFT_X = 615
+    CEIL_Y = 92
+    WALK_Y = 468
+    WATER_Y = 506
+
+    ramp = [C("090a14"), C("10141f"), C("151d28"), C("202e37"), C("394a50")]
+
+    def lit(x: int, y: int, boost: float = 0.0):
+        d = ((x - SHAFT_X) ** 2 + ((y - (WALK_Y - 60)) * 1.9) ** 2) ** 0.5
+        lv = boost + max(0.0, 1.0 - d / 420.0) * 4.4
+        # banded, never dithered — dot noise is banned everywhere
+        return ramp[max(0, min(len(ramp) - 1, int(lv + 0.5)))]
+
+    # the brick wall, full frame: rolled course heights + staggered joints
+    wy = CEIL_Y
+    while wy < WALK_Y:
+        row_h = rng.randint(9, 12)
+        joints = []
+        jx = -rng.randint(0, 30)
+        while jx < SCENE_W:
+            jx += rng.randint(22, 46)
+            joints.append(jx)
+        for y in range(wy, min(WALK_Y, wy + row_h)):
+            for x in range(SCENE_W):
+                col = lit(x, y)
+                if y == wy:
+                    col = C("090a14")               # mortar line
+                elif x in joints and y > wy + 1:
+                    col = C("090a14")               # brick joint
+                c.set(x, y, col)
+        wy += row_h
+    # ceiling: dark slab + beams
+    for y in range(0, CEIL_Y):
         for x in range(SCENE_W):
-            c.set(x, y, C("341c27"))
-    speckle(c, rng, {(x, y) for y in range(360, SCENE_H) for x in range(0, SCENE_W)},
-            [C("241527"), C("4d2b32")], [0.10, 0.05])
-    # cave walls closing in from the sides + stalactites
-    for x in range(SCENE_W):
-        edge = int(90 * (1 - min(x, SCENE_W - 1 - x) / 300.0))
-        if edge > 0:
-            for y in range(SCENE_H):
-                if min(x, SCENE_W - 1 - x) < edge - y // 8:
-                    c.set(x, y, C("151d28"))
+            c.set(x, y, C("090a14"))
+    for bx in range(70, SCENE_W, 150):
+        jx = bx + rng.randint(-12, 12)
+        if abs(jx - SHAFT_X) < 44:
+            continue                                 # not through the shaft
+        c.rect(jx, CEIL_Y - 10, jx + 8, CEIL_Y, C("10141f"))
+        c.vline(jx + 8, CEIL_Y - 10, CEIL_Y, C("151d28"))
+    c.hline(0, SCENE_W - 1, CEIL_Y, C("10141f"))
+
+    # the manhole shaft: a gap in the ceiling, faint baked light column
+    for y in range(0, CEIL_Y):
+        for x in range(SHAFT_X - 28, SHAFT_X + 29):
+            c.set(x, y, C("10141f"))                 # shaft throat
+    for dx in range(-24, 25):                        # the open cover ring
+        dy = int((1.0 - (dx / 24.0) ** 2) ** 0.5 * 6)
+        for y in range(12 - dy, 12 + dy):
+            c.set(SHAFT_X + dx, y, C("172038"))      # night sky up there
+        c.set(SHAFT_X + dx, 12 + dy, C("577277"))
+        c.set(SHAFT_X + dx, 12 - dy, C("394a50"))
+    c.set(SHAFT_X - 7, 8, C("c7cfcc"))               # one star
+    c.rect(SHAFT_X + 26, 6, SHAFT_X + 44, 10, C("151d28"))  # slid-aside cover
+    c.hline(SHAFT_X + 27, SHAFT_X + 43, 6, C("202e37"))
+    # (no baked dot-column: the wall's banded lit() carries the brightness
+    # and the runtime god-ray overlay provides the soft beam)
+
+    # the ladder, bolted inside the shaft line
+    for ry in range(CEIL_Y - 60, WALK_Y - 2, 13):
+        if ry > 4:
+            c.hline(SHAFT_X + 8, SHAFT_X + 20, ry, C("577277"))
+            c.set(SHAFT_X + 8, ry + 1, C("202e37"))
+            c.set(SHAFT_X + 20, ry + 1, C("202e37"))
+    c.vline(SHAFT_X + 7, 20, WALK_Y, C("394a50"))
+    c.vline(SHAFT_X + 21, 20, WALK_Y, C("394a50"))
+    c.vline(SHAFT_X + 6, 22, WALK_Y - 1, C("151d28"))
+
+    # the tunnel mouth at the left edge: an arch into nothing, solid
+    for x in range(0, 150):
+        e = 1.0 - (x / 150.0) ** 2
+        ay = int(CEIL_Y + 40 - 36 * (e ** 0.5))
+        for y in range(ay, WALK_Y):
+            if x < 118 or y > ay + (x - 118) * 8:
+                c.set(x, y, C("090a14"))
+        c.set(x, ay, C("151d28"))                    # faint arch rim
+        c.set(x, ay - 1, C("10141f"))
+
+    # pipes on the wall, right side, with brackets and rust
+    for x in range(SHAFT_X + 60, SCENE_W):
+        py = 180 + (x - SHAFT_X - 60) // 14
+        c.set(x, py - 1, lit(x, py - 1, 1.0))
+        c.set(x, py, C("394a50"))
+        c.set(x, py + 1, C("202e37"))
+        c.set(x, py + 2, C("151d28"))
+        c.set(x, py + 3, C("090a14"))
+        if x % 61 < rng.randint(3, 6) and x % 61 > 0:  # rust runs, not dots
+            c.set(x, py + 1, C("884b2b"))
+            c.set(x, py, C("602c2c"))
+        if x % 52 == 0:
+            c.vline(x, py + 3, py + 9, C("151d28"))
+    for a in range(0, 360, 30):                      # valve wheel
+        c.set(int(SHAFT_X + 170 + math.cos(math.radians(a)) * 6),
+              int(188 + math.sin(math.radians(a)) * 6), C("577277"))
+    # cables sagging along the left half
+    for k in range(160):
+        t = k / 160.0
+        sag = math.sin(t * math.pi) * 18
+        c.set(int(140 + t * 330), int(120 + sag), C("10141f"))
+        c.set(int(150 + t * 320), int(132 + sag * 0.8), C("151d28"))
+
+    # wet streaks + moss patches on the wall (solid, structural)
     for i in range(14):
-        sx = rng.randrange(60, SCENE_W - 60)
-        ln = rng.randint(14, 44)
-        for y in range(ln):
-            half = max(1, (ln - y) // 5)
-            for x in range(sx - half, sx + half):
-                c.set(x, y, C("151d28"))
-    # light shaft over the chest: random dither, denser toward the center
-    cx = SCENE_W // 2
-    for y in range(0, 300):
-        half = 26 + y // 4
-        for x in range(cx - half, cx + half):
-            t = 1.0 - abs(x - cx) / float(half)
-            if rng.random() < 0.05 + 0.06 * t:
-                c.set(x, y, C("e7d5b3") if rng.random() < 0.3 else C("d7b594"))
-    # treasure mound
-    for x in range(cx - 210, cx + 210):
-        h = int(95 * (1 - ((x - cx) / 210.0) ** 2)) + rng.randint(-2, 2)
-        for y in range(400 - h, 400):
-            r = rng.random()
-            col = C("de9e41")
-            if r < 0.28:
-                col = C("e8c170")
-            elif r < 0.40:
-                col = C("be772b")
-            elif r < 0.43:
-                col = C("ebede9")
-            c.set(x, y + 30, col)
-    # loose coins on the floor
-    for i in range(50):
-        px_, py = rng.randrange(cx - 300, cx + 300), rng.randrange(430, SCENE_H - 10)
-        c.rect(px_, py, px_ + 2, py + 1, C("e8c170"))
-        c.set(px_ + 1, py + 2, C("be772b"))
-    # the chest on top of the mound
-    bx, by = cx - 45, 262
-    c.rect(bx, by + 26, bx + 90, by + 62, C("602c2c"))          # body
-    for yy in range(by + 26, by + 62, 8):
-        c.hline(bx, bx + 90, yy, C("341c27"))
-    c.rect(bx, by + 26, bx + 90, by + 30, C("de9e41"))           # gold trim
-    c.rect(bx, by + 56, bx + 90, by + 60, C("de9e41"))
-    c.rect(bx + 40, by + 30, bx + 50, by + 42, C("e8c170"))      # clasp
-    c.rect(bx - 6, by, bx + 96, by + 14, C("884b2b"))            # open lid
-    c.rect(bx - 6, by + 10, bx + 96, by + 14, C("de9e41"))
-    for i in range(240):                                          # glow burst
-        gx = bx + 45 + rng.randint(-52, 52)
-        gy = by + 18 + rng.randint(-16, 12)
-        if rng.random() < 0.6:
-            c.set(gx, gy, C("e8c170"))
-        else:
-            c.set(gx, gy, C("ebede9"))
-    return c
+        wx = rng.randrange(130, SCENE_W - 10)
+        wy_ = rng.randrange(CEIL_Y + 4, 200)
+        ln = rng.randint(12, 60)
+        c.vline(wx, wy_, wy_ + ln, C("10141f"))
+        c.set(wx, wy_ + ln + 1, C("172038"))
+    wall_low = {(x, y) for y in range(WALK_Y - 30, WALK_Y)
+                for x in range(130, SCENE_W)}
+    for i in range(7):
+        patch = blob(rng, rng.randrange(150, SCENE_W - 20),
+                     WALK_Y - rng.randrange(4, 24), rng.randint(8, 26), wall_low)
+        for (qx, qy) in patch:
+            c.set(qx, qy, C("19332d"))
 
-def make_scene_scrapyard(props: dict) -> tuple[Canvas, Canvas]:
-    """Concept 2: neon scrapyard. Returns (base, neon overlay for flicker)."""
-    rng = random.Random(f"{SEED}:scene:scrap")
-    c = Canvas(SCENE_W, SCENE_H)
-    _vgrad(c, [(200, C("090a14")), (340, C("10141f")), (SCENE_H, C("151d28"))])
-    # junk skyline
-    for x in range(0, SCENE_W, 3):
-        h = 40 + int(30 * abs(((x * 37) % 100) / 50 - 1)) + rng.randint(-6, 6)
-        for y in range(260 - h, 262):
-            c.rect(x, y, x + 2, y, C("10141f"))
-    # ground
-    for y in range(340, SCENE_H):
+    # the walkway ledge
+    for y in range(WALK_Y, WATER_Y):
         for x in range(SCENE_W):
-            c.set(x, y, C("202e37"))
-    speckle(c, rng, {(x, y) for y in range(340, SCENE_H) for x in range(SCENE_W)},
-            [C("151d28"), C("394a50")], [0.09, 0.04])
-    # heaps of our own props
-    def put(name: str, x: int, y: int) -> None:
-        _paste(c, props[name][0].img, x, y)
-    for i, (nm, px_, py) in enumerate([
-            ("rubble_3", 90, 380), ("rubble_2", 210, 420), ("tires_0", 330, 396),
-            ("barrel_1", 160, 356), ("barrel_4", 420, 452), ("crate_2", 520, 380),
-            ("rubble_2", 640, 430), ("tires_3", 730, 380), ("barrel_0", 790, 420),
-            ("cylinder_3", 260, 470), ("rubble_1", 850, 470), ("crate_5", 60, 460),
-            ("tires_1", 590, 470), ("rubble_3", 460, 400)]):
-        put(nm, px_, py)
-    # broken robot slumped against a heap
-    rx, ry = 660, 320
-    c.rect(rx, ry, rx + 44, ry + 34, C("394a50"))
-    c.rect(rx + 4, ry + 4, rx + 40, ry + 30, C("577277"))
-    c.rect(rx + 8, ry + 34, rx + 16, ry + 60, C("394a50"))      # slumped leg
-    c.rect(rx + 30, ry + 34, rx + 38, ry + 52, C("202e37"))
-    c.rect(rx - 14, ry + 10, rx, ry + 16, C("394a50"))          # hanging arm
-    c.rect(rx + 14, ry + 12, rx + 30, ry + 22, C("090a14"))     # eye slot
-    c.set(rx + 20, ry + 16, C("cf573c"))
-    c.set(rx + 21, ry + 16, C("cf573c"))
-    # sign pole + dark panel (lit text lives on the overlay), sized to fit
-    sx, sy = 150, 120
-    word = _render_word("spoils", C("411d31"), C("411d31"))  # off-state text
-    ghost = word.resize((word.width * 3, word.height * 3), Image.NEAREST)
-    var_w = ghost.width
-    c.rect(sx + var_w // 2 - 3, sy + ghost.height + 4, sx + var_w // 2 + 3, 360, C("151d28"))
-    c.rect(sx - 8, sy - 8, sx + var_w + 18, sy + ghost.height + 4, C("10141f"))
-    c.rect(sx - 8, sy - 8, sx + var_w + 18, sy - 6, C("394a50"))
-    _paste(c, ghost, sx + 6, sy - 2)
-    # neon overlay: the lit sign text + halo, flickered at runtime
-    lit = _render_word("spoils", C("df84a5"), C("c65197"))
-    lit_big = lit.resize((lit.width * 3, lit.height * 3), Image.NEAREST)
-    ov = Canvas(lit_big.width + 16, lit_big.height + 16)
-    _paste(ov, lit_big, 8, 8)
-    opx = ov.img.load()
-    halo = []
-    for y in range(ov.h):
-        for x in range(ov.w):
-            if opx[x, y][3] == 0:
-                near = False
-                for dx in (-2, -1, 0, 1, 2):
-                    for dy in (-2, -1, 0, 1, 2):
-                        p = ov.get(x + dx, y + dy)
-                        if p[3] > 0 and p[:3] == C("c65197")[:3]:
-                            near = True
-                if near and (x + y) % 2 == 0:
-                    halo.append((x, y))
-    for (x, y) in halo:
-        ov.set(x, y, C("7a367b"))
-    return c, ov
+            col = lit(x, y, 0.7 if abs(x - SHAFT_X) < 200 else 0.2)
+            c.set(x, y, col)
+    c.hline(0, SCENE_W - 1, WALK_Y, C("090a14"))
+    # the light pool on the walkway: solid banded ellipse
+    for dx in range(-74, 75):
+        for dy in range(-10, 11):
+            d = (dx / 74.0) ** 2 + (dy / 10.0) ** 2
+            if d < 1.0:
+                c.set(SHAFT_X + dx, WALK_Y + 18 + dy,
+                      C("819796") if d < 0.3 else C("577277"))
+    c.hline(SHAFT_X - 90, SHAFT_X + 90, WATER_Y - 1, C("577277"))
+    c.hline(SHAFT_X - 170, SHAFT_X - 91, WATER_Y - 1, C("394a50"))
+    c.hline(SHAFT_X + 91, SHAFT_X + 170, WATER_Y - 1, C("394a50"))
 
-def make_scene_overlook(props: dict, char_sheet: Image.Image) -> tuple[Canvas, Canvas]:
-    """Concept 4: the overlook. Returns (base, drifting cloud strip)."""
-    rng = random.Random(f"{SEED}:scene:overlook")
+    # black water: solid, with the shaft's reflection as broken DASHES
+    for y in range(WATER_Y, SCENE_H):
+        for x in range(SCENE_W):
+            c.set(x, y, C("090a14"))
+    for y in range(WATER_Y + 2, SCENE_H, 3):          # reflection column
+        for k in range(2):
+            gx = SHAFT_X + rng.randint(-24, 20)
+            c.hline(gx, gx + rng.randint(2, 5), y,
+                    C("253a5e") if rng.random() < 0.7 else C("3c5e8b"))
+    for y in range(WATER_Y + 4, SCENE_H, 7):          # faint drift lines
+        gx = rng.randrange(30, SCENE_W - 40)
+        c.hline(gx, gx + rng.randint(3, 7), y, C("172038"))
+    c.hline(0, SCENE_W - 1, WATER_Y, C("090a14"))
+
+    # raider cache in the pool's edge light
+    bx, by = SHAFT_X - 118, WALK_Y + 26
+    c.rect(bx, by - 14, bx + 22, by, C("341c27"))
+    c.rect(bx + 1, by - 13, bx + 21, by - 9, C("602c2c"))
+    c.hline(bx + 1, bx + 21, by - 8, C("884b2b"))
+    c.vline(bx + 11, by - 8, by - 1, C("241527"))
+    c.hline(bx, bx + 22, by, C("090a14"))
+    c.rect(bx + 28, by - 9, bx + 34, by, C("202e37"))
+    c.rect(bx + 29, by - 7, bx + 33, by - 3, C("151d28"))
+    c.set(bx + 31, by - 10, C("394a50"))
+    c.rect(bx - 22, by - 6, bx - 4, by, C("411d31"))
+    c.hline(bx - 22, bx - 4, by - 6, C("752438"))
+    c.hline(bx - 24, bx + 36, by + 1, C("090a14"))
+
+    # (no baked dot-vignette — the runtime vignette.png is smooth alpha)
+
+    # god-ray overlay (soft alpha, breathes at runtime)
+    rw, rh = 150, 390
+    ray = Image.new("RGBA", (rw, rh), (0, 0, 0, 0))
+    rp = ray.load()
+    for y in range(rh):
+        t = y / float(rh)
+        half = 24 + 24 * t
+        for x in range(rw):
+            ax = abs(x - rw / 2) / half
+            if ax < 1.0:
+                a = int(72 * (1.0 - ax) ** 1.6 * (1.0 - t * 0.5))
+                if a > 0:
+                    rp[x, y] = (168, 181, 178, a)
+
+    # drip ripple strip: 3 frames, 18x8
+    strip = Canvas(54, 8)
+    for f in range(3):
+        ox = f * 18 + 9
+        r = 2 + f * 3
+        for a in range(0, 360, 15):
+            x = int(ox + math.cos(math.radians(a)) * r)
+            y = int(4 + math.sin(math.radians(a)) * r * 0.4)
+            if 0 <= x < 54:
+                strip.set(x, y, C("253a5e") if f == 2 else C("3c5e8b"))
+    return c, ray, strip
+
+
+def make_scene_den() -> tuple[Canvas, Image.Image, Canvas]:
+    """Menu 2 — THE DEN: the traders' back room, all three of them home.
+    kettle hunched behind his scale on the candle side, verne at the
+    medicine shelf, mara at the radio wall. Two light sources own the frame
+    (warm candle left, cool radio right) with DITHERED falloff. The job
+    board carries paper JOB SHEETS — pin, title, a little photo of the
+    district, squiggled unreadable notes; transit ringed red: tonight's
+    job. Returns (base, candle-glow overlay, VU-needle strip)."""
+    rng = random.Random(f"{SEED}:scene:den")
     c = Canvas(SCENE_W, SCENE_H)
-    _vgrad(c, [(150, C("151d28")), (230, C("1e1d39")), (300, C("253a5e")),
-               (330, C("3c5e8b")), (SCENE_H, C("202e37"))])
-    # pale sun through the murk
-    sx, sy = 640, 180
-    for y in range(sy - 22, sy + 22):
-        for x in range(sx - 22, sx + 22):
-            d = ((x - sx) / 22.0) ** 2 + ((y - sy) / 22.0) ** 2
-            if d < 1.0 and (x + y) % 2 == 0:
-                c.set(x, y, C("73bed3") if d > 0.4 else C("a4dddb"))
-    # ruined city skyline on the horizon
+    CANDLE = (150, 366)
+    RADIO = (760, 320)
+    warm_ramp = [C("241527"), C("341c27"), C("602c2c"), C("884b2b"), C("ad7757")]
+    cool_ramp = [C("172038"), C("1e1d39"), C("253a5e"), C("3c5e8b")]
+
+    def light_levels(x: int, y: int) -> tuple[float, float]:
+        dw = ((x - CANDLE[0]) ** 2 + ((y - CANDLE[1]) * 2.1) ** 2) ** 0.5
+        dc = ((x - RADIO[0]) ** 2 + ((y - RADIO[1]) * 1.9) ** 2) ** 0.5
+        return max(0.0, 1.0 - dw / 350.0), max(0.0, 1.0 - dc / 310.0)
+
+    def ramp_pick(ramp_: list, lv: float):
+        # clean banded light — the coin-flip dither read as dot static
+        return ramp_[max(0, min(len(ramp_) - 1, int(lv + 0.5)))]
+
+    CEIL = 46
+    # back wall: planks with ROLLED widths, tone jitter, knots, nails and
+    # splits — a fixed 26px rhythm read as an obvious grid (user report)
+    plank_edges: list[int] = []
+    px_ = 0
+    while px_ < SCENE_W:
+        plank_edges.append(px_)
+        px_ += rng.randint(16, 36)
+    plank_of: list[int] = [0] * SCENE_W
+    for pi in range(len(plank_edges)):
+        x0 = plank_edges[pi]
+        x1 = plank_edges[pi + 1] if pi + 1 < len(plank_edges) else SCENE_W
+        for x in range(x0, min(SCENE_W, x1)):
+            plank_of[x] = pi
+    plank_bias = [rng.uniform(-0.55, 0.55) for _ in plank_edges]
+    plank_split = {pi: (rng.randrange(plank_edges[pi] + 3,
+                        min(SCENE_W - 1, plank_edges[pi] + 14)),
+                        rng.randrange(90, 320))
+                   for pi in range(len(plank_edges)) if rng.random() < 0.16}
+    knots = {}
+    for pi in range(len(plank_edges)):
+        for k in range(rng.randrange(0, 3)):
+            kx = plank_edges[pi] + rng.randint(3, 12)
+            knots[(kx, rng.randrange(CEIL + 20, 410))] = True
+    for y in range(CEIL, 430):
+        for x in range(SCENE_W):
+            warm, cool = light_levels(x, y)
+            pi = plank_of[x]
+            plank_edge = x in plank_edges
+            base_i = (1 if plank_edge else 0) + plank_bias[pi]
+            if warm >= cool and warm > 0.03:
+                col = ramp_pick(warm_ramp, base_i + warm * 4.2)
+            elif cool > 0.03:
+                col = ramp_pick(cool_ramp, base_i + cool * 3.4)
+            else:
+                col = C("090a14") if plank_edge else C("10141f")
+            c.set(x, y, col)
+    for (kx, ky) in knots:                                # knots + grain swirls
+        c.set(kx, ky, C("241527"))
+        c.set(kx + 1, ky, C("341c27"))
+        c.set(kx, ky + 1, C("341c27"))
+    for pi, (sx_, sy_) in plank_split.items():            # split boards
+        for k in range(rng.randint(20, 70)):
+            c.set(sx_ + (k // 16), sy_ + k, C("090a14"))
+    for pi in range(len(plank_edges)):                    # nail pairs
+        nx_ = plank_edges[pi] + rng.randint(2, 10)
+        for ny_ in (CEIL + rng.randint(6, 14), 410 - rng.randint(0, 10)):
+            c.set(nx_, ny_, C("151d28"))
+    # ceiling: joists over darkness + a dead bulb on its cable
+    for y in range(0, CEIL):
+        for x in range(SCENE_W):
+            c.set(x, y, C("090a14"))
+    for bx in range(40, SCENE_W, 128):
+        jx = bx + rng.randint(-8, 8)
+        c.rect(jx, 8, jx + 7, CEIL - 1, C("241527"))
+        c.vline(jx + 7, 8, CEIL - 1, C("10141f"))
+    c.vline(298, 0, 66, C("151d28"))
+    c.rect(296, 67, 300, 72, C("394a50"))
+    c.set(297, 69, C("577277"))
+    # floor: board ROWS with staggered joints and rolled tones — the old
+    # constant diagonal seam period was one more readable grid
+    fy = 430
+    row_i = 0
+    while fy < SCENE_H:
+        row_h = 8 + int((fy - 430) / 20) + rng.randint(0, 2)
+        tone_flip = rng.random() < 0.5
+        joints = []
+        jx = -rng.randint(0, 60)
+        while jx < SCENE_W:
+            jx += rng.randint(46, 130)
+            joints.append(jx)
+        for y in range(fy, min(SCENE_H, fy + row_h)):
+            for x in range(SCENE_W):
+                warm, cool = light_levels(x, y)
+                col = C("241527") if tone_flip else C("341c27")
+                if warm > 0.44:
+                    col = C("602c2c")
+                elif warm > 0.28:
+                    col = C("4d2b32")
+                elif cool > 0.34:
+                    col = C("1e1d39")
+                if y == fy:
+                    col = C("090a14")                     # row seam
+                elif x in joints and y > fy + 1:
+                    col = C("090a14")                     # staggered joint
+                c.set(x, y, col)
+        for jx in joints:                                  # nail at each joint
+            if 0 <= jx - 1 < SCENE_W and fy + 2 < SCENE_H:
+                c.set(jx - 1, fy + 2, C("151d28"))
+        fy += row_h
+        row_i += 1
+    floor_region = {(x, y) for y in range(432, SCENE_H) for x in range(SCENE_W)}
+    for i in range(7):                                     # worn traffic patches
+        patch = blob(rng, rng.randrange(120, 840), rng.randrange(440, 520),
+                     rng.randint(40, 110), floor_region)
+        for (qx, qy) in patch:
+            c.set(qx, qy, C("4d2b32"))
+    # kettle's rug
+    for y in range(438, 502):
+        for x in range(96, 356):
+            edge = min(x - 96, 355 - x, y - 438, 501 - y)
+            if edge < 2 and rng.random() < 0.5:
+                continue                      # frayed edge
+            if edge < 2:
+                c.set(x, y, C("752438"))
+            elif rng.random() > 0.06:
+                c.set(x, y, C("411d31"))
+    c.rect(150, 462, 165, 470, C("341c27"))   # worn through to boards
+    c.rect(280, 480, 291, 486, C("341c27"))
+
+    # ---- THE JOB BOARD ----
+    for y in range(108, 282):                 # drop shadow
+        for x in range(78, 362):
+            if rng.random() < 0.5:
+                c.set(x, y, C("090a14"))
+    c.rect(66, 92, 352, 274, C("341c27"))     # frame
+    c.rect(70, 96, 348, 270, C("4d2b32"))     # cork
+    cork_region = {(x, y) for y in range(96, 270) for x in range(70, 348)}
+    for i in range(8):                        # cork wear patches, not dots
+        patch = blob(rng, 70 + rng.randrange(278), 96 + rng.randrange(174),
+                     rng.randint(16, 44), cork_region)
+        for (qx, qy) in patch:
+            c.set(qx, qy, C("602c2c") if i % 3 else C("341c27"))
+    c.hline(66, 240, 91, C("ad7757"))         # top edge catch, warm half
+    c.hline(241, 352, 91, C("577277"))        # cool half
+    c.vline(92, CEIL - 1, 92, C("090a14"))    # hanging wires
+    c.vline(326, CEIL - 1, 92, C("090a14"))
+
+    def mini_photo(px0: int, py0: int, kind: str) -> None:
+        c.rect(px0 - 1, py0 - 1, px0 + 24, py0 + 15, C("090a14"))
+        for yy in range(15):
+            for xx in range(24):
+                c.set(px0 + xx, py0 + yy, C("253a5e") if yy < 8 else C("172038"))
+        if kind == "transit":
+            for xx in range(24):
+                c.set(px0 + xx, py0 + 10, C("394a50"))
+            c.rect(px0 + 14, py0 + 7, px0 + 19, py0 + 9, C("25562e"))
+            c.vline(px0 + 5, py0 + 2, py0 + 10, C("090a14"))
+            c.set(px0 + 6, py0 + 3, C("411d31"))
+        elif kind == "the mills":
+            c.rect(px0 + 4, py0 + 7, px0 + 17, py0 + 14, C("10141f"))
+            c.vline(px0 + 7, py0 + 1, py0 + 7, C("10141f"))
+            c.vline(px0 + 13, py0 + 2, py0 + 7, C("10141f"))
+            c.set(px0 + 7, py0, C("341c27"))
+            c.set(px0 + 8, py0 - 1, C("241527"))
+        elif kind == "harbor":
+            for xx in range(24):
+                if rng.random() < 0.5:
+                    c.set(px0 + xx, py0 + 12, C("3c5e8b"))
+            c.vline(px0 + 16, py0 + 2, py0 + 11, C("090a14"))
+            c.hline(px0 + 9, px0 + 16, py0 + 2, C("090a14"))
+            c.set(px0 + 9, py0 + 3, C("090a14"))
+            c.rect(px0 + 2, py0 + 9, px0 + 9, py0 + 11, C("10141f"))
+        else:  # old ward
+            for (bx_, bh) in ((1, 5), (6, 9), (12, 4), (17, 7)):
+                c.rect(px0 + bx_, py0 + 12 - bh, px0 + bx_ + 4, py0 + 12,
+                       C("10141f"))
+            c.vline(px0 + 8, py0, py0 + 3, C("10141f"))
+
+    def squiggle(x0: int, x1: int, y: int, col) -> None:
+        for x in range(x0, x1):
+            if (x - x0) % 11 == 9:
+                continue                       # word gaps
+            c.set(x, y + (1 if math.sin(x * 1.7) > 0.3 else 0), col)
+
+    sheets = [("transit", 180, 110, False), ("the mills", 86, 122, True),
+              ("harbor", 274, 128, True), ("old ward", 116, 196, True)]
+    pins: list[tuple[int, int]] = []
+    for (word, sx, sy, crossed) in sheets:
+        pw, ph = (72, 64) if word == "transit" else (60, 54)
+        paper = C("d7b594") if sx < 470 else C("a8b5b2")
+        shade = C("c09473") if sx < 470 else C("819796")
+        cut_a = rng.randint(1, 4)              # two torn corners, clean cuts
+        cut_b = rng.randint(1, 4)
+        for yy in range(ph):
+            for xx in range(pw):
+                if xx + yy < cut_a or (pw - xx) + (ph - yy) < cut_b:
+                    continue                   # torn corners
+                col = paper
+                if xx > pw - 3 or yy > ph - 3:
+                    col = shade                # edge shading
+                c.set(sx + xx, sy + yy, col)
+        pin = (sx + pw // 2, sy + 1)
+        pins.append(pin)
+        c.set(pin[0], pin[1], C("cf573c"))     # tack
+        c.set(pin[0], pin[1] + 1, C("de9e41"))
+        title = _render_word(word, C("241527"), C("341c27"))
+        c.img.alpha_composite(title, (sx + 4, sy + 5))
+        c.px = c.img.load()
+        mini_photo(sx + 4, sy + 18, word)
+        for ln in range(3):                    # unreadable notes, right column
+            squiggle(sx + 31, sx + pw - 4, sy + 20 + ln * 6, C("341c27"))
+        squiggle(sx + 4, sx + pw - 4, sy + 38, C("341c27"))
+        squiggle(sx + 4, sx + pw - 18, sy + 44, C("341c27"))
+        if crossed:                            # struck off the rotation
+            for k in range(pw - 8):
+                if rng.random() < 0.8:
+                    c.set(sx + 4 + k, sy + 6 + int(k * (ph - 12) / pw),
+                          C("a53030"))
+        else:                                  # transit: ringed red, tonight
+            for a in range(0, 360, 7):
+                x = int(pin[0] + math.cos(math.radians(a)) * 7)
+                y = int(pin[1] + 1 + math.sin(math.radians(a)) * 5)
+                c.set(x, y, C("a53030"))
+            squiggle(sx + 6, sx + 34, sy + 56, C("a53030"))
+    for i in range(1, len(pins)):              # red strings between pins
+        x0, y0 = pins[0]
+        x1, y1 = pins[i]
+        steps = 44
+        for k in range(steps + 1):
+            t = k / steps
+            x = x0 + (x1 - x0) * t
+            y = y0 + (y1 - y0) * t + math.sin(t * math.pi) * 5
+            c.set(int(x), int(y), C("a53030"))
+
+    # ---- kettle's corner (warm) ----
+    c.rect(104, 384, 344, 398, C("602c2c"))    # table top
+    c.rect(108, 398, 340, 404, C("341c27"))
+    for lx in (118, 326):
+        c.rect(lx, 404, lx + 5, 466, C("241527"))
+        c.set(lx + 5, 406, C("341c27"))
+    # KETTLE — a real little person, not a silhouette: seated behind the
+    # table in profile, hunched toward the scale, candle-lit from the left
+    kx, ky = 252, 330                                   # head anchor
+    c.rect(kx, ky, kx + 15, ky + 11, C("d7b594"))       # face, profile left
+    c.vline(kx + 15, ky + 2, ky + 10, C("c09473"))      # far shade
+    c.rect(kx + 12, ky + 1, kx + 15, ky + 11, C("c09473"))
+    c.rect(kx - 2, ky - 4, kx + 17, ky, C("341c27"))    # flat cap
+    c.hline(kx - 5, kx + 6, ky, C("4d2b32"))            # brim toward candle
+    c.set(kx - 5, ky - 1, C("602c2c"))
+    c.rect(kx + 2, ky + 8, kx + 12, ky + 13, C("819796"))  # grey beard
+    c.set(kx + 1, ky + 9, C("a8b5b2"))
+    c.set(kx + 6, ky + 5, C("090a14"))                  # eye
+    c.rect(kx - 4, ky + 13, kx + 20, ky + 40, C("602c2c"))  # coat, hunched
+    c.rect(kx - 4, ky + 13, kx + 2, ky + 40, C("884b2b"))   # candle-lit front
+    c.vline(kx - 4, ky + 14, ky + 39, C("ad7757"))
+    c.rect(kx + 14, ky + 13, kx + 20, ky + 40, C("4d2b32")) # shaded back
+    c.rect(kx + 4, ky + 16, kx + 12, ky + 20, C("341c27"))  # scarf
+    c.rect(kx - 12, ky + 18, kx - 2, ky + 23, C("602c2c"))  # arm reaching out
+    c.hline(kx - 12, kx - 2, ky + 18, C("884b2b"))
+    c.rect(kx - 16, ky + 21, kx - 11, ky + 25, C("d7b594")) # hand at the scale
+    c.set(kx - 16, ky + 25, C("c09473"))
+    c.rect(kx - 2, ky + 40, kx + 18, ky + 46, C("341c27"))  # lap into table line
+    # the scale, big enough to read
+    c.vline(205, 324, 382, C("202e37"))
+    c.vline(206, 324, 382, C("151d28"))
+    c.hline(167, 245, 324, C("202e37"))
+    c.hline(167, 245, 325, C("151d28"))
+    for (ex, pan_y) in ((167, 344), (245, 336)):
+        c.vline(ex, 326, pan_y - 3, C("394a50"))       # chains
+        c.hline(ex - 9, ex + 9, pan_y, C("151d28"))    # pan
+        c.hline(ex - 7, ex + 7, pan_y + 1, C("202e37"))
+        c.set(ex - 9, pan_y - 1, C("394a50"))
+        c.set(ex + 9, pan_y - 1, C("394a50"))
+    for k in range(6):                                  # brass in the low pan
+        c.set(162 + k * 2, 343, C("e8c170") if k % 2 else C("de9e41"))
+    c.set(205, 320, C("577277"))                        # pivot glint
+    for i in range(110):                                # brass pile on the table
+        px_ = 262 + rng.randrange(70)
+        py_ = 376 + rng.randrange(8)
+        c.set(px_, py_, (C("de9e41"), C("e8c170"), C("be772b"))[rng.randrange(3)])
+    # the candle, fat, with a SOLID banded wall halo that respects the plank
+    # lines (runtime glow breathes softly on top)
+    plank_set = set(plank_edges)
+    for dy in range(-38, 39):
+        for dx in range(-54, 55):
+            d = (dx / 54.0) ** 2 + (dy / 38.0) ** 2
+            x = CANDLE[0] + dx
+            y = CANDLE[1] - 24 + dy
+            if d < 1.0 and y < 384 and x not in plank_set:
+                if d < 0.34:
+                    c.set(x, y, C("ad7757"))
+                elif d < 0.72:
+                    c.set(x, y, C("884b2b"))
+    c.rect(CANDLE[0] - 3, CANDLE[1] - 16, CANDLE[0] + 2, CANDLE[1], C("d7b594"))
+    c.vline(CANDLE[0] + 2, CANDLE[1] - 14, CANDLE[1], C("c09473"))
+    c.set(CANDLE[0] - 1, CANDLE[1] - 18, C("de9e41"))
+    c.rect(CANDLE[0] - 1, CANDLE[1] - 21, CANDLE[0], CANDLE[1] - 18, C("e8c170"))
+    c.set(CANDLE[0] - 1, CANDLE[1] - 22, C("e7d5b3"))
+    c.hline(CANDLE[0] - 6, CANDLE[0] + 5, CANDLE[1] + 1, C("884b2b"))
+    c.hline(CANDLE[0] - 4, CANDLE[0] + 3, CANDLE[1] + 2, C("602c2c"))
+    # ashtray on the table's end — runtime smoke rises from here
+    c.rect(330, 378, 340, 381, C("202e37"))
+    c.set(334, 377, C("cf573c"))
+
+    # ---- VERNE at the medicine shelf (center-right), a real figure ----
+    c.hline(636, 706, 248, C("341c27"))                 # shelf plank
+    c.hline(636, 706, 249, C("241527"))
+    c.rect(640, 234, 646, 247, C("25562e"))             # bottles, all different
+    c.set(642, 232, C("468232"))
+    c.set(641, 238, C("468232"))
+    c.rect(652, 238, 657, 247, C("3c5e8b"))
+    c.set(654, 236, C("73bed3"))
+    c.rect(663, 230, 668, 247, C("819796"))             # tall jar
+    c.set(664, 234, C("a8b5b2"))
+    c.rect(674, 240, 683, 247, C("c7cfcc"))             # one bandage roll
+    c.set(677, 243, C("819796"))
+    vx, vy = 652, 286                                   # head anchor
+    c.rect(vx, vy, vx + 13, vy + 12, C("d7b594"))       # face, 3/4 right
+    c.vline(vx, vy + 2, vy + 11, C("c09473"))
+    c.rect(vx - 1, vy - 3, vx + 14, vy + 1, C("341c27"))  # short dark hair
+    c.set(vx + 14, vy - 1, C("4d2b32"))
+    c.set(vx + 9, vy + 5, C("090a14"))                  # eye
+    c.rect(vx - 4, vy + 12, vx + 17, vy + 48, C("394a50"))  # coat
+    c.rect(vx + 1, vy + 16, vx + 12, vy + 44, C("c7cfcc"))  # medic apron
+    c.vline(vx + 1, vy + 17, vy + 43, C("a8b5b2"))
+    c.set(vx + 6, vy + 22, C("a53030"))                 # small red cross
+    c.set(vx + 6, vy + 24, C("a53030"))
+    c.set(vx + 5, vy + 23, C("a53030"))
+    c.set(vx + 7, vy + 23, C("a53030"))
+    c.vline(vx + 17, vy + 14, vy + 46, C("253a5e"))     # cool rim
+    c.vline(vx - 4, vy + 14, vy + 46, C("2a2e37") if False else C("341c27"))
+    c.rect(vx - 9, vy + 24, vx - 3, vy + 29, C("394a50"))   # arm up to shelf
+    c.rect(vx - 12, vy + 20, vx - 6, vy + 25, C("d7b594"))  # hand at a bottle
+    c.rect(vx - 2, vy + 48, vx + 6, vy + 78, C("202e37"))   # legs
+    c.rect(vx + 8, vy + 48, vx + 16, vy + 78, C("151d28"))
+    c.rect(vx - 3, vy + 78, vx + 7, vy + 82, C("10141f"))   # boots
+    c.rect(vx + 7, vy + 78, vx + 17, vy + 82, C("090a14"))
+    c.rect(vx - 8, vy + 84, vx + 22, vy + 87, C("090a14"))  # ground shadow
+
+    # ---- mara at the radio wall (cool) ----
+    # units first: two SCREEN units (glowing scanline faces), the rest dark
+    units = ((700, 240, 790, 296, True), (700, 304, 768, 352, False),
+             (796, 252, 886, 300, True), (776, 308, 874, 356, False),
+             (700, 360, 786, 400, False), (794, 364, 868, 404, False))
+    for (rx0, ry0, rx1, ry1, screen) in units:
+        # baked halo behind the glowing units, BEFORE the box itself
+        c.rect(rx0, ry0, rx1, ry1, C("151d28"))
+        c.rect(rx0 + 2, ry0 + 2, rx1 - 2, ry1 - 2, C("202e37"))
+        if screen:                                       # scanline glass, clean
+            for yy in range(ry0 + 5, ry1 - 10):
+                for xx in range(rx0 + 6, rx1 - 6):
+                    if yy % 2 == 0:
+                        c.set(xx, yy, C("253a5e"))
+                    else:
+                        c.set(xx, yy, C("172038"))
+            for xx in range(rx0 + 6, rx1 - 6):           # a waveform trace
+                yy = (ry0 + ry1) // 2 + int(math.sin(xx * 0.55) * 3)
+                c.set(xx, yy, C("73bed3"))
+            c.hline(rx0 + 6, rx1 - 6, ry1 - 8, C("394a50"))  # control strip
+            for i in range(3):
+                c.set(rx0 + 10 + i * 8, ry1 - 6, C("577277"))
+        else:                                            # dark unit: one LED
+            c.set(rx1 - 8, ry0 + 8, C("73bed3"))
+            c.set(rx1 - 9, ry0 + 8, C("253a5e"))         # its tiny halo
+            c.set(rx1 - 8, ry0 + 7, C("172038"))
+            c.set(rx1 - 8, ry0 + 9, C("172038"))
+    for (nx_, ny_) in ((746, 262), (814, 272)):          # dial faces (needles)
+        c.rect(nx_ - 10, ny_ - 8, nx_ + 10, ny_ + 5, C("253a5e"))
+        c.rect(nx_ - 9, ny_ - 7, nx_ + 9, ny_ + 4, C("3c5e8b"))
+        c.rect(nx_ - 8, ny_ - 6, nx_ + 8, ny_ + 3, C("172038"))
+    # the junction box the whole rig feeds into — cables visibly run to it
+    c.rect(878, 226, 894, 240, C("202e37"))
+    c.rect(880, 228, 892, 238, C("151d28"))
+    c.set(884, 232, C("cf573c"))                          # fuse LED
+    c.set(883, 232, C("752438"))
+    c.set(885, 232, C("752438"))
+    for (sx_, sy_, ex_, ey_) in ((884, 240, 840, 252), (884, 240, 886, 300),
+                                 (880, 238, 790, 244)):
+        steps = 24                                        # cable drops
+        for k in range(steps + 1):
+            t = k / steps
+            x = sx_ + (ex_ - sx_) * t
+            y = sy_ + (ey_ - sy_) * t + math.sin(t * math.pi) * 6
+            c.set(int(x), int(y), C("090a14"))
+    for k in range(80):                                   # cable arcs above
+        t = k / 80.0
+        c.set(int(700 + t * 178), int(226 + math.sin(t * 3.4) * 9 + t * 4),
+              C("090a14"))
+        c.set(int(730 + t * 148), int(214 + math.sin(t * 4.4) * 7 + t * 16),
+              C("10141f"))
+    c.rect(690, 408, 900, 420, C("341c27"))              # desk
+    c.rect(694, 420, 896, 426, C("241527"))
+    c.vline(706, 426, 486, C("241527"))
+    c.vline(882, 426, 490, C("241527"))
+    # MARA — seated at the rig, oxblood jacket (the warm accent inside the
+    # cool zone: the eye goes to her), headset on, screen-lit
+    mx, my = 736, 336                                    # head anchor
+    c.rect(mx, my, mx + 14, my + 12, C("d7b594"))        # face, 3/4 right
+    c.vline(mx, my + 3, my + 11, C("c09473"))
+    c.rect(mx - 2, my - 4, mx + 8, my + 10, C("4d2b32")) # hair
+    c.rect(mx - 4, my + 8, mx + 1, my + 22, C("4d2b32")) # low ponytail
+    c.set(mx - 4, my + 22, C("341c27"))
+    c.set(mx + 10, my + 5, C("090a14"))                  # eye toward screens
+    c.hline(mx - 2, mx + 14, my - 5, C("151d28"))        # headset band
+    c.set(mx - 2, my - 4, C("151d28"))
+    c.set(mx + 14, my - 4, C("151d28"))
+    c.rect(mx + 12, my + 4, mx + 17, my + 12, C("202e37"))  # ear cup
+    c.set(mx + 14, my + 7, C("73bed3"))                  # cup LED
+    c.hline(mx - 1, mx + 12, my - 3, C("3c5e8b"))        # screen light on hair
+    c.rect(mx - 6, my + 12, mx + 18, my + 44, C("752438"))  # jacket
+    c.vline(mx + 18, my + 14, my + 42, C("3c5e8b"))      # rig-side rim
+    c.rect(mx + 16, my + 14, mx + 18, my + 42, C("411d31"))
+    c.vline(mx - 6, my + 14, my + 42, C("411d31"))       # shaded back
+    c.rect(mx + 12, my + 20, mx + 30, my + 26, C("752438"))  # arm to the dial
+    c.hline(mx + 12, mx + 30, my + 20, C("df84a5") if False else C("a53030"))
+    c.rect(mx + 28, my + 24, mx + 34, my + 29, C("d7b594"))  # hand on the knob
+    c.rect(mx - 8, my + 44, mx + 16, my + 66, C("202e37"))   # legs, seated
+    c.rect(mx - 10, my + 66, mx - 2, my + 72, C("10141f"))   # boot
+    c.rect(mx + 12, my + 44, mx + 18, my + 50, C("151d28"))
+    c.rect(mx - 14, my + 42, mx + 20, my + 47, C("341c27"))  # chair seat
+    c.vline(mx - 10, my + 47, my + 76, C("241527"))          # chair legs
+    c.vline(mx + 16, my + 47, my + 78, C("241527"))
+    c.rect(mx - 18, my + 8, mx - 13, my + 46, C("341c27"))   # chair back
+    c.vline(mx - 13, my + 10, my + 44, C("241527"))
+
+    # (no baked dot-vignette — the runtime vignette.png is smooth alpha)
+
+    # candle glow overlay (soft alpha, breathes at runtime)
+    gw, gh = 240, 170
+    glow = Image.new("RGBA", (gw, gh), (0, 0, 0, 0))
+    gp = glow.load()
+    r, g, b, _ = C("e8c170")
+    for y in range(gh):
+        for x in range(gw):
+            d = ((x - gw / 2) / (gw / 2)) ** 2 + ((y - gh / 2) / (gh / 2)) ** 2
+            if d < 1.0:
+                gp[x, y] = (r, g, b, int(70 * (1.0 - d) ** 2))
+
+    # VU needle strip: 3 frames, 16x12
+    strip = Canvas(48, 12)
+    for f in range(3):
+        ox = f * 16
+        strip.rect(ox, 0, ox + 15, 11, C("253a5e"))
+        strip.rect(ox + 1, 1, ox + 14, 10, C("172038"))
+        strip.set(ox + 13, 2, C("a53030"))
+        strip.set(ox + 14, 2, C("a53030"))
+        tip = (ox + 4, 3) if f == 0 else ((ox + 8, 2) if f == 1 else (ox + 12, 3))
+        x0, y0 = ox + 8, 10
+        for k in range(9):
+            t = k / 8.0
+            strip.set(int(x0 + (tip[0] - x0) * t), int(y0 + (tip[1] - y0) * t),
+                      C("c7cfcc"))
+    return c, glow, strip
+
+
+def make_scene_storm() -> tuple[Canvas, Canvas, list[Image.Image], list[Canvas]]:
+    """Menu 3 — STORM OVER THE CORDON: the whole sealed city under a
+    thunderstorm, seen from outside the wire (its silhouette crosses the
+    foreground). Returns (base, flash-lit overlay, bolt sprites, window
+    clusters) — rain/flash/bolts/dying windows animate at runtime."""
+    rng = random.Random(f"{SEED}:scene:storm")
+    c = Canvas(SCENE_W, SCENE_H)
+    _vgrad(c, [(110, C("090a14")), (220, C("10141f")), (330, C("172038")),
+               (420, C("1e1d39")), (SCENE_H, C("151d28"))])
+    # the storm DECK: dense overlapping masses pressing down from the top,
+    # ragged wisps along its bottom edge, and a clearer band above the
+    # skyline where the bolts get to live
+    for (count, y_lo, y_hi, rx_lo, rx_hi, ry_lo, ry_hi, density) in (
+            (16, 20, 110, 120, 200, 26, 48, 0.88),
+            (14, 110, 210, 90, 160, 20, 38, 0.78),
+            (10, 210, 268, 50, 90, 10, 20, 0.55)):
+        for i in range(count):
+            cx_ = rng.randrange(-60, SCENE_W + 60)
+            cy_ = rng.randrange(y_lo, y_hi)
+            rx_ = rng.randint(rx_lo, rx_hi)
+            ry_ = rng.randint(ry_lo, ry_hi)
+            # SOLID lumpy masses: per-column edge jitter, banded core/skirt,
+            # a solid lit underside line — zero per-pixel coin flips
+            jit_t = rng.uniform(17.0, 33.0)
+            jit_p = rng.uniform(0.0, math.tau)
+            deep = density > 0.7
+            for x in range(max(0, cx_ - rx_), min(SCENE_W, cx_ + rx_)):
+                e = 1.0 - ((x - cx_) / rx_) ** 2
+                if e <= 0.0:
+                    continue
+                half = ry_ * (e ** 0.5) * (0.82 + 0.18 * math.sin(x / jit_t + jit_p))
+                y0 = int(cy_ - half)
+                y1 = int(cy_ + half)
+                for y in range(y0, y1):
+                    band = (y - y0) / max(1.0, float(y1 - y0))
+                    c.set(x, y, C("090a14") if (deep and band < 0.55)
+                          else C("10141f"))
+                if half > 4:
+                    c.set(x, y1, C("253a5e"))                 # lit underside
+                    if not deep:
+                        c.set(x, y1 - 1, C("172038"))
+    # (no baked rain dots — the runtime rain layer is the rain)
+    # the city: three receding skyline rows
+    # depth: FAR is hazy-light, NEAR is near-black (it was inverted and the
+    # front row read as paper cutouts)
+    far = _skyline_row(c, rng, 400, 24, 90, C("151d28"))
+    mid = _skyline_row(c, rng, 442, 40, 150, C("10141f"), 22, 52, 3, 9)
+    near = _skyline_row(c, rng, 505, 60, 210, C("090a14"), 26, 64, 4, 12)
+    # dark windows on the near row (the lit versions live in the overlays)
+    win_spots: list[tuple[int, int]] = []
+    for (x0, x1, top) in near:
+        for i in range((x1 - x0) // 9):
+            wx = x0 + 3 + rng.randrange(max(1, x1 - x0 - 7))
+            wy = top + 8 + rng.randrange(max(1, 500 - top - 12))
+            c.rect(wx, wy, wx + 1, wy + 2, C("090a14"))
+            if rng.random() < 0.06 and len(win_spots) < 18:
+                win_spots.append((wx, wy))
+    # THE WIRE across the foreground: clean lattice panels, and floodlights
+    # that READ as lights — hot core, warm layered halo, cone to the ground
+    base_y = 512
     x = 0
     while x < SCENE_W:
-        w = rng.randint(18, 44)
-        h = rng.randint(20, 70)
-        col = C("10141f") if rng.random() < 0.6 else C("151d28")
-        for xx in range(x, min(SCENE_W, x + w)):
-            top = 300 - h + (3 if (xx // 6) % 2 else 0)
-            for y in range(top, 302):
-                c.set(xx, y, col)
-        if rng.random() < 0.5:  # a few dim lit windows
-            for i in range(rng.randint(1, 3)):
-                c.set(x + rng.randrange(2, max(3, w - 2)), 300 - rng.randrange(6, max(7, h - 4)),
-                      C("de9e41") if rng.random() < 0.7 else C("cf573c"))
-        x += w + rng.randint(2, 10)
-    # wasteland midground
-    for y in range(302, 420):
+        pw = rng.randint(26, 36)
+        c.vline(x, base_y - 13, base_y, C("090a14"))
+        c.vline(x + 1, base_y - 12, base_y, C("10141f"))
+        for px_ in range(x + 2, min(SCENE_W, x + pw)):
+            c.set(px_, base_y - 11, C("090a14"))
+            c.set(px_, base_y, C("090a14"))
+            k = px_ - x
+            if k % 3 == 0 or (pw - k) % 3 == 0:
+                c.set(px_, base_y - 10 + (k * 7) % 9, C("10141f"))
+        x += pw
+    lx = 30
+    while lx < SCENE_W:
+        c.vline(lx, base_y - 30, base_y, C("090a14"))
+        c.vline(lx + 1, base_y - 29, base_y, C("10141f"))
+        c.rect(lx - 3, base_y - 34, lx + 4, base_y - 30, C("090a14"))
+        # halo: SOLID banded ellipses around the lamp head, then the core
+        for dx in range(-26, 27):
+            for dy in range(-13, 14):
+                d = (dx / 26.0) ** 2 + (dy / 13.0) ** 2
+                if d < 1.0:
+                    hx, hy = lx + dx, base_y - 32 + dy
+                    if d < 0.12:
+                        c.set(hx, hy, C("e8c170"))
+                    elif d < 0.36:
+                        c.set(hx, hy, C("de9e41"))
+                    elif d < 0.68:
+                        c.set(hx, hy, C("602c2c"))
+        c.set(lx - 1, base_y - 32, C("e8c170"))
+        c.set(lx, base_y - 32, C("ebede9"))                 # hot core
+        c.set(lx + 1, base_y - 32, C("e7d5b3"))
+        for dy in range(1, 24):                              # solid light cone
+            half = 2 + dy // 2
+            inner = max(0, half - 2)
+            for dx in range(-half, half + 1):
+                if abs(dx) <= inner:
+                    c.set(lx + dx, base_y - 30 + dy,
+                          C("819796") if dy < 9 else C("577277"))
+        lx += rng.randint(120, 190)
+    for y in range(base_y + 1, SCENE_H):                     # our side: dark
         for x in range(SCENE_W):
-            c.set(x, y, C("202e37") if (x * 3 + y * 5) % 7 else C("151d28"))
-    # cliff mass, foreground
-    for x in range(SCENE_W):
-        ch_ = 140 + int(50 * (x / SCENE_W)) + rng.randint(-2, 2)
-        for y in range(SCENE_H - ch_, SCENE_H):
-            c.set(x, y, C("151d28"))
-        c.set(x, SCENE_H - ch_, C("394a50"))
-        if rng.random() < 0.3:
-            c.set(x, SCENE_H - ch_ + 1, C("202e37"))
-    # scavenged gear + the raider looking out
-    def put(name: str, x: int, y: int) -> None:
-        _paste(c, props[name][0].img, x, y)
-    put("crate_0", 236, 372)
-    put("barrel_0", 352, 356)
-    put("tires_2", 196, 396)
-    raider = char_sheet.crop((0, 7 * 40, 32, 8 * 40))  # N row, idle: facing away
-    raider2 = raider.resize((64, 80), Image.NEAREST)
-    _paste(c, raider2, 292, 306)
-    # cloud strip overlay (drifts at runtime)
-    strip = Canvas(SCENE_W, 90)
-    for i in range(16):
-        bx = rng.randrange(0, SCENE_W)
-        bw = rng.randint(60, 160)
-        bh = rng.randint(8, 18)
-        by = rng.randrange(4, 70)
-        for y in range(by, by + bh):
-            for x in range(bx, bx + bw):
-                d = abs(y - (by + bh / 2)) / (bh / 2)
-                if rng.random() < 0.5 * (1 - d):
-                    strip.set(x % SCENE_W, y, C("1e1d39") if rng.random() < 0.7 else C("253a5e"))
-    return c, strip
+            c.set(x, y, C("10141f") if y > base_y + 14 else C("151d28"))
+
+    # flash-lit overlay: rims that catch the lightning (shown during strikes)
+    lit = Canvas(SCENE_W, SCENE_H)
+    for (x0, x1, top) in far:
+        for x in range(x0, x1):
+            step = 3 if (x // 6) % 2 else 0
+            lit.set(x, top + step, C("3c5e8b"))
+    for (x0, x1, top) in mid:
+        for x in range(x0, x1):
+            step = 3 if (x // 6) % 2 else 0
+            lit.set(x, top + step, C("73bed3"))
+            if rng.random() < 0.25:
+                lit.set(x, top + step + 1, C("3c5e8b"))
+    for (x0, x1, top) in near:
+        for x in range(x0, x1):
+            step = 3 if (x // 6) % 2 else 0
+            lit.set(x, top + step, C("a4dddb"))
+            lit.set(x, top + step + 1, C("73bed3"))
+    for x in range(0, SCENE_W, 2):                                # wire catches it
+        lit.set(x, 512, C("73bed3"))
+
+    # forked bolt sprites
+    bolts: list[Image.Image] = []
+    for b in range(2):
+        brng = random.Random(f"{SEED}:bolt:{b}")
+        img = Image.new("RGBA", (90, 240), (0, 0, 0, 0))
+        bp = img.load()
+        x = 45.0
+        forks = [(x, 0.0, 1.0)]
+        while forks:
+            fx, fy, life = forks.pop()
+            while fy < 238 and life > 0:
+                fx += brng.uniform(-3.2, 3.2)
+                fy += brng.uniform(3.0, 7.0)
+                if not (2 <= fx <= 87) or fy >= 238:
+                    break
+                core = C("a4dddb")
+                side = C("73bed3")
+                bp[int(fx), int(fy)] = core
+                if brng.random() < 0.7:
+                    bp[int(fx) + 1, int(fy)] = (side[0], side[1], side[2], 160)
+                if brng.random() < 0.10 and life > 0.5:
+                    forks.append((fx, fy, life * 0.45))
+                life -= 0.012
+        bolts.append(img)
+
+    # window clusters: small lit overlays the runtime extinguishes one by one
+    clusters: list[Canvas] = []
+    rng.shuffle(win_spots)
+    for ci in range(3):
+        cl = Canvas(SCENE_W, SCENE_H)
+        for (wx, wy) in win_spots[ci::3]:
+            cl.rect(wx, wy, wx + 1, wy + 2, C("de9e41"))
+            cl.set(wx, wy, C("e8c170"))
+        clusters.append(cl)
+    return c, lit, bolts, clusters
+
 
 def make_vignette() -> Image.Image:
     """Soft radial darkening for menus. Smooth alpha by design (not palette)."""
@@ -3116,8 +3849,9 @@ def main() -> None:
     for name, piece in wall_piece_inventory().items():
         entries[name] = piece
     for tone in ROOF_TONES:
-        for v in range(2):
+        for v in range(4):
             entries[f"roof_tile_{tone}_{v}"] = make_roof_tile(tone, v)
+        for v in range(2):
             entries[f"roof_tile_{tone}_broken_{v}"] = make_roof_tile_broken(tone, v)
         entries[f"roof_fascia_{tone}_s"] = make_roof_fascia(tone, "x")
         entries[f"roof_fascia_{tone}_e"] = make_roof_fascia(tone, "y")
@@ -3200,17 +3934,28 @@ def main() -> None:
     make_studio_word().save(OUT / "studio_word.png")
 
     # rotating main-menu backdrops (+ their animated overlay layers)
-    scene_hoard = make_scene_hoard()
-    assert_palette(scene_hoard.img, "menu_hoard")
-    scene_hoard.img.save(OUT / "menu_hoard.png")
-    scrap_base, scrap_neon = make_scene_scrapyard(entries)
-    assert_palette(scrap_base.img, "menu_scrapyard")
-    scrap_base.img.save(OUT / "menu_scrapyard.png")
-    scrap_neon.img.save(OUT / "menu_scrapyard_neon.png")
-    over_base, over_clouds = make_scene_overlook(entries, sheet)
-    assert_palette(over_base.img, "menu_overlook")
-    over_base.img.save(OUT / "menu_overlook.png")
-    over_clouds.img.save(OUT / "menu_overlook_clouds.png")
+    drain_base, drain_ray, drain_ripple = make_scene_drain()
+    assert_palette(drain_base.img, "menu_drain")
+    assert_palette(drain_ripple.img, "menu_drain_ripple")
+    drain_base.img.save(OUT / "menu_drain.png")
+    drain_ray.save(OUT / "menu_drain_ray.png")          # light: soft alpha
+    drain_ripple.img.save(OUT / "menu_drain_ripple.png")
+    den_base, den_glow, den_needles = make_scene_den()
+    assert_palette(den_base.img, "menu_den")
+    assert_palette(den_needles.img, "menu_den_needles")
+    den_base.img.save(OUT / "menu_den.png")
+    den_glow.save(OUT / "menu_den_glow.png")            # light: soft alpha
+    den_needles.img.save(OUT / "menu_den_needles.png")
+    storm_base, storm_lit, storm_bolts, storm_wins = make_scene_storm()
+    assert_palette(storm_base.img, "menu_storm")
+    assert_palette(storm_lit.img, "menu_storm_lit")
+    storm_base.img.save(OUT / "menu_storm.png")
+    storm_lit.img.save(OUT / "menu_storm_lit.png")
+    for i, bolt in enumerate(storm_bolts):
+        bolt.save(OUT / f"menu_storm_bolt_{i}.png")
+    for i, cluster in enumerate(storm_wins):
+        assert_palette(cluster.img, f"menu_storm_win_{i}")
+        cluster.img.save(OUT / f"menu_storm_win_{i}.png")
 
     (OUT / "manifest.json").write_text(json.dumps(manifest, indent=2))
 

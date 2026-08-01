@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dvhdq0d71t2vl"
-path="res://.godot/imported/menu_overlook.png-3086d39c5ed58a7862cfb0eed0558ebe.ctex"
+uid="uid://vf2fhrsc2rhf"
+path="res://.godot/imported/menu_storm_lit.png-5d9b3203641f8037815ee53be32f6c3c.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/gen/menu_overlook.png"
-dest_files=["res://.godot/imported/menu_overlook.png-3086d39c5ed58a7862cfb0eed0558ebe.ctex"]
+source_file="res://art/gen/menu_storm_lit.png"
+dest_files=["res://.godot/imported/menu_storm_lit.png-5d9b3203641f8037815ee53be32f6c3c.ctex"]
 
 [params]
 
