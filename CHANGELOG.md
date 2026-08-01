@@ -3,6 +3,28 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.10] — 2026-08-01
+
+### Fixed
+- **The car ends were there all along — painted invisibly.** The end caps
+  used each scheme's darkest tone, which vanished against dark asphalt and
+  kept reading as "missing front/back" through three geometry fixes. Caps
+  now use the mid body tone with a lit top edge and a visible steel bumper.
+  Also: the wheel-arch carve was oversized and bit through the 8px-tall
+  hood/trunk sections (shrunk, kept below the trim), and the broken-variant
+  open door now hinges attached at the sill instead of floating underneath.
+- **Ruined roof holes show attic darkness** instead of being transparent —
+  a true hole displayed whatever rendered beneath the lifted roof sprite
+  (misprojected exterior ground, even wall pieces).
+
+### Changed
+- **Sniper volleys**: 2–3 rounds converge at once from different off-screen
+  angles (one crack per volley), and rounds fly at 1150 px/s — dodging on
+  reaction should barely work.
+- **Zoom rework**: the overpowered extra zoom-out is gone (native view is
+  the widest); the ladder now reaches 6x with smooth glides between stops,
+  always resting on whole pixel factors.
+
 ## [0.6.9] — 2026-08-01
 
 The polish storm: everything the playtest surfaced in one pass.

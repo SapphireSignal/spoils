@@ -571,7 +571,10 @@ def make_roof_tile_broken(tone: str, variant: int) -> tuple[Canvas, tuple, list 
                 rng.randint(60, 110),
                 {(x, y) for y in range(32) for x in range(64) if in_diamond(x, y)})
     for (x, y) in hole:
-        c.set(x, y, (0, 0, 0, 0))
+        # DARKNESS, not transparency: a true see-through hole showed whatever
+        # rendered under the lifted roof sprite — misprojected ground or wall
+        # pieces (user report). A torn roof opens into black attic shadow.
+        c.set(x, y, C("090a14") if (x * 3 + y * 7) % 11 else C("10141f"))
     for (x, y) in list(hole):  # torn edge
         for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
             if (nx, ny) not in hole and c.get(nx, ny)[3] > 0 and (nx + ny) % 2 == 0:
@@ -1267,10 +1270,12 @@ def make_vehicle(kind: str, scheme: int, rev: bool = False,
         base = oy + (L + t) // 2
         top_y = base - clear - cap_h + (t + 1) // 2
         for y in range(top_y, base - clear + 1):
-            c.set(x, y, body_dd)
-        c.set(x, top_y, body_d)                   # lit top edge of the cap
-        c.set(x, base - clear, C("202e37"))       # bumper band
-        c.set(x, base - clear - 1, C("202e37"))
+            # MID tone, not darkest: a body_dd cap disappears against dark
+            # asphalt and reads as a missing end (three user reports)
+            c.set(x, y, body_d if t < cap_d - 1 else body_dd)
+        c.set(x, top_y, body_c)                   # lit top edge of the cap
+        c.set(x, base - clear, C("394a50"))       # steel bumper, visible
+        c.set(x, base - clear - 1, C("394a50"))
     # wrapped corner: the side face's last column darkens into the cap
     for y in range(oy + (L - 1) // 2 - clear - cap_h + 1, oy + (L - 1) // 2 - clear):
         c.set(ox + L - 1, y, body_dd)
@@ -1282,8 +1287,8 @@ def make_vehicle(kind: str, scheme: int, rev: bool = False,
         base = oy - (t + 1) // 2
         far_top = base - clear - far_h + (t + 1) // 2
         for y in range(far_top, base - clear + 1):
-            c.set(x, y, body_dd)
-        c.set(x, base - clear, C("202e37"))    # bumper hint
+            c.set(x, y, body_d if t == 1 else body_dd)
+        c.set(x, base - clear, C("394a50"))    # bumper hint, visible
     # a 1px light sliver on the far corner (headlight fwd art, tail rev art)
     c.set(ox - 2, oy - 1 - clear - far_h + 2, C("de9e41") if not rev else C("752438"))
     cap_top = oy + L // 2 - clear - cap_h
@@ -1311,9 +1316,12 @@ def make_vehicle(kind: str, scheme: int, rev: bool = False,
     for wf in (8, 34):  # wheel arches + wheels
         cxw = ox + wf + 3
         cyw = oy + (wf + 3) // 2 - 1
-        for dy in range(-4, 3):
-            for dx in range(-4, 5):
-                if dx * dx + dy * dy <= 18:
+        # carve SMALL and only around the wheel itself: the old radius-4.2
+        # carve ate the lower half of the 8px-tall hood/trunk sections — THE
+        # "missing front/back" that survived three fixes
+        for dy in range(-2, 3):
+            for dx in range(-3, 4):
+                if dx * dx + dy * dy <= 8:
                     c.set(cxw + dx, cyw + dy, (0, 0, 0, 0))
         for dy in range(-3, 3):
             for dx in range(-3, 4):
@@ -1347,18 +1355,18 @@ def make_vehicle(kind: str, scheme: int, rev: bool = False,
             base = oy + x // 2
             y = base - clear - rng.randrange(1, max(2, prof[min(L - 1, x - ox)] - 1))
             c.set(x, y, C("884b2b") if rng.random() < 0.6 else C("602c2c"))
-        # the open door: a panel swung out over the sill, hanging past the
-        # body line with its window hole showing
+        # the open door: a panel swung out over the sill — CONNECTED to the
+        # body (it hinges at the sill line, no floating debris)
         door_i = (win_lo + win_hi) // 2 + rng.randrange(-3, 3)
         for k in range(6):
             x = ox + door_i + k
             base = oy + (door_i + k) // 2
-            top = base - clear + 1
+            top = base - clear - 1
             for y in range(top, top + 5 - (k // 3)):
                 c.set(x, y, body_d if 0 < k < 5 else body_dd)
             if 1 < k < 4:
-                c.set(x, top + 1, C("090a14"))     # its window, dark
-        c.set(ox + door_i + 4, oy + (door_i + 4) // 2 - clear + 4, C("819796"))  # handle
+                c.set(x, top + 2, C("090a14"))     # its window, dark
+        c.set(ox + door_i + 4, oy + (door_i + 4) // 2 - clear + 2, C("819796"))  # handle
         # one flat tire: the rear wheel squashes onto the ground
         flat_x = ox + 34 + 3
         flat_y = oy + (34 + 3) // 2 - 1

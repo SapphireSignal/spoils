@@ -49,10 +49,12 @@ var _floor_layer: TileMapLayer
 var _surface_kinds: Dictionary = {}  # atlas coords -> footstep kind
 var _prev_anim_step := -1
 # camera zoom ladder: combined world-px -> screen-px factors. Only WHOLE
-# factors stay pixel-crisp; 0 = follow the window's native integer scale.
+# factors stay pixel-crisp; native window scale is the WIDEST view (a wider
+# one was "too OP" — user call), 6x is the closest. The camera GLIDES
+# between stops so scrolling feels continuous; it always settles on a
+# whole factor.
 var zoom_combined := 0
-var _zoom_center := Vector2.ZERO
-var _zoom_barrier_f := 0.0
+var _zoom_view := 0.0
 
 
 func _init() -> void:
@@ -143,9 +145,6 @@ func setup_surfaces(floor_layer: TileMapLayer, kinds: Dictionary) -> void:
 	_surface_kinds = kinds
 
 
-func set_zoom_edge(map_center: Vector2, barrier_f: float) -> void:
-	_zoom_center = map_center
-	_zoom_barrier_f = barrier_f
 
 
 func _footstep() -> void:
@@ -220,8 +219,12 @@ func _process(delta: float) -> void:
 	# identical grid. Two disagreeing grids read as shimmer/blur while
 	# walking (v0.6.4 lesson). The grid is 1/combined-zoom-factor wide.
 	var s := float(maxi(1, Settings.pixel_scale))
-	var c := _effective_scale(s)
-	camera.zoom = Vector2(c / s, c / s)
+	var c := s if zoom_combined == 0 else float(zoom_combined)
+	# glide toward the target stop; rest states are always whole factors
+	if _zoom_view <= 0.0:
+		_zoom_view = c
+	_zoom_view = move_toward(_zoom_view, c, delta * maxf(4.0, absf(c - _zoom_view) * 10.0))
+	camera.zoom = Vector2(_zoom_view / s, _zoom_view / s)
 	var snapped := (global_position * c).round() / c
 	var visual_err := snapped - global_position
 	_sprite.position = visual_err
@@ -230,22 +233,10 @@ func _process(delta: float) -> void:
 	_animate(input_vec, delta)
 
 
-func _effective_scale(s: float) -> float:
-	var c := s if zoom_combined == 0 else float(zoom_combined)
-	# at the widest zoom the view is huge — near the barricade line the
-	# camera tightens a step so the world's true edge can never be seen
-	if c < 2.0 and _zoom_barrier_f > 0.0:
-		var u := global_position - _zoom_center
-		if absf(u.x) * 0.5 + absf(u.y) > _zoom_barrier_f - 700.0:
-			zoom_combined = 2
-			c = 2.0
-	return c
-
-
 func _step_zoom(direction: int) -> void:
 	var s := maxi(1, Settings.pixel_scale)
 	var current := s if zoom_combined == 0 else zoom_combined
-	var next := clampi(current + direction, 1, 4)
+	var next := clampi(current + direction, s, 6)  # native view is the widest
 	zoom_combined = 0 if next == s else next
 
 

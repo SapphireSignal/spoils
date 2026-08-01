@@ -8,7 +8,7 @@ extends Node
 const GRACE_SECONDS := 3.0
 const SHOT_INTERVAL_MIN := 1.3
 const SHOT_INTERVAL_MAX := 2.1
-const SHOT_SPEED := 950.0
+const SHOT_SPEED := 1150.0  # dodging one on reaction should barely work
 const SHOT_SPAWN_DIST := 430.0   # beyond every supported view half-diagonal
 const SHOT_LIFE := 1.4
 const HIT_RADIUS := 8.0
@@ -90,14 +90,26 @@ func _leave_zone() -> void:
 
 
 func _fire_round(u: Vector2, depth: float) -> void:
-	# the shot comes from OUTSIDE — the direction of the nearest edge —
-	# and the deeper you push, the less the sniper misses
+	# a VOLLEY: more than one sniper owns this buffer. Two or three rounds
+	# converge from different off-screen angles at once; the deeper you
+	# push, the less any of them miss.
+	var volley := 2 if depth <= ESCALATE_DEPTH else 3
+	if depth <= ESCALATE_DEPTH and _rng.randf() < 0.35:
+		volley = 3
+	for shot in volley:
+		_spawn_round(u, depth)
+	Sfx.play_crack()
+
+
+func _spawn_round(u: Vector2, depth: float) -> void:
 	var out_dir := Vector2(0.5 * signf(u.x), signf(u.y)).normalized()
+	# each shooter sits at a different angle along the treeline
+	out_dir = out_dir.rotated(_rng.randf_range(-0.5, 0.5))
 	var side := out_dir.orthogonal()
 	var target := _player.global_position
 	var start := target + out_dir * SHOT_SPAWN_DIST \
-		+ side * _rng.randf_range(-60.0, 60.0)
-	var err := 2.0 if depth > ESCALATE_DEPTH else 8.0
+		+ side * _rng.randf_range(-140.0, 140.0)
+	var err := 2.0 if depth > ESCALATE_DEPTH else 7.0
 	var aim := target + side * _rng.randf_range(-err, err)
 	var vel := (aim - start).normalized() * SHOT_SPEED
 
@@ -118,7 +130,6 @@ func _fire_round(u: Vector2, depth: float) -> void:
 	_rounds.append(round_node)
 	_round_vel.append(vel)
 	_round_age.append(0.0)
-	Sfx.play_crack()
 
 
 func _update_rounds(delta: float) -> void:

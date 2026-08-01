@@ -118,6 +118,7 @@ func _build_world() -> void:
 		alarms.register(entry["node"] as Node2D, entry["lights"] as Array)
 	alarms.setup(_player)
 	_player.setup_surfaces(_floor_layer, _surface_kinds_from(info["floor_coords"]))
+	# (zoom never widens past the native view, so no edge camera-guard needed)
 	_build_prompt()
 	await get_tree().process_frame
 

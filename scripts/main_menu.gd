@@ -51,6 +51,13 @@ var _changelog_list: VBoxContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.10", ["car ends are visible now - they existed but were painted too dark",
+		"wheel arches no longer bite into hoods and trunks",
+		"the broken-into door hangs attached to the car, not floating below",
+		"holes in ruined roofs show attic darkness, not the ground outside",
+		"sniper volleys: 2-3 shots converge at once, and they fly faster",
+		"zoom reworked: no more overpowered zoom-out, ladder reaches 6x",
+		"zoom glides smoothly between stops and always rests pixel-perfect"]],
 	["v0.6.9", ["the missing car parts are ACTUALLY fixed (raked windshields had gaps)",
 		"barrels are properly 3d now - real top faces, curved hoops",
 		"the barricade line is lattice fencing now, denser, with concrete accents",
