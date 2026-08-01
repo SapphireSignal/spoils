@@ -7,11 +7,28 @@ This file carries everything a fresh session needs that isn't in those two.
 
 ## Where we are
 
-- **Version v0.6.19 SHIPPED** (22nd release on 2026-08-01 — read
-  CHANGELOG.md; v0.6.18 "districts" landed the same day). Everything
-  verified by shots; smoke covers stairs + cursor-follow driving; perf
-  240 avg / ~4.5ms worst / ~4.6k nodes. **AWAITING USER REACTIONS**;
-  next = M2 on "go".
+- **Version v0.6.21 SHIPPED** (25th release on 2026-08-01 — read
+  CHANGELOG.md for v0.6.19/20/21; all same-day). v0.6.20: safehouse
+  spawn (bulletproof placement — probe bands + exhaustive row-walk),
+  free-angle cursor driving (max 190, `auto_target` hook for harness/
+  future AI), diagonal-parallelogram colliders on all (2,1) vehicles
+  (mirror_prop flips polys; DriveableCar swaps poly with heading),
+  trunk 5.5/lamp 3.5/pallet colliders, door-frame art seed excludes
+  door_open (truck color-flash), warehouse GUARANTEED (+fallback dodges
+  rail), comms → forest-block corner, fleet +steel-blue/tan (BROKEN
+  INDEXES NOW _5/_6 — four builder check sites), single centered
+  road line (edge-halves were swapped), corner stairs, upstairs door
+  lockout (player.upstairs + auto-close on climb), Sfx engine bed
+  self-decays (_engine_target + Sfx._process — it played forever once),
+  splash SHATTER (crack frames → shards → studio_signal core → beams →
+  studio_tag; _shot_splash captures at 2.4s; soft click ticks).
+  v0.6.21: bushes 30-42px hide-in size (foliage RADIUS 24), AUTUMN
+  GROVE = east half of the forest block (tree_autumn family, leaves
+  0-1 green / 2-3 red, color-true shedding via _leaf_trees_red +
+  encoded near-list). Perf 240/4.5ms/~5k. **AWAITING REACTIONS**;
+  next = M2 on "go". TRAILER: ffmpeg NOT installed; pitches sent —
+  user picks a concept before any build (pipeline: --write-movie PNG
+  frames 640x360 → 3x nearest → ffmpeg 1080p60 + davidkbd bed).
 - Watch-list: map size (~100 diamond now), THE MAP window (layout/zoom/
   tooltips), map-select screen, cursor driving feel, scrapyard/gallery,
   smoker read, power-box sparks, prone/standing size, den board text,
