@@ -3,6 +3,42 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.24] — 2026-08-01
+
+### Changed
+- **EIGHT-DIRECTION VEHICLES** (user request, sample approved first): the
+  four angles a (2,1) sheet cannot draw now exist for every car and
+  pickup — `make_vehicle_flank` (screen-horizontal heading: the flank
+  faces the camera dead-on, the roof lies as a flat band straight above
+  it, both ends go edge-on) and `make_vehicle_head` (screen-vertical
+  heading: both flanks go edge-on, so the view is FOUR solid bands —
+  end face, hood or trunk, raked glass, roof — drawn far-to-near with
+  skirt fills; a per-station loop ladders into stripes, which is what
+  the first cut did). `_veh_profile` gives every view the same
+  length-agnostic silhouette, so a car keeps its shape at any heading.
+  Registered as `vehicle_{n,s,e,w}_i` beside the existing
+  `vehicle_{nw,ne,se,sw}_i`, with door-open frames, light coordinates
+  and per-facing colliders — `_base_variant_name()` picks them up with
+  no special cases.
+- **Wider vehicles** (user approved): ROOF_DEPTH 12 → 18. The old cars
+  were narrower than real cars — invisible in the diagonal views, but
+  the head-on view would have read as a plank. Every vehicle in the
+  district is now built on the true body width, which also makes them
+  sit more solidly on the road.
+- **New driving controls** (user call): **get in and the engine starts
+  itself; get out and it shuts off** — the engine action is gone from
+  the input map, the settings binds and the keybinds panel. **WASD
+  drives** across all eight headings (cursor-follow removed), keeping
+  the steering inertia from v0.6.23 — the car carves toward your input
+  and turns tighten as you slow — plus iso squash on the vertical so a
+  car crossing north-south covers ground at the rate the tiles imply.
+  **E** headlights, **F** in and out. Controls card rewritten to match.
+- Smoke harness drives via `auto_drive` now (headless sends no input)
+  and asserts both halves of the new rule: the engine must be running
+  after entry and silent after stepping out.
+
+Perf: 240 avg, worst 4.72 ms, ~5.3k nodes. SMOKE PASS.
+
 ## [0.6.23] — 2026-08-01
 
 ### Changed

@@ -233,22 +233,23 @@ func _smoke() -> void:
 		await get_tree().create_timer(0.6).timeout
 		if player.driving != car:
 			failures.append("player did not end up driving after enter()")
+		elif not car.engine_on:
+			failures.append("the engine did not start on entry")
 		else:
-			car.engine_on = true
-			car.following = true
-			# headless has no real cursor — aim the chase somewhere far
-			car.auto_target = car.global_position + Vector2(400.0, 200.0)
+			# headless sends no input — feed the drive vector directly
+			car.auto_drive = Vector2(0.8944, 0.4472)
 			var car_start := car.global_position
 			await get_tree().create_timer(1.0).timeout
-			car.following = false
-			car.auto_target = Vector2.INF
+			car.auto_drive = Vector2.ZERO
 			if car.global_position.distance_to(car_start) < 40.0:
-				failures.append("car barely moved while following (%.1f px)" %
+				failures.append("car barely moved while driving (%.1f px)" %
 					car.global_position.distance_to(car_start))
 			car.exit_car()
 			await get_tree().create_timer(0.6).timeout
 			if player.driving != null or not player.visible:
 				failures.append("player did not step out of the car")
+			elif car.engine_on:
+				failures.append("the engine kept running after stepping out")
 		player.respawn(info["spawn"])
 		await get_tree().process_frame
 

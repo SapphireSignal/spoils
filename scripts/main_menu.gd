@@ -66,6 +66,13 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.24", ["cars point where theyre going - eight real angles now,",
+		"drawn from the side and head on, not just the four corners",
+		"every vehicle got wider: they were narrower than real cars",
+		"and it showed the moment they turned",
+		"new controls: get in and the engine starts itself, wasd to",
+		"drive, e for lights, f to get out (and it shuts off)",
+		"no more engine key, no more clicking to follow the cursor"]],
 	["v0.6.23", ["the map is real now: press m for the whole district,",
 		"every place named, and a little me that moves as you do",
 		"clicking transit works (it didnt - the window ate it)",

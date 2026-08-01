@@ -21,7 +21,7 @@ const BASE_VIEW := Vector2i(640, 360)
 # rebindable actions and their default physical keys
 const BIND_ACTIONS: Array[String] = [
 	"move_up", "move_down", "move_left", "move_right",
-	"interact", "crouch", "prone", "reload", "flashlight", "engine",
+	"interact", "crouch", "prone", "reload", "flashlight",
 	"map", "inventory",
 	"slot_primary", "slot_secondary", "slot_melee",
 ]
@@ -29,7 +29,7 @@ const BIND_LABELS := {
 	"move_up": "move up", "move_down": "move down",
 	"move_left": "move left", "move_right": "move right",
 	"interact": "interact", "crouch": "crouch", "prone": "prone",
-	"reload": "reload", "flashlight": "flashlight", "engine": "start engine",
+	"reload": "reload", "flashlight": "flashlight",
 	"map": "open map", "inventory": "inventory",
 	"slot_primary": "primary weapon", "slot_secondary": "secondary weapon",
 	"slot_melee": "melee weapon",
@@ -37,7 +37,7 @@ const BIND_LABELS := {
 const DEFAULT_BINDS := {
 	"move_up": KEY_W, "move_down": KEY_S, "move_left": KEY_A, "move_right": KEY_D,
 	"interact": KEY_F, "crouch": KEY_CTRL, "prone": KEY_Z, "reload": KEY_R,
-	"flashlight": KEY_E, "engine": KEY_Q,
+	"flashlight": KEY_E,
 	"map": KEY_M, "inventory": KEY_TAB,
 	"slot_primary": KEY_1, "slot_secondary": KEY_2, "slot_melee": KEY_3,
 }

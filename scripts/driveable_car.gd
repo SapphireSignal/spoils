@@ -1,39 +1,43 @@
 class_name DriveableCar
 extends CharacterBody2D
-## An intact car you can actually drive (user request): F opens the door
-## and seats you (door swing = a baked texture-swap frame + a real door
-## recording), Q wakes the engine, W/S is throttle/reverse, A/D steps the
-## heading around the four baked facings, E throws the headlights, F steps
-## back out. The sprite parks on the same screen-pixel grid as the player,
-## so the camera weld stays shimmer-free at any zoom. Broken-into cars
-## never become one of these — they stay the static props they are.
+## An intact car you can actually drive (user request): F opens the door,
+## seats you and WAKES THE ENGINE; WASD drives it across all EIGHT baked
+## facings so the nose points where you're going; E throws the headlights;
+## F steps back out and shuts the engine off behind you. No engine key —
+## a car you're sitting in is a car that's running (user call 2026-08-01).
+## The sprite parks on the same screen-pixel grid as the player, so the
+## camera weld stays shimmer-free at any zoom. Broken-into cars never
+## become one of these — they stay the static props they are.
 
 const MAX_SPEED := 190.0        # brisk, not a rocket (user: "way too fast")
 const ACCEL := 220.0
 const BRAKE := 340.0
 const COAST := 150.0            # engine braking while idling down
-const ARRIVE_DIST := 34.0       # ease off when the cursor is this close
-const TURN_COOLDOWN := 0.22     # seconds between 90-degree heading steps
+const TURN_COOLDOWN := 0.10     # eight facings means smaller, quicker steps
 const DOOR_TIME := 0.34
-const HEADINGS := ["nw", "ne", "se", "sw"]   # clockwise on screen
+# all eight screen headings; the diagonals keep the iso (2,1) slope
+const HEADINGS := ["n", "ne", "e", "se", "s", "sw", "w", "nw"]
 const DIRS := {
-	"nw": Vector2(-0.8944, -0.4472), "ne": Vector2(0.8944, -0.4472),
-	"se": Vector2(0.8944, 0.4472), "sw": Vector2(-0.8944, 0.4472),
+	"n": Vector2(0.0, -1.0), "ne": Vector2(0.8944, -0.4472),
+	"e": Vector2(1.0, 0.0), "se": Vector2(0.8944, 0.4472),
+	"s": Vector2(0.0, 1.0), "sw": Vector2(-0.8944, 0.4472),
+	"w": Vector2(-1.0, 0.0), "nw": Vector2(-0.8944, -0.4472),
 }
 # where the driver steps out, per heading (beside the visible door)
 const EXIT_OFFSET := {
-	"nw": Vector2(-8.0, 14.0), "ne": Vector2(8.0, 14.0),
-	"se": Vector2(-16.0, 10.0), "sw": Vector2(16.0, 10.0),
+	"n": Vector2(-16.0, 8.0), "ne": Vector2(8.0, 14.0),
+	"e": Vector2(-6.0, 16.0), "se": Vector2(-16.0, 10.0),
+	"s": Vector2(-16.0, 8.0), "sw": Vector2(16.0, 10.0),
+	"w": Vector2(6.0, 16.0), "nw": Vector2(-8.0, 14.0),
 }
 
 var heading := "nw"
 var index := 0                  # family variant index (intact ones drive)
 var driven := false
-var engine_on := false
-var following := false          # left click toggles cursor-follow
+var engine_on := false          # true the whole time you're seated
 var speed := 0.0
-var auto_target := Vector2.INF  # harness/AI override for the cursor point
-var _drive_dir := Vector2.ZERO  # free-angle motion vector (cursor chase)
+var auto_drive := Vector2.ZERO  # harness/AI override for the WASD vector
+var _drive_dir := Vector2.ZERO  # the direction the car is actually carrying
 
 var _sprite: Sprite2D
 var _poly: CollisionPolygon2D
@@ -41,7 +45,6 @@ var _manifest: Dictionary = {}
 var _player: Player
 var _busy := false              # a door swing is in flight
 var _turn_left := 0.0
-var _click_held := false
 var _lights: Array[PointLight2D] = []
 var _crash_cool := 0.0          # one thump per hit, not one per frame
 var _dust_tex: Texture2D
@@ -125,6 +128,9 @@ func enter(player: Player) -> void:
 	_apply_variant(_base_variant_name())
 	driven = true
 	_busy = false
+	# the engine wakes with you — no separate key any more (user call)
+	engine_on = true
+	Sfx.play_engine_start()
 	set_process(true)
 
 
@@ -135,10 +141,9 @@ func exit_car() -> void:
 	set_process(false)
 	speed = 0.0
 	velocity = Vector2.ZERO
-	if engine_on:
+	if engine_on:                # and it dies when you get out
 		engine_on = false
 		Sfx.play_engine_off()
-	following = false
 	Sfx.set_engine(0.0)
 	for light in _lights:
 		light.enabled = false
@@ -164,59 +169,46 @@ func _process(delta: float) -> void:
 		for light in _lights:
 			light.enabled = not light.enabled
 		Sfx.play_click()
-	if Input.is_action_just_pressed("engine") and not engine_on:
-		engine_on = true
-		Sfx.play_engine_start()
 
-	# cursor-follow driving (user call — the wasd steering "seems off"):
-	# one left CLICK and the car chases the cursor at full throttle; another
-	# click and it rolls to an idle stop
-	var click := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
-	if click and not _click_held and engine_on:
-		following = not following
-	_click_held = click
-	if not engine_on:
-		following = false
-
-	if following:
-		var chase := get_global_mouse_position() if auto_target.x == INF \
-			else auto_target
-		var to_cursor := chase - global_position
-		if to_cursor.length() < ARRIVE_DIST:
-			speed = move_toward(speed, 0.0, BRAKE * delta)   # you're there
+	# WASD driving (user call — eight facings earned it): hold a direction
+	# and the car pulls that way; let go and it rolls down to a stop. The
+	# heading CARVES toward your input instead of snapping, so the car
+	# still has weight — turns tighten as you slow, like a real wheel.
+	var want_dir := auto_drive
+	if want_dir == Vector2.ZERO:
+		want_dir = Input.get_vector("move_left", "move_right",
+			"move_up", "move_down")
+	if want_dir.length() > 0.1:
+		want_dir = want_dir.normalized()
+		if _drive_dir == Vector2.ZERO:
+			_drive_dir = want_dir
 		else:
-			# FREE-ANGLE drive with STEERING INERTIA (user: "add some sort
-			# of physics"): the car CARVES toward the cursor instead of
-			# snapping — the turn tightens as you slow, like a real wheel
-			var want_dir := to_cursor.normalized()
-			if _drive_dir == Vector2.ZERO:
-				_drive_dir = want_dir
-			else:
-				var turn_rate := 3.2 + 2.8 * (1.0 - absf(speed) / MAX_SPEED)
-				_drive_dir = _drive_dir.slerp(want_dir,
-					minf(1.0, delta * turn_rate)).normalized()
-			_turn_left -= delta
-			var want := ""
-			var best_dot := -2.0
-			for h in HEADINGS:
-				var d := (DIRS[h] as Vector2).normalized().dot(_drive_dir)
-				if d > best_dot:
-					best_dot = d
-					want = h
-			# facing swaps keep a little hysteresis so the sprite never
-			# flickers between two diagonals mid-carve
-			if want != heading and _turn_left <= 0.0 and best_dot > \
-					(DIRS[heading] as Vector2).normalized().dot(_drive_dir) + 0.06:
-				_turn_left = TURN_COOLDOWN
-				heading = want
-				_apply_variant(_base_variant_name())
-				_poly.set_deferred("polygon", _collider_points(_base_variant_name()))
-				_aim_lights()
-			speed = move_toward(speed, MAX_SPEED, ACCEL * delta)
+			var turn_rate := 3.6 + 3.2 * (1.0 - absf(speed) / MAX_SPEED)
+			_drive_dir = _drive_dir.slerp(want_dir,
+				minf(1.0, delta * turn_rate)).normalized()
+		_turn_left -= delta
+		var want := ""
+		var best_dot := -2.0
+		for h in HEADINGS:
+			var d := (DIRS[h] as Vector2).normalized().dot(_drive_dir)
+			if d > best_dot:
+				best_dot = d
+				want = h
+		# hysteresis so the sprite never flickers between two facings
+		if want != heading and _turn_left <= 0.0 and best_dot > \
+				(DIRS[heading] as Vector2).normalized().dot(_drive_dir) + 0.06:
+			_turn_left = TURN_COOLDOWN
+			heading = want
+			_apply_variant(_base_variant_name())
+			_poly.set_deferred("polygon", _collider_points(_base_variant_name()))
+			_aim_lights()
+		speed = move_toward(speed, MAX_SPEED, ACCEL * delta)
 	else:
 		speed = move_toward(speed, 0.0, COAST * delta)
 
-	velocity = _drive_dir * speed
+	# the same iso squash the player walks with, so a car crossing the
+	# screen north-south covers ground at the rate the tiles imply
+	velocity = Vector2(_drive_dir.x, _drive_dir.y * 0.6) * speed
 	var pre_speed := absf(speed)
 	move_and_slide()
 	_crash_cool = maxf(0.0, _crash_cool - delta)

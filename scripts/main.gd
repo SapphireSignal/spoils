@@ -209,7 +209,7 @@ func _build_prompt() -> void:
 	_car_hint.scroll_active = false
 	_car_hint.autowrap_mode = TextServer.AUTOWRAP_OFF
 	_car_hint.custom_minimum_size = Vector2(460, 0)
-	_car_hint.text = "[center][color=#de9e41]q[/color] [color=#819796]engine[/color]     [color=#de9e41]left click[/color] [color=#819796]follow the cursor / stop[/color]     [color=#de9e41]e[/color] [color=#819796]lights[/color]     [color=#de9e41]f[/color] [color=#819796]step out[/color][/center]"
+	_car_hint.text = "[center][color=#de9e41]w a s d[/color] [color=#819796]drive[/color]     [color=#de9e41]e[/color] [color=#819796]lights[/color]     [color=#de9e41]f[/color] [color=#819796]step out[/color][/center]"
 	_car_hint.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	_car_hint.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_car_hint.grow_vertical = Control.GROW_DIRECTION_BEGIN

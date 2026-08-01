@@ -7,6 +7,25 @@ This file carries everything a fresh session needs that isn't in those two.
 
 ## Where we are
 
+- **Version v0.6.24 SHIPPED** (28th release on 2026-08-01 — read
+  CHANGELOG.md; all same-day). **v0.6.24 = 8-DIRECTION VEHICLES + the
+  new car controls.** Sample was approved by the user first (process:
+  sample → sign-off → fleet). gen_art: `_veh_profile` (length-agnostic
+  profile), `make_vehicle_flank` (screen-horizontal heading; flank
+  dead-on, roof a flat band above, ends edge-on), `make_vehicle_head`
+  (screen-vertical; FOUR solid bands — face/hood-or-trunk/glass/roof,
+  far-to-near with skirt fills; NEVER per-station, it ladders into
+  stripes). Families `vehicle_{n,s,e,w}_i` + `_door` frames + light
+  coords + per-facing colliders sit beside the old diagonals, so
+  `_base_variant_name()` needs no special cases. ROOF_DEPTH 12→18
+  (user approved WIDER cars — the old ones were narrower than real
+  cars). CONTROLS (user call): engine auto-starts on enter and dies on
+  exit (the `engine` action is DELETED from project.godot, settings
+  BIND_ACTIONS/labels/defaults, and the panel), WASD drives all eight
+  headings with the v0.6.23 carve + iso squash on the vertical,
+  cursor-follow REMOVED, E lights, F in/out. Harness drives via
+  `auto_drive` and asserts engine-on-entry / engine-off-on-exit.
+  Perf 240 / 4.72ms / ~5.3k.
 - **Version v0.6.23 SHIPPED** (27th release on 2026-08-01 — read
   CHANGELOG.md; all same-day). **v0.6.23 = THE REAL MAP + honest second
   floors + car feel.** M-map rebuilt: fit-whole-district open at the
@@ -28,24 +47,10 @@ This file carries everything a fresh session needs that isn't in those two.
   hysteresis + play_car_bump crash thump + full-speed smoke + 12s
   amber-key RichTextLabel hint. Engine "static" fixed (pitch slew+cap
   1.16, low-pass "engine" bus); foliage muted while driving. Trails
-  never cross sidewalks; dash halves paired (_dash_here). **NEXT
-  VEHICLE STEP (user ask, deliberately staged): 8-direction vehicle
-  sheets so the nose tracks the cursor at 45 degrees. SAMPLE BUILT
-  2026-08-01 and SENT — AWAITING SIGN-OFF; do not convert the fleet
-  until the user approves. gen_art.py: `_veh_profile` (length-agnostic
-  side profile), `make_vehicle_flank` (screen-HORIZONTAL heading: the
-  flank faces camera dead-on, roof is a flat band straight above, both
-  ends edge-on) and `make_vehicle_head` (screen-VERTICAL heading: both
-  flanks edge-on, so it is FOUR solid bands — end face / hood-or-trunk
-  / raked glass / roof, drawn far-to-near with skirt fills; per-station
-  loops LADDER into stripes, never do that). Registered as
-  vehicle8_{n,s,e,w}_0 (scheme 4 steel-blue sedan) — sample names, the
-  game references NONE of them. Known: the new views are drawn a touch
-  wider in proportion than the old (2,1) sheets, whose roof depth (12)
-  under-scales a real car's width; matching them means widening the
-  four diagonal views too — offered to the user, their call. On
-  approval: door_open frames + light coords + colliders per facing,
-  then DIRS/HEADINGS in driveable_car.gd goes 4 → 8.** **v0.6.22 = THE FIXED
+  never cross sidewalks; dash halves paired (_dash_here). (The 8-direction vehicle work SHIPPED in v0.6.24 — see above.
+  LESSON WORTH KEEPING: sample → user sign-off → fleet conversion is
+  the right shape for any art change that touches everything; it is
+  what the end-face saga bought us.) **v0.6.22 = THE FIXED
   MAP** (user call, retroactive to day one: NO procedural rerolls, ever —
   quests will point at real addresses). DISTRICT_SEED "transit-01" in
   world_builder.gd IS the district (picked from a 5-seed audition: towns

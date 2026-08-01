@@ -1516,7 +1516,10 @@ def make_rack(variant: int) -> tuple[Canvas, tuple, list]:
     c.outline_auto()
     return c, (38, 51), ["diamond", 34.0, 14.0]
 
-ROOF_DEPTH = 12  # top-face depth in px — the old 6 read as a paper-thin car
+ROOF_DEPTH = 18  # top-face depth in px. 6 read as paper, 12 still read as a
+                 # narrow car — this matches the TRUE body width the head-on
+                 # and flank views show, so all 8 facings are one vehicle
+                 # (user approved the wider cars 2026-08-01)
 
 
 def _diag_poly(half_long: float, half_wide: float) -> list:
@@ -1682,9 +1685,11 @@ def make_vehicle_flank(kind: str, scheme: int, broken: bool = False,
     origin_full = (ox + L // 2, oy)
     cropped, origin = crop_canvas(c, origin_full)
     lights_rel = [[px - origin_full[0], py - origin_full[1]] for (px, py) in lights_px]
-    return cropped, origin, ["poly",
-        [-L / 2.0, -3.0, L / 2.0, -3.0, L / 2.0, 3.0, -L / 2.0, 3.0],
-        lights_rel]
+    # ground footprint: long across the screen, shallow front-to-back
+    half_long = 30.0 if kind == "car" else 32.0
+    return cropped, origin, ["poly", [
+        -half_long, -7.0, half_long, -7.0, half_long, 7.0, -half_long, 7.0]], \
+        lights_rel
 
 
 def make_vehicle_head(kind: str, scheme: int, toward: bool,
@@ -1803,9 +1808,13 @@ def make_vehicle_head(kind: str, scheme: int, toward: bool,
     origin_full = (cx, oy)
     cropped, origin = crop_canvas(c, origin_full)
     lights_rel = [[px - origin_full[0], py - origin_full[1]] for (px, py) in lights_px]
-    return cropped, origin, ["poly",
-        [-W / 2.0, -6.0, W / 2.0, -6.0, W / 2.0, 6.0, -W / 2.0, 6.0],
-        lights_rel]
+    # ground footprint: the car's true width, foreshortened front-to-back
+    # to match what the sprite shows (a deeper box would stop you before
+    # the art touched anything)
+    half_w = W / 2.0
+    return cropped, origin, ["poly", [
+        -half_w, -10.0, half_w, -10.0, half_w, 10.0, -half_w, 10.0]], \
+        lights_rel
 
 
 def make_vehicle(kind: str, scheme: int, rev: bool = False,
@@ -3950,6 +3959,16 @@ def prop_inventory() -> tuple[dict, dict]:
         fam("vehicle_se", i, art_se)
         fam("vehicle_ne", i, mirror_prop(art_nw))
         fam("vehicle_sw", i, mirror_prop(art_se))
+        # the FOUR angles a (2,1) sheet cannot draw: the flank view (the
+        # car crossing the screen) and the two end-on views. With these
+        # the nose can track the cursor through all 8 headings.
+        art_e = make_vehicle_flank(kind, scheme, broken=broken)
+        fam("vehicle_e", i, art_e)
+        fam("vehicle_w", i, mirror_prop(art_e))
+        fam("vehicle_s", i, make_vehicle_head(kind, scheme, toward=True,
+                                              broken=broken))
+        fam("vehicle_n", i, make_vehicle_head(kind, scheme, toward=False,
+                                              broken=broken))
         if not broken:
             # driveable cars: the door-open enter/exit frame (texture swap)
             door_nw = make_vehicle(kind, scheme, rev=False, door_open=True)
@@ -3958,15 +3977,13 @@ def prop_inventory() -> tuple[dict, dict]:
             props[f"vehicle_se_{i}_door"] = door_se
             props[f"vehicle_ne_{i}_door"] = mirror_prop(door_nw)
             props[f"vehicle_sw_{i}_door"] = mirror_prop(door_se)
-    # SAMPLE: the four angles a (2,1) sheet can't draw — the flank view
-    # (screen-horizontal heading) and the two head-on views. Nothing in
-    # the game references these yet; they exist for user sign-off before
-    # the whole fleet gets converted to 8 directions.
-    sample_flank = make_vehicle_flank("car", 4)   # scheme 4 = the steel-blue
-    props["vehicle8_e_0"] = sample_flank          # sedan already in the fleet
-    props["vehicle8_w_0"] = mirror_prop(sample_flank)
-    props["vehicle8_s_0"] = make_vehicle_head("car", 4, toward=True)
-    props["vehicle8_n_0"] = make_vehicle_head("car", 4, toward=False)
+            door_e = make_vehicle_flank(kind, scheme, door_open=True)
+            props[f"vehicle_e_{i}_door"] = door_e
+            props[f"vehicle_w_{i}_door"] = mirror_prop(door_e)
+            props[f"vehicle_s_{i}_door"] = make_vehicle_head(
+                kind, scheme, toward=True, door_open=True)
+            props[f"vehicle_n_{i}_door"] = make_vehicle_head(
+                kind, scheme, toward=False, door_open=True)
     # buses for the depot: two liveries parked, two broken into
     bus_specs = [(1, False), (2, False), (0, True), (3, True)]
     for i, (scheme, broken) in enumerate(bus_specs):
