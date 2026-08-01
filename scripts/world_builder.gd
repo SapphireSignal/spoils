@@ -21,7 +21,12 @@ const MAP_H := 256
 const TILE := Vector2i(64, 32)
 const EDGE_FOREST := 85      # content margin: gameplay stays inside the
                              # treeline fringe (inset 78..85, inside the ring)
-const BARRIER_INSET := 78    # the barricade ring — the map's ADVERTISED edge.
+const BARRIER_INSET := 66    # the barricade ring — the map's ADVERTISED edge.
+                             # 78 gave ~100 playable cells and squeezed the
+                             # zone blocks so hard the scrapyard hall had to
+                             # shrink to fit beside the rails (user: "make
+                             # the map a bit bigger, so the warehouse can be
+                             # better"). 66 gives ~124 and roomier blocks.
 # v0.6.19: nudged in again ("just make the map a bit smaller again") —
 # playable diamond ~100 cells now.
 # v0.6.18: the district shrank AGAIN ("way smaller, its still huge" — user,
@@ -913,8 +918,8 @@ func _plan_scrap_hall(b: Vector2i) -> void:
 		attempts += 1
 		await _tick()
 		var size := Vector2i(
-			_rng.randi_range(11, maxi(11, mini(14, r.size.x - 6))),
-			_rng.randi_range(7, maxi(7, mini(9, (r.size.y / 2) - 2))))
+			_rng.randi_range(13, maxi(13, mini(17, r.size.x - 6))),
+			_rng.randi_range(9, maxi(9, mini(12, (r.size.y / 2) - 2))))
 		if size.x > r.size.x - 2 or size.y > r.size.y - 2:
 			continue
 		var lo_y := maxi(r.position.y, r.end.y - size.y - 5)
@@ -943,7 +948,8 @@ func _plan_scrap_hall(b: Vector2i) -> void:
 	# full footprint won't fit between the rail and the block edge, keep
 	# SHRINKING it until something does. A smaller hall is a building; no
 	# hall is the old bug.
-	for size in [Vector2i(12, 8), Vector2i(11, 7), Vector2i(10, 6),
+	for size in [Vector2i(16, 11), Vector2i(15, 10), Vector2i(14, 9),
+			Vector2i(12, 8), Vector2i(11, 7), Vector2i(10, 6),
 			Vector2i(9, 6), Vector2i(8, 5), Vector2i(7, 5), Vector2i(6, 4)]:
 		if size.x > r.size.x - 2 or size.y > r.size.y - 2:
 			continue
@@ -1157,18 +1163,10 @@ func _paint_terrain() -> void:
 			if _rail_cross.has(cell) and _cell_inset(cell) >= BARRIER_INSET - 2:
 				tile_name = "rail_cross_%s" % str(_rail_cross[cell])
 			elif _rail_cells.has(cell) and _cell_inset(cell) >= BARRIER_INSET - 2:
-				# the track wears in STRETCHES, not per tile: a run of
-				# overgrown, a run of rusted, then clean again. Per-cell
-				# rolls would read as noise instead of neglect.
-				var axis := str(_rail_cells[cell])
-				var run := posmod(hash(Vector3i((cell.x + cell.y) / 7,
-					0, _zone_salt)), 100)
-				if run < 26:
-					tile_name = "rail_%s_weeds" % axis
-				elif run < 40:
-					tile_name = "rail_%s_rust" % axis
-				else:
-					tile_name = "rail_%s" % axis
+				# ONE track the whole way: same ties, same rail, tile to
+				# tile, so the line reads as a single connected railway
+				# (user call — the worn variants broke it into pieces)
+				tile_name = "rail_%s" % str(_rail_cells[cell])
 			elif _ballast.has(cell) and _cell_inset(cell) >= BARRIER_INSET - 2:
 				tile_name = "ballast_%d" % _rng.randi_range(0, 2)
 			elif _plaza.has(cell):

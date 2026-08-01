@@ -479,42 +479,23 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
                 if (sx, sy + 1) in region:
                     c.set(sx, sy + 1, C("151d28"))
         along_x = "_x" in kind
-        # the line runs dead straight for the whole district, so the TILES
-        # have to carry the variety: a plain length, an overgrown length,
-        # and a rusted length with the odd tie missing (user: "it does
-        # look a bit odd the track being all a straight line")
-        weedy = kind.endswith("_weeds")
-        rusted = kind.endswith("_rust")
-        gap_at = rng.randrange(8) if rusted else -1
+        # ONE track, the whole way across the district: wooden ties under
+        # steel rail, identical tile to tile so the line reads as
+        # continuous and connected (user call — the worn/overgrown
+        # variants made it look like different broken bits of railway).
         for (x, y) in region:
             p = (x - 32) * 0.5 - (y - 16) if along_x else (x - 32) * 0.5 + (y - 16)
             q = (x - 32) * 0.5 + (y - 16) if along_x else (x - 32) * 0.5 - (y - 16)
             if abs(p) < 6.5 and q % 8 < 2.2:            # wooden tie
-                if rusted and int(q // 8) % 5 == gap_at % 5:
-                    continue                             # a tie rotted away
                 c.set(x, y, C("341c27") if q % 8 < 1.4 else C("241527"))
-        if weedy:
-            # grass through the ballast and up between the rails — this
-            # stretch has not carried much traffic
-            for _ in range(rng.randint(14, 20)):
-                gx, gy = 4 + rng.randrange(56), 3 + rng.randrange(26)
-                if (gx, gy) not in region:
-                    continue
-                blade = rng.randint(2, 4)
-                for k in range(blade):
-                    if (gx, gy - k) in region:
-                        c.set(gx, gy - k,
-                              C("25562e") if k < blade - 1 else C("468232"))
-        head = C("884b2b") if rusted else C("819796")
-        web = C("602c2c") if rusted else C("394a50")
         for (x, y) in region:                            # rails OVER the ties
             p = (x - 32) * 0.5 - (y - 16) if along_x else (x - 32) * 0.5 + (y - 16)
             for rail_c in (-3.5, 3.5):
                 d = p - rail_c
                 if abs(d) < 0.8:
-                    c.set(x, y, head)                    # polished, or rusted
+                    c.set(x, y, C("819796"))            # polished head
                 elif 0.8 <= d < 1.8:
-                    c.set(x, y, web)                     # web shadow side
+                    c.set(x, y, C("394a50"))            # web shadow side
 
     elif kind == "plaza":
         # courtyard pavers: pale slabs with a diamond joint grid, period 16
@@ -587,8 +568,6 @@ FLOOR_TILES = [
     ("ballast_0", ("ballast", 0)), ("ballast_1", ("ballast", 1)),
     ("ballast_2", ("ballast", 2)),
     ("rail_x", ("rail_x", 0)), ("rail_y", ("rail_y", 0)),
-    ("rail_x_weeds", ("rail_x_weeds", 0)), ("rail_y_weeds", ("rail_y_weeds", 0)),
-    ("rail_x_rust", ("rail_x_rust", 0)), ("rail_y_rust", ("rail_y_rust", 0)),
     ("rail_cross_x", ("rail_cross_x", 0)), ("rail_cross_y", ("rail_cross_y", 0)),
     ("plaza_0", ("plaza", 0)), ("plaza_1", ("plaza", 1)), ("plaza_2", ("plaza", 2)),
 ]

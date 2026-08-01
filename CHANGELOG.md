@@ -3,6 +3,27 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.36] — 2026-08-01
+
+### Changed
+- **The district is bigger** (user: "make the map a bit bigger, so the
+  warehouse can be better, its too small now"). `BARRIER_INSET` 78 → 66,
+  taking the playable district from roughly 100 cells across to ~124.
+  Every zone block gains room — the scrapyard block went 20×14 → 28×22 —
+  and the scrapyard hall's size ladder now starts at 16×11 instead of
+  12×8, so it builds as a proper warehouse instead of shrinking to
+  squeeze past the rails.
+- **One railway, the whole way across** (user: "it should be the same
+  track all the way across the map, same look, the wood planks with
+  steel beam... make sure the railroad tracks are all connected").
+  **Reverted the worn/overgrown track variants added in v0.6.33** — the
+  stretches of rusted rail with rotted ties and weed-grown ballast broke
+  the line into what read as separate, disconnected bits of railway.
+  There is one rail tile again: wooden ties under steel rail, identical
+  tile to tile, continuous end to end. The trackside dressing from
+  v0.6.33 stays — poles, signals and lineside junk were never the
+  problem, the track surface was.
+
 ## [0.6.35] — 2026-08-01
 
 ### Fixed

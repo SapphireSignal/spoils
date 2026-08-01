@@ -66,6 +66,12 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.36", ["the district is bigger: every block has more room, and",
+		"the scrapyard warehouse is a proper hall again",
+		"one railway all the way across the map now - same ties,",
+		"same rail, tile to tile, properly connected",
+		"(the worn and overgrown stretches are gone, they made it",
+		"look like separate broken bits of track)"]],
 	["v0.6.34", ["the scrapyard warehouse is back. fixing the track",
 		"running under it had quietly deleted it instead,",
 		"which put the racks back out in the open",
