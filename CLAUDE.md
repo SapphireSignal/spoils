@@ -7,6 +7,35 @@ This file carries everything a fresh session needs that isn't in those two.
 
 ## Where we are
 
+- **Version v0.6.48 SHIPPED** (2026-08-01, overnight while the user
+  slept — they pre-authorized the batch and went to bed; they wake to
+  v0.6.45–48 plus the completed sweep versions below). The overnight
+  four:
+  - **v0.6.45 the car faces where it drives** — root cause was double:
+    `_veh_profile` runs front→rear from index 0, the flank painter
+    drew index 0 at the LEFT while believing front-right (lights
+    painted end-swapped), AND the e/w registration was inverted. The
+    drawn flank art IS the westbound sprite now. Plus INSTANT WASD
+    facing (user call: carve/slerp/hysteresis deleted — input vector →
+    nearest of 8, applied immediately).
+  - **v0.6.46** — the sparking power box is pinned to the SAFEHOUSE
+    (roll burned; repair quest hangs off it later); mara's popup is
+    SILENT both ways (Sfx.play_radio intentionally kept unused).
+  - **v0.6.47 the volume page** — settings → volume: master/music/
+    effects/ambient sliders, live + persisted. REAL buses (music/sfx/
+    ambient → Master) created by Settings BEFORE Sfx/Music load; the
+    engine's low-passed bus sends to ambient. RULE: every new
+    AudioStreamPlayer must set `player.bus` or it bypasses the mix
+    (verified tonight: zero unbussed players). Harness --menu=volume.
+  - **v0.6.48** — shelters whose span reaches a crossing road within
+    2 cells along their run are dropped (rolls burn; fixed district
+    otherwise untouched; verified pixel-identical at the toll
+    crossing minus the offender).
+  - Overnight sweep pass: all audio players bussed, no stray
+    play_radio callers, layout probes identical, perf 240 avg /
+    4.45 ms worst / ~8k nodes (session best). Known cosmetic stales:
+    radio.say() docstring still says "key up" (the squelch is gone);
+    Sfx.play_radio/_synth_squelch unused on purpose.
 - **Version v0.6.44 SHIPPED** (2026-08-01). **The sweep is COMPLETE**:
   v0.6.42 = severe finds, v0.6.43 = the remaining fifteen, v0.6.44 =
   the verified dead-code deletion. All three verified layout-identical
@@ -159,39 +188,19 @@ This file carries everything a fresh session needs that isn't in those two.
 
 ## THE QUEUE (as of v0.6.44 — work straight down it)
 
-**OVERNIGHT BATCH (user call 2026-08-01, sent before sleeping — work
-these FIRST, autonomously; ship small versions, update this file after
-every one; STOP with a clean handoff before the usage budget runs out):**
-a. ~~Vehicles face where they drive~~ **DONE v0.6.45** — root cause:
-   _veh_profile runs front→rear from index 0, flank painter drew index
-   0 at the LEFT believing front-right, so lights were end-swapped AND
-   the e/w registration was inverted. Drawn flank art = WESTBOUND now.
-   Diagonals + head-ons verified correct. Queue item 6 below is the
-   same bug — also done.
-b. ~~Instant WASD car facing~~ **DONE v0.6.45** — carve/slerp/
-   hysteresis/TURN_COOLDOWN deleted; input vector → nearest of 8,
-   applied immediately.
-c. ~~Safehouse power box always broken/sparking~~ **DONE v0.6.46**
-   (roll burned, _spark_house pinned to the safehouse plot; verified
-   in-shot: lid-ajar box arcing left of the spawn door).
-d. ~~No sound on mara's radio popup~~ **DONE v0.6.46** (both
-   play_radio calls removed from radio.gd; Sfx.play_radio kept unused
-   on purpose for M2's walk-in — delete it if M2 doesn't want it).
-e. ~~Volume panel in settings~~ **DONE v0.6.47** — buses music/sfx/
-   ambient created by Settings (loads before Sfx/Music), engine bus
-   sends to ambient, sliders live in scripts/volume_panel.gd, both
-   menus host it, harness --menu=volume. NOTE for new sounds: set
-   `player.bus` — an unbussed player bypasses the mix and only obeys
-   master.
-Then the standing queue below (skip 1 — needs the user's photo; skip
-6/7 sample-sign-off items and the road-grid rework — need the user);
-then ANOTHER SWEEP; then final handoff.
+**THE OVERNIGHT BATCH IS DONE** (all five user asks shipped as
+v0.6.45–48 — detail in "Where we are" above). What remains below is
+what the next session works, in order. Items needing THE USER are
+marked; don't attempt them without them.
 
-1. **Yellow centreline still one lane off** — the user photographed it
-   with RED LINES showing the correct position. Fixed twice already by
-   reasoning; verify EMPIRICALLY against that shot this time.
-2. **Roads shouldn't be a symmetrical grid** — some areas with no roads,
-   and broken road ends with rubble where they cut off.
+1. **Yellow centreline still one lane off** — NEEDS THE USER: their
+   red-line photo is in an old chat; ask them to re-send it, then
+   verify EMPIRICALLY against it (fixed twice by reasoning, failed
+   twice).
+2. **Roads shouldn't be a symmetrical grid** — NEEDS THE USER (it's a
+   deliberate layout revision of the fixed district: re-audition +
+   their sign-off): some areas with no roads, broken road ends with
+   rubble where they cut off.
 3. ~~Bus shelters half in the road at crossings~~ **DONE v0.6.48**
    (_shelter_overhangs: crossing road within 2 cells along the run →
    the piece is dropped, rolls burn identically).
@@ -202,14 +211,18 @@ then ANOTHER SWEEP; then final handoff.
    as dead. Give conifers NEEDLES; dead snags stay bare.
 6. ~~Flip vehicles~~ **DONE v0.6.45** (was the flank facing bug — see
    the overnight batch above).
-7. **Pickup bed** — shade the interior so it reads as a container, put a
-   box in it, sample sheet across all angles.
+7. **Pickup bed** — NEEDS THE USER (sample → sign-off): shade the
+   interior so it reads as a container, put a box in it, sample sheet
+   across all angles.
 8. **Catalogue variety** — 2-variant families left (bench, dumpster,
    shelter, vending, newsbox, forklift, planter, swing) + singleton
    crane/sandbox. Deeper fix: parameterise builders so SHAPES differ,
    not just wear.
-9. **Changelog panel fps dip** — still unmeasured (the transit-load one
-   was the 233 ms preview.png stall, fixed in v0.6.41).
+9. **Changelog panel fps dip** — needs INTERACTIVE measurement (the
+   user's 240 Hz eye; menu-shot fps numbers are a known harness
+   artifact). Note: the panel builds ONCE at menu _ready, so if a dip
+   exists it's likely the first-layout pass of ~48 versions of Labels
+   on first open — pre-layout offscreen or build incrementally.
 
 ## PROCESS (learned the hard way this session)
 
