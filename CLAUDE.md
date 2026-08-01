@@ -7,7 +7,12 @@ This file carries everything a fresh session needs that isn't in those two.
 
 ## Where we are
 
-- **Version v0.6.5** ("the barricade update"), committed & pushed. Map
+- **Version v0.6.9** (see CHANGELOG for v0.6.6-v0.6.9: prone stance on Z,
+  splash screen + menu music + full audio suite, lattice-fence barricade
+  line, 3D barrels, complete vehicles, wheel zoom ladder w/ edge
+  auto-tighten, anti-banding dither film, clip audit in gen_art — generation
+  FAILS on canvas-edge content, keep it that way). Older baseline: v0.6.5
+  ("the barricade update"), committed & pushed. Map
   **"transit"** (user-named), 320×320 total with the PLAYABLE district inside
   a randomized barricade ring (inset 31 cells); the world visibly continues
   beyond it but escalating sniper fire owns the buffer (fallen-raider bodies
