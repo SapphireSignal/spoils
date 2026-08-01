@@ -7,13 +7,17 @@ This file carries everything a fresh session needs that isn't in those two.
 
 ## Where we are
 
-- **Version v0.6.16 SHIPPED** (nineteen releases on 2026-08-01, v0.6.3 →
-  v0.6.16 — read CHANGELOG.md for the full arc). **v0.6.17 is WIP,
-  COMMITTED but NOT tagged/changelogged — FINISH IT FIRST next session.**
+- **Version v0.6.17 SHIPPED** (twenty releases on 2026-08-01, v0.6.3 →
+  v0.6.17 — read CHANGELOG.md for the full arc). Fog + night shots viewed
+  and CONFIRMED GOOD, perf at 240-baseline (day/morning/night), 2x shots
+  sent to the user. **AWAITING USER REACTIONS on the v0.6.17 tuning
+  watch-list** (below); otherwise NEXT = Milestone 2 on their "go".
+- Watch-list: day length (10 min shipped; 8-min offer stands), night too
+  dark/not enough, fog strength, 24-38s music pause length, thunder/rain
+  levels. Small tunings → v0.6.18.
 
-## v0.6.17 WIP — state + exact remaining steps (2026-08-01 chat handoff)
+## v0.6.17 systems (shipped 2026-08-01)
 
-DONE (in the WIP commit, smoke-passing):
 - MORNING FOG: fog_0..2.png (soft alpha, gen_art make_fog_puffs), env fog
   pool (32 puffs, FOG_ALPHA_MAX 0.5) anchored to builder fog_spots
   (forest 5% + road spots every ~9 cells), spawns from a NEAR-VIEW list
@@ -38,21 +42,6 @@ DONE (in the WIP commit, smoke-passing):
   _shot applies env flags, waits 10 frames, applies AGAIN (fog prefill
   needs the SETTLED camera — flags run before the camera catches the
   --at teleport).
-
-REMAINING for v0.6.17 (in order):
-1. **VIEW shots/v0617_fog.png** (taken with all fixes; NEVER visually
-   confirmed). If fog STILL invisible: debug rendered visibility itself
-   (temp alpha 1.0 test; check fog_layer z=55 renders; verify puffs'
-   positions vs camera in a rendered probe). Headless/rendered probes
-   PROVE spawning works (active=12-32) — only the LOOK is unconfirmed.
-2. VIEW shots/v0617_night.png — night darkness verify (user wants
-   "hard to see, that's why we have a flashlight").
-3. Perf run (--perf --seed=v0617 + a --tod=0.9 night pass).
-4. CHANGELOG_ENTRIES v0.6.17 + CHANGELOG.md (fog, leaves, 10-min day,
-   dark nights, all audio fades) → tag v0.6.17 → push --tags → send the
-   user fog + night shots.
-5. Watch for user reactions: day length (8 min?), night too dark/not
-   enough, fog strength, music pause length, thunder/rain levels.
 - v0.6.16: raid music = USER'S 3 AUDITIONED PICKS (guitar02/harp01/piano01
   as raid_0..2) rotating random-no-repeat, CONTINUOUS from raid start to
   death (2-5s breaths; stop on died, restart post-respawn; the audition
