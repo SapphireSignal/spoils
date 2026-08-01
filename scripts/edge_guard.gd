@@ -30,6 +30,7 @@ var _rng := RandomNumberGenerator.new()
 var _rounds: Array[Node2D] = []
 var _round_vel: Array[Vector2] = []
 var _round_age: Array[float] = []
+var _pending: Array[float] = []  # countdowns to the volley's staggered shots
 
 
 func setup(player: Player, world: Node2D, map_center: Vector2, barrier_f: float) -> void:
@@ -41,21 +42,40 @@ func setup(player: Player, world: Node2D, map_center: Vector2, barrier_f: float)
 
 	var layer := CanvasLayer.new()
 	layer.layer = 75
+	# a full-rect root gives the anchors a real rect to center against (the
+	# label used to hang bare under the CanvasLayer and could drift off-center
+	# on scaled displays — user report). Fractional anchors: dead center
+	# horizontally, a touch above the middle vertically, on ANY resolution.
+	var root := Control.new()
+	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_label = Label.new()
 	_label.text = "turn back or you will get sniped"
 	_label.theme = UITheme.get_theme()
-	_label.set_anchors_preset(Control.PRESET_CENTER)
+	_label.anchor_left = 0.5
+	_label.anchor_right = 0.5
+	_label.anchor_top = 0.44
+	_label.anchor_bottom = 0.44
 	_label.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_label.grow_vertical = Control.GROW_DIRECTION_BOTH
-	_label.position.y -= 58.0  # a bit higher than the middle, per spec
 	_label.add_theme_color_override("font_color", Color("cf573c"))
 	_label.visible = false
-	layer.add_child(_label)
+	root.add_child(_label)
+	layer.add_child(root)
 	add_child(layer)
 
 
 func _process(delta: float) -> void:
 	_update_rounds(delta)
+	# staggered volley shots come due even while retreating — _spawn_round
+	# itself holds fire once the runner is back inside the line
+	var pi_ := _pending.size() - 1
+	while pi_ >= 0:
+		_pending[pi_] -= delta
+		if _pending[pi_] <= 0.0:
+			_pending.remove_at(pi_)
+			_spawn_round()
+		pi_ -= 1
 	if _player == null or _player.dead:
 		_leave_zone()
 		return
@@ -79,7 +99,7 @@ func _process(delta: float) -> void:
 			_shot_timer = 0.8
 		else:
 			_shot_timer = _rng.randf_range(SHOT_INTERVAL_MIN, SHOT_INTERVAL_MAX)
-		_fire_round(u, depth)
+		_fire_volley(depth)
 
 
 func _leave_zone() -> void:
@@ -89,29 +109,42 @@ func _leave_zone() -> void:
 	_shot_timer = 0.0
 
 
-func _fire_round(u: Vector2, depth: float) -> void:
-	# a VOLLEY: more than one sniper owns this buffer. Two or three rounds
-	# converge from different off-screen angles at once; the deeper you
-	# push, the less any of them miss.
+func _fire_volley(depth: float) -> void:
+	# a VOLLEY: more than one sniper owns this buffer, but they are separate
+	# people — the first fires now, the rest come STAGGERED fractions of a
+	# second later (user call: never all at the same time), each with its
+	# own crack and its own fresh read on the runner.
 	var volley := 2 if depth <= ESCALATE_DEPTH else 3
 	if depth <= ESCALATE_DEPTH and _rng.randf() < 0.35:
 		volley = 3
-	for shot in volley:
-		_spawn_round(u, depth)
-	Sfx.play_crack()
+	_spawn_round()
+	for extra in range(1, volley):
+		_pending.append(_rng.randf_range(0.14, 0.42) * float(extra))
 
 
-func _spawn_round(u: Vector2, depth: float) -> void:
+func _spawn_round() -> void:
+	if _player == null or _player.dead:
+		return
+	var u := _player.global_position - _map_center
+	var depth := absf(u.x) * 0.5 + absf(u.y) - _barrier_f
+	if depth < 8.0:
+		return  # turned back mid-volley: the shooters hold fire
 	var out_dir := Vector2(0.5 * signf(u.x), signf(u.y)).normalized()
 	# each shooter sits at a different angle along the treeline
 	out_dir = out_dir.rotated(_rng.randf_range(-0.5, 0.5))
 	var side := out_dir.orthogonal()
-	var target := _player.global_position
+	# PREDICTED aim (user call): lead the runner — the round flies at where
+	# you are HEADED, not where you are. Slight per-shooter over/under-lead
+	# keeps direction changes worth something.
+	var lead_time := SHOT_SPAWN_DIST / SHOT_SPEED
+	var target := _player.global_position \
+		+ _player.velocity * lead_time * _rng.randf_range(0.75, 1.05)
 	var start := target + out_dir * SHOT_SPAWN_DIST \
 		+ side * _rng.randf_range(-140.0, 140.0)
 	var err := 2.0 if depth > ESCALATE_DEPTH else 7.0
 	var aim := target + side * _rng.randf_range(-err, err)
 	var vel := (aim - start).normalized() * SHOT_SPEED
+	Sfx.play_crack()
 
 	var round_node := Node2D.new()
 	round_node.z_index = 70

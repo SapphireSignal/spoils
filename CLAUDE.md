@@ -7,8 +7,16 @@ This file carries everything a fresh session needs that isn't in those two.
 
 ## Where we are
 
-- **Version v0.6.13**, all committed/tagged/pushed (sixteen releases on
-  2026-08-01, v0.6.3 → v0.6.13 — read CHANGELOG.md for the full arc).
+- **Version v0.6.14**, all committed/tagged/pushed (seventeen releases on
+  2026-08-01, v0.6.3 → v0.6.14 — read CHANGELOG.md for the full arc).
+- v0.6.14 = "the streets update": map HALVED (ring inset 31→72, playable
+  ~176², counts rebalanced, nodes ~11k), sidewalks + worn crosswalks +
+  manholes + dead traffic lights (5 damage states, mirrored per corner),
+  weathering zones (concrete_worn/damp via offset hash grids), warehouses
+  now 13-17×9-12 halls with wider human-stacked racks, snipers PREDICT
+  (lead = velocity × flight time, 0.75-1.05 per-shooter) and volleys
+  STAGGER (0.14-0.42s × index, _pending array in edge_guard._process),
+  turn-back warning anchored at (0.5, 0.44) fractional — never px offsets.
 
 ## RESOLVED 2026-08-01: the missing-car-part saga (six rounds)
 
@@ -32,7 +40,7 @@ Audio taste addendum learned the same day: footsteps at -18dB were
   FAILS on canvas-edge content, keep it that way). Older baseline: v0.6.5
   ("the barricade update"), committed & pushed. Map
   **"transit"** (user-named), 320×320 total with the PLAYABLE district inside
-  a randomized barricade ring (inset 31 cells); the world visibly continues
+  a randomized barricade ring (inset 72 cells since v0.6.14); the world visibly continues
   beyond it but escalating sniper fire owns the buffer (fallen-raider bodies
   past the line sell it). Camera NEVER clamps (user call). Doors interactive
   (F, with prompt), flashlight (E, real click), DARK nights, flickering lamps,
@@ -40,9 +48,13 @@ Audio taste addendum learned the same day: footsteps at -18dB were
   deploys, fresh seeded layout per deploy.
 - **Milestone 1 (walkable world) is DONE** (~18 user feedback passes, see
   CHANGELOG v0.2.0 → v0.6.5).
-- **NEXT: Milestone 2 — GUNPLAY, to ship as v0.7.0.** Mouse aim, hitscan with
-  tracers, muzzle flash, screen shake, destructible props, first synthesized
-  gun sounds. The user starts it by saying "go".
+- **NEXT: Milestone 2 — GUNPLAY + THE TUNNELS, to ship as v0.7.0.** Mouse
+  aim, hitscan with tracers, muzzle flash, screen shake, destructible props,
+  synthesized gun sounds — PLUS the underground tunnel system (user request
+  2026-08-01, specced in DESIGN.md §8): secret bookshelf passages in some
+  houses, exactly TWO interactive street manholes, F-interact ladders down
+  AND back up, dark tight corridors where the flashlight matters. The user
+  starts it by saying "go".
 - After that (design doc §8): M3 human enemies (0.8), M4 the loop with
   TARKOV-STYLE loot: grid inventory, containers, character doll gear slots
   (0.9), M5 fake-player bots/lighting/trader (1.0), M6 quests (1.1), M7 second
@@ -73,7 +85,13 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   look per building, interactive Door on a visible side, entrance pockets kept
   clear inside AND out), lane-correct road vehicles (some broken + litter),
   sparse mostly-dead street lamps, sticks, clustered scatter, puddle spots.
-  BARRICADE RING at inset 31 = the advertised map edge (art axis x/y, flats
+  sidewalks flanking ~62% of road sides (pale slab tiles, v/h orientations,
+  13% broken), worn crosswalks on every intersection arm, rare manhole
+  tiles, dead traffic lights at crossings (traffic_light[_m]_0-3 + _flat,
+  placed 0-2 per intersection, mirrored so heads hang over the asphalt),
+  district weathering zones (concrete_worn/damp picked by two offset
+  8-cell hash grids off _zone_salt — probabilistic mix, no patch grid).
+  BARRICADE RING at inset 72 = the advertised map edge (art axis x/y, flats
   walkable-over, road breaches get wreckage) + sparse bodies past it; tree
   density tiers off through the buffer band. Border collision at the true
   diamond edge is only a backstop. build() is a COROUTINE with TIME-BUDGETED
@@ -88,7 +106,12 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   PointLight2D pool at night with per-lamp flicker/dropouts.
 - `scripts/door.gd` — closed-by-default door: F toggles, 4-frame swing,
   thin wall-line collider disabled while open, group "doors".
-- `scripts/edge_guard.gd` — barricade-line sniper: centered warning ("turn
+- `scripts/edge_guard.gd` — barricade-line snipers with PREDICTIVE aim
+  (lead the player's velocity by flight time, per-shooter 0.75-1.05x) and
+  STAGGERED volleys (first shot instant, rest via _pending countdowns in
+  _process — never scene-tree timers, they outlive scene swaps); each
+  spawned round plays its own crack. Warning label: fractional anchors
+  (0.5, 0.44) under a full-rect root — centered warning ("turn
   back or you will get sniped") on crossing barrier_f, 3 s grace, off-screen
   tracer rounds, ESCALATING interval/accuracy with depth, 3 hits = death.
 - `scripts/player.gd` — render-rate movement (NOT physics tick), THREE
@@ -133,8 +156,8 @@ then `godot_console --headless --path . --import`.
   `--flashlight`, `--seed=<text>`). Read the PNG yourself, judge it, iterate,
   send the user a 2× upscale (scratchpad) of the good one.
 - `--seed=<text>` pins the district; ALWAYS pair `--probe-world` (prints
-  lamp/vehicle/door counts + shot-aimable cells) with the same seed you then
-  shoot, or your coordinates aim at a different world.
+  lamp/vehicle/door/traffic-light counts + shot-aimable cells) with the same
+  seed you then shoot, or your coordinates aim at a different world.
 - Perf: `godot_console --path . -- --perf [--weather=rain --tod=0 ...]` →
   prints avg fps / worst frame ms / node count. v0.6.3 baseline on the user's
   240 Hz box: 240 avg, worst ~5 ms, ~34k nodes.

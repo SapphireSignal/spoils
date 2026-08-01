@@ -213,6 +213,15 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
                 c.set(x, y, C("19332d"))
             elif rng.random() < 0.3:
                 c.set(x, y, C("25562e"))
+    elif kind == "concrete_worn":
+        # sun-bleached block: same hue, reads a step lighter — used in
+        # district-scale weathering zones so neighborhoods differ subtly
+        region = _floor_base(c, rng, CONC_BASE, CONC_D1, CONC_L1, 0.018, 0.055)
+        speckle(c, rng, region, [CONC_L2], [0.012])
+    elif kind == "concrete_damp":
+        # shaded/damp block: a step darker, moss creeping in the pores
+        region = _floor_base(c, rng, CONC_BASE, CONC_D1, CONC_L1, 0.075, 0.008)
+        speckle(c, rng, region, [CONC_D2, C("19332d")], [0.03, 0.012])
     elif kind == "dirt":
         _floor_base(c, rng, C("341c27"), C("241527"), C("4d2b32"), 0.045, 0.07)
     elif kind == "dirt_blend":
@@ -262,6 +271,76 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
             if (x, y) in region:
                 c.set(x, y, C("25562e"))
 
+    elif kind.startswith("sidewalk"):
+        # walkway slabs flanking roads: lighter than the asphalt, with joint
+        # lines cut ACROSS the run every 16 iso units (16 divides 64, so
+        # joints continue seamlessly tile to tile). sidewalk_v runs along the
+        # cell +y axis (flanks vertical roads), sidewalk_h along +x. Broken
+        # variants lose chunks to the dirt underneath and grow weeds in the
+        # bites — nature reclaiming the district.
+        # a clearly PALER slab band than the concrete field around it — the
+        # first cut used the field's own base and the walkway vanished into
+        # it, leaving the joints floating like tick marks
+        region = _floor_base(c, rng, CONC_L1, CONC_BASE, CONC_L2, 0.16, 0.05)
+        broken = "broken" in kind
+        for (x, y) in region:
+            if kind.startswith("sidewalk_v"):
+                param = (x - 32) * 0.5 - (y - 16)   # joint lines run along +x
+            else:
+                param = (x - 32) * 0.5 + (y - 16)   # joint lines run along +y
+            if param % 16 < 1.1:
+                c.set(x, y, CONC_BASE)
+        if broken:
+            for _ in range(rng.randint(2, 3)):
+                bite = blob(rng, 8 + rng.randrange(48), 6 + rng.randrange(20),
+                            rng.randint(10, 26), region)
+                for (x, y) in bite:
+                    c.set(x, y, C("341c27"))        # down to the dirt
+                for (x, y) in list(bite):
+                    for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+                        if (nx, ny) in region and (nx, ny) not in bite:
+                            if (nx + ny) % 2 == 0:
+                                c.set(nx, ny, CONC_D2)
+                            elif rng.random() < 0.18:
+                                c.set(nx, ny, C("25562e"))  # weeds in the cracks
+            x, y = 10 + rng.randrange(24), 6 + rng.randrange(16)
+            dx = rng.choice((-1, 1))
+            for _ in range(rng.randint(14, 22)):    # one long wandering crack
+                if (x, y) in region:
+                    c.set(x, y, CONC_D2)
+                x += dx if rng.random() < 0.7 else -dx
+                y += rng.choice((0, 1, 1, -1))
+
+    elif kind.startswith("crosswalk"):
+        # zebra stripes across the road at intersections, HEAVILY worn — most
+        # paint is gone, what's left is faded and nibbled. Same iso families
+        # as the sidewalk joints; period 8 divides 64 for seam continuity.
+        region = _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.04, 0.02)
+        for (x, y) in region:
+            if kind == "crosswalk_v":
+                param = (x - 32) * 0.5 - (y - 16)   # stripes run along +x
+            else:
+                param = (x - 32) * 0.5 + (y - 16)
+            if param % 8 < 3.0:
+                r = rng.random()
+                if r < 0.42:
+                    c.set(x, y, C("819796"))        # surviving paint
+                elif r < 0.52:
+                    c.set(x, y, C("577277"))        # half-worn paint
+
+    elif kind == "manhole":
+        # a manhole cover sunk into the asphalt — sparse street furniture
+        region = _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.04, 0.02)
+        cx_, cy_ = 32, 16
+        for (x, y) in region:
+            d = ((x - cx_) / 9.0) ** 2 + ((y - cy_) / 4.5) ** 2
+            if d < 1.0:
+                c.set(x, y, C("151d28"))
+                if d > 0.62:
+                    c.set(x, y, CONC_BASE)          # rim ring
+        c.set(cx_ - 3, cy_, C("090a14"))            # pick holes
+        c.set(cx_ + 2, cy_, C("090a14"))
+
     elif kind == "asphalt_stall":
         # parking stall separator: pale worn line along the lower-left edge
         region = _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.04, 0.02)
@@ -306,6 +385,14 @@ FLOOR_TILES = [
     ("forest_0", ("forest", 0)), ("forest_1", ("forest", 1)),
     ("forest_2", ("forest", 2)),
     ("grass_blend_0", ("grass_blend", 0)), ("grass_blend_1", ("grass_blend", 1)),
+    ("concrete_worn_0", ("concrete_worn", 0)), ("concrete_worn_1", ("concrete_worn", 1)),
+    ("concrete_damp_0", ("concrete_damp", 0)), ("concrete_damp_1", ("concrete_damp", 1)),
+    ("sidewalk_v_0", ("sidewalk_v", 0)), ("sidewalk_v_1", ("sidewalk_v", 1)),
+    ("sidewalk_h_0", ("sidewalk_h", 0)), ("sidewalk_h_1", ("sidewalk_h", 1)),
+    ("sidewalk_v_broken_0", ("sidewalk_v_broken", 0)),
+    ("sidewalk_h_broken_0", ("sidewalk_h_broken", 0)),
+    ("crosswalk_v", ("crosswalk_v", 0)), ("crosswalk_h", ("crosswalk_h", 0)),
+    ("manhole_0", ("manhole", 0)),
 ]
 
 def make_floors_atlas() -> tuple[Image.Image, dict[str, list[int]]]:
@@ -1161,32 +1248,41 @@ def make_crate_stack(variant: int) -> tuple[Canvas, tuple, list]:
     return cropped, origin, ["diamond", base_w / 2 + 1.0, base_w / 4 + 1.0]
 
 def make_rack(variant: int) -> tuple[Canvas, tuple, list]:
-    """Industrial shelving with a UNIQUE, unevenly-jostled load per variant."""
+    """Industrial shelving with a UNIQUE, unevenly-jostled load per variant.
+    WIDER + DEEPER frame (user: shelves read too small for their boxes) and
+    properly human stacking: staggered heights, off-grid offsets, boxes
+    shoved against each other, mixed sizes — never a tidy row (user: 'like
+    someone actually stacked them there')."""
     rng = random.Random(f"{SEED}:rack:{variant}")
-    # keep total height under the wall height so racks never poke past the
-    # wall cap when parked against a wall
-    c = Canvas(68, 58)
+    # height stays under the wall cap; the growth is in width and depth
+    c = Canvas(84, 58)
     steel, steel_d = C("394a50"), C("202e37")
-    for level_y in (20, 36):
-        rows = small_diamond_rows(52, 26)
+    for level_y in (20, 38):
+        rows = small_diamond_rows(68, 34)
         for i, (x0, x1) in enumerate(rows):
             for x in range(x0, x1 + 1):
                 c.set(4 + x, level_y + i // 2, steel if i % 2 else steel_d)
-    for ux in (6, 30, 54):
-        c.vline(ux, 18, 52, steel_d)
-        c.vline(ux + 1, 18, 52, steel)
-    # random load: count, slots, sizes, tones, damage, mirroring all rolled
-    for level_base in (8, 25):
-        slots = [8, 22, 36]
+    for ux in (6, 39, 72):
+        c.vline(ux, 18, 53, steel_d)
+        c.vline(ux + 1, 18, 53, steel)
+    for level_base in (7, 25):
+        slots = [7, 27, 47]
         rng.shuffle(slots)
         for i in range(rng.randint(1, 3)):
-            w = rng.choice((16, 20, 24))
-            box, _, _ = draw_crate(rng, w, rng.randint(8, 11), rng.randrange(2),
+            w = rng.choice((12, 16, 20, 24))   # iso boxes need w % 4 == 0
+            box, _, _ = draw_crate(rng, w, rng.randint(7, 11), rng.randrange(2),
                                    rng.random() < 0.35, rng.random() < 0.3)
-            _paste_canvas(c, box, slots[i] + rng.randint(-3, 3),
-                          level_base + rng.randint(-2, 2), rng.random() < 0.5)
+            bx = slots[i] + rng.randint(-4, 4)
+            by = level_base + rng.randint(-2, 3)
+            _paste_canvas(c, box, bx, by, rng.random() < 0.5)
+            if rng.random() < 0.35 and w <= 20:  # a smaller box shoved against it
+                box2, _, _ = draw_crate(rng, rng.choice((8, 12)),
+                                        rng.randint(5, 8), rng.randrange(2),
+                                        rng.random() < 0.4, False)
+                _paste_canvas(c, box2, bx + w + rng.randint(-1, 4),
+                              by + rng.randint(3, 6), rng.random() < 0.5)
     c.outline_auto()
-    return c, (30, 50), ["diamond", 28.0, 12.0]
+    return c, (38, 51), ["diamond", 34.0, 14.0]
 
 ROOF_DEPTH = 12  # top-face depth in px — the old 6 read as a paper-thin car
 
@@ -1742,6 +1838,82 @@ def make_street_lamp(state: str) -> tuple[Canvas, tuple, list]:
     c.outline_auto()
     return c, (px_, py + 2), ["circle", 2.0]
 
+def make_traffic_light(state: str) -> tuple[Canvas, tuple, list | None]:
+    """Intersection traffic light, long dead like the district. One design
+    with wear (the barricade lesson): a pole, an arm reaching over the road,
+    a 3-lens head hanging off it. States: dark_a / dark_b (intact but
+    unpowered — lenses in dead muted hues), bent (arm drooping), smashed
+    (lenses out, glass down, a wire dangling), fallen (the whole pole flat
+    on the ground, head popped off — no collider, walk over it)."""
+    rng = random.Random(f"{SEED}:tlight:{state}")
+    steel, steel_d = C("394a50"), C("202e37")
+    dead_red, dead_amber, dead_green = C("411d31"), C("602c2c"), C("19332d")
+
+    if state == "fallen":
+        c = Canvas(52, 24)
+        for i in range(34):                      # pole lying along +x
+            x = 4 + i
+            sh = i // 12                          # slight iso drop
+            c.set(x, 8 + sh, steel)
+            c.set(x, 9 + sh, steel_d)
+            if i % 9 == 4 and rng.random() < 0.7:
+                c.set(x, 8 + sh, C("884b2b"))     # rust where it hit
+        c.rect(3, 6, 4, 11, steel_d)              # base plate at the near end
+        hx, hy = 40, 6                            # head knocked off, lying
+        c.rect(hx, hy, hx + 7, hy + 5, steel_d)
+        c.set(hx + 1, hy + 2, dead_red)
+        c.set(hx + 3, hy + 2, C("090a14"))        # popped lens
+        c.set(hx + 5, hy + 2, dead_green)
+        c.set(hx + 8, hy + 6, C("577277"))        # glass shards
+        c.set(hx + 3, hy + 7, C("577277"))
+        c.outline_auto()
+        return c, (24, 14), None
+
+    c = Canvas(34, 60)
+    px_, py = 7, 50
+    arm_len = 15 if state != "dark_b" else 10
+    droop = 3 if state == "bent" else 0
+    for y in range(9, py + 1):                    # the pole
+        c.set(px_, y, steel)
+        c.set(px_ + 1, y, steel_d)
+    for y in range(py - 24, py, 6):               # pole wear
+        if rng.random() < 0.6:
+            c.set(px_, y, C("577277") if rng.random() < 0.5 else C("884b2b"))
+    c.rect(px_ - 1, py, px_ + 2, py + 1, steel_d)  # base
+    c.hline(px_ - 1, px_ + 2, py + 2, C("151d28"))
+    if state == "dark_b":                          # small worn sign plate
+        c.rect(px_ + 2, py - 22, px_ + 5, py - 18, C("577277"))
+        c.set(px_ + 3, py - 21, C("819796"))
+    for xi in range(arm_len):                      # the arm, reaching +x
+        dy = droop * xi // max(1, arm_len - 1)
+        c.set(px_ + xi, 9 + dy, steel)
+        c.set(px_ + xi, 10 + dy, steel_d)
+    if state == "bent":
+        c.set(px_ + 3, 9, C("151d28"))             # kink at the bend
+    hx = px_ + arm_len - 2                         # head hangs at the arm end
+    hy = 11 + droop
+    c.hline(hx, hx + 5, hy, C("577277"))           # lit top face (3D rule)
+    c.rect(hx, hy + 1, hx + 5, hy + 13, steel_d)
+    c.vline(hx + 5, hy + 1, hy + 13, C("151d28"))  # shaded east edge
+    lenses = [dead_red, dead_amber, dead_green]
+    if state == "smashed":
+        lenses = [C("090a14")] * 3
+    for li, col in enumerate(lenses):
+        ly = hy + 2 + li * 4
+        c.rect(hx + 1, ly, hx + 3, ly + 2, col)
+        c.set(hx + 3, ly + 2, C("151d28"))         # lens hood shadow
+    if state == "smashed":
+        c.set(hx + 2, hy + 6, C("090a14"))
+        c.rect(hx + 1, hy + 10, hx + 3, hy + 12, C("090a14"))  # bottom socket torn
+        c.set(hx + 2, hy + 14, C("151d28"))        # dangling wire
+        c.set(hx + 2, hy + 15, C("151d28"))
+        c.set(hx + 3, hy + 16, C("151d28"))
+        c.set(hx - 1, py + 1, C("577277"))         # glass at the pole foot
+        c.set(hx + 2, py + 1, C("577277"))
+    c.outline_auto()
+    return c, (px_, py + 2), ["circle", 2.0]
+
+
 def make_lamp_glow() -> Image.Image:
     """Warm halo around a lit lamp head. Smooth alpha by design (light, like
     dust/vignette — palette-exempt)."""
@@ -2114,6 +2286,15 @@ def prop_inventory() -> tuple[dict, dict]:
     props["street_lamp"] = make_street_lamp("working")
     fam("street_lamp_dead", 0, make_street_lamp("dead_bent"))
     fam("street_lamp_dead", 1, make_street_lamp("dead_smashed"))
+    # traffic lights: arm reaches +x; mirrored family for corners on the
+    # other side of the road, so the head always hangs over the asphalt
+    for i, state in enumerate(("dark_a", "dark_b", "bent", "smashed")):
+        tl = make_traffic_light(state)
+        fam("traffic_light", i, tl)
+        fam("traffic_light_m", i, mirror_prop(tl))
+    tl_flat = make_traffic_light("fallen")
+    fam("traffic_light_flat", 0, tl_flat)
+    fam("traffic_light_flat", 1, mirror_prop(tl_flat))
     for kind in ("wood", "metal"):
         for axis in ("x", "y"):
             props[f"door_{kind}_{axis}"] = make_door_strip(kind, axis)

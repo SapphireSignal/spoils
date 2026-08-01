@@ -51,6 +51,17 @@ var _changelog_list: VBoxContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.14", ["the map is half the size - a tight district, no more hiking",
+		"sidewalks line many roads, slab by slab, some cracked open with weeds",
+		"crosswalks at every intersection, worn down to almost nothing",
+		"dead traffic lights watch the crossings - bent, smashed, or face down",
+		"the ground has moods now: sun-worn blocks, damp mossy blocks, manholes",
+		"warehouses are huge industrial halls with more racks and stock",
+		"shelves grew to hold their boxes, and the boxes look human-stacked",
+		"snipers lead their shots - they aim where you are going, so juke",
+		"volleys come staggered from different shooters, never one wall",
+		"the turn-back warning sits dead center, a touch above the middle",
+		"locked into the plan: the tunnels arrive with the guns update"]],
 	["v0.6.13", ["cars and trucks have real backs now - you circled it, that was it",
 		"the rear is a full wall across the body: tailgate, trunk, grille",
 		"tail lights and head lights sit at both corners like they should",

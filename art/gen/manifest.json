@@ -132,6 +132,58 @@
     "grass_blend_1": [
       3,
       7
+    ],
+    "concrete_worn_0": [
+      0,
+      8
+    ],
+    "concrete_worn_1": [
+      1,
+      8
+    ],
+    "concrete_damp_0": [
+      2,
+      8
+    ],
+    "concrete_damp_1": [
+      3,
+      8
+    ],
+    "sidewalk_v_0": [
+      0,
+      9
+    ],
+    "sidewalk_v_1": [
+      1,
+      9
+    ],
+    "sidewalk_h_0": [
+      2,
+      9
+    ],
+    "sidewalk_h_1": [
+      3,
+      9
+    ],
+    "sidewalk_v_broken_0": [
+      0,
+      10
+    ],
+    "sidewalk_h_broken_0": [
+      1,
+      10
+    ],
+    "crosswalk_v": [
+      2,
+      10
+    ],
+    "crosswalk_h": [
+      3,
+      10
+    ],
+    "manhole_0": [
+      0,
+      11
     ]
   },
   "props": {
@@ -725,62 +777,62 @@
     },
     "rack_0": {
       "size": [
-        68,
+        84,
         58
       ],
       "origin": [
-        30,
-        50
+        38,
+        51
       ],
       "collider": [
         "diamond",
-        28.0,
-        12.0
+        34.0,
+        14.0
       ]
     },
     "rack_1": {
       "size": [
-        68,
+        84,
         58
       ],
       "origin": [
-        30,
-        50
+        38,
+        51
       ],
       "collider": [
         "diamond",
-        28.0,
-        12.0
+        34.0,
+        14.0
       ]
     },
     "rack_2": {
       "size": [
-        68,
+        84,
         58
       ],
       "origin": [
-        30,
-        50
+        38,
+        51
       ],
       "collider": [
         "diamond",
-        28.0,
-        12.0
+        34.0,
+        14.0
       ]
     },
     "rack_3": {
       "size": [
-        68,
+        84,
         58
       ],
       "origin": [
-        30,
-        50
+        38,
+        51
       ],
       "collider": [
         "diamond",
-        28.0,
-        12.0
+        34.0,
+        14.0
       ]
     },
     "vehicle_nw_0": {
@@ -1450,6 +1502,140 @@
         "circle",
         2.0
       ]
+    },
+    "traffic_light_0": {
+      "size": [
+        34,
+        60
+      ],
+      "origin": [
+        7,
+        52
+      ],
+      "collider": [
+        "circle",
+        2.0
+      ]
+    },
+    "traffic_light_m_0": {
+      "size": [
+        34,
+        60
+      ],
+      "origin": [
+        26,
+        52
+      ],
+      "collider": [
+        "circle",
+        2.0
+      ]
+    },
+    "traffic_light_1": {
+      "size": [
+        34,
+        60
+      ],
+      "origin": [
+        7,
+        52
+      ],
+      "collider": [
+        "circle",
+        2.0
+      ]
+    },
+    "traffic_light_m_1": {
+      "size": [
+        34,
+        60
+      ],
+      "origin": [
+        26,
+        52
+      ],
+      "collider": [
+        "circle",
+        2.0
+      ]
+    },
+    "traffic_light_2": {
+      "size": [
+        34,
+        60
+      ],
+      "origin": [
+        7,
+        52
+      ],
+      "collider": [
+        "circle",
+        2.0
+      ]
+    },
+    "traffic_light_m_2": {
+      "size": [
+        34,
+        60
+      ],
+      "origin": [
+        26,
+        52
+      ],
+      "collider": [
+        "circle",
+        2.0
+      ]
+    },
+    "traffic_light_3": {
+      "size": [
+        34,
+        60
+      ],
+      "origin": [
+        7,
+        52
+      ],
+      "collider": [
+        "circle",
+        2.0
+      ]
+    },
+    "traffic_light_m_3": {
+      "size": [
+        34,
+        60
+      ],
+      "origin": [
+        26,
+        52
+      ],
+      "collider": [
+        "circle",
+        2.0
+      ]
+    },
+    "traffic_light_flat_0": {
+      "size": [
+        52,
+        24
+      ],
+      "origin": [
+        24,
+        14
+      ],
+      "collider": null
+    },
+    "traffic_light_flat_1": {
+      "size": [
+        52,
+        24
+      ],
+      "origin": [
+        27,
+        14
+      ],
+      "collider": null
     },
     "door_wood_x": {
       "size": [
@@ -2891,6 +3077,22 @@
     "street_lamp_dead": [
       "street_lamp_dead_0",
       "street_lamp_dead_1"
+    ],
+    "traffic_light": [
+      "traffic_light_0",
+      "traffic_light_1",
+      "traffic_light_2",
+      "traffic_light_3"
+    ],
+    "traffic_light_m": [
+      "traffic_light_m_0",
+      "traffic_light_m_1",
+      "traffic_light_m_2",
+      "traffic_light_m_3"
+    ],
+    "traffic_light_flat": [
+      "traffic_light_flat_0",
+      "traffic_light_flat_1"
     ],
     "stick": [
       "stick_0",

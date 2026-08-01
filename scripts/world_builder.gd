@@ -19,9 +19,13 @@ extends RefCounted
 const MAP_W := 320
 const MAP_H := 320
 const TILE := Vector2i(64, 32)
-const EDGE_FOREST := 38      # content margin: gameplay stays inside the
-                             # treeline fringe (inset 31..38, inside the ring)
-const BARRIER_INSET := 31    # the barricade ring — the map's ADVERTISED edge.
+const EDGE_FOREST := 79      # content margin: gameplay stays inside the
+                             # treeline fringe (inset 72..79, inside the ring)
+const BARRIER_INSET := 72    # the barricade ring — the map's ADVERTISED edge.
+# v0.6.14: ring pulled way in (31 -> 72). The playable district is roughly
+# HALF its old area ("map is way too big" — user, twice) and reads denser:
+# same road grid squeezed tighter, buildings closer, less empty walking.
+# The sniper buffer beyond the ring more than doubled in depth as a bonus.
 # Everything gameplay lives inside it; the 31-tile band beyond is sniper
 # country, deep enough that a player who ignores the warning dies (escalating
 # fire) long before the camera — which never clamps — could reach the void.
@@ -56,6 +60,9 @@ var _yards: Array[Rect2i] = []
 var _spawn_cell := Vector2i(160, 160)
 var _puddle_spots: Array[Vector2] = []
 var _alarm_cars: Array[Dictionary] = []  # {node, lights} — armed intact cars
+var _sidewalk: Dictionary = {}       # cell -> "v"/"h" (walkways flanking roads)
+var _traffic_cells: Array[Vector2i] = []
+var _zone_salt := 0                  # per-build salt for the weathering zones
 
 
 func build(root: Node2D, seed_text: String = "") -> Dictionary:
@@ -78,9 +85,11 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 	_ysort.y_sort_enabled = true
 	root.add_child(_ysort)
 
+	_zone_salt = _rng.randi()
 	_plan_roads()
 	await _plan_forest()
 	_plan_paths()
+	_plan_sidewalks()
 	await _plan_plots()
 
 	await _paint_terrain()
@@ -88,6 +97,7 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 		await _build_shell(plot)
 	await _place_yards()
 	await _place_lamps()
+	await _place_traffic_lights()
 	await _place_barricades()
 	await _place_trees()
 	await _place_lone_trees()
@@ -113,6 +123,7 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 		"puddle_spots": _puddle_spots,
 		"floor_coords": _floor_coords,
 		"alarm_cars": _alarm_cars,
+		"traffic_cells": _traffic_cells,
 	}
 
 
@@ -205,7 +216,7 @@ func _plan_forest() -> void:
 	# inside the barricade ring, plus interior blobs and groves. The buffer
 	# past the line stays bare district. Seeds: (target, cx, cy).
 	var blobs: Array[Vector3i] = []
-	for i in 150:  # fringe clumps hugging the inside of the ring
+	for i in 110:  # fringe clumps hugging the inside of the ring
 		var inset := BARRIER_INSET + _rng.randi_range(0, 6)
 		var along := _rng.randi_range(BARRIER_INSET, MAP_W - 1 - BARRIER_INSET)
 		var seed_cell := Vector2i(along, inset)
@@ -214,11 +225,11 @@ func _plan_forest() -> void:
 			2: seed_cell = Vector2i(inset, along)
 			3: seed_cell = Vector2i(MAP_W - 1 - inset, along)
 		blobs.append(Vector3i(_rng.randi_range(6, 18), seed_cell.x, seed_cell.y))
-	for i in 26:   # interior woods
-		blobs.append(Vector3i(_rng.randi_range(160, 520),
+	for i in 16:   # interior woods (counts scaled to the tighter district)
+		blobs.append(Vector3i(_rng.randi_range(120, 340),
 			_rng.randi_range(EDGE_FOREST + 6, MAP_W - EDGE_FOREST - 6),
 			_rng.randi_range(EDGE_FOREST + 6, MAP_H - EDGE_FOREST - 6)))
-	for i in 90:   # groves — min size 5 so grass never spawns as a lone tile
+	for i in 55:   # groves — min size 5 so grass never spawns as a lone tile
 		blobs.append(Vector3i(_rng.randi_range(5, 12),
 			_rng.randi_range(EDGE_FOREST + 6, MAP_W - EDGE_FOREST - 6),
 			_rng.randi_range(EDGE_FOREST + 6, MAP_H - EDGE_FOREST - 6)))
@@ -264,14 +275,51 @@ func _plan_paths() -> void:
 				y += _rng.randi_range(-1, 1)
 
 
+func _plan_sidewalks() -> void:
+	# walkways flanking SOME roads (rolled per road side, full length for
+	# municipal continuity — wear comes from the broken tiles, not gaps)
+	for r in _roads_v:
+		for side_x in [r.x - 1, r.x + r.y]:
+			if _rng.randf() > 0.62:
+				continue
+			for y in range(BARRIER_INSET, MAP_H - BARRIER_INSET):
+				var cell := Vector2i(side_x, y)
+				if not _on_road(cell) and not _forest.has(cell) \
+						and not _dirt_path.has(cell):
+					_sidewalk[cell] = "v"
+	for r in _roads_h:
+		for side_y in [r.x - 1, r.x + r.y]:
+			if _rng.randf() > 0.62:
+				continue
+			for x in range(BARRIER_INSET, MAP_W - BARRIER_INSET):
+				var cell := Vector2i(x, side_y)
+				if not _on_road(cell) and not _forest.has(cell) \
+						and not _dirt_path.has(cell) and not _sidewalk.has(cell):
+					_sidewalk[cell] = "h"
+
+
+func _crosswalk_at(cell: Vector2i, road_v: int, road_h: int) -> String:
+	# zebra tiles on the road arms right before a crossing
+	if road_v >= 0 and road_h < 0:
+		for r in _roads_h:
+			if cell.y == r.x - 1 or cell.y == r.x + r.y:
+				return "v"
+	elif road_h >= 0 and road_v < 0:
+		for r in _roads_v:
+			if cell.x == r.x - 1 or cell.x == r.x + r.y:
+				return "h"
+	return ""
+
+
 func _plan_plots() -> void:
 	var attempts := 0
-	while _plots.size() < 34 and attempts < 1400:
+	while _plots.size() < 26 and attempts < 2200:
 		attempts += 1
 		await _tick()
-		var kind := "house" if _rng.randf() < 0.55 else "warehouse"
+		var kind := "house" if _rng.randf() < 0.6 else "warehouse"
+		# warehouses A LOT bigger (user call) — proper industrial halls
 		var size := Vector2i(_rng.randi_range(6, 8), _rng.randi_range(5, 7)) \
-			if kind == "house" else Vector2i(_rng.randi_range(9, 12), _rng.randi_range(7, 9))
+			if kind == "house" else Vector2i(_rng.randi_range(13, 17), _rng.randi_range(9, 12))
 		var pos := Vector2i(
 			_rng.randi_range(EDGE_FOREST + 3, MAP_W - EDGE_FOREST - size.x - 3),
 			_rng.randi_range(EDGE_FOREST + 3, MAP_H - EDGE_FOREST - size.y - 3))
@@ -319,6 +367,17 @@ func _paint_terrain() -> void:
 		for x in MAP_W:
 			var cell := Vector2i(x, y)
 			var tile_name := "concrete_%d" % _rng.randi_range(0, 5)
+			# district-scale weathering: two offset 8-cell hash grids AND-ed
+			# together bias whole blocks lighter (sun-bleached) or darker
+			# (damp/mossy), with a probabilistic mix so zone borders dissolve
+			# as grain instead of reading as an aligned patch grid
+			var zone := posmod(hash(Vector3i(cell.x >> 3, cell.y >> 3, _zone_salt)), 100)
+			var zone2 := posmod(hash(Vector3i((cell.x + 4) >> 3, (cell.y + 4) >> 3,
+				_zone_salt ^ 0x5bd1)), 100)
+			if zone < 24 and zone2 < 60 and _rng.randf() < 0.6:
+				tile_name = "concrete_worn_%d" % _rng.randi_range(0, 1)
+			elif zone >= 76 and zone2 >= 40 and _rng.randf() < 0.6:
+				tile_name = "concrete_damp_%d" % _rng.randi_range(0, 1)
 			var roll := _rng.randf()
 			if roll < 0.03:
 				tile_name = "crack_%d" % _rng.randi_range(0, 2)
@@ -338,13 +397,28 @@ func _paint_terrain() -> void:
 			# district, so the stubs stop under the wreckage (user call)
 			if (road_v >= 0 or road_h >= 0) and _cell_inset(cell) >= BARRIER_INSET - 2:
 				tile_name = "asphalt_%d" % _rng.randi_range(0, 1)
-				# center dashes — on BOTH road directions, never at crossings
-				if road_v >= 0 and road_h < 0 and cell.x == road_v + 1 \
+				var cw := _crosswalk_at(cell, road_v, road_h)
+				# crosswalks at the crossings, center dashes elsewhere (on
+				# BOTH road directions, never at crossings), the odd manhole
+				if cw != "":
+					tile_name = "crosswalk_%s" % cw
+				elif road_v >= 0 and road_h < 0 and cell.x == road_v + 1 \
 						and _rng.randf() < 0.96:
 					tile_name = "asphalt_line"
 				elif road_h >= 0 and road_v < 0 and cell.y == road_h + 1 \
 						and _rng.randf() < 0.96:
 					tile_name = "asphalt_line_h"
+				elif _rng.randf() < 0.006:
+					tile_name = "manhole_0"
+			elif _sidewalk.has(cell) and not is_forest and not is_dirt \
+					and _cell_inset(cell) >= BARRIER_INSET - 2:
+				# walkway slabs: mostly intact, some cracked open (the broken
+				# tile eats through to the dirt and grows weeds)
+				if _rng.randf() < 0.13:
+					tile_name = "sidewalk_%s_broken_0" % str(_sidewalk[cell])
+				else:
+					tile_name = "sidewalk_%s_%d" % [str(_sidewalk[cell]),
+						_rng.randi_range(0, 1)]
 			elif not is_forest and not is_dirt:
 				# biome blending: concrete touching grass grows grass; concrete
 				# touching a dirt path picks up dirt — no hard tile seams
@@ -716,7 +790,7 @@ func _furnish_warehouse(interior: Rect2i, pocket: Array[Vector2i]) -> void:
 		rack_slots.append(x_offset)
 	_shuffle(rack_slots)
 	var used: Array[Vector2i] = pocket.duplicate()
-	for i in _rng.randi_range(2, mini(3, rack_slots.size())):
+	for i in _rng.randi_range(3, mini(5, rack_slots.size())):
 		var cell := Vector2i(p.x + rack_slots[i - 1], p.y)
 		if cell in pocket:
 			continue
@@ -730,7 +804,7 @@ func _furnish_warehouse(interior: Rect2i, pocket: Array[Vector2i]) -> void:
 	var total := 0.0
 	for opt in stock_mix:
 		total += opt[1]
-	for i in _rng.randi_range(5, 9):
+	for i in _rng.randi_range(8, 14):  # halls are big now — stock to match
 		if cells.is_empty():
 			break
 		var cell := _take_random_cell(cells)
@@ -803,6 +877,55 @@ func _place_lamps() -> void:
 			await _tick()
 
 
+func _place_traffic_lights() -> void:
+	# dead traffic lights at the crossings — the same municipal design
+	# everywhere, differing only in damage (the barricade lesson). Counts,
+	# corners, damage state and jitter all rolled; heads hang over the
+	# asphalt (mirrored family on the far-side corners).
+	for rv in _roads_v:
+		for rh in _roads_h:
+			await _tick()
+			var count_roll := _rng.randf()
+			var count := 0 if count_roll < 0.30 else (1 if count_roll < 0.75 else 2)
+			if count == 0:
+				continue
+			var corners := [
+				[Vector2i(rv.x - 1, rh.x - 1), false],
+				[Vector2i(rv.x + rv.y, rh.x - 1), true],
+				[Vector2i(rv.x - 1, rh.x + rh.y), false],
+				[Vector2i(rv.x + rv.y, rh.x + rh.y), true],
+			]
+			_shuffle(corners)
+			var placed := 0
+			for corner in corners:
+				if placed >= count:
+					break
+				var cell: Vector2i = corner[0]
+				if _occupied.has(cell) or _forest.has(cell) or _on_road(cell) \
+						or _dirt_path.has(cell) or _near_a_door(cell) \
+						or _cell_inset(cell) < BARRIER_INSET:
+					continue
+				var roll := _rng.randf()
+				if roll < 0.10:
+					_add_prop_at_cell(_pick_variant("traffic_light_flat"), cell,
+						Vector2(6, 3))
+				else:
+					var fam := "traffic_light_m" if corner[1] else "traffic_light"
+					var idx := 0
+					var damage := _rng.randf()
+					if damage < 0.35:
+						idx = 0        # dark, long arm
+					elif damage < 0.60:
+						idx = 1        # dark, short arm + sign plate
+					elif damage < 0.80:
+						idx = 2        # bent arm
+					else:
+						idx = 3        # smashed head
+					_add_prop_at_cell("%s_%d" % [fam, idx], cell, Vector2(3, 2))
+				_traffic_cells.append(cell)
+				placed += 1
+
+
 func _place_barricades() -> void:
 	# the barricade ring — the map's ADVERTISED edge. Randomized pieces with
 	# slip-through gaps, some knocked flat; roads breach the line with
@@ -866,7 +989,7 @@ func _dress_buffer() -> void:
 	# forests, no roads, nothing to loot. The emptiness IS the message.
 	var placed := 0
 	var attempts := 0
-	while placed < 90 and attempts < 1400:
+	while placed < 120 and attempts < 1800:  # the buffer band is deeper now
 		attempts += 1
 		await _tick()
 		var depth := _rng.randi_range(4, BARRIER_INSET - 3)
@@ -949,7 +1072,7 @@ func _place_lone_trees() -> void:
 	# breaking through the concrete anywhere on the map
 	var placed := 0
 	var attempts := 0
-	while placed < 240 and attempts < 3000:
+	while placed < 130 and attempts < 2000:
 		attempts += 1
 		var cell := Vector2i(_rng.randi_range(EDGE_FOREST, MAP_W - EDGE_FOREST),
 			_rng.randi_range(EDGE_FOREST, MAP_H - EDGE_FOREST))
@@ -991,7 +1114,7 @@ func _place_lone_trees() -> void:
 
 func _place_road_vehicles() -> void:
 	# abandoned vehicles in their lanes — right way round, some broken into
-	for i in 36:
+	for i in 30:
 		await _tick()
 		var vertical := _rng.randf() < 0.5
 		var fam := ""
@@ -1038,7 +1161,7 @@ func _scatter_props() -> void:
 		total += opt[1]
 	var placed := 0
 	var attempts := 0
-	while placed < 620 and attempts < 12000:
+	while placed < 380 and attempts < 9000:
 		attempts += 1
 		await _tick()
 		var cell: Vector2i
@@ -1094,7 +1217,7 @@ func _scatter_warehouse_stock() -> void:
 
 func _collect_puddle_spots() -> void:
 	var tries := 0
-	while _puddle_spots.size() < 130 and tries < 2400:
+	while _puddle_spots.size() < 95 and tries < 2000:
 		tries += 1
 		var cell := Vector2i(_rng.randi_range(EDGE_FOREST, MAP_W - EDGE_FOREST),
 			_rng.randi_range(EDGE_FOREST, MAP_H - EDGE_FOREST))

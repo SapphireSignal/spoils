@@ -207,8 +207,17 @@ Claude must prove its own work without the user:
    plus a feedback pass: smooth ground, brick buildings, distinct props,
    6-frame walk, pixel-snapped camera.)*
 2. **Gunplay (v0.7):** aim at mouse, shoot with tracers/flash/shake/sound,
-   destructible props.
+   destructible props. **Plus THE TUNNELS (user request 2026-08-01):** an
+   underground tunnel system beneath the district. Entrances: a secret
+   passage behind the bookshelf in SOME houses (interact to slide it), and
+   exactly TWO interactive manholes out on the streets — open the cover,
+   interact with the ladder to climb down; a ladder at every entrance leads
+   back up the same way (F both directions). Dark, tight corridors — the
+   flashlight matters down there.
 3. **Enemies (v0.8):** human scav AI (patrol→chase→shoot), health/death, loot drops.
+   Readability: flag hostiles with the bright Apollo reds/oranges (a53030 /
+   cf573c accents — armband, headlamp, muzzle glow) so they pop against the
+   dark streets; keep it SUBTLE per the audio/visual taste rules.
 4. **The loop (v0.9):** Tarkov-style loot — grid inventory with item footprints,
    searchable containers, character doll gear slots (helmet/armor/rig/backpack/
    weapons) — extraction points, raid timer, death = loss, stash persistence.

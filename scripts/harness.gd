@@ -444,6 +444,8 @@ func _probe_world() -> void:
 	for door in get_tree().get_nodes_in_group("doors"):
 		door_cells.append(floor_layer.local_to_map((door as Node2D).global_position))
 	print("DOORS total=%d cells=%s" % [door_cells.size(), door_cells.slice(0, 5)])
+	var traffic: Array = info.get("traffic_cells", [])
+	print("TRAFFIC total=%d cells=%s" % [traffic.size(), traffic.slice(0, 6)])
 
 	# the interact prompt must appear when parked right at a door
 	var player := main.get_node_or_null("World/Player") as Player

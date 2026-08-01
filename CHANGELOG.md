@@ -3,6 +3,38 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.14] — 2026-08-01
+
+### Changed
+- **The district tightened to roughly half its area** (user: "the map is way
+  too big", second report). The barricade ring moved from inset 31 to 72 on
+  the 320×320 world; the road grid, ~21 buildings, forests and scatter now
+  pack a ~176×176 playable core (placement counts rebalanced to match). The
+  sniper buffer beyond the ring more than doubled in depth. Deploy builds in
+  ~1 s; node count nearly halved.
+- **Streets grew street furniture:** sidewalks flank many roads (pale slab
+  bands, joint lines every half tile, ~13% of slabs cracked open to the dirt
+  with weeds in the bites), heavily worn zebra crosswalks mark every
+  intersection arm, rare manholes dot the asphalt, and dead traffic lights
+  stand at the crossings — one municipal design in five states: dark (two
+  arm lengths), bent, smashed (glass down, wire dangling), knocked flat.
+- **Ground pass:** two new concrete tones (sun-worn, damp/mossy) applied in
+  district-scale weathering zones via doubled offset hash grids — blocks
+  read differently aged, with borders dissolving as grain, never a patch
+  grid.
+- **Warehouses are huge industrial halls now** (13-17 × 9-12 cells), with up
+  to five racks and roughly doubled floor stock. Racks got wider, deeper
+  frames (user: shelves read too small) and human stacking: staggered
+  heights, off-grid offsets, boxes shoved together, mixed sizes.
+- **Snipers predict.** Rounds lead the runner (aim at position + velocity ×
+  flight time, with per-shooter over/under-lead), and volleys stagger across
+  fractions of a second — separate shooters, separate cracks, never one
+  simultaneous wall. The turn-back warning now anchors to true screen
+  center (a touch above middle) on any resolution.
+- Roadmap: the underground TUNNELS (bookshelf passages in some houses + two
+  interactive manholes with ladders) are specced into Milestone 2 alongside
+  gunplay; enemy high-visibility accents specced into M3.
+
 ## [0.6.13] — 2026-08-01
 
 ### Fixed
