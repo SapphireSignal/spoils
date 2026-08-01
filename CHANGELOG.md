@@ -3,6 +3,42 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.29] — 2026-08-01
+
+### Changed
+- **Clutter variation** (user ask: break visual repetition without adding
+  procedural generation — the layout stays fixed). Three pieces:
+  - **Baked lean, never runtime rotation.** `bake_lean()` shears a prop's
+    rows by their height above a pivot, so a "tipped" crate is a
+    genuinely different sprite. Runtime rotation is still banned — it
+    resamples off the pixel grid and shimmers while the camera scrolls,
+    which is why this is done at generation time.
+  - **Per-instance wear.** `bake_wear()` ages each copy with a few small
+    solid patches of grime (the same patch logic the tiles use — no
+    single-pixel dot noise). `clutter_variants()` ties it together:
+    every copy gets its own build seed, its own lean and its own wear.
+    Crates went 6 → 10 variants, tires 4 → 7, pallets 3 → 6, rubble
+    4 → 7 — all visibly different objects, not one object stamped N times.
+  - **Asymmetrical piling.** New `_place_pile()` drops an anchor piece
+    then satellites that thin out and drift further along the pile's own
+    lean, so a heap has a heavy middle and stragglers spilling off one
+    side. `_scatter_around()` does loose mixed-family debris with a bias
+    so it never reads as a halo. `_clutter_offset()` jitters within a
+    cell on WHOLE world pixels (static props must stay on the grid), and
+    `_pick_variant_varied()` never hands out the same variant twice
+    running — a repeat side by side is what the eye catches first.
+  - Applied to the street scatter (a quarter of barrels/tires/rubble now
+    land as heaps) and the scrapyard (over half of it does — it is where
+    things get dumped). Perf held: 240 avg, worst 4.52 ms.
+
+### Fixed
+- **README was out of date**: it still promised "a fresh layout generates
+  on every deploy", a 320×320 district, a 20-minute day and a "dead,
+  overrun" world. Rewritten for what the game actually is now — one
+  fixed learnable district and why it's fixed, the POIs in it, working
+  extraction, driveable cars, second stories, the map key, the real
+  controls, and the human-only rule.
+
 ## [0.6.28] — 2026-08-01
 
 ### Fixed

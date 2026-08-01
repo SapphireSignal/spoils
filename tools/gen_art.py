@@ -1432,6 +1432,79 @@ def _paste_canvas(c: Canvas, piece: Canvas, x: int, y: int,
     c.img.alpha_composite(img, (x, y))
     c.px = c.img.load()
 
+def bake_lean(c: Canvas, origin: tuple[int, int], lean: float,
+              pivot_y: int | None = None) -> tuple[Canvas, tuple[int, int]]:
+    """Tip a prop over by a few degrees — BAKED, never at runtime.
+
+    Runtime rotation is banned in this project: it resamples the sprite off
+    the pixel grid and shimmers while the camera scrolls. So a "rotated"
+    crate is a DIFFERENT SPRITE, sheared here at generation time. Rows are
+    slid horizontally by their height above the pivot, which reads as a
+    small tilt at this scale and keeps every pixel on the grid.
+
+    lean: pixels of slide per 10 px of height. +right, -left. Keep it in
+    the ±1.5 range — beyond that a box stops looking tipped and starts
+    looking broken.
+    """
+    pivot = c.h - 1 if pivot_y is None else pivot_y
+    out = Canvas(c.w + 8, c.h)
+    ox = 4
+    for y in range(c.h):
+        shift = int(round((pivot - y) / 10.0 * lean))
+        for x in range(c.w):
+            px = c.px[x, y]
+            if px[3]:
+                out.set(x + ox + shift, y, px)
+    return out, (origin[0] + ox, origin[1])
+
+
+def bake_wear(c: Canvas, rng: random.Random, colors: list[tuple],
+              amount: float = 0.06) -> None:
+    """Age one instance of a prop: a few small solid patches of grime and
+    rust over its opaque pixels. Uses the same patch logic as the tiles
+    (NO single-pixel dot noise — user call), so two crates off the same
+    generator never wear identically."""
+    region = [(x, y) for y in range(c.h) for x in range(c.w)
+              if c.px[x, y][3] > 0]
+    if not region:
+        return
+    speckle(c, rng, region, colors, [amount] * len(colors))
+
+
+def clutter_variants(name: str, count: int, build, rng_seed: str,
+                     wear_colors: list[tuple] | None = None,
+                     leans: tuple = (0.0, 0.9, -0.9, 1.4, -1.4)) -> list:
+    """Bake `count` genuinely different copies of one prop.
+
+    This is the anti-repetition workhorse: every copy gets its own build
+    seed (so the generator's own randomness differs), its own baked lean
+    from the table, and its own wear pass. Dropping five of these in a
+    pile reads as five objects somebody threw down, not one object
+    stamped five times.
+    """
+    out = []
+    for i in range(count):
+        rng = random.Random(f"{SEED}:{rng_seed}:{i}")
+        canvas, origin, collider = build(rng, i)[:3]
+        # the builders hand back a TIGHT canvas (already outlined and
+        # cropped), so pad before doing anything — leaning and re-outlining
+        # a tight sprite pushes ink straight off the edge
+        pad = 6
+        roomy = Canvas(canvas.w + pad * 2, canvas.h + pad * 2)
+        roomy.img.alpha_composite(canvas.img, (pad, pad))
+        roomy.px = roomy.img.load()
+        canvas = roomy
+        origin = (origin[0] + pad, origin[1] + pad)
+        lean = leans[i % len(leans)]
+        if abs(lean) > 0.01:
+            canvas, origin = bake_lean(canvas, origin, lean)
+        if wear_colors:
+            bake_wear(canvas, rng, wear_colors, 0.04 + 0.03 * (i % 3))
+        canvas, origin = crop_canvas(canvas, origin)
+        out.append((canvas, origin, collider))
+    return out
+
+
 def crop_canvas(c: Canvas, origin: tuple[int, int],
                 margin: int = 1) -> tuple[Canvas, tuple[int, int]]:
     """Trim a canvas to its opaque bounding box (+margin), keeping the origin
@@ -4002,25 +4075,45 @@ def prop_inventory() -> tuple[dict, dict]:
         fallen = i >= 4
         fam("barrel", i, draw_barrel(rng, style, rng.randint(24, 30),
                                      rng.randint(8, 10), fallen))
-    for i in range(6):
-        rng = random.Random(f"{SEED}:crate:{i}")
-        fam("crate", i, draw_crate(rng, rng.choice((24, 28, 32)), rng.randint(10, 15),
-                                   i % 2, damaged=(i in (2, 5)), stencil=(i in (0, 3))))
+    # CRATES get the full anti-repetition treatment: ten of them, each with
+    # its own build roll, its own baked lean, and its own wear. A pile of
+    # these reads as ten thrown-down boxes instead of one box stamped ten
+    # times (user ask: break visual repetition).
+    for i, art in enumerate(clutter_variants(
+            "crate", 10,
+            lambda r, k: draw_crate(r, r.choice((24, 28, 32)), r.randint(10, 15),
+                                    k % 2, damaged=(k % 3 == 2),
+                                    stencil=(k % 4 == 0)),
+            "crate",
+            wear_colors=[C("602c2c"), C("341c27")],
+            leans=(0.0, 1.1, -1.1, 0.6, -0.6, 0.0, 1.5, -1.5, 0.9, -0.9))):
+        fam("crate", i, art)
     for i in range(4):
         rng = random.Random(f"{SEED}:cyl:{i}")
         color = ("steel", "red", "gray", "steel")[i]
         fam("cylinder", i, draw_cylinder(rng, color, rng.randint(30, 36), toppled=(i == 3)))
-    for i in range(4):
-        rng = random.Random(f"{SEED}:tires:{i}")
-        fam("tires", i, draw_tires(rng, (3, 2, 1, 1)[i], single=(i == 3)))
-    for i in range(3):
-        fam("pallet", i, draw_pallet(broken=(i == 1), stacked=(i == 2)))
+    for i, art in enumerate(clutter_variants(
+            "tires", 7,
+            lambda r, k: draw_tires(r, (3, 2, 1, 1, 2, 1, 3)[k], single=(k in (3, 5))),
+            "tires",
+            wear_colors=[C("202e37")],
+            leans=(0.0, 0.8, -0.8, 1.2, -1.2, 0.4, -0.4))):
+        fam("tires", i, art)
+    for i, art in enumerate(clutter_variants(
+            "pallet", 6,
+            lambda r, k: draw_pallet(broken=(k % 3 == 1), stacked=(k % 3 == 2)),
+            "pallet",
+            wear_colors=[C("602c2c"), C("341c27")],
+            leans=(0.0, 1.3, -1.3, 0.7, -0.7, 1.0))):
+        fam("pallet", i, art)
     for i in range(2):
         rng = random.Random(f"{SEED}:dumpster:{i}")
         fam("dumpster", i, draw_dumpster(rng, lid_open=(i == 1)))
-    for i in range(4):
-        rng = random.Random(f"{SEED}:rubble:{i}")
-        fam("rubble", i, draw_rubble(rng, min(i, 2)))
+    for i, art in enumerate(clutter_variants(
+            "rubble", 7, lambda r, k: draw_rubble(r, min(k % 3, 2)), "rubble",
+            wear_colors=[C("341c27")],
+            leans=(0.0, 0.0, 0.6, -0.6, 0.0, 1.0, -1.0))):
+        fam("rubble", i, art)
     for i, kind in enumerate(("tall", "snapped", "fallen")):
         rng = random.Random(f"{SEED}:pillar:{i}")
         fam("pillar", i, draw_pillar(rng, kind))

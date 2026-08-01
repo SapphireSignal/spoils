@@ -66,6 +66,12 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.29", ["clutter looks dumped now, not placed: crates, tires,",
+		"barrels and rubble come in many more versions, each",
+		"leaning its own way and worn its own way",
+		"junk piles up unevenly with stragglers spilling off",
+		"one side, instead of sitting in tidy stacks",
+		"the same object never appears twice in a row"]],
 	["v0.6.28", ["you can only interact with what the prompt is",
 		"offering - doors and cars used to answer from further",
 		"back than the game ever told you they would",

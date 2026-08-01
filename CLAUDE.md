@@ -516,6 +516,16 @@ then `godot_console --headless --path . --import`.
 
 ## Additional never-regress rules (learned 2026-08-01, the hard way)
 
+- **CLUTTER VARIATION vs PROCEDURAL GENERATION** (user call 2026-08-01):
+  breaking visual repetition is REQUIRED; generating layout is BANNED.
+  Use the helpers, don't hand-roll: python `bake_lean()` (baked shear —
+  runtime rotation stays banned, it breaks the pixel grid),
+  `bake_wear()` (small solid patches, never dot noise) and
+  `clutter_variants()` (per-copy seed + lean + wear; pads the canvas
+  first or the second outline_auto clips). GDScript `_place_pile()`
+  (anchor + thinning satellites along a lean), `_scatter_around()`,
+  `_clutter_offset()` (WHOLE world px only) and `_pick_variant_varied()`
+  (never the same variant twice running).
 - **THE MAP IS FIXED** (user call 2026-08-01, retroactive to day one):
   one canonical district per map, no procedural rerolls — quests point at
   real addresses, players learn streets. Layout changes ONLY as

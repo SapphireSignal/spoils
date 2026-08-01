@@ -1286,6 +1286,73 @@ func _pick_variant(family: String) -> String:
 	return names[_rng.randi_range(0, names.size() - 1)]
 
 
+# ---------------------------------------------------------- clutter ---------
+# Breaking visual repetition. NOT procedural generation — the layout is
+# fixed and hand-picked (hard rule). This is only about making identical
+# objects stop looking stamped: they sit at their own offsets, wear their
+# own damage, and pile up unevenly the way dumped things actually do.
+
+var _last_variant: Dictionary = {}   # family -> the variant used last
+
+func _pick_variant_varied(family: String) -> String:
+	## Same as _pick_variant, but never hands out the same variant twice
+	## running. One repeat in a row is what the eye catches first.
+	var names: Array = _families[family]
+	if names.size() < 2:
+		return names[0]
+	var pick: String = names[_rng.randi_range(0, names.size() - 1)]
+	if pick == _last_variant.get(family, ""):
+		pick = names[(names.find(pick) + 1 + _rng.randi_range(0, names.size() - 2))
+			% names.size()]
+	_last_variant[family] = pick
+	return pick
+
+
+func _clutter_offset(spread: float = 10.0) -> Vector2:
+	## A whole-pixel offset inside a cell. Whole pixels because static props
+	## must sit on the world grid (rule 1); the iso floor is twice as wide
+	## as it is tall, so the vertical spread is halved to match.
+	return Vector2(roundf(_rng.randf_range(-spread, spread)),
+		roundf(_rng.randf_range(-spread * 0.5, spread * 0.5)))
+
+
+func _place_pile(family: String, cell: Vector2i, heap: int,
+		spread: float = 13.0) -> void:
+	## An ASYMMETRIC pile: one anchor piece, then satellites that fall away
+	## from it at a decreasing rate and drift further as they go. Real
+	## dumped clutter has a heavy middle and stragglers — never a tidy row,
+	## never a ring, and never the same variant beside itself.
+	if not _families.has(family):
+		return
+	var base := _floor_layer.map_to_local(cell)
+	_add_prop(_pick_variant_varied(family), base + _clutter_offset(spread * 0.35))
+	_occupied[cell] = true
+	var lean := Vector2(_rng.randf_range(-1.0, 1.0), _rng.randf_range(-1.0, 1.0))
+	for i in range(1, heap):
+		if _rng.randf() > 0.85 - 0.12 * float(i):   # the tail thins out
+			break
+		# each satellite pushes further along the pile's own lean, so the
+		# heap has a direction — the way a load spills off one side
+		var reach := spread * (0.5 + 0.42 * float(i))
+		var at := base + lean * reach + _clutter_offset(spread * 0.55)
+		_add_prop(_pick_variant_varied(family), at)
+
+
+func _scatter_around(families: Array, cell: Vector2i, count: int,
+		spread: float = 22.0) -> void:
+	## Loose debris around a landmark: mixed families, uneven spacing, and
+	## a bias toward one side so it never reads as a halo.
+	var base := _floor_layer.map_to_local(cell)
+	var bias := Vector2(_rng.randf_range(-1.0, 1.0), _rng.randf_range(-1.0, 1.0))
+	for i in count:
+		var family: String = families[_rng.randi_range(0, families.size() - 1)]
+		if not _families.has(family):
+			continue
+		var at := base + bias * _rng.randf_range(0.0, spread) \
+			+ _clutter_offset(spread * 0.7)
+		_add_prop(_pick_variant_varied(family), at)
+
+
 func _take_random_cell(cells: Array[Vector2i]) -> Vector2i:
 	var index := _rng.randi_range(0, cells.size() - 1)
 	var cell: Vector2i = cells[index]
@@ -2172,9 +2239,15 @@ func _place_scrapyard() -> void:
 				or _rail_cells.has(cell) or _ballast.has(cell) \
 				or _near_a_door(cell) or _sidewalk.has(cell):
 			continue
+		# the scrapyard is where things get DUMPED — heaps, not placements
 		var junk: String = ["tires", "rubble", "barrel", "pallet", "crate",
 			"crate_stack"][_rng.randi_range(0, 5)]
-		_add_prop_at_cell(_pick_variant(junk), cell, Vector2(9, 4))
+		if _rng.randf() < 0.55:
+			_place_pile(junk, cell, _rng.randi_range(2, 5), 15.0)
+		else:
+			_add_prop(_pick_variant_varied(junk),
+				_floor_layer.map_to_local(cell) + _clutter_offset(10.0))
+			_occupied[cell] = true
 
 
 func _place_gallery() -> void:
@@ -2769,7 +2842,17 @@ func _scatter_props() -> void:
 		for opt in mix:
 			roll -= opt[1]
 			if roll <= 0.0:
-				_add_prop_at_cell(_pick_variant(opt[0]), cell, Vector2(10, 5))
+				var family: String = opt[0]
+				# most junk lands alone; a quarter of it lands as a MESSY
+				# heap — one anchor piece with stragglers spilling off one
+				# side, never a tidy stack (user: asymmetrical piling)
+				if _rng.randf() < 0.26 and family in ["barrel", "tires", "rubble"]:
+					_place_pile(family, cell, _rng.randi_range(2, 4))
+					placed += 1
+				else:
+					_add_prop(_pick_variant_varied(family),
+						_floor_layer.map_to_local(cell) + _clutter_offset(11.0))
+					_occupied[cell] = true
 				break
 		placed += 1
 		if placed % 150 == 0:
