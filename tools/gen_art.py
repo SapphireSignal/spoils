@@ -4470,16 +4470,33 @@ def prop_inventory() -> tuple[dict, dict]:
         fam("pillar", i, draw_pillar(rng, kind))
 
     # interior dressing (not scattered; placed by the builder)
-    props["couch"] = make_couch()
-    props["cabinet"] = make_cabinet()
-    props["tv_stand"] = make_tv_stand()
-    props["table"] = make_table()
-    props["chair"] = make_chair()
-    props["bookshelf"] = make_bookshelf()
+    # FURNITURE VARIETY. Every one of these used to be a single sprite, so
+    # every house in the district had the identical table, the identical
+    # bookshelf, the identical cabinet (user: "these have visual
+    # repetition... make sure everything in my game doesnt have
+    # repetition"). Each now bakes five copies with its own grime and its
+    # own slight lean — furniture leans a LITTLE, since a cabinet tipped
+    # like a crate reads as falling over rather than lived-in.
+    _FURNITURE_WEAR = [C("341c27"), C("241527")]
+    _FURNITURE_LEANS = (0.0, 0.4, -0.4, 0.7, -0.7)
+    for _name, _build in (("couch", make_couch), ("cabinet", make_cabinet),
+            ("tv_stand", make_tv_stand), ("table", make_table),
+            ("chair", make_chair), ("bookshelf", make_bookshelf)):
+        for i, art in enumerate(clutter_variants(
+                _name, 5, (lambda b: (lambda r, k: b()))(_build), _name,
+                wear_colors=_FURNITURE_WEAR, leans=_FURNITURE_LEANS)):
+            fam(_name, i, art)
     for i in range(4):
         fam("crate_stack", i, make_crate_stack(i))
     for i in range(4):
         fam("rack", i, make_rack(i))
+    # racks stood in identical pairs in the yards (user screenshot): three
+    # more, each worn and leaning its own way
+    for i, art in enumerate(clutter_variants(
+            "rack", 3, lambda r, k: make_rack(k % 4), "rack_extra",
+            wear_colors=[C("341c27"), C("602c2c")],
+            leans=(0.5, -0.5, 0.8))):
+        fam("rack", 4 + i, art)
     # vehicles: every lane heading pre-baked (nw/se drawn, ne/sw mirrored);
     # the last two specs are broken-into wrecks
     veh_specs = [("car", 0, False), ("car", 4, False), ("pickup", 5, False),
@@ -4536,7 +4553,11 @@ def prop_inventory() -> tuple[dict, dict]:
     fam("buffer_stop", 1, mirror_prop(buffer_art))
     # two-story interiors
     props["stairs"] = make_stairs()
-    props["bed"] = make_bed()
+    for i, art in enumerate(clutter_variants(
+            "bed", 4, lambda r, k: make_bed(), "bed",
+            wear_colors=[C("341c27"), C("241527")],
+            leans=(0.0, 0.3, -0.3, 0.6))):
+        fam("bed", i, art)
     # the playground
     for i, playground_broken in enumerate((False, True)):
         fam("swing_set", i, make_swing_set(playground_broken))

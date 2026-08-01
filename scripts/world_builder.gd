@@ -1613,7 +1613,7 @@ func _build_shell(plot: Dictionary) -> void:
 		# is the spawn and stays clear forever
 		var couch_cell := Vector2i(interior.position.x + 1, interior.position.y + 1)
 		if couch_cell not in pocket:
-			ground_props.append(_add_prop_at_cell("couch", couch_cell, Vector2(4, 2)))
+			ground_props.append(_add_prop_at_cell(_pick_variant_varied("couch"), couch_cell, Vector2(4, 2)))
 		var crate_cell := Vector2i(interior.end.x - 2, interior.position.y + 1)
 		if crate_cell not in pocket:
 			ground_props.append(_add_prop_at_cell(
@@ -1714,8 +1714,8 @@ func _furnish_house(interior: Rect2i, pocket: Array[Vector2i],
 		_shuffle(fallback)
 		couch_cell = fallback.pop_front()
 		tv_cell = fallback.pop_front()
-	collect.append(_add_prop_at_cell("couch", couch_cell, Vector2(6, 3)))
-	collect.append(_add_prop_at_cell("tv_stand", tv_cell, Vector2(4, 2)))
+	collect.append(_add_prop_at_cell(_pick_variant_varied("couch"), couch_cell, Vector2(6, 3)))
+	collect.append(_add_prop_at_cell(_pick_variant_varied("tv_stand"), tv_cell, Vector2(4, 2)))
 	# back-wall pieces: distinct random slots, both always present
 	var wall_cells: Array[Vector2i] = []
 	for x in range(interior.position.x, interior.end.x):
@@ -1723,7 +1723,7 @@ func _furnish_house(interior: Rect2i, pocket: Array[Vector2i],
 		if cell != couch_cell and cell != tv_cell and cell not in pocket:
 			wall_cells.append(cell)
 	_shuffle(wall_cells)
-	for piece in ["cabinet", "bookshelf"]:
+	for piece in [_pick_variant_varied("cabinet"), _pick_variant_varied("bookshelf")]:
 		if wall_cells.is_empty():
 			break
 		collect.append(_add_prop_at_cell(piece, wall_cells.pop_front(), Vector2(6, 2)))
@@ -1732,7 +1732,8 @@ func _furnish_house(interior: Rect2i, pocket: Array[Vector2i],
 	keep.append(couch_cell)
 	keep.append(tv_cell)
 	var cells := _interior_free_cells(interior, keep)
-	var extras := ["table", "chair", "chair", "crate_%d" % _rng.randi_range(0, 5)]
+	var extras := [_pick_variant_varied("table"), _pick_variant_varied("chair"),
+		_pick_variant_varied("chair"), _pick_variant("crate")]
 	_shuffle(extras)
 	for i in _rng.randi_range(2, 3):
 		if cells.is_empty():
@@ -1753,7 +1754,7 @@ func _furnish_warehouse(interior: Rect2i, pocket: Array[Vector2i],
 		var cell := Vector2i(p.x + rack_slots[i - 1], p.y)
 		if cell in pocket:
 			continue
-		collect.append(_add_prop_at_cell(_pick_variant("rack"), cell, Vector2(8, 2)))
+		collect.append(_add_prop_at_cell(_pick_variant_varied("rack"), cell, Vector2(8, 2)))
 		used.append(cell)
 	var cells := _interior_free_cells(interior, used)
 	var stock_mix := [
@@ -1796,7 +1797,7 @@ func _furnish_school(interior: Rect2i, pocket: Array[Vector2i],
 	var teacher := Vector2i(board_cell.x + (1 if _rng.randf() < 0.5 else -1),
 		p.y + 1)
 	if interior.grow(-1).has_point(teacher) and teacher not in pocket:
-		collect.append(_add_prop_at_cell("table", teacher, Vector2(4, 2)))
+		collect.append(_add_prop_at_cell(_pick_variant_varied("table"), teacher, Vector2(4, 2)))
 		used[teacher] = true
 	# desk rows: chair SOUTH of each desk, every pair facing the board
 	var y := p.y + 3
@@ -1808,8 +1809,8 @@ func _furnish_school(interior: Rect2i, pocket: Array[Vector2i],
 			if desk not in pocket and chair not in pocket \
 					and not used.has(desk) and not used.has(chair) \
 					and interior.has_point(chair) and chair.y < interior.end.y:
-				collect.append(_add_prop_at_cell("table", desk, Vector2(4, 2)))
-				collect.append(_add_prop_at_cell("chair", chair, Vector2(4, 2)))
+				collect.append(_add_prop_at_cell(_pick_variant_varied("table"), desk, Vector2(4, 2)))
+				collect.append(_add_prop_at_cell(_pick_variant_varied("chair"), chair, Vector2(4, 2)))
 				used[desk] = true
 				used[chair] = true
 			x += _rng.randi_range(2, 3)
@@ -1822,7 +1823,7 @@ func _furnish_school(interior: Rect2i, pocket: Array[Vector2i],
 			wall_cells.append(cell)
 	_shuffle(wall_cells)
 	for i in mini(2, wall_cells.size()):
-		collect.append(_add_prop_at_cell("bookshelf", wall_cells[i], Vector2(5, 2)))
+		collect.append(_add_prop_at_cell(_pick_variant_varied("bookshelf"), wall_cells[i], Vector2(5, 2)))
 
 
 func _build_upper(interior: Rect2i, stairs_cell: Vector2i, kind: String,
@@ -1904,11 +1905,14 @@ func _build_upper(interior: Rect2i, stairs_cell: Vector2i, kind: String,
 	_shuffle(cells)
 	var pieces: Array[String] = []
 	if kind == "house":
-		pieces = ["bed", "cabinet", "bookshelf", "crate_%d" % _rng.randi_range(0, 5)]
+		pieces = [_pick_variant_varied("bed"), _pick_variant_varied("cabinet"),
+			_pick_variant_varied("bookshelf"), _pick_variant("crate")]
 		if _rng.randf() < 0.4:
-			pieces.append("bed")
+			pieces.append(_pick_variant_varied("bed"))
 	else:
-		pieces = ["table", "chair", "table", "chair", "bookshelf"]
+		pieces = [_pick_variant_varied("table"), _pick_variant_varied("chair"),
+			_pick_variant_varied("table"), _pick_variant_varied("chair"),
+			_pick_variant_varied("bookshelf")]
 	for piece in pieces:
 		if cells.is_empty():
 			break
@@ -2296,7 +2300,7 @@ func _place_scrapyard() -> void:
 		if not _occupied.has(cell) and not _forest.has(cell) \
 				and not _on_road(cell) and not _near_a_door(cell) \
 				and not _rail_cells.has(cell) and not _sidewalk.has(cell):
-			_add_prop_at_cell(_pick_variant("rack"), cell, Vector2(4, 2))
+			_add_prop_at_cell(_pick_variant_varied("rack"), cell, Vector2(4, 2))
 		rack_x += _rng.randi_range(3, 5)
 	for i in 12:                                 # the junk between everything
 		await _tick()

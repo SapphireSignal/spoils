@@ -66,6 +66,12 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.37", ["furniture stopped repeating. every house used to have",
+		"the identical table, chair, bookshelf and cabinet -",
+		"there are five of each now, worn and set their own way",
+		"racks come in seven versions instead of four, so the",
+		"yards stop showing you the same pair twice",
+		"nothing picks the same version twice in a row anymore"]],
 	["v0.6.36", ["the district is bigger: every block has more room, and",
 		"the scrapyard warehouse is a proper hall again",
 		"one railway all the way across the map now - same ties,",

@@ -951,10 +951,40 @@
         5.0
       ]
     },
-    "couch": {
+    "couch_0": {
       "size": [
-        50,
-        46
+        48,
+        44
+      ],
+      "origin": [
+        24,
+        33
+      ],
+      "collider": [
+        "diamond",
+        23.0,
+        12.0
+      ]
+    },
+    "couch_1": {
+      "size": [
+        49,
+        44
+      ],
+      "origin": [
+        23,
+        33
+      ],
+      "collider": [
+        "diamond",
+        23.0,
+        12.0
+      ]
+    },
+    "couch_2": {
+      "size": [
+        48,
+        44
       ],
       "origin": [
         25,
@@ -966,14 +996,44 @@
         12.0
       ]
     },
-    "cabinet": {
+    "couch_3": {
       "size": [
-        30,
-        46
+        50,
+        44
+      ],
+      "origin": [
+        23,
+        33
+      ],
+      "collider": [
+        "diamond",
+        23.0,
+        12.0
+      ]
+    },
+    "couch_4": {
+      "size": [
+        49,
+        44
+      ],
+      "origin": [
+        26,
+        33
+      ],
+      "collider": [
+        "diamond",
+        23.0,
+        12.0
+      ]
+    },
+    "cabinet_0": {
+      "size": [
+        28,
+        44
       ],
       "origin": [
         14,
-        40
+        39
       ],
       "collider": [
         "diamond",
@@ -981,14 +1041,74 @@
         7.0
       ]
     },
-    "tv_stand": {
+    "cabinet_1": {
       "size": [
-        34,
-        46
+        29,
+        44
+      ],
+      "origin": [
+        13,
+        39
+      ],
+      "collider": [
+        "diamond",
+        13.0,
+        7.0
+      ]
+    },
+    "cabinet_2": {
+      "size": [
+        29,
+        44
+      ],
+      "origin": [
+        16,
+        39
+      ],
+      "collider": [
+        "diamond",
+        13.0,
+        7.0
+      ]
+    },
+    "cabinet_3": {
+      "size": [
+        30,
+        44
+      ],
+      "origin": [
+        13,
+        39
+      ],
+      "collider": [
+        "diamond",
+        13.0,
+        7.0
+      ]
+    },
+    "cabinet_4": {
+      "size": [
+        30,
+        44
       ],
       "origin": [
         17,
-        35
+        39
+      ],
+      "collider": [
+        "diamond",
+        13.0,
+        7.0
+      ]
+    },
+    "tv_stand_0": {
+      "size": [
+        32,
+        40
+      ],
+      "origin": [
+        17,
+        31
       ],
       "collider": [
         "diamond",
@@ -996,14 +1116,74 @@
         8.0
       ]
     },
-    "table": {
+    "tv_stand_1": {
       "size": [
-        30,
-        30
+        32,
+        40
       ],
       "origin": [
-        15,
-        24
+        16,
+        31
+      ],
+      "collider": [
+        "diamond",
+        15.0,
+        8.0
+      ]
+    },
+    "tv_stand_2": {
+      "size": [
+        32,
+        40
+      ],
+      "origin": [
+        18,
+        31
+      ],
+      "collider": [
+        "diamond",
+        15.0,
+        8.0
+      ]
+    },
+    "tv_stand_3": {
+      "size": [
+        33,
+        40
+      ],
+      "origin": [
+        16,
+        31
+      ],
+      "collider": [
+        "diamond",
+        15.0,
+        8.0
+      ]
+    },
+    "tv_stand_4": {
+      "size": [
+        33,
+        40
+      ],
+      "origin": [
+        19,
+        31
+      ],
+      "collider": [
+        "diamond",
+        15.0,
+        8.0
+      ]
+    },
+    "table_0": {
+      "size": [
+        28,
+        27
+      ],
+      "origin": [
+        14,
+        22
       ],
       "collider": [
         "diamond",
@@ -1011,28 +1191,204 @@
         7.0
       ]
     },
-    "chair": {
+    "table_1": {
       "size": [
-        18,
-        28
+        28,
+        27
       ],
       "origin": [
-        9,
-        21
+        13,
+        22
+      ],
+      "collider": [
+        "diamond",
+        13.0,
+        7.0
+      ]
+    },
+    "table_2": {
+      "size": [
+        28,
+        27
+      ],
+      "origin": [
+        15,
+        22
+      ],
+      "collider": [
+        "diamond",
+        13.0,
+        7.0
+      ]
+    },
+    "table_3": {
+      "size": [
+        28,
+        27
+      ],
+      "origin": [
+        12,
+        22
+      ],
+      "collider": [
+        "diamond",
+        13.0,
+        7.0
+      ]
+    },
+    "table_4": {
+      "size": [
+        28,
+        27
+      ],
+      "origin": [
+        16,
+        22
+      ],
+      "collider": [
+        "diamond",
+        13.0,
+        7.0
+      ]
+    },
+    "chair_0": {
+      "size": [
+        16,
+        24
+      ],
+      "origin": [
+        8,
+        19
       ],
       "collider": [
         "circle",
         4.0
       ]
     },
-    "bookshelf": {
+    "chair_1": {
       "size": [
-        32,
-        44
+        17,
+        24
+      ],
+      "origin": [
+        8,
+        19
+      ],
+      "collider": [
+        "circle",
+        4.0
+      ]
+    },
+    "chair_2": {
+      "size": [
+        17,
+        24
+      ],
+      "origin": [
+        9,
+        19
+      ],
+      "collider": [
+        "circle",
+        4.0
+      ]
+    },
+    "chair_3": {
+      "size": [
+        17,
+        24
+      ],
+      "origin": [
+        7,
+        19
+      ],
+      "collider": [
+        "circle",
+        4.0
+      ]
+    },
+    "chair_4": {
+      "size": [
+        16,
+        24
+      ],
+      "origin": [
+        9,
+        19
+      ],
+      "collider": [
+        "circle",
+        4.0
+      ]
+    },
+    "bookshelf_0": {
+      "size": [
+        28,
+        42
       ],
       "origin": [
         15,
-        38
+        37
+      ],
+      "collider": [
+        "diamond",
+        14.0,
+        7.0
+      ]
+    },
+    "bookshelf_1": {
+      "size": [
+        29,
+        42
+      ],
+      "origin": [
+        14,
+        37
+      ],
+      "collider": [
+        "diamond",
+        14.0,
+        7.0
+      ]
+    },
+    "bookshelf_2": {
+      "size": [
+        29,
+        42
+      ],
+      "origin": [
+        17,
+        37
+      ],
+      "collider": [
+        "diamond",
+        14.0,
+        7.0
+      ]
+    },
+    "bookshelf_3": {
+      "size": [
+        30,
+        42
+      ],
+      "origin": [
+        14,
+        37
+      ],
+      "collider": [
+        "diamond",
+        14.0,
+        7.0
+      ]
+    },
+    "bookshelf_4": {
+      "size": [
+        30,
+        42
+      ],
+      "origin": [
+        18,
+        37
       ],
       "collider": [
         "diamond",
@@ -1153,6 +1509,51 @@
       "origin": [
         38,
         51
+      ],
+      "collider": [
+        "diamond",
+        34.0,
+        14.0
+      ]
+    },
+    "rack_4": {
+      "size": [
+        83,
+        52
+      ],
+      "origin": [
+        35,
+        46
+      ],
+      "collider": [
+        "diamond",
+        34.0,
+        14.0
+      ]
+    },
+    "rack_5": {
+      "size": [
+        76,
+        53
+      ],
+      "origin": [
+        38,
+        47
+      ],
+      "collider": [
+        "diamond",
+        34.0,
+        14.0
+      ]
+    },
+    "rack_6": {
+      "size": [
+        78,
+        50
+      ],
+      "origin": [
+        35,
+        44
       ],
       "collider": [
         "diamond",
@@ -5085,14 +5486,59 @@
         6.0
       ]
     },
-    "bed": {
+    "bed_0": {
       "size": [
-        36,
-        34
+        28,
+        29
       ],
       "origin": [
-        18,
-        30
+        16,
+        25
+      ],
+      "collider": [
+        "diamond",
+        13.0,
+        7.0
+      ]
+    },
+    "bed_1": {
+      "size": [
+        29,
+        29
+      ],
+      "origin": [
+        16,
+        25
+      ],
+      "collider": [
+        "diamond",
+        13.0,
+        7.0
+      ]
+    },
+    "bed_2": {
+      "size": [
+        29,
+        29
+      ],
+      "origin": [
+        17,
+        25
+      ],
+      "collider": [
+        "diamond",
+        13.0,
+        7.0
+      ]
+    },
+    "bed_3": {
+      "size": [
+        28,
+        29
+      ],
+      "origin": [
+        15,
+        25
       ],
       "collider": [
         "diamond",
@@ -8630,6 +9076,48 @@
       "pillar_1",
       "pillar_2"
     ],
+    "couch": [
+      "couch_0",
+      "couch_1",
+      "couch_2",
+      "couch_3",
+      "couch_4"
+    ],
+    "cabinet": [
+      "cabinet_0",
+      "cabinet_1",
+      "cabinet_2",
+      "cabinet_3",
+      "cabinet_4"
+    ],
+    "tv_stand": [
+      "tv_stand_0",
+      "tv_stand_1",
+      "tv_stand_2",
+      "tv_stand_3",
+      "tv_stand_4"
+    ],
+    "table": [
+      "table_0",
+      "table_1",
+      "table_2",
+      "table_3",
+      "table_4"
+    ],
+    "chair": [
+      "chair_0",
+      "chair_1",
+      "chair_2",
+      "chair_3",
+      "chair_4"
+    ],
+    "bookshelf": [
+      "bookshelf_0",
+      "bookshelf_1",
+      "bookshelf_2",
+      "bookshelf_3",
+      "bookshelf_4"
+    ],
     "crate_stack": [
       "crate_stack_0",
       "crate_stack_1",
@@ -8640,7 +9128,10 @@
       "rack_0",
       "rack_1",
       "rack_2",
-      "rack_3"
+      "rack_3",
+      "rack_4",
+      "rack_5",
+      "rack_6"
     ],
     "vehicle_nw": [
       "vehicle_nw_0",
@@ -8753,6 +9244,12 @@
     "buffer_stop": [
       "buffer_stop_0",
       "buffer_stop_1"
+    ],
+    "bed": [
+      "bed_0",
+      "bed_1",
+      "bed_2",
+      "bed_3"
     ],
     "swing_set": [
       "swing_set_0",

@@ -3,6 +3,31 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.37] — 2026-08-01
+
+### Changed
+- **Furniture variety** (user: "these have visual repetition... make sure
+  everything in my game doesnt have repetition"). An audit of every prop
+  family's variant count found the real culprit: **all seven interior
+  furniture pieces were single sprites** — every house in the district
+  had the identical table, chair, bookshelf, cabinet, couch, tv stand
+  and bed. Each now bakes 4–5 copies through the v0.6.29
+  `clutter_variants` path, so every instance carries its own grime
+  patches and its own slight lean. Furniture leans *a little* — a
+  cabinet tipped like a crate reads as falling over, not lived-in.
+- **Racks** went 4 → 7 variants (the user screenshotted two identical
+  ones standing side by side in a yard).
+- Every one of those call sites now uses `_pick_variant_varied()`, so
+  the same version can never appear twice in a row — which is the repeat
+  the eye actually catches.
+
+### Known / queued
+- Remaining 2-variant families (benches, dumpsters, shelters, vending,
+  newsboxes, forklifts, planters, swings) and the singleton crane and
+  sandbox still need the same treatment.
+- The deeper fix is parameterising the builders so variants differ in
+  SHAPE and size, not only in wear and lean.
+
 ## [0.6.36] — 2026-08-01
 
 ### Changed
