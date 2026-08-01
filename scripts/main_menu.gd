@@ -37,6 +37,29 @@ var _title: TextureRect
 var _title_base_y := 0.0
 var _buttons: VBoxContainer
 var _settings: SettingsPanel
+var _changelog: PanelContainer
+
+# readable in-game summary; the full detail lives in CHANGELOG.md
+const CHANGELOG_ENTRIES := [
+	["v0.5.4", ["changelog viewer (this!)", "smoother return to menu from a raid"]],
+	["v0.5.3", ["roofs rebuilt from modular pieces - clean corners everywhere"]],
+	["v0.5.2", ["roofs sit flush on walls", "roof only hides when actually inside",
+		"red brick + gray masonry buildings, two roof shades", "back-view neck fixed"]],
+	["v0.5.1", ["clean floating menu buttons", "first sounds: button hover blips",
+		"walls always stay visible", "one doorway per building",
+		"hair + symmetric arms", "main menu button while paused"]],
+	["v0.5.0", ["text crisp for real (font bug found)", "new lowercase pixel font",
+		"real thin walls with door frames", "rotating menu backdrops"]],
+	["v0.4.0", ["first main menu", "pixel font everywhere",
+		"roofs + walk-inside reveal", "every prop got variations",
+		"resolution setting"]],
+	["v0.3.0", ["pause menu + settings", "fullscreen fills the whole screen"]],
+	["v0.2.1", ["smooth motion on high-refresh monitors", "fullscreen by default"]],
+	["v0.2.0", ["smooth ground, no tile grid", "brick buildings",
+		"props with real variety", "better walk animation"]],
+	["v0.1.1", ["fixed the play shortcut"]],
+	["v0.1.0", ["the first build: a walkable ruined block"]],
+]
 
 
 func _ready() -> void:
@@ -78,9 +101,14 @@ func _process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_cancel") and _settings.visible:
+	if not event.is_action_pressed("ui_cancel"):
+		return
+	if _settings.visible:
 		get_viewport().set_input_as_handled()
 		_close_settings()
+	elif _changelog.visible:
+		get_viewport().set_input_as_handled()
+		_close_changelog()
 
 
 # ------------------------------------------------------------- backdrops ----
@@ -274,8 +302,18 @@ func _build_ui() -> void:
 	center.add_child(_settings)
 	root.add_child(center)
 
+	var changelog_btn := Button.new()
+	changelog_btn.text = "changelog"
+	changelog_btn.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	changelog_btn.offset_left = -86
+	changelog_btn.offset_top = -40
+	changelog_btn.offset_right = -6
+	changelog_btn.offset_bottom = -20
+	changelog_btn.pressed.connect(_open_changelog)
+	root.add_child(changelog_btn)
+
 	var version := Label.new()
-	version.text = "pre-alpha v0.5.3"
+	version.text = "pre-alpha v0.5.4"
 	version.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	version.offset_left = -130
 	version.offset_top = -16
@@ -284,6 +322,66 @@ func _build_ui() -> void:
 	version.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	version.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	root.add_child(version)
+
+	_changelog = _build_changelog_panel()
+	var changelog_center := CenterContainer.new()
+	changelog_center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	changelog_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	changelog_center.add_child(_changelog)
+	root.add_child(changelog_center)
+
+
+func _build_changelog_panel() -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.visible = false
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 6)
+	var title := Label.new()
+	title.text = "changelog"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_color_override("font_color", UITheme.ACCENT)
+	box.add_child(title)
+
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(280, 210)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	var list := VBoxContainer.new()
+	list.add_theme_constant_override("separation", 3)
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for entry in CHANGELOG_ENTRIES:
+		var version_label := Label.new()
+		version_label.text = str(entry[0])
+		version_label.add_theme_color_override("font_color", UITheme.TEXT_BRIGHT)
+		list.add_child(version_label)
+		for line in (entry[1] as Array):
+			var item := Label.new()
+			item.text = "- " + str(line)
+			item.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			item.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			item.add_theme_color_override("font_color", UITheme.TEXT_DIM)
+			list.add_child(item)
+		var gap := Control.new()
+		gap.custom_minimum_size = Vector2(0, 4)
+		list.add_child(gap)
+	scroll.add_child(list)
+	box.add_child(scroll)
+
+	var back := Button.new()
+	back.text = "< back"
+	back.pressed.connect(_close_changelog)
+	box.add_child(back)
+	panel.add_child(box)
+	return panel
+
+
+func _open_changelog() -> void:
+	_buttons.visible = false
+	_changelog.visible = true
+
+
+func _close_changelog() -> void:
+	_changelog.visible = false
+	_buttons.visible = true
 
 
 func _menu_button(parent: Container, text: String, handler: Callable) -> Button:

@@ -172,6 +172,10 @@ func _shot(shot_name: String) -> void:
 		var main_menu := get_tree().get_first_node_in_group("main_menu")
 		if main_menu != null:
 			main_menu.call("show_backdrop", _shot_backdrop)
+	if _shot_menu == "changelog" and _shot_scene == "menu":
+		var menu_scene := get_tree().get_first_node_in_group("main_menu")
+		if menu_scene != null:
+			menu_scene.call("_open_changelog")
 	for i in 40:
 		await get_tree().process_frame
 	var image := get_viewport().get_texture().get_image()

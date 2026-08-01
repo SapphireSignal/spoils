@@ -3,6 +3,26 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.5.4] — 2026-07-31
+
+### Added
+- In-game changelog viewer on the main menu (bottom-right, above the version):
+  every version since the first build, summarized in plain language.
+
+### Fixed
+- Returning to the menu from a raid caused a 1–2 frame hitch (backdrop images
+  re-decoding + particle pre-simulation). Backdrops are now preloaded for the
+  process lifetime and only the first scene pre-warms its particles.
+
+## [0.5.3] — 2026-07-31
+
+### Changed
+- Roof rebuilt as modular pieces placed by explicit formula: one tile per
+  interior cell, fascia modules on south/east eaves, lit rims on north/west.
+- Wall coping on north/west walls now extends under the roof (mirrored
+  variants), and corner posts are exactly wall height so their caps close the
+  fascia line at the corners instead of poking through the roof.
+
 ## [0.5.2] — 2026-07-31
 
 ### Fixed
