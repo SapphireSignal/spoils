@@ -48,6 +48,11 @@ var _window: Window
 var _floor_layer: TileMapLayer
 var _surface_kinds: Dictionary = {}  # atlas coords -> footstep kind
 var _prev_anim_step := -1
+# camera zoom ladder: combined world-px -> screen-px factors. Only WHOLE
+# factors stay pixel-crisp; 0 = follow the window's native integer scale.
+var zoom_combined := 0
+var _zoom_center := Vector2.ZERO
+var _zoom_barrier_f := 0.0
 
 
 func _init() -> void:
@@ -138,6 +143,11 @@ func setup_surfaces(floor_layer: TileMapLayer, kinds: Dictionary) -> void:
 	_surface_kinds = kinds
 
 
+func set_zoom_edge(map_center: Vector2, barrier_f: float) -> void:
+	_zoom_center = map_center
+	_zoom_barrier_f = barrier_f
+
+
 func _footstep() -> void:
 	if _floor_layer == null:
 		return
@@ -195,20 +205,48 @@ func _process(delta: float) -> void:
 		position = position.round()
 	_was_moving = moving
 
+	# wheel zoom: whole-factor steps only (fractional zoom shimmers)
+	if not dead:
+		if Input.is_action_just_pressed("zoom_in"):
+			_step_zoom(1)
+		elif Input.is_action_just_pressed("zoom_out"):
+			_step_zoom(-1)
+
 	# ONE grid for everything on screen: the TRUE position stays continuous
 	# (never quantize it — that would inflate speed), but the RENDERED sprite
 	# parks on the screen-pixel grid, and the camera is defined off that same
 	# snapped point. Character-to-camera offset is therefore constant: the
 	# raider is pixel-welded to the screen, and the world scrolls on the
 	# identical grid. Two disagreeing grids read as shimmer/blur while
-	# walking (v0.6.4 lesson).
+	# walking (v0.6.4 lesson). The grid is 1/combined-zoom-factor wide.
 	var s := float(maxi(1, Settings.pixel_scale))
-	var snapped := (global_position * s).round() / s
+	var c := _effective_scale(s)
+	camera.zoom = Vector2(c / s, c / s)
+	var snapped := (global_position * c).round() / c
 	var visual_err := snapped - global_position
 	_sprite.position = visual_err
 	_shadow.position = visual_err
-	camera.global_position = _camera_target(snapped, s)
+	camera.global_position = _camera_target(snapped, c)
 	_animate(input_vec, delta)
+
+
+func _effective_scale(s: float) -> float:
+	var c := s if zoom_combined == 0 else float(zoom_combined)
+	# at the widest zoom the view is huge — near the barricade line the
+	# camera tightens a step so the world's true edge can never be seen
+	if c < 2.0 and _zoom_barrier_f > 0.0:
+		var u := global_position - _zoom_center
+		if absf(u.x) * 0.5 + absf(u.y) > _zoom_barrier_f - 700.0:
+			zoom_combined = 2
+			c = 2.0
+	return c
+
+
+func _step_zoom(direction: int) -> void:
+	var s := maxi(1, Settings.pixel_scale)
+	var current := s if zoom_combined == 0 else zoom_combined
+	var next := clampi(current + direction, 1, 4)
+	zoom_combined = 0 if next == s else next
 
 
 func _camera_target(from: Vector2, s: float) -> Vector2:

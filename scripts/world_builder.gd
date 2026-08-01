@@ -168,15 +168,20 @@ func _make_tileset() -> TileSet:
 # ---------------------------------------------------------------- plan -------
 
 func _plan_roads() -> void:
-	var span := MAP_W - 64
+	# roads live INSIDE the district: the outermost ones stay clear of the
+	# barricade ring (a jittered road could land parallel along the line)
+	var lo := BARRIER_INSET + 17
+	var span := MAP_W - 2 * lo
 	for i in ROAD_COUNT:
 		@warning_ignore("integer_division")
-		var base := 32 + span * i / (ROAD_COUNT - 1)
-		_roads_v.append(Vector2i(clampi(base + _rng.randi_range(-9, 9), 18, MAP_W - 24), 4))
+		var base := lo + span * i / (ROAD_COUNT - 1)
+		_roads_v.append(Vector2i(clampi(base + _rng.randi_range(-9, 9),
+			lo - 2, MAP_W - lo - 2), 4))
 	for i in ROAD_COUNT:
 		@warning_ignore("integer_division")
-		var base := 32 + span * i / (ROAD_COUNT - 1)
-		_roads_h.append(Vector2i(clampi(base + _rng.randi_range(-9, 9), 18, MAP_H - 24), 4))
+		var base := lo + span * i / (ROAD_COUNT - 1)
+		_roads_h.append(Vector2i(clampi(base + _rng.randi_range(-9, 9),
+			lo - 2, MAP_H - lo - 2), 4))
 
 
 func _road_v_at(cell: Vector2i) -> int:
@@ -824,14 +829,15 @@ func _ring_side(axis: String, fixed: int, from: int, to: int, _far: bool) -> voi
 	# line is made of the same barrier over and over), a second design mixed
 	# in sparingly, the odd one knocked askew or flat, uneven spacing
 	# (clusters then gaps), and every piece shoved a little off the line
-	# jerseys (family indices 0-1) always dominate — a concrete line reads as
-	# a BARRIER; the thin fences (indices 2-3) are occasional accents only
+	# the LATTICE FENCE panels are the line (user call — the concrete runs
+	# read as train tracks); jerseys are occasional accents. Denser line:
+	# long runs, small rare gaps, everything jittered a little off-line.
 	var names: Array = _families["barricade_%s" % axis]
-	var dominant: String = names[_rng.randi_range(0, 1)]
-	var second: String = names[_rng.randi_range(2, 3)]
-	var i := from + _rng.randi_range(0, 3)
+	var dominant: String = names[_rng.randi_range(2, 3)]
+	var second: String = names[_rng.randi_range(0, 1)]
+	var i := from + _rng.randi_range(0, 2)
 	while i <= to:
-		var run := _rng.randi_range(2, 5)
+		var run := _rng.randi_range(3, 7)
 		for r in run:
 			if i > to:
 				break
@@ -848,17 +854,17 @@ func _ring_side(axis: String, fixed: int, from: int, to: int, _far: bool) -> voi
 				continue
 			var roll := _rng.randf()
 			var piece := dominant
-			if roll < 0.10:
+			if roll < 0.08:
 				piece = _pick_variant("barricade_%s_askew" % axis)
-			elif roll < 0.20:
+			elif roll < 0.18:
 				piece = _pick_variant("barricade_%s_flat" % axis)
-			elif roll < 0.32:
+			elif roll < 0.28:
 				piece = second
 			var pos := _floor_layer.map_to_local(cell) + Vector2(
 				_rng.randf_range(-7.0, 7.0), _rng.randf_range(-4.0, 4.0))
 			_add_prop(piece, pos)
 			_occupied[cell] = true
-		i += _rng.randi_range(3, 8)  # a gap — slip through somewhere
+		i += _rng.randi_range(2, 4) if _rng.randf() < 0.8 else _rng.randi_range(5, 7)
 
 
 func _dress_buffer() -> void:
@@ -1025,10 +1031,13 @@ func _place_road_vehicles() -> void:
 
 
 func _scatter_props() -> void:
+	# NO boxes in the open (user call): crates/stacks/pallets spawn only
+	# around warehouses (below) and in their yards — the street junk is
+	# barrels, tires, rubble, and the like
+	await _scatter_warehouse_stock()
 	var mix := [
-		["barrel", 0.16], ["cylinder", 0.08], ["crate", 0.14], ["tires", 0.12],
-		["pallet", 0.10], ["dumpster", 0.06], ["rubble", 0.22], ["pillar", 0.06],
-		["crate_stack", 0.06],
+		["barrel", 0.20], ["cylinder", 0.10], ["tires", 0.16],
+		["dumpster", 0.08], ["rubble", 0.30], ["pillar", 0.08],
 	]
 	var total := 0.0
 	for opt in mix:
@@ -1070,6 +1079,23 @@ func _scatter_props() -> void:
 		placed += 1
 		if placed % 150 == 0:
 			await _scene_tree.process_frame
+
+
+func _scatter_warehouse_stock() -> void:
+	# spilled stock hugs the warehouses it fell off of
+	for plot in _plots:
+		if plot["kind"] != "warehouse":
+			continue
+		await _tick()
+		var ring: Rect2i = (plot["rect"] as Rect2i).grow(_rng.randi_range(2, 4))
+		for i in _rng.randi_range(3, 6):
+			var cell := Vector2i(_rng.randi_range(ring.position.x, ring.end.x - 1),
+				_rng.randi_range(ring.position.y, ring.end.y - 1))
+			if _occupied.has(cell) or _forest.has(cell) or _on_road(cell) \
+					or _near_a_door(cell) or (plot["rect"] as Rect2i).has_point(cell):
+				continue
+			var item := _pick_variant(["crate", "crate_stack", "pallet"][_rng.randi_range(0, 2)])
+			_add_prop_at_cell(item, cell, Vector2(8, 4))
 
 
 func _collect_puddle_spots() -> void:

@@ -204,20 +204,32 @@ func _process(delta: float) -> void:
 	# the rain bed follows the density, always subtle
 	Sfx.set_rain(rain_intensity)
 
-	# lightning during heavy rain: a real double-strike that lingers, thunder
-	# rolling in behind it (the delay is the distance)
+	# lightning during heavy rain: sometimes one strike, sometimes a burst of
+	# two or three chasing each other, each with its own thunder behind it
 	if _raining and rain_intensity > 0.6:
 		_lightning_timer -= delta
 		if _lightning_timer <= 0.0:
 			_lightning_timer = randf_range(18.0, 50.0)
-			var peak := 0.20 + 0.10 * night_amount
-			var tween := create_tween()
-			tween.tween_property(_flash, "color:a", peak, 0.09)
-			tween.tween_property(_flash, "color:a", 0.05, 0.16)
-			tween.tween_property(_flash, "color:a", peak * 0.75, 0.08)
-			tween.tween_property(_flash, "color:a", 0.0, 0.50)
-			get_tree().create_timer(randf_range(0.4, 1.4)).timeout.connect(
-				Sfx.play_thunder)
+			var strikes := 1
+			var roll := randf()
+			if roll < 0.18:
+				strikes = 3
+			elif roll < 0.48:
+				strikes = 2
+			_strike()
+			for s in range(1, strikes):
+				get_tree().create_timer(
+					randf_range(0.5, 1.3) * float(s)).timeout.connect(_strike)
+
+
+func _strike() -> void:
+	var peak := (0.20 + 0.10 * night_amount) * randf_range(0.8, 1.15)
+	var tween := create_tween()
+	tween.tween_property(_flash, "color:a", peak, 0.09)
+	tween.tween_property(_flash, "color:a", 0.05, 0.16)
+	tween.tween_property(_flash, "color:a", peak * 0.75, 0.08)
+	tween.tween_property(_flash, "color:a", 0.0, 0.50)
+	get_tree().create_timer(randf_range(0.4, 1.4)).timeout.connect(Sfx.play_thunder)
 
 
 func _night_amount_for(t: float) -> float:

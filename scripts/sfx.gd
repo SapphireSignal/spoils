@@ -95,8 +95,8 @@ func play_step(kind: String, quiet: bool) -> void:
 	var variants: Array = _steps.get(kind, _steps.get("concrete", []))
 	if variants.is_empty():
 		return
-	_step_player.volume_db = -20.0 if quiet else -14.0
-	_step_player.pitch_scale = randf_range(0.94, 1.06)  # no two steps alike
+	_step_player.volume_db = -24.0 if quiet else -18.0  # subtle, always
+	_step_player.pitch_scale = randf_range(0.95, 1.05)  # no two steps alike
 	_step_player.stream = variants[randi() % variants.size()]
 	_step_player.play()
 
@@ -119,7 +119,10 @@ func set_rain(intensity: float) -> void:
 	if not _rain_player.playing:
 		_rain_player.stream = _rain_loop
 		_rain_player.play()
-	_rain_player.volume_db = lerpf(-38.0, -18.0, clampf(intensity, 0.0, 1.0))
+	# VERY subtle, with a slow non-loop-aligned drift so nothing about it
+	# ever reads as a repeating pattern
+	var drift := sin(Time.get_ticks_msec() / 1000.0 * TAU / 13.7) * 1.5
+	_rain_player.volume_db = lerpf(-46.0, -30.0, clampf(intensity, 0.0, 1.0)) + drift
 
 
 func alarm_stream() -> AudioStreamWAV:
@@ -229,45 +232,63 @@ func _synth_noise(duration: float, amp: float) -> AudioStreamWAV:
 
 
 func _synth_steps() -> void:
-	## Per-surface footsteps, two variants each, all short and SOFT.
-	## concrete: dry tick. asphalt: duller tick. wood: hollow knock.
-	## grass: brushed rustle. dirt: muffled scuff.
-	var specs := {
-		"concrete": [0.05, 0.15, 1400.0, 0.10, 0.30],
-		"asphalt": [0.055, 0.45, 900.0, 0.09, 0.25],
-		"wood": [0.09, 0.35, 210.0, 0.16, 0.55],
-		"grass": [0.06, 0.75, 0.0, 0.07, 0.0],
-		"dirt": [0.07, 0.6, 140.0, 0.08, 0.35],
-	}
-	for kind in specs:
-		var spec: Array = specs[kind]
+	## Per-surface footsteps, two variants each — each surface built with its
+	## OWN recipe so they are unmistakably different (user report: too samey):
+	## concrete = crisp dry tick; asphalt = low dull thud; wood = hollow
+	## two-tone knock; grass = a slow soft brush; dirt = a grainy crunch.
+	for kind in ["concrete", "asphalt", "wood", "grass", "dirt"]:
 		var variants: Array[AudioStreamWAV] = []
 		for v in 2:
-			variants.append(_synth_step_one(str(kind) + str(v), spec[0], spec[1],
-				spec[2], spec[3], spec[4]))
+			variants.append(_synth_step_kind(kind, v))
 		_steps[kind] = variants
 
 
-func _synth_step_one(seed_text: String, duration: float, lowpass: float,
-		tone_hz: float, amp: float, tone_mix: float) -> AudioStreamWAV:
-	var count := int(duration * RATE)
+func _synth_step_kind(kind: String, variant: int) -> AudioStreamWAV:
+	var dur := 0.045
+	match kind:
+		"asphalt": dur = 0.06
+		"wood": dur = 0.12
+		"grass": dur = 0.10
+		"dirt": dur = 0.075
+	var count := int(dur * RATE)
 	var data := PackedByteArray()
 	data.resize(count * 2)
 	var rng := RandomNumberGenerator.new()
-	rng.seed = hash("spoils-step-" + seed_text)
-	var prev := 0.0
-	var phase := 0.0
+	rng.seed = hash("spoils-step-%s-%d" % [kind, variant])
+	var lp1 := 0.0
+	var lp2 := 0.0
 	for i in count:
 		var t := float(i) / count
-		var env := minf(float(i) / (0.003 * RATE), 1.0) * pow(1.0 - t, 3.4)
 		var n := rng.randf_range(-1.0, 1.0)
-		var filtered := n * (1.0 - lowpass) + prev * lowpass
-		prev = filtered
-		var s := filtered * (1.0 - tone_mix)
-		if tone_hz > 0.0:
-			phase += TAU * tone_hz / RATE
-			s += sin(phase) * tone_mix
-		data.encode_s16(i * 2, int(clampf(s * env * amp, -1.0, 1.0) * 32767.0))
+		var s := 0.0
+		match kind:
+			"concrete":  # bright dry tick, over instantly
+				var env := minf(float(i) / (0.0015 * RATE), 1.0) * pow(1.0 - t, 5.0)
+				s = n * 0.65 * env + sin(TAU * 2300.0 * float(i) / RATE) * 0.10 * env * env
+			"asphalt":   # low dull thud with a little grit
+				lp1 = n * 0.4 + lp1 * 0.6
+				var env := minf(float(i) / (0.002 * RATE), 1.0) * pow(1.0 - t, 4.0)
+				s = lp1 * 0.4 * env + sin(TAU * 105.0 * float(i) / RATE) * 0.35 * env
+			"wood":      # hollow knock: two low resonances ringing briefly
+				var env := minf(float(i) / (0.0015 * RATE), 1.0) * pow(1.0 - t, 2.4)
+				s = (sin(TAU * 165.0 * float(i) / RATE) * 0.55
+					+ sin(TAU * 332.0 * float(i) / RATE) * 0.28) * env
+				if t < 0.07:
+					s += n * 0.25 * (1.0 - t / 0.07)
+			"grass":     # a brush, not a tap: slow swell, deeply softened
+				lp1 = n * 0.15 + lp1 * 0.85
+				lp2 = lp1 * 0.15 + lp2 * 0.85
+				var env := smoothstep(0.0, 0.3, t) * (1.0 - smoothstep(0.35, 1.0, t))
+				s = lp2 * 1.5 * env
+			"dirt":      # grainy crunch: three little crush bursts inside
+				lp1 = n * 0.45 + lp1 * 0.55
+				var env := pow(1.0 - t, 3.0)
+				var grain := 1.0
+				for g in [0.08, 0.3, 0.55]:
+					if absf(t - float(g)) < 0.05:
+						grain = 1.9
+				s = lp1 * 0.4 * env * grain
+		data.encode_s16(i * 2, int(clampf(s, -1.0, 1.0) * 32767.0))
 	return _wav(data)
 
 
@@ -308,26 +329,27 @@ func _synth_thunder(seed_text: String, duration: float, amp: float) -> AudioStre
 
 
 func _synth_rain_bed() -> AudioStreamWAV:
-	## Seamless soft patter loop; the environment sets its level.
-	var count := int(2.0 * RATE)
+	## A pure smooth distant wash — no pops, no texture that could read as
+	## repetition (user: "just normal rain, very subtle"). 8 s of doubly
+	## lowpassed noise; any loop seam in that is inaudible.
+	var count := int(8.0 * RATE)
 	var data := PackedByteArray()
 	data.resize(count * 2)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash("spoils-rainbed")
-	var prev := 0.0
+	var lp1 := 0.0
+	var lp2 := 0.0
 	for i in count:
 		var n := rng.randf_range(-1.0, 1.0)
-		var filtered := n * 0.22 + prev * 0.78
-		prev = filtered
-		var s := filtered * 0.55
-		if rng.randf() < 0.004:  # individual fat drops in the wash
-			s += rng.randf_range(-0.3, 0.3)
-		data.encode_s16(i * 2, int(clampf(s, -1.0, 1.0) * 32767.0))
+		lp1 = n * 0.18 + lp1 * 0.82
+		lp2 = lp1 * 0.18 + lp2 * 0.82
+		data.encode_s16(i * 2, int(clampf(lp2 * 0.9, -1.0, 1.0) * 32767.0))
 	return _wav(data, count)
 
 
 func _synth_alarm() -> AudioStreamWAV:
-	## Two-tone car alarm, 3 seconds, deliberately small and non-obnoxious.
+	## Two-tone car alarm, 3 seconds, small and non-obnoxious. Every pulse
+	## has a real attack/release ramp — hard gating clicked ("static").
 	var count := int(3.0 * RATE)
 	var data := PackedByteArray()
 	data.resize(count * 2)
@@ -335,10 +357,11 @@ func _synth_alarm() -> AudioStreamWAV:
 	for i in count:
 		var t := float(i) / count
 		var cycle := fmod(t * 3.2, 1.0)
-		var freq := 720.0 if cycle < 0.5 else 545.0
+		var freq := 700.0 if cycle < 0.5 else 540.0
 		phase += TAU * freq / RATE
-		var pulse := 1.0 if fmod(cycle, 0.5) < 0.42 else 0.0
-		var fade := minf(t / 0.05, 1.0) * minf((1.0 - t) / 0.15, 1.0)
-		var s := (sin(phase) + 0.2 * sin(phase * 2.0)) * pulse * fade * 0.16
+		var pt := fmod(cycle, 0.5) / 0.5  # position inside this pulse window
+		var pulse := smoothstep(0.0, 0.12, pt) * (1.0 - smoothstep(0.72, 0.92, pt))
+		var fade := minf(t / 0.08, 1.0) * minf((1.0 - t) / 0.2, 1.0)
+		var s := sin(phase) * pulse * fade * 0.15
 		data.encode_s16(i * 2, int(clampf(s, -1.0, 1.0) * 32767.0))
 	return _wav(data)

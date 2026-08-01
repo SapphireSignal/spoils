@@ -73,7 +73,7 @@ func _ready() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey or event is InputEventMouseButton:
 		if event.is_pressed():
-			_finish()
+			_finish(false)
 
 
 func _process(delta: float) -> void:
@@ -113,7 +113,7 @@ func _process(delta: float) -> void:
 		_spawn_ring(4)
 
 	if _t > DONE_AT:
-		_finish()
+		_finish(false)
 
 
 func _spawn_ring(index: int) -> void:
@@ -127,8 +127,23 @@ func _spawn_ring(index: int) -> void:
 	tween.tween_callback(ring.queue_free)
 
 
-func _finish() -> void:
+func _finish(instant: bool = true) -> void:
+	# harness runs cut instantly; a person gets a clean fade to black first
+	# (the hard cut into the fully-formed menu read as a glitch)
 	if _finishing:
 		return
 	_finishing = true
-	get_tree().change_scene_to_file.call_deferred("res://scenes/menu.tscn")
+	if instant:
+		get_tree().change_scene_to_file.call_deferred("res://scenes/menu.tscn")
+		return
+	var cover := ColorRect.new()
+	cover.color = Color("090a14", 0.0)
+	cover.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var layer := CanvasLayer.new()
+	layer.layer = 100
+	layer.add_child(cover)
+	add_child(layer)
+	var tween := create_tween()
+	tween.tween_property(cover, "color:a", 1.0, 0.45)
+	tween.tween_callback(func() -> void:
+		get_tree().change_scene_to_file("res://scenes/menu.tscn"))

@@ -3,6 +3,52 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.9] — 2026-08-01
+
+The polish storm: everything the playtest surfaced in one pass.
+
+### Added
+- **Mouse-wheel zoom**: a whole-factor ladder (fractional zoom would break
+  the pixel grid) — two steps in, one step out beyond the default. Near the
+  barricade line the camera auto-tightens a step so the world's true edge
+  can never scroll into view. Rain coverage and sniper spawn distances scale
+  with the view.
+- **Anti-banding film**: a 1/255-alpha noise overlay that breaks the day
+  cycle's full-screen 8-bit tint steps into imperceptible per-pixel grain
+  (the user could SEE the screen click one brightness step every couple of
+  seconds).
+- **Multi-strike lightning**: bursts of 1/2/3 strikes, each with its own
+  flash intensity and its own rolling thunder.
+- **Clip audit in the art pipeline**: generation now FAILS if any sprite has
+  opaque pixels on its canvas border (grid modules exempt). Fixed everything
+  it caught: tv stand (the user's screenshot), couch, dumpster, racks,
+  crates, cylinders, single tire, fallen pillar, roof vent/hatch, bottle,
+  paper, all barricades, bodies.
+
+### Changed
+- **Vehicles, actually complete**: the raked windshield/trunk ramps left
+  ladder gaps in the roof plane (profile jumps of 2px per column between
+  strokes) — the real "missing front/back". Ramps now bridge every step.
+- **Barrels are 3D**: elliptical top face, walls hanging off the ellipse's
+  curve, hoops that follow the curvature — no more flat front-view drums.
+- **The barricade line is lattice fencing** (the style the user pointed at):
+  dense diagonal-mesh panels as the dominant piece, concrete jerseys demoted
+  to accents, tighter runs, smaller gaps. Roads can no longer generate
+  parallel along the ring (outermost road span pulled well inside).
+- **Footsteps rebuilt per surface with distinct recipes**: crisp concrete
+  tick, low asphalt thud, hollow two-tone wood knock, slow grass brush,
+  grainy dirt crunch — and everything quieter (-18 dB, -24 crouched/prone).
+- **Rain bed rebuilt**: the old one added ~176 random pops per second
+  (heard as crackle/"messed up") and looped audibly every 2 s. Now a pure
+  doubly-lowpassed 8 s wash, much quieter (-46..-30 dB), with a slow
+  non-loop-aligned drift so nothing repeats perceptibly.
+- **Car alarm de-clicked**: every pulse gets a real attack/release ramp
+  (hard gating read as static).
+- **Splash → menu is one continuous dip to black** (fade out, fade in) —
+  the hard cut into the fully-formed menu read as a glitch.
+- **Boxes belong to industry**: crates/stacks/pallets only spawn around
+  warehouses and their yards, never in the open street.
+
 ## [0.6.8] — 2026-08-01
 
 The sound update: the district found its voice — and its studio card.

@@ -586,22 +586,22 @@ def make_roof_tile_broken(tone: str, variant: int) -> tuple[Canvas, tuple, list 
     return c, origin, collider
 
 def make_roof_vent() -> tuple[Canvas, tuple, list | None]:
-    c = Canvas(24, 22)
-    vb = iso_prism(c, 2, 1, 20, 10, 7, CONC_BASE, CONC_D1, CONC_D2)
+    c = Canvas(24, 24)
+    vb = iso_prism(c, 2, 2, 20, 10, 7, CONC_BASE, CONC_D1, CONC_D2)
     for x in range(3, 17):
         if x % 3 != 0:
             c.set(2 + x, vb[x] + 3, INK)
             c.set(2 + x, vb[x] + 5, INK)
     c.outline_auto()
-    return c, (12, 15), None
+    return c, (12, 16), None
 
 def make_roof_hatch() -> tuple[Canvas, tuple, list | None]:
-    c = Canvas(20, 14)
-    hb = iso_prism(c, 2, 1, 16, 8, 2, CONC_D1, CONC_D2, INK)
+    c = Canvas(20, 16)
+    hb = iso_prism(c, 2, 2, 16, 8, 2, CONC_D1, CONC_D2, INK)
     for x in range(4, 12):
         c.set(2 + x, hb[x] - 1, CONC_BASE)
     c.outline_auto()
-    return c, (10, 8), None
+    return c, (10, 9), None
 
 # ---------------------------------------------------------------- props ------
 
@@ -634,9 +634,9 @@ WOOD_TONES = [("be772b", "884b2b", "602c2c", "341c27"),
 def draw_crate(rng: random.Random, w: int, h: int, tone: int,
                damaged: bool, stencil: bool) -> tuple[Canvas, tuple, list]:
     d = w // 2
-    c = Canvas(w + 4, d + h + 4)
+    c = Canvas(w + 4, d + h + 6)
     top, left, right, line = (C(n) for n in WOOD_TONES[tone])
-    ox, oy = 2, 1
+    ox, oy = 2, 2
     bottoms = iso_prism(c, ox, oy, w, d, h, top, left, right)
     for x in range(w):
         y = bottoms[x] - (0 if x % 2 else 1)
@@ -670,35 +670,58 @@ def draw_barrel(rng: random.Random, style: str, h: int, r: int,
     }
     body, lite, dark, lid, fleck = styles[style]
     if not fallen:
-        c = Canvas(2 * r + 4, h + 6)
-        cx = r + 2
-        top_y, bot_y = 5, h + 3
-        for y in range(top_y, bot_y):
-            half = r if top_y + 2 <= y <= bot_y - 3 else r - 1
-            for x in range(cx - half, cx + half):
-                t = (x - (cx - half)) / (2 * half)
-                c.set(x, y, lite if t < 0.35 else (body if t < 0.8 else dark))
-        for y in range(2, 7):
-            half = max(3, r - abs(y - 4) * 2 - 0)
-            half = min(r, half + 3)
-            for x in range(cx - half, cx + half):
-                c.set(x, y, C("819796") if y <= 3 else lid)
-        hoop_ys = [top_y + (h - 4) // 3, top_y + 2 * (h - 4) // 3]
+        # a REAL iso cylinder (the old front-view drum read completely flat
+        # next to the 3D vehicles): elliptical top face, walls hanging from
+        # the ellipse's curve, hoops that follow the same curvature
+        import math as _math
+        c = Canvas(2 * r + 6, h + r + 6)
+        cx = r + 3
+        top_cy = r // 2 + 2
+        ell_h = max(2, r // 2)
+
+        def edge_dy(dx: int) -> int:
+            f = 1.0 - (dx * dx) / float(r * r)
+            return int(round(_math.sqrt(max(0.0, f)) * ell_h))
+
+        # top face: full ellipse — lid fill, lit near rim, dark far rim
+        for dx in range(-r, r + 1):
+            dy = edge_dy(dx)
+            for y in range(top_cy - dy, top_cy + dy + 1):
+                col = lid
+                if y <= top_cy - dy + 1 and dx < 1:
+                    col = C("819796")            # lit back-left rim
+                elif y >= top_cy + dy - 1:
+                    col = dark                   # near rim shadow
+                c.set(cx + dx, y, col)
+        c.set(cx, top_cy, dark)                  # bung
+        c.set(cx + 1, top_cy, dark)
+        # walls: hang from the ellipse's lower edge, shaded around the curve
+        for dx in range(-r, r + 1):
+            dy = edge_dy(dx)
+            t = (dx + r) / float(2 * r)
+            col = lite if t < 0.28 else (body if t < 0.74 else dark)
+            for y in range(top_cy + dy, top_cy + dy + h):
+                c.set(cx + dx, y, col)
+        # hoops follow the same curvature
+        hoop_hs = [h // 3, (2 * h) // 3]
         if rng.random() < 0.5:
-            hoop_ys.append(top_y + 3)
-        for hy in hoop_ys:
-            for x in range(cx - r, cx + r):
-                c.set(x, hy, dark)
-                c.set(x, hy - 1, C("ad7757") if style == "rust" else C("819796"))
-        if rng.random() < 0.5:  # dent
-            dy = rng.randrange(top_y + 3, bot_y - 3)
-            for x in range(cx - r, cx - r + 3):
-                c.set(x, dy, dark)
-                c.set(x, dy + 1, dark)
+            hoop_hs.append(2)
+        for hh in hoop_hs:
+            for dx in range(-r, r + 1):
+                dy = edge_dy(dx)
+                c.set(cx + dx, top_cy + dy + hh, dark)
+                c.set(cx + dx, top_cy + dy + hh - 1,
+                    C("ad7757") if style == "rust" else C("819796"))
+        if rng.random() < 0.5:  # dent on the shaded side
+            dent_y = top_cy + ell_h + rng.randrange(3, h - 3)
+            for x in range(cx + r - 3, cx + r):
+                c.set(x, dent_y, body)
+                c.set(x, dent_y + 1, body)
         for _ in range(rng.randint(6, 12)):
-            c.set(rng.randrange(cx - r + 1, cx + r - 1), rng.randrange(7, bot_y - 1), fleck)
+            fx = rng.randrange(cx - r + 1, cx + r - 1)
+            c.set(fx, top_cy + edge_dy(fx - cx) + rng.randrange(2, h - 1), fleck)
         c.outline_auto()
-        return c, (cx, h + 2), ["circle", float(r - 1)]
+        return c, (cx, top_cy + h + 1), ["circle", float(r - 1)]
     # fallen barrel: cylinder on its side, seen at iso angle
     length = h
     c = Canvas(length + 10, 2 * r + 8)
@@ -731,9 +754,9 @@ def draw_cylinder(rng: random.Random, color: str, h: int,
     }
     lite, base, dark, glint = tones[color]
     if not toppled:
-        c = Canvas(14, h + 6)
+        c = Canvas(14, h + 8)
         cx = 7
-        top = 4
+        top = 5
         dome = {top: 2, top + 1: 3, top + 2: 4, top + 3: 4}
         for y, half in dome.items():
             for x in range(cx - half, cx + half):
@@ -746,12 +769,12 @@ def draw_cylinder(rng: random.Random, color: str, h: int,
         for x in range(cx - 4, cx + 4):
             c.set(x, band_y, dark)
             c.set(x, band_y - 1, glint if x % 2 else base)
-            c.set(x, h + 1, C("202e37"))
-        c.rect(cx - 1, 1, cx, 3, C("577277"))
+            c.set(x, h + 2, C("202e37"))
+        c.rect(cx - 1, 2, cx, 4, C("577277"))
         for _ in range(rng.randint(2, 5)):
             c.set(rng.randrange(cx - 3, cx + 3), rng.randrange(top + 6, h), C("602c2c"))
         c.outline_auto()
-        return c, (7, h + 1), ["circle", 4.0]
+        return c, (7, h + 2), ["circle", 4.0]
     c = Canvas(h + 8, 16)
     for i in range(h - 4):
         x = 5 + i
@@ -768,10 +791,10 @@ def draw_cylinder(rng: random.Random, color: str, h: int,
 
 def draw_tires(rng: random.Random, count: int, single: bool) -> tuple[Canvas, tuple, list]:
     if single:  # one tire leaning upright
-        c = Canvas(22, 24)
-        cx, cy = 11, 11
-        for y in range(22):
-            for x in range(22):
+        c = Canvas(26, 27)
+        cx, cy = 12, 12
+        for y in range(24):
+            for x in range(24):
                 dx, dy = (x - cx) / 9.5, (y - cy) / 9.5
                 d = dx * dx + dy * dy
                 if 0.35 < d < 1.0:
@@ -779,9 +802,9 @@ def draw_tires(rng: random.Random, count: int, single: bool) -> tuple[Canvas, tu
                 elif d <= 0.35:
                     c.set(x, y + 1, C("090a14"))
         for a in range(-3, 4):  # tread highlight arc
-            c.set(cx + a, 3 if abs(a) < 2 else 4, C("202e37"))
+            c.set(cx + a, 4 if abs(a) < 2 else 5, C("202e37"))
         c.outline_auto()
-        return c, (11, 22), ["circle", 6.0]
+        return c, (12, 23), ["circle", 6.0]
     c = Canvas(30, 10 + 6 * count)
     cx = 15
     halves = [8, 11, 12, 12, 11, 9]
@@ -829,8 +852,8 @@ def draw_pallet(rng: random.Random, broken: bool, stacked: bool) -> tuple[Canvas
 
 def draw_dumpster(rng: random.Random, lid_open: bool) -> tuple[Canvas, tuple, list]:
     W, D, H = 36, 18, 16
-    c = Canvas(44, 44)
-    ox, oy = 3, 9
+    c = Canvas(44, 48)
+    ox, oy = 3, 10
     bottoms = iso_prism(c, ox, oy, W, D, H, C("394a50"), C("25562e"), C("19332d"))
     if lid_open:
         for i, (x0, x1) in enumerate(small_diamond_rows(W, D)):
@@ -888,7 +911,7 @@ def draw_rubble(rng: random.Random, size: int) -> tuple[Canvas, tuple, list]:
 
 def draw_pillar(rng: random.Random, kind: str) -> tuple[Canvas, tuple, list]:
     if kind == "fallen":
-        c = Canvas(52, 20)
+        c = Canvas(56, 22)
         for i in range(44):
             x = 4 + i
             sh = i // 16
@@ -934,7 +957,7 @@ def draw_pillar(rng: random.Random, kind: str) -> tuple[Canvas, tuple, list]:
 # Interior dressing so buildings read as lived-in places, not empty shells.
 
 def make_couch() -> tuple[Canvas, tuple, list]:
-    c = Canvas(50, 42)
+    c = Canvas(50, 46)
     seat_top, seat_l, seat_r = C("752438"), C("411d31"), C("241527")
     bottoms = iso_prism(c, 3, 12, 44, 22, 8, seat_top, seat_l, seat_r)
     # backrest along the NE edge (faces the camera across the seat)
@@ -965,7 +988,9 @@ def make_cabinet() -> tuple[Canvas, tuple, list]:
     return c, (14, 40), ["diamond", 13.0, 7.0]
 
 def make_tv_stand() -> tuple[Canvas, tuple, list]:
-    c = Canvas(34, 38)
+    # tall enough for the full base: the old 38px canvas cut the stand's
+    # bottom rows clean off (user screenshot)
+    c = Canvas(34, 46)
     bottoms = iso_prism(c, 2, 20, 28, 14, 8, C("4d2b32"), C("341c27"), C("241527"))
     # tv on top: dark slab, screen facing SW with a glint
     tv = iso_prism(c, 7, 6, 16, 8, 12, C("151d28"), C("202e37"), C("10141f"))
@@ -976,7 +1001,7 @@ def make_tv_stand() -> tuple[Canvas, tuple, list]:
         if 3 <= x <= 6:
             c.set(7 + x, tv[x] + 3 + x - 3, C("3c5e8b"))  # screen glint
     c.outline_auto()
-    return c, (17, 34), ["diamond", 15.0, 8.0]
+    return c, (17, 35), ["diamond", 15.0, 8.0]
 
 def make_table() -> tuple[Canvas, tuple, list]:
     c = Canvas(30, 30)
@@ -1077,7 +1102,7 @@ def make_rack(variant: int) -> tuple[Canvas, tuple, list]:
     rng = random.Random(f"{SEED}:rack:{variant}")
     # keep total height under the wall height so racks never poke past the
     # wall cap when parked against a wall
-    c = Canvas(60, 58)
+    c = Canvas(68, 58)
     steel, steel_d = C("394a50"), C("202e37")
     for level_y in (20, 36):
         rows = small_diamond_rows(52, 26)
@@ -1175,30 +1200,43 @@ def make_vehicle(kind: str, scheme: int, rev: bool = False,
         base = oy + i // 2
         for y in range(base - clear - prof[i], base - clear + 1):
             c.set(x, y, body_d)
+    prev_top = None
     for i in range(L):  # roof plane toward NE — deep enough to read as width
         x = ox + i
         base = oy + i // 2
         top = base - clear - prof[i]
+        # on the raked ramps (windshield/trunk) the profile jumps 2+ per
+        # column; bridge the whole jump or the plane renders as ladder slats
+        # ("the front or back is always missing" — user report, twice)
+        span = 1 if prev_top is None else abs(prev_top - top) + 1
+        rising = prev_top is not None and prev_top > top
         for t in range(1, ROOF_DEPTH + 1):
             col = body_c
             if t == ROOF_DEPTH:
                 col = body_d            # far rim
             elif rng.random() < 0.02:
                 col = body_d
-            # fill BOTH rounding rows of the 2:1 step — single-pixel strokes
-            # leave a checkerboard of holes that outline into a dotted lattice
-            c.set(x + t, top - (t + 1) // 2, col)
-            c.set(x + t, top - t // 2, col)
+            for k in range(span):
+                yy = top + (k if rising else -k)
+                c.set(x + t, yy - (t + 1) // 2, col)
+                c.set(x + t, yy - t // 2, col)
+        prev_top = top
     # raked glass on the roof plane (windshield when heading SE, rear glass
     # when heading NW) — this is what makes the facing readable from above
+    glass_prev = None
     for i in range(glass_roof[0], glass_roof[1]):
         x = ox + i
         base = oy + i // 2
         top = base - clear - prof[i]
+        g_span = 1 if glass_prev is None else abs(glass_prev - top) + 1
+        g_rising = glass_prev is not None and glass_prev > top
         for t in range(2, ROOF_DEPTH - 1):
             var_col = glass if t < 5 else glass_d
-            c.set(x + t, top - (t + 1) // 2, var_col)
-            c.set(x + t, top - t // 2, var_col)
+            for k in range(g_span):
+                yy = top + (k if g_rising else -k)
+                c.set(x + t, yy - (t + 1) // 2, var_col)
+                c.set(x + t, yy - t // 2, var_col)
+        glass_prev = top
     for i in range(win_lo, win_hi):  # side window band with pillars
         x = ox + i
         base = oy + i // 2
@@ -1474,7 +1512,7 @@ def make_body(variant: int) -> tuple[Canvas, tuple, list | None]:
         "boot": C("10141f"), "hair": hair, "skin": C("d7b594"),
         "skin_sh": C("c09473"), "pack": C("7a4841"), "pack_d": C("4d2b32"),
     }
-    c = Canvas(32, 40)
+    c = Canvas(34, 44)
     view = ("side", "front", "diag_front")[rng.randrange(3)]
     # dried stain beneath, dark and subtle
     for i in range(rng.randint(5, 9)):
@@ -1495,15 +1533,15 @@ def make_barricade(kind: str, state: str) -> tuple[Canvas, tuple, list | None]:
     map's advertised edge; the world visibly continues beyond them."""
     rng = random.Random(f"{SEED}:barricade:{kind}:{state}")
     LN = 28
-    c = Canvas(LN + 14, 36)
-    ox, oy = 4, 24
+    c = Canvas(LN + 14, 46)
+    ox, oy = 4, 28
 
     if kind == "jersey" and state.startswith("askew"):
         # knocked off the line: the same barrier at a visibly wrong angle
         slope = 0.85 if state == "askew_a" else 0.2
         for i in range(LN - 4):
             x = ox + i
-            by = oy + int(i * slope) - (4 if state == "askew_a" else 0)
+            by = oy + int(i * slope) - (10 if state == "askew_a" else 0)
             for k in range(9):
                 col = CONC_BASE
                 if rng.random() < 0.06:
@@ -1573,27 +1611,33 @@ def make_barricade(kind: str, state: str) -> tuple[Canvas, tuple, list | None]:
         c.outline_auto()
         cr, orr = crop_canvas(c, (ox + LN // 2, oy + 7))
         return cr, orr, None
+    # standing lattice panel — the piece the user pointed at, upright: a
+    # dense diagonal cross-hatch between two posts, top rail, rusted through
     sag = 2 if state == "bent" else 0
-    post_h = 15
-    for px_ in (2, LN - 3):  # posts
+    post_h = 14
+    for px_ in (1, LN - 2):  # posts
         x = ox + px_
         by = oy + px_ // 2
         for k in range(post_h):
             c.set(x, by - k, steel_d if k % 4 else rust)
         c.set(x, by, C("202e37"))
-    for rail_k in (4, 12):  # rails following the edge slope (mid-sag if bent)
-        for i in range(2, LN - 2):
-            x = ox + i
-            mid_dip = sag if abs(i - LN // 2) < 8 else 0
-            y = oy + i // 2 - rail_k + mid_dip
-            c.set(x, y, steel if rng.random() > 0.12 else rust)
-    for i in range(4, LN - 4, 3):  # lattice verticals
+    for i in range(1, LN - 1):  # top + bottom rails (mid-sag if bent)
         x = ox + i
         mid_dip = sag if abs(i - LN // 2) < 8 else 0
         by = oy + i // 2
-        for k in range(5, 12):
-            if rng.random() > 0.15:
-                c.set(x, by - k + mid_dip, steel_d)
+        c.set(x, by - 13 + mid_dip, steel)
+        c.set(x, by - 12 + mid_dip, steel_d)
+        c.set(x, by - 1, steel_d)
+    for i in range(1, LN - 1):  # dense diagonal lattice fill
+        x = ox + i
+        mid_dip = sag if abs(i - LN // 2) < 8 else 0
+        by = oy + i // 2
+        for k in range(2, 12):
+            on_diag = (i + k) % 3 == 0 or (i - k) % 3 == 0
+            if on_diag and rng.random() > 0.1:
+                c.set(x, by - k + mid_dip, steel_d if (i + k) % 2 else steel)
+            elif rng.random() < 0.04:
+                c.set(x, by - k + mid_dip, rust)
     c.outline_auto()
     cr, orr = crop_canvas(c, (ox + LN // 2, oy + 8))
     return cr, orr, ["diamond", 15.0, 5.0]
@@ -1896,7 +1940,7 @@ def draw_trash(rng: random.Random, kind: str) -> tuple[Canvas, tuple, list | Non
         c.outline_auto()
         return c, (4, 6), None
     if kind == "bottle":
-        c = Canvas(10, 7)
+        c = Canvas(11, 8)
         glass, glint = C("19332d"), C("468232")
         for i in range(5):  # lying on its side
             c.set(2 + i, 3, glass)
@@ -1907,7 +1951,7 @@ def draw_trash(rng: random.Random, kind: str) -> tuple[Canvas, tuple, list | Non
         c.outline_auto()
         return c, (5, 4), None
     # paper scrap
-    c = Canvas(8, 6)
+    c = Canvas(9, 7)
     for (x, y) in ((2, 2), (3, 2), (4, 2), (2, 3), (3, 3), (5, 3), (4, 4)):
         c.set(x, y, C("a8b5b2") if (x + y) % 2 else C("c7cfcc"))
     c.outline_auto()
@@ -2740,6 +2784,22 @@ def make_vignette() -> Image.Image:
                 px[x, y] = (9, 10, 20, a)
     return img
 
+def make_dither() -> Image.Image:
+    """A 128x128 noise film at ~1/255 alpha. Laid over the world it shifts
+    every screen pixel's rounding threshold differently, so slow full-screen
+    tint fades dissolve as grain instead of stepping in visible unison
+    (the user can SEE single 8-bit steps of the day/night cycle)."""
+    rng = random.Random(f"{SEED}:dither")
+    img = Image.new("RGBA", (128, 128), (0, 0, 0, 0))
+    px = img.load()
+    for y in range(128):
+        for x in range(128):
+            if rng.random() < 0.5:
+                px[x, y] = (255, 255, 255, 1)
+            else:
+                px[x, y] = (0, 0, 0, 1)
+    return img
+
 def make_dust() -> Image.Image:
     img = Image.new("RGBA", (3, 3), (0, 0, 0, 0))
     img.putpixel((1, 1), (255, 255, 255, 255))
@@ -2840,6 +2900,24 @@ def main() -> None:
     grabber.rect(1, 9, 6, 10, C("819796"))
     entries["ui_grabber"] = (grabber, (4, 6), None)
 
+    # clip audit: opaque pixels on a canvas border mean the draw ran off the
+    # canvas and got silently cut (tv stand, crate stacks... never again).
+    # Grid modules that abut by design are exempt.
+    _EDGE_OK = ("roof_tile_", "roof_fascia_", "roof_eave_", "roof_corner_",
+                "seg_", "post_", "door_", "ui_grabber")
+    clipped = []
+    for name, entry in entries.items():
+        if any(name.startswith(p) for p in _EDGE_OK):
+            continue
+        img = entry[0].img
+        pxa = img.load()
+        w, h = img.size
+        if any(pxa[x, 0][3] > 0 or pxa[x, h - 1][3] > 0 for x in range(w)) or \
+                any(pxa[0, y][3] > 0 or pxa[w - 1, y][3] > 0 for y in range(h)):
+            clipped.append(name)
+    if clipped:
+        raise AssertionError(f"CLIPPED (content touches canvas edge): {clipped}")
+
     for name, entry in entries.items():
         canvas, origin, collider = entry[0], entry[1], entry[2]
         if name != "shadow":
@@ -2870,6 +2948,7 @@ def main() -> None:
     shine_img.save(OUT / "title_shine.png")
     tagline_img.save(OUT / "tagline.png")
     make_vignette().save(OUT / "vignette.png")    # soft alpha by design
+    make_dither().save(OUT / "dither.png")        # anti-banding film
     make_dust().save(OUT / "dust.png")            # white, tinted at runtime
     make_rain_streak().save(OUT / "rain_streak.png")
     make_rain_splash().save(OUT / "rain_splash.png")

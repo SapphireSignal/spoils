@@ -93,6 +93,18 @@ func _build_world() -> void:
 	var environment := EnvironmentSystem.new()
 	add_child(environment)
 	await environment.setup(self, _floor_layer, info["puddle_spots"], _roofs)
+	# anti-banding film: breaks the day-cycle's uniform 8-bit tint steps into
+	# per-pixel grain (a slow full-screen fade otherwise visibly "clicks")
+	var dither_layer := CanvasLayer.new()
+	dither_layer.layer = 25
+	var film := TextureRect.new()
+	film.texture = load("res://art/gen/dither.png")
+	film.stretch_mode = TextureRect.STRETCH_TILE
+	film.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+	film.set_anchors_preset(Control.PRESET_FULL_RECT)
+	film.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dither_layer.add_child(film)
+	add_child(dither_layer)
 	await get_tree().process_frame
 
 	var guard := EdgeGuard.new()

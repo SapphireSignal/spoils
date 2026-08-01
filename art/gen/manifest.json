@@ -137,12 +137,12 @@
   "props": {
     "barrel_0": {
       "size": [
-        24,
-        36
+        26,
+        46
       ],
       "origin": [
-        12,
-        32
+        13,
+        38
       ],
       "collider": [
         "circle",
@@ -151,12 +151,12 @@
     },
     "barrel_1": {
       "size": [
-        22,
-        32
+        24,
+        41
       ],
       "origin": [
-        11,
-        28
+        12,
+        33
       ],
       "collider": [
         "circle",
@@ -165,12 +165,12 @@
     },
     "barrel_2": {
       "size": [
-        24,
-        36
+        26,
+        46
       ],
       "origin": [
-        12,
-        32
+        13,
+        38
       ],
       "collider": [
         "circle",
@@ -179,12 +179,12 @@
     },
     "barrel_3": {
       "size": [
-        20,
-        35
+        22,
+        43
       ],
       "origin": [
-        10,
-        31
+        11,
+        36
       ],
       "collider": [
         "circle",
@@ -224,7 +224,22 @@
     "crate_0": {
       "size": [
         36,
-        33
+        35
+      ],
+      "origin": [
+        18,
+        23
+      ],
+      "collider": [
+        "diamond",
+        17.0,
+        9.0
+      ]
+    },
+    "crate_1": {
+      "size": [
+        36,
+        34
       ],
       "origin": [
         18,
@@ -236,29 +251,14 @@
         9.0
       ]
     },
-    "crate_1": {
-      "size": [
-        36,
-        32
-      ],
-      "origin": [
-        18,
-        21
-      ],
-      "collider": [
-        "diamond",
-        17.0,
-        9.0
-      ]
-    },
     "crate_2": {
       "size": [
         36,
-        32
+        34
       ],
       "origin": [
         18,
-        21
+        22
       ],
       "collider": [
         "diamond",
@@ -269,11 +269,11 @@
     "crate_3": {
       "size": [
         32,
-        30
+        32
       ],
       "origin": [
         16,
-        20
+        21
       ],
       "collider": [
         "diamond",
@@ -284,11 +284,11 @@
     "crate_4": {
       "size": [
         32,
-        29
+        31
       ],
       "origin": [
         16,
-        19
+        20
       ],
       "collider": [
         "diamond",
@@ -299,11 +299,11 @@
     "crate_5": {
       "size": [
         36,
-        31
+        33
       ],
       "origin": [
         18,
-        20
+        21
       ],
       "collider": [
         "diamond",
@@ -314,11 +314,11 @@
     "cylinder_0": {
       "size": [
         14,
-        36
+        38
       ],
       "origin": [
         7,
-        31
+        32
       ],
       "collider": [
         "circle",
@@ -328,11 +328,11 @@
     "cylinder_1": {
       "size": [
         14,
-        36
+        38
       ],
       "origin": [
         7,
-        31
+        32
       ],
       "collider": [
         "circle",
@@ -342,11 +342,11 @@
     "cylinder_2": {
       "size": [
         14,
-        37
+        39
       ],
       "origin": [
         7,
-        32
+        33
       ],
       "collider": [
         "circle",
@@ -412,12 +412,12 @@
     },
     "tires_3": {
       "size": [
-        22,
-        24
+        26,
+        27
       ],
       "origin": [
-        11,
-        22
+        12,
+        23
       ],
       "collider": [
         "circle",
@@ -460,11 +460,11 @@
     "dumpster_0": {
       "size": [
         44,
-        44
+        48
       ],
       "origin": [
         21,
-        34
+        35
       ],
       "collider": [
         "diamond",
@@ -475,11 +475,11 @@
     "dumpster_1": {
       "size": [
         44,
-        44
+        48
       ],
       "origin": [
         21,
-        34
+        35
       ],
       "collider": [
         "diamond",
@@ -561,8 +561,8 @@
     },
     "pillar_2": {
       "size": [
-        52,
-        20
+        56,
+        22
       ],
       "origin": [
         26,
@@ -577,7 +577,7 @@
     "couch": {
       "size": [
         50,
-        42
+        46
       ],
       "origin": [
         25,
@@ -607,11 +607,11 @@
     "tv_stand": {
       "size": [
         34,
-        38
+        46
       ],
       "origin": [
         17,
-        34
+        35
       ],
       "collider": [
         "diamond",
@@ -725,7 +725,7 @@
     },
     "rack_0": {
       "size": [
-        60,
+        68,
         58
       ],
       "origin": [
@@ -740,7 +740,7 @@
     },
     "rack_1": {
       "size": [
-        60,
+        68,
         58
       ],
       "origin": [
@@ -755,7 +755,7 @@
     },
     "rack_2": {
       "size": [
-        60,
+        68,
         58
       ],
       "origin": [
@@ -770,7 +770,7 @@
     },
     "rack_3": {
       "size": [
-        60,
+        68,
         58
       ],
       "origin": [
@@ -1622,8 +1622,8 @@
     },
     "trash_3": {
       "size": [
-        10,
-        7
+        11,
+        8
       ],
       "origin": [
         5,
@@ -1633,8 +1633,8 @@
     },
     "trash_4": {
       "size": [
-        8,
-        6
+        9,
+        7
       ],
       "origin": [
         4,
@@ -1678,7 +1678,7 @@
     "barricade_x_0": {
       "size": [
         34,
-        25
+        29
       ],
       "origin": [
         16,
@@ -1693,7 +1693,7 @@
     "barricade_y_0": {
       "size": [
         34,
-        25
+        29
       ],
       "origin": [
         17,
@@ -1708,7 +1708,7 @@
     "barricade_x_1": {
       "size": [
         34,
-        25
+        29
       ],
       "origin": [
         16,
@@ -1723,7 +1723,7 @@
     "barricade_y_1": {
       "size": [
         34,
-        25
+        29
       ],
       "origin": [
         17,
@@ -1737,11 +1737,11 @@
     },
     "barricade_x_2": {
       "size": [
-        28,
-        27
+        30,
+        31
       ],
       "origin": [
-        14,
+        15,
         23
       ],
       "collider": [
@@ -1752,23 +1752,8 @@
     },
     "barricade_y_2": {
       "size": [
-        28,
-        27
-      ],
-      "origin": [
-        13,
-        23
-      ],
-      "collider": [
-        "diamond",
-        15.0,
-        5.0
-      ]
-    },
-    "barricade_x_3": {
-      "size": [
-        28,
-        27
+        30,
+        31
       ],
       "origin": [
         14,
@@ -1780,13 +1765,28 @@
         5.0
       ]
     },
-    "barricade_y_3": {
+    "barricade_x_3": {
       "size": [
-        28,
-        27
+        30,
+        31
       ],
       "origin": [
-        13,
+        15,
+        23
+      ],
+      "collider": [
+        "diamond",
+        15.0,
+        5.0
+      ]
+    },
+    "barricade_y_3": {
+      "size": [
+        30,
+        31
+      ],
+      "origin": [
+        14,
         23
       ],
       "collider": [
@@ -1798,7 +1798,7 @@
     "barricade_x_flat_0": {
       "size": [
         37,
-        19
+        22
       ],
       "origin": [
         16,
@@ -1809,7 +1809,7 @@
     "barricade_y_flat_0": {
       "size": [
         37,
-        19
+        22
       ],
       "origin": [
         20,
@@ -1820,7 +1820,7 @@
     "barricade_x_flat_1": {
       "size": [
         36,
-        18
+        20
       ],
       "origin": [
         16,
@@ -1831,7 +1831,7 @@
     "barricade_y_flat_1": {
       "size": [
         36,
-        18
+        20
       ],
       "origin": [
         19,
@@ -1842,11 +1842,11 @@
     "barricade_x_askew_0": {
       "size": [
         28,
-        27
+        33
       ],
       "origin": [
         14,
-        21
+        27
       ],
       "collider": [
         "diamond",
@@ -1857,11 +1857,11 @@
     "barricade_y_askew_0": {
       "size": [
         28,
-        27
+        33
       ],
       "origin": [
         13,
-        21
+        27
       ],
       "collider": [
         "diamond",
@@ -1901,7 +1901,7 @@
     },
     "body_0": {
       "size": [
-        32,
+        34,
         13
       ],
       "origin": [
@@ -2746,22 +2746,22 @@
     "roof_vent": {
       "size": [
         24,
-        22
+        24
       ],
       "origin": [
         12,
-        15
+        16
       ],
       "collider": null
     },
     "roof_hatch": {
       "size": [
         20,
-        14
+        16
       ],
       "origin": [
         10,
-        8
+        9
       ],
       "collider": null
     },

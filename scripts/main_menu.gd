@@ -51,6 +51,20 @@ var _changelog_list: VBoxContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.9", ["the missing car parts are ACTUALLY fixed (raked windshields had gaps)",
+		"barrels are properly 3d now - real top faces, curved hoops",
+		"the barricade line is lattice fencing now, denser, with concrete accents",
+		"no more road running along the barriers",
+		"footsteps are properly distinct per surface - and quieter",
+		"rain is a soft distant wash now - no crackle, no repeating, no swelling",
+		"car alarms lost their static edge",
+		"lightning comes in bursts of 1, 2 or 3 strikes",
+		"mouse wheel zooms: two steps in, one honest step out",
+		"the day cycle can't visibly step anymore (anti-banding film)",
+		"boxes only spawn near warehouses now",
+		"splash fades into the menu instead of cutting",
+		"tv stand, couch, dumpster and more were clipped at their edges - all",
+		"fixed, and the art pipeline now refuses to ship a clipped sprite"]],
 	["v0.6.8", ["the sapphire signal splash: the gem, the ping, the first beam",
 		"main menu music - a dark theme for a dead district, made by code",
 		"footsteps: concrete, asphalt, hardwood, grass and dirt all sound right",
@@ -215,6 +229,19 @@ func _ready() -> void:
 	_build_ui()
 	_activate(0, true)
 	Music.play_menu()
+	# emerge from black — pairs with the splash's fade-out so the handoff
+	# is one continuous dip instead of a hard cut
+	var cover := ColorRect.new()
+	cover.color = Color("090a14")
+	cover.set_anchors_preset(Control.PRESET_FULL_RECT)
+	cover.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var cover_layer := CanvasLayer.new()
+	cover_layer.layer = 100
+	cover_layer.add_child(cover)
+	add_child(cover_layer)
+	var fade := create_tween()
+	fade.tween_property(cover, "color:a", 0.0, 0.5)
+	fade.tween_callback(cover_layer.queue_free)
 
 
 func show_backdrop(index: int) -> void:  # harness hook for screenshots
