@@ -45,7 +45,7 @@ const CHANGELOG_ENTRIES := [
 		"slim wall tops - the wide cap looked like a lid on a thin wall",
 		"roof eaves now overhang and fully cover the wall tops",
 		"roof caps over every corner post and door jamb",
-		"buttons more see-through", "changelog button visible again"]],
+		"buttons restyled: dark with a light border - readable on every scene", "changelog button visible again"]],
 	["v0.5.5", ["more detail in this changelog",
 		"new burgundy buttons that stand out on every backdrop",
 		"changelog link dimmed to match the footer"]],

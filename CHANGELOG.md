@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
@@ -17,7 +17,9 @@ All notable changes to SPOILS are documented here. Versions follow a simple
   normal themed button again.
 
 ### Changed
-- All buttons are more translucent.
+- Buttons restyled once more: near-black translucent fill with a light border
+  and bright text — contrast by brightness instead of hue, so they read on
+  the gold vault, the purple cave and the blue-gray scenes alike.
 ## [0.5.5] — 2026-07-31
 
 ### Changed
