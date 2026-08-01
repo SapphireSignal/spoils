@@ -478,20 +478,43 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
                 c.set(sx, sy, C("394a50"))
                 if (sx, sy + 1) in region:
                     c.set(sx, sy + 1, C("151d28"))
-        along_x = kind.endswith("_x")
+        along_x = "_x" in kind
+        # the line runs dead straight for the whole district, so the TILES
+        # have to carry the variety: a plain length, an overgrown length,
+        # and a rusted length with the odd tie missing (user: "it does
+        # look a bit odd the track being all a straight line")
+        weedy = kind.endswith("_weeds")
+        rusted = kind.endswith("_rust")
+        gap_at = rng.randrange(8) if rusted else -1
         for (x, y) in region:
             p = (x - 32) * 0.5 - (y - 16) if along_x else (x - 32) * 0.5 + (y - 16)
             q = (x - 32) * 0.5 + (y - 16) if along_x else (x - 32) * 0.5 - (y - 16)
             if abs(p) < 6.5 and q % 8 < 2.2:            # wooden tie
+                if rusted and int(q // 8) % 5 == gap_at % 5:
+                    continue                             # a tie rotted away
                 c.set(x, y, C("341c27") if q % 8 < 1.4 else C("241527"))
+        if weedy:
+            # grass through the ballast and up between the rails — this
+            # stretch has not carried much traffic
+            for _ in range(rng.randint(14, 20)):
+                gx, gy = 4 + rng.randrange(56), 3 + rng.randrange(26)
+                if (gx, gy) not in region:
+                    continue
+                blade = rng.randint(2, 4)
+                for k in range(blade):
+                    if (gx, gy - k) in region:
+                        c.set(gx, gy - k,
+                              C("25562e") if k < blade - 1 else C("468232"))
+        head = C("884b2b") if rusted else C("819796")
+        web = C("602c2c") if rusted else C("394a50")
         for (x, y) in region:                            # rails OVER the ties
             p = (x - 32) * 0.5 - (y - 16) if along_x else (x - 32) * 0.5 + (y - 16)
             for rail_c in (-3.5, 3.5):
                 d = p - rail_c
                 if abs(d) < 0.8:
-                    c.set(x, y, C("819796"))            # polished head
+                    c.set(x, y, head)                    # polished, or rusted
                 elif 0.8 <= d < 1.8:
-                    c.set(x, y, C("394a50"))            # web shadow side
+                    c.set(x, y, web)                     # web shadow side
 
     elif kind == "plaza":
         # courtyard pavers: pale slabs with a diamond joint grid, period 16
@@ -564,6 +587,8 @@ FLOOR_TILES = [
     ("ballast_0", ("ballast", 0)), ("ballast_1", ("ballast", 1)),
     ("ballast_2", ("ballast", 2)),
     ("rail_x", ("rail_x", 0)), ("rail_y", ("rail_y", 0)),
+    ("rail_x_weeds", ("rail_x_weeds", 0)), ("rail_y_weeds", ("rail_y_weeds", 0)),
+    ("rail_x_rust", ("rail_x_rust", 0)), ("rail_y_rust", ("rail_y_rust", 0)),
     ("rail_cross_x", ("rail_cross_x", 0)), ("rail_cross_y", ("rail_cross_y", 0)),
     ("plaza_0", ("plaza", 0)), ("plaza_1", ("plaza", 1)), ("plaza_2", ("plaza", 2)),
 ]
@@ -3973,6 +3998,66 @@ def make_smoker_sheet() -> tuple[Canvas, tuple, list | None]:
     sheet.px = sheet.img.load()
     return sheet, (14, 34), None
 
+def make_telegraph_pole(variant: int) -> tuple[Canvas, tuple, list]:
+    """The poles that march beside the line. A straight railway reads as a
+    drawn line until something repeats ALONGSIDE it at human intervals —
+    these are that. Two crossarms, insulators, and a lean on some."""
+    rng = random.Random(f"{SEED}:telegraph:{variant}")
+    c = Canvas(34, 76)
+    px, base = 16, 66
+    height = rng.randint(46, 54)
+    lean = (0, 1, -1, 0)[variant % 4]
+    for k in range(height):                    # the pole, lit on the north
+        x = px + (k * lean) // 24
+        c.set(x, base - k, C("602c2c"))
+        c.set(x + 1, base - k, C("341c27"))
+    top = base - height
+    for (arm_y, span) in ((top + 6, 7), (top + 13, 5)):
+        ax = px + ((base - arm_y) * lean) // 24
+        for i in range(-span, span + 1):
+            c.set(ax + i, arm_y + abs(i) // 4, C("4d2b32"))
+        for i in (-span + 1, 0, span - 1):     # insulators
+            c.set(ax + i, arm_y + abs(i) // 4 - 1, C("73bed3"))
+    if variant % 3 == 0:                        # one pole has lost an arm
+        for i in range(3, 8):
+            c.set(px + i, top + 6 + i // 4, (0, 0, 0, 0))
+    for _ in range(rng.randint(1, 3)):
+        c.set(px + rng.randint(0, 1), base - rng.randrange(6, height - 6),
+              C("241527"))
+    c.outline_auto()
+    cr, orr = crop_canvas(c, (px, base))
+    return cr, orr, ["diamond", 3.0, 2.0]
+
+
+def make_rail_signal(clear: bool) -> tuple[Canvas, tuple, list]:
+    """A colour-light signal on the line. Dead six years, but one of them
+    still shows an aspect, which is exactly the kind of detail that makes
+    a straight track read as a working railway."""
+    c = Canvas(30, 74)
+    px, base = 14, 64
+    for k in range(44):                        # mast
+        c.set(px, base - k, C("394a50"))
+        c.set(px + 1, base - k, C("202e37"))
+    for i in range(5):                         # base cabinet
+        for k in range(7):
+            c.set(px - 2 + i, base - k, C("577277") if i < 2 else C("394a50"))
+    head_y = base - 50
+    for i in range(-4, 5):                     # the head
+        for k in range(14):
+            c.set(px + i, head_y + k, C("202e37") if abs(i) > 3 else C("151d28"))
+    for (ly, col) in ((head_y + 3, C("a53030") if not clear else C("341c27")),
+                      (head_y + 8, C("de9e41") if clear else C("241527"))):
+        for i in range(-2, 3):
+            for k in range(3):
+                if abs(i) + k < 4:
+                    c.set(px + i, ly + k, col)
+    for i in range(-5, 6):                     # the hood over the lamps
+        c.set(px + i, head_y - 1, C("151d28"))
+    c.outline_auto()
+    cr, orr = crop_canvas(c, (px, base))
+    return cr, orr, ["diamond", 3.5, 2.0]
+
+
 def make_toll_booth() -> tuple[Canvas, tuple, list]:
     """The warden's booth on the district edge: a small hut with a lit
     serving window, a counter shelf, a shift light over it, and the man
@@ -4507,6 +4592,10 @@ def prop_inventory() -> tuple[dict, dict]:
     props["chalkboard"] = make_chalkboard()
     props["helicopter"] = make_helicopter()
     props["locomotive"] = make_locomotive()
+    for i in range(4):
+        fam("telegraph_pole", i, make_telegraph_pole(i))
+    fam("rail_signal", 0, make_rail_signal(False))
+    fam("rail_signal", 1, make_rail_signal(True))
     props["toll_booth"] = make_toll_booth()
     props["toll_barrier"] = make_toll_barrier(False)
     props["toll_barrier_open"] = make_toll_barrier(True)

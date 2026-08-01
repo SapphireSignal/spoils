@@ -298,25 +298,41 @@
       0,
       18
     ],
-    "rail_cross_x": [
+    "rail_x_weeds": [
       1,
       18
     ],
-    "rail_cross_y": [
+    "rail_y_weeds": [
       2,
       18
     ],
-    "plaza_0": [
+    "rail_x_rust": [
       3,
       18
     ],
-    "plaza_1": [
+    "rail_y_rust": [
       0,
       19
     ],
-    "plaza_2": [
+    "rail_cross_x": [
       1,
       19
+    ],
+    "rail_cross_y": [
+      2,
+      19
+    ],
+    "plaza_0": [
+      3,
+      19
+    ],
+    "plaza_1": [
+      0,
+      20
+    ],
+    "plaza_2": [
+      1,
+      20
     ]
   },
   "props": {
@@ -5634,6 +5650,96 @@
         ]
       ]
     },
+    "telegraph_pole_0": {
+      "size": [
+        18,
+        57
+      ],
+      "origin": [
+        9,
+        54
+      ],
+      "collider": [
+        "diamond",
+        3.0,
+        2.0
+      ]
+    },
+    "telegraph_pole_1": {
+      "size": [
+        19,
+        55
+      ],
+      "origin": [
+        8,
+        52
+      ],
+      "collider": [
+        "diamond",
+        3.0,
+        2.0
+      ]
+    },
+    "telegraph_pole_2": {
+      "size": [
+        19,
+        55
+      ],
+      "origin": [
+        11,
+        52
+      ],
+      "collider": [
+        "diamond",
+        3.0,
+        2.0
+      ]
+    },
+    "telegraph_pole_3": {
+      "size": [
+        18,
+        50
+      ],
+      "origin": [
+        9,
+        47
+      ],
+      "collider": [
+        "diamond",
+        3.0,
+        2.0
+      ]
+    },
+    "rail_signal_0": {
+      "size": [
+        15,
+        56
+      ],
+      "origin": [
+        7,
+        53
+      ],
+      "collider": [
+        "diamond",
+        3.5,
+        2.0
+      ]
+    },
+    "rail_signal_1": {
+      "size": [
+        15,
+        56
+      ],
+      "origin": [
+        7,
+        53
+      ],
+      "collider": [
+        "diamond",
+        3.5,
+        2.0
+      ]
+    },
     "toll_booth": {
       "size": [
         42,
@@ -8699,6 +8805,16 @@
       "spray_cans_1",
       "spray_cans_2",
       "spray_cans_3"
+    ],
+    "telegraph_pole": [
+      "telegraph_pole_0",
+      "telegraph_pole_1",
+      "telegraph_pole_2",
+      "telegraph_pole_3"
+    ],
+    "rail_signal": [
+      "rail_signal_0",
+      "rail_signal_1"
     ],
     "tree": [
       "tree_0",

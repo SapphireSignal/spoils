@@ -66,6 +66,12 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.33", ["the railway stopped looking like a drawn line:",
+		"telegraph poles march beside it at uneven spacing and",
+		"swap sides, signals stand at the crossings and the yard",
+		"throat, and junk piles up along the ballast",
+		"the track itself wears in stretches now - some of it is",
+		"overgrown, some is rusted with ties rotted away"]],
 	["v0.6.32", ["the night freight runs. it comes into the yard every",
 		"five minutes, stands for one, and goes without you",
 		"mara calls it in on the radio before it arrives, warns",

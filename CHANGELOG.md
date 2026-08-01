@@ -3,6 +3,27 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.33] — 2026-08-01
+
+### Changed
+- **The rail line reads as a railway** (user: "it does look a bit odd the
+  track being all a straight line"). Real mainlines *are* straight, so
+  the fix isn't to bend it — it's that a straight line reads as a drawn
+  line until something repeats ALONGSIDE it at human intervals:
+  - **Telegraph poles** march the whole run at uneven spacing (7–10
+    cells, never a metronome) and occasionally swap sides of the track.
+    Four variants with different heights and leans; one in three has
+    lost a crossarm.
+  - **Colour-light signals** stand where they'd really stand — on the
+    approach to each level crossing and at the yard throat. Most are
+    dead; one still shows an aspect.
+  - **Trackside junk** piles along the ballast using the v0.6.29 clutter
+    piling, because that's where a railway collects things.
+  - **The track wears in STRETCHES, not per tile**: runs of overgrown
+    track with grass through the ballast and up between the rails, runs
+    of rusted rail with the odd tie rotted away, then clean again. A
+    per-cell roll would read as noise; a run reads as neglect.
+
 ## [0.6.32] — 2026-08-01
 
 ### Added

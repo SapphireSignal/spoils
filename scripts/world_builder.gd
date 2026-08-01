@@ -1134,7 +1134,18 @@ func _paint_terrain() -> void:
 			if _rail_cross.has(cell) and _cell_inset(cell) >= BARRIER_INSET - 2:
 				tile_name = "rail_cross_%s" % str(_rail_cross[cell])
 			elif _rail_cells.has(cell) and _cell_inset(cell) >= BARRIER_INSET - 2:
-				tile_name = "rail_%s" % str(_rail_cells[cell])
+				# the track wears in STRETCHES, not per tile: a run of
+				# overgrown, a run of rusted, then clean again. Per-cell
+				# rolls would read as noise instead of neglect.
+				var axis := str(_rail_cells[cell])
+				var run := posmod(hash(Vector3i((cell.x + cell.y) / 7,
+					0, _zone_salt)), 100)
+				if run < 26:
+					tile_name = "rail_%s_weeds" % axis
+				elif run < 40:
+					tile_name = "rail_%s_rust" % axis
+				else:
+					tile_name = "rail_%s" % axis
 			elif _ballast.has(cell) and _cell_inset(cell) >= BARRIER_INSET - 2:
 				tile_name = "ballast_%d" % _rng.randi_range(0, 2)
 			elif _plaza.has(cell):
@@ -2554,7 +2565,59 @@ func _place_barricades() -> void:
 	await _ring_side("y", hi_x, lo + 2, hi_y - 2)
 	await _place_bodies()
 	await _dress_buffer()
+	await _dress_rail_line()
 	await _place_toll_gate()
+
+
+func _dress_rail_line() -> void:
+	# A dead-straight line reads as a drawn line until something repeats
+	# ALONGSIDE it at human intervals (user: "it does look a bit odd the
+	# track being all a straight line"). Poles march the whole run at
+	# uneven spacing, signals stand where they'd really stand — near the
+	# yard and the crossings — and the ballast collects the usual junk.
+	if _rail_row <= 0:
+		return
+	var side := 2 if _rng.randf() < 0.5 else -2
+	var x := BARRIER_INSET + _rng.randi_range(2, 6)
+	while x < MAP_W - BARRIER_INSET - 2:
+		await _tick()
+		var cell := Vector2i(x, _rail_row + side)
+		if not _occupied.has(cell) and not _on_road(cell) \
+				and not _rail_cells.has(cell) and not _ballast.has(cell) \
+				and not _near_a_door(cell):
+			_add_prop(_pick_variant_varied("telegraph_pole"),
+				_floor_layer.map_to_local(cell) + _clutter_offset(7.0))
+			_occupied[cell] = true
+		# poles run at a rhythm, but never a metronome
+		x += _rng.randi_range(7, 10)
+		if _rng.randf() < 0.12:
+			side = -side                      # the line changes sides
+	# signals: one at each level crossing approach, one at the yard throat
+	var signal_spots: Array[Vector2i] = []
+	for road in _roads_v:
+		signal_spots.append(Vector2i(road.x - 3, _rail_row - 2))
+	signal_spots.append(Vector2i(_freight_cell.x - 9, _rail_row - 2))
+	for spot in signal_spots:
+		await _tick()
+		if spot.x < BARRIER_INSET or spot.x > MAP_W - BARRIER_INSET:
+			continue
+		if _occupied.has(spot) or _on_road(spot) or _rail_cells.has(spot):
+			continue
+		_add_prop_at_cell(_pick_variant("rail_signal"), spot, Vector2(5, 3))
+	# the stuff that collects beside a railway
+	for i in 14:
+		await _tick()
+		var junk_cell := Vector2i(
+			_rng.randi_range(BARRIER_INSET + 3, MAP_W - BARRIER_INSET - 3),
+			_rail_row + (2 if _rng.randf() < 0.5 else -2)
+				+ _rng.randi_range(-1, 1))
+		if _occupied.has(junk_cell) or _on_road(junk_cell) \
+				or _rail_cells.has(junk_cell) or _ballast.has(junk_cell) \
+				or _near_a_door(junk_cell):
+			continue
+		var junk: String = ["barrel", "rubble", "pallet", "tires",
+			"crate"][_rng.randi_range(0, 4)]
+		_place_pile(junk, junk_cell, _rng.randi_range(2, 3), 12.0)
 
 
 func _place_toll_gate() -> void:
