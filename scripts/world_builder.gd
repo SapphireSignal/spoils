@@ -219,13 +219,11 @@ func _pick_variant(family: String) -> String:
 
 
 func _place_buildings() -> void:
-	# doors: (interior cell, side) edges left open
+	# doors: ONE (interior cell, side) edge each — a single doorway per building
 	_build_shell(BUILDING_A, "brick_a",
-		[[Vector2i(BUILDING_A.end.x - 2, 10), "xp"], [Vector2i(BUILDING_A.end.x - 2, 11), "xp"]],
-		false)
+		[[Vector2i(BUILDING_A.end.x - 2, 10), "xp"]], false)
 	_build_shell(BUILDING_B, "brick_b",
-		[[Vector2i(33, BUILDING_B.position.y + 1), "yn"], [Vector2i(34, BUILDING_B.position.y + 1), "yn"]],
-		true)
+		[[Vector2i(33, BUILDING_B.position.y + 1), "yn"]], true)
 
 
 # edge midpoint offset and segment sprite axis per side of a cell
@@ -245,7 +243,6 @@ func _build_shell(rect: Rect2i, style: String, doors: Array, ruined: bool) -> vo
 	var interior: Rect2i = rect.grow(-1)
 	var ruin_corner: Vector2i = interior.end - Vector2i(1, 1)
 	var posts: Dictionary = {}  # rounded Vector2 -> true
-	var near_walls: Array[Node2D] = []  # camera-facing walls, faded when inside
 
 	for y in range(interior.position.y, interior.end.y):
 		for x in range(interior.position.x, interior.end.x):
@@ -281,9 +278,7 @@ func _build_shell(rect: Rect2i, style: String, doors: Array, ruined: bool) -> vo
 					piece = "seg_%s_%s_broken_%d" % [style, axis, _rng.randi_range(0, 1)]
 				elif _rng.randf() < 0.3:
 					piece = "seg_%s_%s_win_%d" % [style, axis, _rng.randi_range(0, 2)]
-				var node := _add_prop(piece, center + (_EDGE_OFFSET[side] as Vector2))
-				if side == "yp" or side == "xp":
-					near_walls.append(node)
+				_add_prop(piece, center + (_EDGE_OFFSET[side] as Vector2))
 
 	# posts at the four outer corners of the shell
 	var corner_cells := [
@@ -303,30 +298,20 @@ func _build_shell(rect: Rect2i, style: String, doors: Array, ruined: bool) -> vo
 		for x in range(rect.position.x, rect.end.x):
 			_occupied[Vector2i(x, y)] = true
 
-	_build_roof(rect, interior, near_walls)
+	_build_roof(rect, interior)
 
 
-func _build_roof(rect: Rect2i, interior: Rect2i, near_walls: Array[Node2D]) -> void:
-	# roof covers ONLY the interior, tucked inside the wall coping (parapet);
-	# a RoofReveal group fades it out when the player is inside
+func _build_roof(rect: Rect2i, interior: Rect2i) -> void:
+	# one generated slab sized to this building; it caps the walls exactly.
+	# RoofReveal fades it out when the player is inside.
 	var south_corner := interior.end - Vector2i(1, 1)
 	var roof := RoofReveal.new()
 	roof.cells = rect
-	roof.near_walls = near_walls
-	# y-sort: after interior props (<= +5 jitter), before south wall segments (+8)
-	roof.position = _floor_layer.map_to_local(south_corner) + Vector2(0, 6)
-	var lift := Vector2(0, -(float(_wall_h) - 6.0))
-	for y in range(interior.position.y, interior.end.y):
-		for x in range(interior.position.x, interior.end.x):
-			var sprite := _prop_sprite("roof_tile_%d" % _rng.randi_range(0, 1))
-			sprite.position = _floor_layer.map_to_local(Vector2i(x, y)) - roof.position + lift
-			roof.add_child(sprite)
-	for i in 2:
-		var cell := Vector2i(_rng.randi_range(interior.position.x, interior.end.x - 1),
-			_rng.randi_range(interior.position.y, interior.end.y - 1))
-		var deco := _prop_sprite("roof_vent" if i == 0 else "roof_hatch")
-		deco.position = _floor_layer.map_to_local(cell) - roof.position + lift
-		roof.add_child(deco)
+	# y-sort: draws over everything of this building (walls, posts, interior)
+	roof.position = _floor_layer.map_to_local(south_corner) + Vector2(0, 24)
+	var slab := _prop_sprite("roof_%dx%d" % [interior.size.x, interior.size.y])
+	slab.position = Vector2(0, -24 - float(_wall_h))
+	roof.add_child(slab)
 	_ysort.add_child(roof)
 	_roofs.append(roof)
 

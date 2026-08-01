@@ -26,7 +26,7 @@ var _dust: CPUParticles2D
 
 var _title: TextureRect
 var _title_base_y := 0.0
-var _buttons: PanelContainer
+var _buttons: VBoxContainer
 var _settings: SettingsPanel
 
 
@@ -254,23 +254,19 @@ func _build_ui() -> void:
 	tagline.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	root.add_child(tagline)
 
-	_buttons = PanelContainer.new()
+	_buttons = VBoxContainer.new()
 	_buttons.anchor_left = 0.5
 	_buttons.anchor_right = 0.5
 	_buttons.anchor_top = 0.62
 	_buttons.anchor_bottom = 0.62
 	_buttons.offset_left = -85
 	_buttons.offset_right = 85
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 7)
-	var deploy := _menu_button(box, "deploy", func() -> void:
+	_buttons.add_theme_constant_override("separation", 8)
+	_menu_button(_buttons, "deploy", func() -> void:
 		get_tree().change_scene_to_file("res://scenes/main.tscn"))
-	deploy.add_theme_color_override("font_color", UITheme.ACCENT)
-	_menu_button(box, "settings", _open_settings)
-	_menu_button(box, "quit", func() -> void: get_tree().quit())
-	_buttons.add_child(box)
+	_menu_button(_buttons, "settings", _open_settings)
+	_menu_button(_buttons, "quit", func() -> void: get_tree().quit())
 	root.add_child(_buttons)
-	deploy.grab_focus()
 
 	_settings = SettingsPanel.new()
 	_settings.visible = false
@@ -282,7 +278,7 @@ func _build_ui() -> void:
 	root.add_child(center)
 
 	var version := Label.new()
-	version.text = "pre-alpha v0.5.0"
+	version.text = "pre-alpha v0.5.1"
 	version.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	version.offset_left = -130
 	version.offset_top = -16
@@ -311,4 +307,3 @@ func _open_settings() -> void:
 func _close_settings() -> void:
 	_settings.visible = false
 	_buttons.visible = true
-	_buttons.get_child(0).get_child(0).grab_focus()

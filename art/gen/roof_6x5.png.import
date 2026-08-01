@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cm6hhxhabc3cs"
-path="res://.godot/imported/roof_hatch.png-b02856e66a8d99698daf7a35aa2376dd.ctex"
+uid="uid://c3qoa4i74ojvo"
+path="res://.godot/imported/roof_6x5.png-ea0ae35fe63d97d949d21fe50e5385a2.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/gen/roof_hatch.png"
-dest_files=["res://.godot/imported/roof_hatch.png-b02856e66a8d99698daf7a35aa2376dd.ctex"]
+source_file="res://art/gen/roof_6x5.png"
+dest_files=["res://.godot/imported/roof_6x5.png-ea0ae35fe63d97d949d21fe50e5385a2.ctex"]
 
 [params]
 

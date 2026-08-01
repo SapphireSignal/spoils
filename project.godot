@@ -14,6 +14,7 @@ config/features=PackedStringArray("4.7")
 
 Authority="*res://scripts/authority.gd"
 Settings="*res://scripts/settings.gd"
+Sfx="*res://scripts/sfx.gd"
 Harness="*res://scripts/harness.gd"
 
 [display]

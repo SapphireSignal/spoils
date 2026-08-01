@@ -1106,47 +1106,25 @@
         4.0
       ]
     },
-    "roof_tile_0": {
+    "roof_7x5": {
       "size": [
-        64,
-        32
+        400,
+        208
       ],
       "origin": [
-        32,
-        16
+        232,
+        184
       ],
       "collider": null
     },
-    "roof_tile_1": {
+    "roof_6x5": {
       "size": [
-        64,
-        32
+        368,
+        192
       ],
       "origin": [
-        32,
-        16
-      ],
-      "collider": null
-    },
-    "roof_vent": {
-      "size": [
-        24,
-        22
-      ],
-      "origin": [
-        12,
-        15
-      ],
-      "collider": null
-    },
-    "roof_hatch": {
-      "size": [
-        20,
-        14
-      ],
-      "origin": [
-        10,
-        8
+        200,
+        168
       ],
       "collider": null
     },

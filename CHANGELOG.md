@@ -3,6 +3,28 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.5.1] — 2026-07-31
+
+### Added
+- First synthesized audio: soft UI hover/press blips, generated in code at
+  startup (no audio files, per the project's rules) and auto-wired to every
+  button in the game.
+
+### Changed
+- Main menu buttons: no more panel box around them, slightly translucent, and
+  all identical — DEPLOY's orange accent and the loud focus outline are gone.
+- Character sprite: arms are now truly symmetric (the torso is an even width,
+  so arm columns are placed off the body edges, not the center), and the
+  beanie is replaced with brown hair with a proper fringe.
+- Buildings have exactly one doorway each.
+
+### Fixed
+- Walls no longer turn see-through when inside a building — walls always stay
+  fully visible; only the roof fades.
+- Roof rebuilt for the thin-wall system: one generated slab per building that
+  caps the walls exactly (fascia trim, baked vents), replacing the
+  tile-assembled roof and its corner glitches for good.
+
 ## [0.5.0] — 2026-07-31
 
 ### Fixed

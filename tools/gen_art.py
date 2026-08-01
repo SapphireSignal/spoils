@@ -406,40 +406,84 @@ def wall_piece_inventory() -> dict[str, tuple[Canvas, tuple, list]]:
     return pieces
 
 # ----------------------------------------------------------------- roofs -----
-# Tar roof tiles sit WALL_H-6 above the floor inside the parapet; the game
-# fades the whole roof group when the player is inside (interior reveal).
+# One purpose-built roof slab per building size (user call: the tile-assembled
+# roof never sat right on the thin walls). The slab spans the interior plus a
+# small overhang so it caps the walls exactly; fascia trim on the lower edges,
+# vents/hatch baked in. The game fades it for the interior reveal.
 
-def make_roof_tile(variant: int) -> Canvas:
-    rng = random.Random(f"{SEED}:roof:{variant}")
-    c = Canvas(64, 32)
-    region = {(x, y) for y in range(32) for x in range(64) if in_diamond(x, y)}
-    for (x, y) in region:
-        c.set(x, y, CONC_D1)
-    speckle(c, rng, region, [C("151d28"), CONC_BASE], [0.09, 0.05])
-    if variant == 1:  # tar patch streaks
-        patch = blob(rng, 32 + rng.randint(-10, 10), 16 + rng.randint(-4, 4),
-                     rng.randint(20, 40), region)
+def make_building_roof(tiles_w: int, tiles_h: int) -> tuple[Canvas, tuple, list | None]:
+    rng = random.Random(f"{SEED}:roof:{tiles_w}x{tiles_h}")
+    margin = 8
+    span_w = (tiles_w + tiles_h) * 32 + 2 * margin
+    span_h = (tiles_w + tiles_h) * 16 + 2 * margin
+    c = Canvas(span_w, span_h)
+    off_x = (tiles_h - 1) * 32 + margin  # canvas x of cell (0,0)'s diamond
+    off_y = margin
+
+    mask: set = set()
+    for cy in range(tiles_h):
+        for cx in range(tiles_w):
+            sx = off_x + (cx - cy) * 32
+            sy = off_y + (cx + cy) * 16
+            for y in range(32):
+                s = diamond_span(y)
+                if s:
+                    for x in range(s[0], s[1] + 1):
+                        mask.add((sx + x, sy + y))
+    for _ in range(4):  # dilate: slight overhang past the wall line
+        grown = set(mask)
+        for (x, y) in mask:
+            for dx, dy in ((2, 1), (-2, 1), (2, -1), (-2, -1), (1, 0), (-1, 0)):
+                grown.add((x + dx, y + dy))
+        mask = grown
+
+    for (x, y) in mask:
+        r = rng.random()
+        col = CONC_D1
+        if r < 0.09:
+            col = C("151d28")
+        elif r < 0.13:
+            col = CONC_BASE
+        c.set(x, y, col)
+    # a few tar patch blobs
+    for i in range(3):
+        seed_pt = (off_x + rng.randint(0, 64), off_y + rng.randint(0, (tiles_w + tiles_h) * 8))
+        patch = blob(rng, off_x + (tiles_w - 1) * 16 + rng.randint(-40, 40),
+                     off_y + (tiles_w + tiles_h) * 8 + rng.randint(-30, 30),
+                     rng.randint(30, 70), mask)
         for (x, y) in patch:
             c.set(x, y, C("151d28"))
-    return c
-
-def make_roof_vent() -> Canvas:
-    c = Canvas(24, 22)
-    bottoms = iso_prism(c, 2, 1, 20, 10, 7, CONC_BASE, CONC_D1, CONC_D2)
-    for x in range(3, 17):  # louver slits on the lit face
+    # edges: highlight on upper rims, fascia trim hanging off lower rims
+    for (x, y) in list(mask):
+        if (x, y - 1) not in mask:
+            c.set(x, y, CONC_BASE)
+        if (x, y + 1) not in mask:
+            c.set(x, y, C("151d28"))
+            c.set(x, y + 1, INK)
+            c.set(x, y + 2, INK)
+    # vents + hatch, kept off the edges
+    bottoms_hint = off_y + (tiles_w + tiles_h) * 8
+    vent = Canvas(24, 22)
+    vb = iso_prism(vent, 2, 1, 20, 10, 7, CONC_BASE, CONC_D1, CONC_D2)
+    for x in range(3, 17):
         if x % 3 != 0:
-            c.set(2 + x, bottoms[x] + 3, INK)
-            c.set(2 + x, bottoms[x] + 5, INK)
-    c.outline_auto()
-    return c
-
-def make_roof_hatch() -> Canvas:
-    c = Canvas(20, 14)
-    bottoms = iso_prism(c, 2, 1, 16, 8, 2, CONC_D1, CONC_D2, INK)
+            vent.set(2 + x, vb[x] + 3, INK)
+            vent.set(2 + x, vb[x] + 5, INK)
+    vent.outline_auto()
+    hatch = Canvas(20, 14)
+    hb = iso_prism(hatch, 2, 1, 16, 8, 2, CONC_D1, CONC_D2, INK)
     for x in range(4, 12):
-        c.set(2 + x, bottoms[x] - 1, CONC_BASE)
+        hatch.set(2 + x, hb[x] - 1, CONC_BASE)
+    hatch.outline_auto()
+    c.img.alpha_composite(vent.img, (off_x + 8, bottoms_hint - 30))
+    c.img.alpha_composite(hatch.img, (off_x - (tiles_h - 2) * 32, bottoms_hint - 4))
+    c.px = c.img.load()
     c.outline_auto()
-    return c
+
+    # origin = center of the SOUTH corner cell (w-1, h-1)
+    south_cx = off_x + (tiles_w - 1 - (tiles_h - 1)) * 32 + 32
+    south_cy = off_y + (tiles_w - 1 + tiles_h - 1) * 16 + 16
+    return c, (south_cx, south_cy), None
 
 # ---------------------------------------------------------------- props ------
 
@@ -827,7 +871,7 @@ SKIN, SKIN_SH = C("d7b594"), C("c09473")
 JKT_L, JKT, JKT_D = C("468232"), C("25562e"), C("19332d")
 PANT, PANT_D = C("202e37"), C("151d28")
 BOOT, BOOT_D = C("341c27"), C("10141f")
-BEANIE, BEANIE_D = C("394a50"), C("202e37")
+HAIR, HAIR_D = C("4d2b32"), C("341c27")
 PACK, PACK_D = C("7a4841"), C("4d2b32")
 STRAP = C("341c27")
 
@@ -852,39 +896,54 @@ FRONT_SWING = {0: 0, 1: 1, 2: 1, 3: 0, 4: -1, 5: -1, 6: 0}
 def draw_head(c: Canvas, view: str, bob: int) -> None:
     y0 = 10 + bob
     if view == "front":
-        c.rect(CX - 4, y0, CX + 3, y0 + 3, BEANIE)
-        c.hline(CX - 4, CX + 3, y0 + 3, BEANIE_D)
+        c.rect(CX - 4, y0, CX + 3, y0 + 2, HAIR)
+        c.vline(CX + 3, y0, y0 + 2, HAIR_D)
+        for i, x in enumerate(range(CX - 4, CX + 4)):  # jagged fringe
+            if i % 3 != 1:
+                c.set(x, y0 + 3, HAIR if x < CX + 2 else HAIR_D)
         c.rect(CX - 4, y0 + 4, CX + 3, y0 + 7, SKIN)
-        c.vline(CX + 3, y0 + 4, y0 + 7, SKIN_SH)
+        c.set(CX - 4, y0 + 3, HAIR)
+        c.set(CX - 4, y0 + 4, HAIR)      # temples
+        c.set(CX + 3, y0 + 4, HAIR_D)
+        c.vline(CX + 3, y0 + 5, y0 + 7, SKIN_SH)
         c.hline(CX - 4, CX + 3, y0 + 7, SKIN_SH)
         c.set(CX - 2, y0 + 5, OUTLINE)
         c.set(CX + 1, y0 + 5, OUTLINE)
     elif view == "front34":
-        c.rect(CX - 3, y0, CX + 4, y0 + 3, BEANIE)
-        c.hline(CX - 3, CX + 4, y0 + 3, BEANIE_D)
+        c.rect(CX - 3, y0, CX + 4, y0 + 2, HAIR)
+        c.vline(CX + 4, y0, y0 + 2, HAIR_D)
+        for i, x in enumerate(range(CX - 3, CX + 5)):
+            if i % 3 != 1:
+                c.set(x, y0 + 3, HAIR if x < CX + 3 else HAIR_D)
         c.rect(CX - 3, y0 + 4, CX + 4, y0 + 7, SKIN)
-        c.vline(CX - 3, y0 + 4, y0 + 7, SKIN_SH)
+        c.set(CX - 3, y0 + 3, HAIR)
+        c.set(CX - 3, y0 + 4, HAIR)
+        c.vline(CX - 3, y0 + 5, y0 + 7, SKIN_SH)
         c.hline(CX - 3, CX + 4, y0 + 7, SKIN_SH)
         c.set(CX, y0 + 5, OUTLINE)
         c.set(CX + 3, y0 + 5, OUTLINE)
     elif view == "side":
-        c.rect(CX - 3, y0, CX + 3, y0 + 3, BEANIE)
-        c.hline(CX - 3, CX + 3, y0 + 3, BEANIE_D)
-        c.rect(CX - 3, y0 + 4, CX - 1, y0 + 7, SKIN_SH)
+        c.rect(CX - 3, y0, CX + 3, y0 + 2, HAIR)
+        c.rect(CX - 3, y0 + 3, CX - 1, y0 + 6, HAIR)   # back of head
+        c.vline(CX - 3, y0 + 3, y0 + 6, HAIR_D)
+        c.set(CX + 2, y0 + 3, HAIR)                     # fringe tip
+        c.set(CX + 3, y0 + 3, HAIR_D)
         c.rect(CX, y0 + 4, CX + 3, y0 + 7, SKIN)
+        c.set(CX - 1, y0 + 7, SKIN_SH)                  # jaw under hair
         c.set(CX + 4, y0 + 5, SKIN)
         c.set(CX + 4, y0 + 6, SKIN_SH)
         c.set(CX + 2, y0 + 5, OUTLINE)
-        c.hline(CX - 3, CX + 3, y0 + 7, SKIN_SH)
+        c.hline(CX, CX + 3, y0 + 7, SKIN_SH)
     elif view == "back34":
-        c.rect(CX - 3, y0, CX + 4, y0 + 4, BEANIE)
-        c.hline(CX - 3, CX + 4, y0 + 4, BEANIE_D)
-        c.rect(CX - 3, y0 + 5, CX + 4, y0 + 7, BEANIE_D)
-        c.set(CX + 4, y0 + 6, SKIN_SH)
+        c.rect(CX - 3, y0, CX + 4, y0 + 5, HAIR)
+        c.vline(CX + 4, y0 + 1, y0 + 5, HAIR_D)
+        c.rect(CX - 3, y0 + 6, CX + 3, y0 + 6, HAIR_D)  # tapered nape
+        c.set(CX + 4, y0 + 6, SKIN_SH)                  # ear sliver
+        c.rect(CX - 1, y0 + 7, CX + 2, y0 + 7, SKIN_SH)
     elif view == "back":
-        c.rect(CX - 4, y0, CX + 3, y0 + 4, BEANIE)
-        c.hline(CX - 4, CX + 3, y0 + 4, BEANIE_D)
-        c.rect(CX - 4, y0 + 5, CX + 3, y0 + 7, BEANIE_D)
+        c.rect(CX - 4, y0, CX + 3, y0 + 5, HAIR)
+        c.vline(CX + 3, y0 + 1, y0 + 5, HAIR_D)
+        c.rect(CX - 3, y0 + 6, CX + 2, y0 + 6, HAIR_D)  # tapered nape
         c.rect(CX - 2, y0 + 7, CX + 1, y0 + 7, SKIN_SH)
 
 
@@ -927,18 +986,20 @@ def draw_pack(c: Canvas, view: str, bob: int) -> None:
 def draw_arms(c: Canvas, view: str, bob: int, frame: int) -> None:
     # both arms the same jacket tone: asymmetric arm shading reads as a bug
     # at this size, and mirrored direction rows make it jump sides
+    # the torso spans CX-4..CX+3 (even width on an odd center), so arm columns
+    # must be placed off the body EDGES to be symmetric, not off CX
     y0 = 19 + bob
     if view in ("front", "back"):
         swing = FRONT_SWING[frame]
         for side, sw in ((-1, swing), (1, -swing)):
-            x = CX + (side * 6) - (1 if side < 0 else 0)
+            x = (CX - 6) if side < 0 else (CX + 4)
             yy = y0 + (1 if sw > 0 else 0)
             c.rect(x, yy, x + 1, yy + 8, JKT)
             c.rect(x, yy + 9, x + 1, yy + 10, SKIN if view == "front" else SKIN_SH)
     elif view in ("front34", "back34"):
         swing = FRONT_SWING[frame]
         for side, sw in ((-1, swing), (1, -swing)):
-            x = CX + (5 * side) + (0 if side < 0 else -1) + sw
+            x = ((CX - 5) if side < 0 else (CX + 4)) + sw
             c.rect(x, y0, x + 1, y0 + 8, JKT)
             c.rect(x, y0 + 9, x + 1, y0 + 10, SKIN)
     else:
@@ -1399,10 +1460,8 @@ def main() -> None:
         entries[name] = (canvas, origin, collider)
     for name, piece in wall_piece_inventory().items():
         entries[name] = piece
-    entries["roof_tile_0"] = (make_roof_tile(0), (32, 16), None)
-    entries["roof_tile_1"] = (make_roof_tile(1), (32, 16), None)
-    entries["roof_vent"] = (make_roof_vent(), (12, 15), None)
-    entries["roof_hatch"] = (make_roof_hatch(), (10, 8), None)
+    entries["roof_7x5"] = make_building_roof(7, 5)   # building A interior
+    entries["roof_6x5"] = make_building_roof(6, 5)   # building B interior
     entries["shadow"] = (make_shadow(), (12, 6), None)
 
     grabber = Canvas(8, 12)  # HSlider knob for the UI theme
@@ -1461,8 +1520,7 @@ def main() -> None:
     show_walls = ["seg_brick_a_x", "seg_brick_a_y", "seg_brick_a_x_win_0",
                   "seg_brick_a_x_win_1", "seg_brick_a_x_win_2", "seg_brick_a_y_win_0",
                   "seg_brick_a_x_broken_0", "post_brick_a", "seg_brick_b_x",
-                  "seg_brick_b_y_win_1", "post_brick_b",
-                  "roof_vent", "roof_hatch", "roof_tile_0"]
+                  "seg_brick_b_y_win_1", "post_brick_b", "roof_6x5"]
     fam_show = [n for fam in families.values() for n in fam]
     rows_imgs = [
         [x3(floors)],
