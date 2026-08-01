@@ -3,6 +3,30 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.31] — 2026-08-01
+
+### Fixed
+- **Falling leaves, both halves of it** (user: "a tree that doesnt have
+  any leaves falling down, its the only tree on the screen", then "its
+  like getting spammed on that tree... this other tree is lonely").
+  Two separate faults, and the flat 50% shed roll caused the first:
+  - **Which trees shed.** A lone oak could lose the coin flip and stand
+    inert forever, while a **pine or a bare dead snag could win it** and
+    drop broadleaf leaves out of a conifer. Now every broadleaf tree
+    sheds (oaks, the autumn grove, and bushes) and conifers and dead
+    snags never do. More shedders costs nothing — the environment's
+    leaf timer caps the overall fall rate, so this buys variety in
+    where leaves come from, not more leaves.
+  - **Which tree gets picked.** The spawner chose at random from the
+    short list of trees near the camera, so with only a couple in view
+    it dumped everything on one of them. It now walks a shuffled cursor
+    through that list, giving every visible tree its turn.
+- **A building could stand on the railway** (user screenshot). The
+  scrapyard hall's fallback placement only dodged the main rail row, so
+  a siding could still run under it. It now searches the whole block for
+  a rail-free footprint (checking track, ballast and crossings), and
+  skips the hall entirely rather than dropping a warehouse on the line.
+
 ## [0.6.30] — 2026-08-01
 
 ### Added

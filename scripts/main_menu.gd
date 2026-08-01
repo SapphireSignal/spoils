@@ -66,6 +66,11 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.31", ["leaves fall from every leafy tree now, and they take",
+		"turns - no more one tree getting spammed while the tree",
+		"beside it drops nothing",
+		"pines and dead trees keep theirs, like they should",
+		"a building could land on the railway. it cannot now"]],
 	["v0.6.30", ["the toll gate: a warden in a booth on the south road,",
 		"a boom across the asphalt, and a man who will talk",
 		"until you pay him",

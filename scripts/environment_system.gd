@@ -86,6 +86,7 @@ var _leaf_tex: Array[Texture2D] = []         # 0-1 green, 2-3 autumn red
 var _leaf_timer := 0.0
 var _leaf_near: Array[int] = []      # near-view shedders (>=100000 = red)
 var _leaf_refresh := 0.0
+var _leaf_cursor := 0                # whose turn it is to drop one
 
 
 func setup(root: Node2D, floor_layer: TileMapLayer, puddle_spots: Array,
@@ -433,12 +434,21 @@ func _update_leaves(delta: float) -> void:
 				if absf(red_tree.x - near_center.x) <= near_view.x \
 						and absf(red_tree.y - near_center.y) <= near_view.y:
 					_leaf_near.append(100000 + ti)
+			# shuffled so the take-turns cursor doesn't march through the
+			# trees in map order (cosmetic only — the world layout's
+			# randomness still flows through the builder's own rng)
+			_leaf_near.shuffle()
 	_leaf_timer -= delta
 	if _leaf_timer <= 0.0 and not _leaf_near.is_empty():
-		# quick drip: with half the greenery shedding, several visible
-		# trees should be dropping at any moment (user call)
+		# quick drip: several visible trees should be dropping at any
+		# moment (user call)
 		_leaf_timer = randf_range(0.22, 0.55)
-		var pick := _leaf_near[randi_range(0, _leaf_near.size() - 1)]
+		# TAKE TURNS. Picking at random from a short near-list dumped
+		# every leaf on one tree while the tree beside it stood bare —
+		# "its like getting spammed on that tree" (user report). A cursor
+		# walking a shuffled list gives every visible tree its turn.
+		_leaf_cursor = (_leaf_cursor + 1) % _leaf_near.size()
+		var pick: int = _leaf_near[_leaf_cursor]
 		var red := pick >= 100000
 		var tree := _leaf_trees_red[pick - 100000] if red else _leaf_trees[pick]
 		for i in LEAF_COUNT:

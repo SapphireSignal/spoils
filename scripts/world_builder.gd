@@ -931,22 +931,35 @@ func _plan_scrap_hall(b: Vector2i) -> void:
 			"door_out": Vector2i(-99, -99),
 		})
 		return
-	# every roll failed (usually the rail cutting the south half): center
-	# it with the same rail dodge the main warehouse fallback uses
+	# every roll failed. Walk the block exhaustively for a rail-free slot —
+	# the old fallback only dodged the MAIN rail row, so a siding could
+	# still end up running straight under the hall (user screenshot).
 	var size := Vector2i(mini(12, r.size.x - 2), mini(8, r.size.y - 2))
-	var pos := r.position + (r.size - size) / 2
-	if _rail_row >= r.position.y - 2 and _rail_row <= r.end.y + 2:
-		if _rail_row <= r.get_center().y:
-			pos.y = mini(r.end.y - size.y, _rail_row + 3)
-		else:
-			pos.y = maxi(r.position.y, _rail_row - size.y - 3)
-	var rect := Rect2i(pos, size)
-	_claim_building_ground(rect)
-	_plots.append({
-		"rect": rect, "kind": "warehouse",
-		"style": "brick_b", "tone": "charcoal", "ruined": false,
-		"stories": 1, "door_side": "yp", "door_out": Vector2i(-99, -99),
-	})
+	for y in range(r.position.y, r.end.y - size.y + 1):
+		for x in range(r.position.x, r.end.x - size.x + 1):
+			var cand := Rect2i(Vector2i(x, y), size)
+			if _rect_rail_free(cand.grow(1)) and _rect_clear_for_building(cand):
+				_claim_building_ground(cand)
+				_plots.append({
+					"rect": cand, "kind": "warehouse",
+					"style": "brick_b", "tone": "charcoal", "ruined": false,
+					"stories": 1, "door_side": "yp",
+					"door_out": Vector2i(-99, -99),
+				})
+				return
+	# nowhere in this block is clear: skip the hall rather than drop a
+	# building on top of the railway
+	push_warning("scrapyard hall: no rail-free footprint in the block")
+
+
+func _rect_rail_free(rect: Rect2i) -> bool:
+	for y in range(rect.position.y, rect.end.y):
+		for x in range(rect.position.x, rect.end.x):
+			var cell := Vector2i(x, y)
+			if _rail_cells.has(cell) or _ballast.has(cell) \
+					or _rail_cross.has(cell):
+				return false
+	return true
 
 
 func _rect_clear_for_building(rect: Rect2i) -> bool:
@@ -2703,20 +2716,28 @@ func _place_trees() -> void:
 
 
 func _maybe_shed_leaves(variant: String, node: Node2D, red: bool = false) -> void:
-	# HALF of every tree sheds; the autumn grove sheds RED, everything
-	# green sheds green (user: "the green only has green")
+	# EVERY broadleaf tree sheds, and only broadleaf trees do.
+	# The old flat 50% roll had two faults the user caught between them:
+	# a lone oak could lose the coin flip and sit there inert forever
+	# ("a tree that doesnt have any leaves falling down, its the only
+	# tree on the screen"), and a PINE or a bare DEAD snag could win it
+	# and drop leaves out of a conifer. The tree family is pine 0-3,
+	# oak 4-6, dead 7-8. More shedders costs nothing: the environment's
+	# leaf timer caps the overall fall rate, so this buys variety in
+	# where leaves come from, not more leaves.
 	assert(variant != "")
-	if _rng.randf() < 0.5:
-		if red:
-			_leaf_trees_red.append(node.position + Vector2(0, -30.0))
-		else:
-			_leaf_trees.append(node.position + Vector2(0, -30.0))
+	if red:
+		_leaf_trees_red.append(node.position + Vector2(0, -30.0))
+		return
+	var index := int(variant.get_slice("_", 1))
+	if index < 4 or index > 6:
+		return                      # conifers and bare snags keep theirs
+	_leaf_trees.append(node.position + Vector2(0, -30.0))
 
 
 func _maybe_shed_bush(node: Node2D) -> void:
-	# bushes join in, dropping from their (now much taller) crowns
-	if _rng.randf() < 0.5:
-		_leaf_trees.append(node.position + Vector2(0, -16.0))
+	# bushes are leafy too, and the same reasoning applies — all of them
+	_leaf_trees.append(node.position + Vector2(0, -16.0))
 
 
 func _place_lone_trees() -> void:
