@@ -6489,7 +6489,13 @@ def main() -> None:
             prev.paste(i, (xcur, ycur + rh - i.height), i)
             xcur += i.width + pad
         ycur += rh + pad
-    prev.save(OUT / "preview.png")
+    # the contact sheet is a DEV artifact — nothing in the game loads it.
+    # Kept out of art/gen so Godot never imports it and, more to the
+    # point, so the deploy's texture prewarm never pays for it: at 512 KB
+    # it was the single largest file in the loaded art folder.
+    dev_out = ROOT / "docs"
+    dev_out.mkdir(exist_ok=True)
+    prev.save(dev_out / "preview.png")
 
     print(f"OK: wrote {len(entries) + 6} files to {OUT}")
 
