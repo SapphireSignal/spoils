@@ -96,6 +96,18 @@
     "wood_2": [
       2,
       5
+    ],
+    "asphalt_stall": [
+      3,
+      5
+    ],
+    "screed_0": [
+      0,
+      6
+    ],
+    "screed_1": [
+      1,
+      6
     ]
   },
   "props": {
@@ -627,14 +639,14 @@
         7.0
       ]
     },
-    "crate_stack": {
+    "crate_stack_0": {
       "size": [
-        36,
-        46
+        44,
+        52
       ],
       "origin": [
-        18,
-        36
+        22,
+        40
       ],
       "collider": [
         "diamond",
@@ -642,7 +654,52 @@
         8.0
       ]
     },
-    "rack": {
+    "crate_stack_1": {
+      "size": [
+        44,
+        52
+      ],
+      "origin": [
+        22,
+        41
+      ],
+      "collider": [
+        "diamond",
+        13.0,
+        7.0
+      ]
+    },
+    "crate_stack_2": {
+      "size": [
+        44,
+        52
+      ],
+      "origin": [
+        22,
+        41
+      ],
+      "collider": [
+        "diamond",
+        13.0,
+        7.0
+      ]
+    },
+    "crate_stack_3": {
+      "size": [
+        44,
+        52
+      ],
+      "origin": [
+        22,
+        41
+      ],
+      "collider": [
+        "diamond",
+        13.0,
+        7.0
+      ]
+    },
+    "rack_0": {
       "size": [
         60,
         58
@@ -655,6 +712,96 @@
         "diamond",
         28.0,
         12.0
+      ]
+    },
+    "rack_1": {
+      "size": [
+        60,
+        58
+      ],
+      "origin": [
+        30,
+        50
+      ],
+      "collider": [
+        "diamond",
+        28.0,
+        12.0
+      ]
+    },
+    "rack_2": {
+      "size": [
+        60,
+        58
+      ],
+      "origin": [
+        30,
+        50
+      ],
+      "collider": [
+        "diamond",
+        28.0,
+        12.0
+      ]
+    },
+    "rack_3": {
+      "size": [
+        60,
+        58
+      ],
+      "origin": [
+        30,
+        50
+      ],
+      "collider": [
+        "diamond",
+        28.0,
+        12.0
+      ]
+    },
+    "truck_0": {
+      "size": [
+        64,
+        58
+      ],
+      "origin": [
+        30,
+        40
+      ],
+      "collider": [
+        "diamond",
+        22.0,
+        11.0
+      ]
+    },
+    "truck_1": {
+      "size": [
+        64,
+        58
+      ],
+      "origin": [
+        30,
+        40
+      ],
+      "collider": [
+        "diamond",
+        22.0,
+        11.0
+      ]
+    },
+    "truck_2": {
+      "size": [
+        64,
+        58
+      ],
+      "origin": [
+        30,
+        40
+      ],
+      "collider": [
+        "diamond",
+        22.0,
+        11.0
       ]
     },
     "seg_brick_a_x": {
@@ -1327,12 +1474,12 @@
     },
     "roof_corner_charcoal": {
       "size": [
-        20,
-        12
+        16,
+        14
       ],
       "origin": [
-        10,
-        6
+        8,
+        5
       ],
       "collider": null
     },
@@ -1426,12 +1573,12 @@
     },
     "roof_corner_pitch": {
       "size": [
-        20,
-        12
+        16,
+        14
       ],
       "origin": [
-        10,
-        6
+        8,
+        5
       ],
       "collider": null
     },
@@ -1528,6 +1675,18 @@
       "pillar_0",
       "pillar_1",
       "pillar_2"
+    ],
+    "crate_stack": [
+      "crate_stack_0",
+      "crate_stack_1",
+      "crate_stack_2",
+      "crate_stack_3"
+    ],
+    "rack": [
+      "rack_0",
+      "rack_1",
+      "rack_2",
+      "rack_3"
     ]
   },
   "char": {

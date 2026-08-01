@@ -66,7 +66,11 @@ func _process(delta: float) -> void:
 	# Movement runs at RENDER rate, not the 60 Hz physics tick: on high-refresh
 	# monitors a 60 Hz world reads as stutter. (A future multiplayer server
 	# would re-run this on a fixed tick; the seam stays in Authority.)
-	crouching = Input.is_action_pressed("crouch")
+	if Settings.crouch_toggle:
+		if Input.is_action_just_pressed("crouch"):
+			crouching = not crouching
+	else:
+		crouching = Input.is_action_pressed("crouch")
 	var speed := SPEED * (CROUCH_SPEED_MULT if crouching else 1.0)
 	var input_vec := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	velocity = Vector2(input_vec.x, input_vec.y * Y_SQUASH) * speed

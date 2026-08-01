@@ -49,6 +49,7 @@ var quality := 2       # 0 low, 1 medium, 2 high
 var max_fps := 0       # 0 = uncapped
 var vsync := true
 var show_fps := false
+var crouch_toggle := false  # false = hold to crouch, true = toggle
 var binds: Dictionary = {}  # action -> physical keycode
 
 var _fps_label: Label
@@ -81,6 +82,11 @@ func apply_binds() -> void:
 func set_bind(action: String, physical_keycode: int) -> void:
 	binds[action] = physical_keycode
 	apply_binds()
+	_save()
+
+
+func set_crouch_toggle(on: bool) -> void:
+	crouch_toggle = on
 	_save()
 
 
@@ -176,6 +182,7 @@ func _load() -> void:
 	max_fps = int(cfg.get_value("video", "max_fps", max_fps))
 	vsync = bool(cfg.get_value("video", "vsync", vsync))
 	show_fps = bool(cfg.get_value("video", "show_fps", show_fps))
+	crouch_toggle = bool(cfg.get_value("input", "crouch_toggle", crouch_toggle))
 	for action in BIND_ACTIONS:
 		binds[action] = int(cfg.get_value("input", action, binds[action]))
 
@@ -188,6 +195,7 @@ func _save() -> void:
 	cfg.set_value("video", "max_fps", max_fps)
 	cfg.set_value("video", "vsync", vsync)
 	cfg.set_value("video", "show_fps", show_fps)
+	cfg.set_value("input", "crouch_toggle", crouch_toggle)
 	for action in BIND_ACTIONS:
 		cfg.set_value("input", action, binds[action])
 	cfg.save(PATH)

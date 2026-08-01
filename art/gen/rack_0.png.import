@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dfvehxx2wofgs"
-path="res://.godot/imported/rack.png-f1543317877642da8af3b40a897758f4.ctex"
+uid="uid://wkscdpe62skj"
+path="res://.godot/imported/rack_0.png-113ca595d938659fb2497c2e51bbcd85.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/gen/rack.png"
-dest_files=["res://.godot/imported/rack.png-f1543317877642da8af3b40a897758f4.ctex"]
+source_file="res://art/gen/rack_0.png"
+dest_files=["res://.godot/imported/rack_0.png-113ca595d938659fb2497c2e51bbcd85.ctex"]
 
 [params]
 

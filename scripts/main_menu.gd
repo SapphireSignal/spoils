@@ -19,6 +19,12 @@ const TEX_CLOUDS := preload("res://art/gen/menu_overlook_clouds.png")
 const TEX_DUST := preload("res://art/gen/dust.png")
 const TEX_VIGNETTE := preload("res://art/gen/vignette.png")
 const TEX_TITLE := preload("res://art/gen/title.png")
+const TEX_SHINE := preload("res://art/gen/title_shine.png")
+const TEX_TAGLINE := preload("res://art/gen/tagline.png")
+
+const SHINE_PERIOD := 6.0   # seconds between gleams
+const SHINE_SWEEP := 0.9    # gleam travel time
+const SHINE_WIDTH := 34.0
 
 var _scenes: Array[Node2D] = []
 var _scene_index := 0
@@ -35,6 +41,8 @@ var _dust: CPUParticles2D
 
 var _title: TextureRect
 var _title_base_y := 0.0
+var _shine_clip: Control
+var _shine: TextureRect
 var _buttons: VBoxContainer
 var _settings: SettingsPanel
 var _keybinds: KeybindsPanel
@@ -132,6 +140,19 @@ func _process(delta: float) -> void:
 
 	_title.position.y = _title_base_y + roundf(sin(_time * 1.3) * 2.0)
 
+	# silver gleam sweeping across the wordmark every few seconds
+	var phase := fmod(_time, SHINE_PERIOD)
+	if phase < SHINE_SWEEP:
+		_shine_clip.visible = true
+		var title_pos := _title.global_position
+		var travel := _title.size.x + SHINE_WIDTH * 2.0
+		_shine_clip.global_position = Vector2(
+			roundf(title_pos.x - SHINE_WIDTH + travel * (phase / SHINE_SWEEP)),
+			title_pos.y)
+		_shine.global_position = title_pos
+	else:
+		_shine_clip.visible = false
+
 	# per-scene life
 	if _neon.visible:
 		var flick := 1.0
@@ -173,19 +194,20 @@ func _build_scenes() -> void:
 	# 1: the master hoard
 	var hoard := Node2D.new()
 	_backdrop(hoard, TEX_HOARD)
+	# gold dust FALLING down the light shaft onto the pile (user call)
 	_sparkles = CPUParticles2D.new()
 	_sparkles.texture = TEX_DUST
-	_sparkles.amount = 26
-	_sparkles.lifetime = 7.0
-	_sparkles.preprocess = 5.0
+	_sparkles.amount = 30
+	_sparkles.lifetime = 12.0
+	_sparkles.preprocess = 12.0
 	_sparkles.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
-	_sparkles.emission_rect_extents = Vector2(220, 40)
-	_sparkles.position = Vector2(0, 130)
-	_sparkles.direction = Vector2(0, -1)
-	_sparkles.spread = 12.0
-	_sparkles.gravity = Vector2.ZERO
-	_sparkles.initial_velocity_min = 8.0
-	_sparkles.initial_velocity_max = 20.0
+	_sparkles.emission_rect_extents = Vector2(70, 10)
+	_sparkles.position = Vector2(0, -250)
+	_sparkles.direction = Vector2(0, 1)
+	_sparkles.spread = 8.0
+	_sparkles.gravity = Vector2(0, 6)
+	_sparkles.initial_velocity_min = 18.0
+	_sparkles.initial_velocity_max = 34.0
 	_sparkles.color = Color("e8c170")
 	_sparkles.color_ramp = _fade_ramp()
 	hoard.add_child(_sparkles)
@@ -317,13 +339,43 @@ func _build_ui() -> void:
 	_title_base_y = _title.offset_top
 	root.add_child(_title)
 
+	# gleam layer: a narrow clipping window sweeps over a silver copy
+	_shine_clip = Control.new()
+	_shine_clip.clip_contents = true
+	_shine_clip.size = Vector2(SHINE_WIDTH, _title.texture.get_height())
+	_shine_clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_shine_clip.visible = false
+	_shine = TextureRect.new()
+	_shine.texture = TEX_SHINE
+	_shine.stretch_mode = TextureRect.STRETCH_KEEP
+	_shine.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_shine_clip.add_child(_shine)
+	root.add_child(_shine_clip)
+
+	# tagline: its own small static image (not animated with the title)
+	var tagline := TextureRect.new()
+	tagline.texture = TEX_TAGLINE
+	var tag_w := float(tagline.texture.get_width())
+	tagline.anchor_left = 0.5
+	tagline.anchor_right = 0.5
+	tagline.offset_left = -tag_w / 2.0
+	tagline.offset_right = tag_w / 2.0
+	tagline.offset_top = 52 + _title.texture.get_height() + 4
+	tagline.offset_bottom = tagline.offset_top + tagline.texture.get_height()
+	tagline.stretch_mode = TextureRect.STRETCH_KEEP
+	tagline.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(tagline)
+
+	# dead-center, growing both ways: stays perfectly centered no matter how
+	# many buttons this list gains later
 	_buttons = VBoxContainer.new()
 	_buttons.anchor_left = 0.5
 	_buttons.anchor_right = 0.5
-	_buttons.anchor_top = 0.62
-	_buttons.anchor_bottom = 0.62
+	_buttons.anchor_top = 0.5
+	_buttons.anchor_bottom = 0.5
 	_buttons.offset_left = -85
 	_buttons.offset_right = 85
+	_buttons.grow_vertical = Control.GROW_DIRECTION_BOTH
 	_buttons.add_theme_constant_override("separation", 8)
 	_menu_button(_buttons, "deploy", func() -> void:
 		get_tree().change_scene_to_file("res://scenes/main.tscn"))
@@ -363,7 +415,7 @@ func _build_ui() -> void:
 	root.add_child(changelog_btn)
 
 	var version := Label.new()
-	version.text = "pre-alpha v0.6.0"
+	version.text = "pre-alpha v0.6.1"
 	version.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	version.offset_left = -130
 	version.offset_top = -16

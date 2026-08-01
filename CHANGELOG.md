@@ -3,6 +3,30 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.1] — 2026-07-31
+
+> Versioning from here on: patch bumps (0.6.x) for polish and fix batches;
+> the minor only moves when a MILESTONE lands (0.7 gunplay, 0.8 enemies,
+> 0.9 the raid loop). 1.0 = the complete v1 game from the design doc.
+
+### Added
+- Loading yard south of the warehouse: asphalt pad with faded stall lines,
+  pickup trucks backed in (random count/colors/stalls; boxes in the beds),
+  and stray stock scattered around — all randomized.
+- Crouch mode option next to the crouch keybind: hold or toggle.
+- Silver gleam that sweeps across the title every few seconds.
+
+### Changed
+- Warehouse floor is a distinct green sealed screed (dark asphalt read as
+  "same as the street").
+- Racks and crate stacks are variant families with messy, jostled, per-box
+  randomized loads — no two look alike, nothing stacks perfectly.
+- Racks are shorter than the walls (top boxes no longer poke past the cap).
+- Roof corner caps are post-sized and carry the fascia/rim lines through the
+  corners.
+- The gold in the vault backdrop now falls down the light shaft (was rising).
+- Menu buttons are exactly centered (and stay centered as buttons are added);
+  the tagline is smaller and no longer bobs with the title.
 ## [0.6.0] — 2026-07-31
 
 ### Added

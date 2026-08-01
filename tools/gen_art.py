@@ -230,6 +230,22 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
                 col = C("241527")  # grain/knots
             c.set(x, y, col)
 
+    elif kind == "screed":
+        # warehouse floor: sealed dark-green industrial screed
+        region = _floor_base(c, rng, C("19332d"), C("151d28"), C("25562e"), 0.07, 0.05)
+        if variant == 1:
+            oil = blob(rng, 32 + rng.randint(-10, 10), 16 + rng.randint(-4, 4),
+                       rng.randint(20, 45), region)
+            for (x, y) in oil:
+                c.set(x, y, C("10141f"))
+
+    elif kind == "asphalt_stall":
+        # parking stall separator: pale worn line along the lower-left edge
+        region = _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.06, 0.03)
+        for (x, y) in region:
+            if not in_diamond(x - 2, y + 1) and rng.random() < 0.8:
+                c.set(x, y, C("819796"))
+
     elif kind == "asphalt":
         _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.06, 0.03)
     elif kind == "asphalt_line":
@@ -253,6 +269,8 @@ FLOOR_TILES = [
     ("asphalt_0", ("asphalt", 0)), ("asphalt_1", ("asphalt", 1)),
     ("asphalt_line", ("asphalt_line", 0)),
     ("wood_0", ("wood", 0)), ("wood_1", ("wood", 1)), ("wood_2", ("wood", 2)),
+    ("asphalt_stall", ("asphalt_stall", 0)),
+    ("screed_0", ("screed", 0)), ("screed_1", ("screed", 1)),
 ]
 
 def make_floors_atlas() -> tuple[Image.Image, dict[str, list[int]]]:
@@ -497,15 +515,25 @@ def make_roof_eave(tone: str, side: str) -> tuple[Canvas, tuple, list | None]:
     return c, (ox + 16, oy), None
 
 def make_roof_corner(tone: str) -> tuple[Canvas, tuple, list | None]:
-    """Small roof-colored diamond capping a wall post at the roof plane, so
-    every corner (and door jamb) reads identical under the roof."""
+    """Post cap at the roof plane, exactly post-sized (12x6) and carrying the
+    same rim/trim treatment as the fascia, so the roof's outline lines
+    continue straight through the corners instead of breaking."""
     base_col, dark_col, lite_col = (C(n) for n in ROOF_TONES[tone])
-    c = Canvas(20, 12)
-    rows = small_diamond_rows(16, 8)
+    c = Canvas(16, 14)
+    rows = small_diamond_rows(12, 6)
+    cells: set = set()
     for i, (x0, x1) in enumerate(rows):
         for x in range(x0, x1 + 1):
-            c.set(2 + x, 2 + i, lite_col if i == 0 else base_col)
-    return c, (10, 6), None
+            cells.add((2 + x, 2 + i))
+            c.set(2 + x, 2 + i, base_col)
+    for (x, y) in cells:
+        if (x, y - 1) not in cells:
+            c.set(x, y, lite_col)          # rim continues over the cap
+        if (x, y + 1) not in cells:
+            c.set(x, y, dark_col)          # fascia trim continues below
+            c.set(x, y + 1, INK)
+            c.set(x, y + 2, INK)
+    return c, (8, 5), None
 
 def make_roof_tile_broken(tone: str, variant: int) -> tuple[Canvas, tuple, list | None]:
     """Roof tile with a collapsed hole — exposed joists across the gap."""
@@ -594,7 +622,7 @@ def draw_crate(rng: random.Random, w: int, h: int, tone: int,
     for y in range(bottoms[w // 2] + 1, bottoms[w // 2] + h + 1):
         c.set(ox + w // 2 - 1, y, line)
         c.set(ox + w // 2, y, line)
-    if damaged:  # a missing board on the lit face
+    if damaged and w // 2 - 4 > 4:  # a missing board on the lit face
         gx = rng.randrange(4, w // 2 - 4)
         for x in range(gx, gx + rng.randint(3, 5)):
             for y in range(bottoms[x] + 1, bottoms[x] + min(h, 5)):
@@ -965,39 +993,119 @@ def make_bookshelf() -> tuple[Canvas, tuple, list]:
     c.outline_auto()
     return c, (15, 38), ["diamond", 14.0, 7.0]
 
-def make_crate_stack() -> tuple[Canvas, tuple, list]:
-    rng = random.Random(f"{SEED}:cratestack")
-    base, base_origin, _ = draw_crate(rng, 28, 12, 0, False, True)
-    top, _, _ = draw_crate(rng, 24, 10, 1, True, False)
-    c = Canvas(36, 46)
-    c.img.alpha_composite(base.img, (2, 16))
+def _paste_canvas(c: Canvas, piece: Canvas, x: int, y: int,
+                  mirror: bool = False) -> None:
+    img = piece.img.transpose(Image.FLIP_LEFT_RIGHT) if mirror else piece.img
+    c.img.alpha_composite(img, (x, y))
     c.px = c.img.load()
-    c.img.alpha_composite(top.img, (5, 0))
-    c.px = c.img.load()
-    return c, (18, 16 + base_origin[1]), ["diamond", 15.0, 8.0]
 
-def make_rack() -> tuple[Canvas, tuple, list]:
-    """Industrial shelving: two uprights, two loaded levels."""
-    rng = random.Random(f"{SEED}:rack")
+def make_crate_stack(variant: int) -> tuple[Canvas, tuple, list]:
+    """Messy human-piled stack: every box gets cumulative random offsets,
+    its own size, and sometimes a mirrored orientation — no perfect stacking."""
+    rng = random.Random(f"{SEED}:cratestack:{variant}")
+    c = Canvas(44, 52)
+    base_w = rng.choice((24, 28))
+    base_h = rng.randint(11, 14)
+    base, base_origin, _ = draw_crate(rng, base_w, base_h, rng.randrange(2),
+                                      rng.random() < 0.3, rng.random() < 0.5)
+    base_x = (c.w - base.w) // 2
+    base_y = c.h - base.h - 2
+    _paste_canvas(c, base, base_x, base_y, rng.random() < 0.5)
+    top_x, top_y = base_x, base_y
+    prev = base
+    count = rng.randint(1, 2)
+    for i in range(count):
+        w = rng.choice((16, 20, 24))
+        h = rng.randint(8, 12)
+        box, _, _ = draw_crate(rng, w, h, rng.randrange(2),
+                               rng.random() < 0.3, rng.random() < 0.4)
+        # jostle: offset from the box below, never perfectly centered
+        top_x = top_x + (prev.w - box.w) // 2 + rng.randint(-4, 4)
+        top_y = top_y - h - rng.randint(1, 3)
+        _paste_canvas(c, box, top_x, top_y, rng.random() < 0.5)
+        prev = box
+    return c, (c.w // 2, base_y + base_origin[1]), ["diamond", base_w / 2 + 1.0, base_w / 4 + 1.0]
+
+def make_rack(variant: int) -> tuple[Canvas, tuple, list]:
+    """Industrial shelving with a UNIQUE, unevenly-jostled load per variant."""
+    rng = random.Random(f"{SEED}:rack:{variant}")
+    # keep total height under the wall height so racks never poke past the
+    # wall cap when parked against a wall
     c = Canvas(60, 58)
     steel, steel_d = C("394a50"), C("202e37")
-    # levels: thin slabs at two heights
-    for level_y in (14, 32):
+    for level_y in (20, 36):
         rows = small_diamond_rows(52, 26)
         for i, (x0, x1) in enumerate(rows):
             for x in range(x0, x1 + 1):
                 c.set(4 + x, level_y + i // 2, steel if i % 2 else steel_d)
-    # uprights
     for ux in (6, 30, 54):
-        c.vline(ux, 12, 52, steel_d)
-        c.vline(ux + 1, 12, 52, steel)
-    # boxes on levels
-    for (bx, by, tone) in ((10, 2, 0), (28, 6, 1), (40, 0, 0), (16, 20, 1), (36, 22, 0)):
-        box, _, _ = draw_crate(rng, 24, 10, tone, rng.random() < 0.3, False)
-        c.img.alpha_composite(box.img, (bx, by))
-        c.px = c.img.load()
+        c.vline(ux, 18, 52, steel_d)
+        c.vline(ux + 1, 18, 52, steel)
+    # random load: count, slots, sizes, tones, damage, mirroring all rolled
+    for level_base in (8, 25):
+        slots = [8, 22, 36]
+        rng.shuffle(slots)
+        for i in range(rng.randint(1, 3)):
+            w = rng.choice((16, 20, 24))
+            box, _, _ = draw_crate(rng, w, rng.randint(8, 11), rng.randrange(2),
+                                   rng.random() < 0.35, rng.random() < 0.3)
+            _paste_canvas(c, box, slots[i] + rng.randint(-3, 3),
+                          level_base + rng.randint(-2, 2), rng.random() < 0.5)
     c.outline_auto()
     return c, (30, 50), ["diamond", 28.0, 12.0]
+
+def make_truck(variant: int) -> tuple[Canvas, tuple, list]:
+    """Pickup truck, nose to the NW, open bed with cargo boxes.
+    Low colored body with a raised bed rim, taller cab with a windshield
+    glint, wheels under the skirt."""
+    rng = random.Random(f"{SEED}:pickup:{variant}")
+    schemes = [
+        ("a8b5b2", "819796", "577277", 1),   # weathered white, light load
+        ("468232", "25562e", "19332d", 2),   # olive
+        ("884b2b", "602c2c", "4d2b32", 3),   # rust, loaded up
+    ]
+    body_t, body_l, body_r, load = schemes[variant]
+    c = Canvas(64, 58)
+    chx, chy = 10, 22
+
+    body_b = iso_prism(c, chx, chy, 40, 20, 8, C(body_t), C(body_l), C(body_r))
+    rows = small_diamond_rows(40, 20)
+    # open bed: rear half of the top face drops to a dark bed floor,
+    # leaving a rim of body color as the bed walls
+    for i in range(8, 20):
+        x0, x1 = rows[i]
+        for x in range(x0 + 3, x1 - 2):
+            c.set(chx + x, chy + i, C("241527"))
+    # cab on the front half, one step taller
+    cab_b = iso_prism(c, chx + 12, chy - 8, 16, 8, 10,
+        C(body_t), C(body_l), C(body_r))
+    for i in range(3):  # windshield band across the cab roof front edge
+        x0, x1 = small_diamond_rows(16, 8)[i]
+        for x in range(x0, x1 + 1):
+            c.set(chx + 12 + x, chy - 8 + i, C("3c5e8b") if i else C("253a5e"))
+    # cargo boxes on the bed, jostled
+    spots = [(18, 8), (24, 12), (13, 12)]
+    rng.shuffle(spots)
+    for i in range(load):
+        w = rng.choice((12, 16))
+        mini = Canvas(w + 4, 14)
+        mb = iso_prism(mini, 2, 1, w, w // 2, rng.randint(4, 6),
+            C("be772b"), C("884b2b"), C("602c2c"))
+        for mx in range(w):
+            mini.set(2 + mx, mb[mx] + 2, C("341c27"))
+        mini.outline_auto()
+        sx, sy = spots[i]
+        c.img.alpha_composite(mini.img,
+            (chx + sx + rng.randint(-2, 2), chy + sy - 10 + rng.randint(-1, 1)))
+        c.px = c.img.load()
+    # wheels under the skirt on the lit side
+    for wheel_cols in (range(6, 11), range(26, 32)):
+        for lx in wheel_cols:
+            base_y = chy + (body_b[lx] - chy) + 8
+            for dy in range(3):
+                c.set(chx + lx, base_y + dy + 1, C("090a14"))
+    c.outline_auto()
+    return c, (chx + 20, chy + 18), ["diamond", 22.0, 11.0]
 
 def prop_inventory() -> tuple[dict, dict]:
     """Returns ({name: (canvas, origin, collider)}, {family: [names]})."""
@@ -1046,8 +1154,12 @@ def prop_inventory() -> tuple[dict, dict]:
     props["table"] = make_table()
     props["chair"] = make_chair()
     props["bookshelf"] = make_bookshelf()
-    props["crate_stack"] = make_crate_stack()
-    props["rack"] = make_rack()
+    for i in range(4):
+        fam("crate_stack", i, make_crate_stack(i))
+    for i in range(4):
+        fam("rack", i, make_rack(i))
+    for i in range(3):
+        props[f"truck_{i}"] = make_truck(i)
     return props, families
 
 def make_shadow() -> Canvas:
@@ -1310,28 +1422,35 @@ def _render_word(word: str, upper_col, lower_col) -> Image.Image:
                         break
     return text
 
-def make_title() -> Image.Image:
-    """Big lowercase wordmark + outlined tagline, baked as one image (the
-    bitmap font can't outline at runtime and the plain tagline was unreadable
-    over bright backdrops)."""
+def make_title() -> tuple[Image.Image, Image.Image, Image.Image]:
+    """Returns (wordmark, silver shine layer, tagline). The tagline is its own
+    static image (user: smaller, not animated with the title); the shine layer
+    is the wordmark in silver, swept across at runtime for a gleam."""
     text = _render_word("spoils", C("ebede9"), C("819796"))
     scale = 7
     big = text.resize((text.width * scale, text.height * scale), Image.NEAREST)
-    tag = _render_word("loot. extract. survive.", C("c7cfcc"), C("819796"))
-    tag2 = tag.resize((tag.width * 2, tag.height * 2), Image.NEAREST)
-    width = max(big.width + 4, tag2.width)
-    title = Image.new("RGBA", (width, big.height + 10 + tag2.height), (0, 0, 0, 0))
+    title = Image.new("RGBA", (big.width + 4, big.height + 10), (0, 0, 0, 0))
     shadow = Image.new("RGBA", big.size, (0, 0, 0, 0))
     spx, bpx = shadow.load(), big.load()
     for y in range(big.height):
         for x in range(big.width):
             if bpx[x, y][3] > 0:
                 spx[x, y] = (9, 10, 20, 140)
-    bx = (width - big.width - 4) // 2
-    title.paste(shadow, (bx + 4, 8), shadow)
-    title.paste(big, (bx, 0), big)
-    title.paste(tag2, ((width - tag2.width) // 2, big.height + 8), tag2)
-    return title
+    title.paste(shadow, (4, 8), shadow)
+    title.paste(big, (0, 0), big)
+
+    # shine: letter pixels only (not outline/shadow), in bright silver
+    shine = Image.new("RGBA", title.size, (0, 0, 0, 0))
+    shp = shine.load()
+    tp = title.load()
+    for y in range(title.height):
+        for x in range(title.width):
+            p = tp[x, y]
+            if p[3] > 0 and p[:3] in (C("ebede9")[:3], C("819796")[:3]):
+                shp[x, y] = C("ebede9") if p[:3] == C("ebede9")[:3] else C("c7cfcc")
+
+    tag = _render_word("loot. extract. survive.", C("c7cfcc"), C("819796"))
+    return title, shine, tag
 
 # ---------------------------------------------------------- menu backdrops ---
 # Four rotating main-menu scenes, 960x544 (covers the expanded view on any
@@ -1660,7 +1779,10 @@ def main() -> None:
         "dirs": [d for d, _, _ in DIR_VIEWS],
     }
 
-    make_title().save(OUT / "title.png")          # white/palette mix, UI-tinted
+    title_img, shine_img, tagline_img = make_title()
+    title_img.save(OUT / "title.png")
+    shine_img.save(OUT / "title_shine.png")
+    tagline_img.save(OUT / "tagline.png")
     make_vignette().save(OUT / "vignette.png")    # soft alpha by design
     make_dust().save(OUT / "dust.png")            # white, tinted at runtime
 
@@ -1698,7 +1820,7 @@ def main() -> None:
         [x3(entries[n][0].img) for n in show_walls],
         [x3(entries[n][0].img) for n in fam_show[:16]],
         [x3(entries[n][0].img) for n in fam_show[16:]],
-        [x3(sheet), make_title()],
+        [x3(sheet), title_img],
     ]
     W = max(sum(i.width + pad for i in row) for row in rows_imgs) + pad
     Hh = sum(max(i.height for i in row) + pad for row in rows_imgs) + pad

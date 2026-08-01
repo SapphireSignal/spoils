@@ -73,6 +73,14 @@ func _bind_row(action: String) -> HBoxContainer:
 	button.pressed.connect(func() -> void: _start_listen(action))
 	_bind_buttons[action] = button
 	row.add_child(button)
+	if action == "crouch":
+		var mode := Button.new()
+		mode.text = "toggle" if Settings.crouch_toggle else "hold"
+		mode.custom_minimum_size = Vector2(48, 0)
+		mode.pressed.connect(func() -> void:
+			Settings.set_crouch_toggle(not Settings.crouch_toggle)
+			mode.text = "toggle" if Settings.crouch_toggle else "hold")
+		row.add_child(mode)
 	return row
 
 

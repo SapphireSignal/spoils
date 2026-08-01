@@ -14,6 +14,7 @@ const ROAD_B_Y := Vector2i(26, 29)  # row band, runs screen down-right
 const BUILDING_A := Rect2i(9, 8, 7, 6)
 const BUILDING_B := Rect2i(29, 32, 10, 8)
 const SPAWN_CELL := Vector2i(18, 13)
+const LOT := Rect2i(30, 40, 9, 4)  # loading yard south of the warehouse
 
 var _rng := RandomNumberGenerator.new()
 var _manifest: Dictionary = {}
@@ -49,6 +50,7 @@ func build(root: Node2D) -> Dictionary:
 			_floor_layer.set_cell(Vector2i(x, y), 0, Vector2i(int(tc[0]), int(tc[1])))
 
 	_place_buildings()
+	_place_warehouse_yard()
 	_place_perimeter()
 	_place_fixed_props()
 	_scatter_props()
@@ -154,7 +156,16 @@ func _layout_terrain() -> Array:
 	var inner_b: Rect2i = BUILDING_B.grow(-1)
 	for y in range(inner_b.position.y, inner_b.end.y):
 		for x in range(inner_b.position.x, inner_b.end.x):
-			terrain[y][x] = "asphalt_%d" % _rng.randi_range(0, 1)
+			terrain[y][x] = "screed_%d" % _rng.randi_range(0, 1)
+
+	# loading yard south of the warehouse: asphalt pad with stall lines
+	for y in range(LOT.position.y, LOT.end.y):
+		for x in range(LOT.position.x, LOT.end.x):
+			if x >= 0 and y >= 0 and x < MAP_W and y < MAP_H:
+				if (x == 32 or x == 35) and y < LOT.end.y - 1:
+					terrain[y][x] = "asphalt_stall"
+				else:
+					terrain[y][x] = "asphalt_%d" % _rng.randi_range(0, 1)
 	return terrain
 
 
@@ -368,7 +379,7 @@ func _furnish_warehouse(interior: Rect2i) -> void:
 	var used: Array[Vector2i] = []
 	for i in _rng.randi_range(2, mini(3, rack_slots.size())):
 		var cell := Vector2i(p.x + rack_slots[i - 1], p.y)
-		_add_prop_at_cell("rack", cell, Vector2(8, 2))
+		_add_prop_at_cell(_pick_variant("rack"), cell, Vector2(8, 2))
 		used.append(cell)
 
 	var cells := _interior_free_cells(interior, used)
@@ -387,10 +398,7 @@ func _furnish_warehouse(interior: Rect2i) -> void:
 		for opt in stock_mix:
 			roll -= opt[1]
 			if roll <= 0.0:
-				var item: String = opt[0]
-				if item != "crate_stack":
-					item = _pick_variant(item)
-				_add_prop_at_cell(item, cell, Vector2(10, 5))
+				_add_prop_at_cell(_pick_variant(opt[0]), cell, Vector2(10, 5))
 				break
 
 
@@ -456,6 +464,36 @@ func _build_roof(interior: Rect2i, tone: String, post_positions: Array,
 
 	_ysort.add_child(roof)
 	_roofs.append(roof)
+
+
+func _place_warehouse_yard() -> void:
+	# box trucks backed into random stalls (one always has its rear open),
+	# stray stock scattered around the yard
+	var stalls: Array[Vector2i] = [Vector2i(31, 41), Vector2i(34, 41), Vector2i(37, 41)]
+	stalls.shuffle()
+	var variants: Array[int] = [2, _rng.randi_range(0, 1), _rng.randi_range(0, 1)]
+	for i in _rng.randi_range(2, 3):
+		var cell: Vector2i = stalls[i - 1]
+		_add_prop_at_cell("truck_%d" % variants[i - 1], cell, Vector2(6, 3))
+		_occupied[cell + Vector2i(0, -1)] = true  # trucks are long: keep clear
+		_occupied[cell + Vector2i(0, 1)] = true
+
+	var yard_cells: Array[Vector2i] = []
+	for y in range(BUILDING_B.end.y, LOT.end.y):
+		for x in range(LOT.position.x, LOT.end.x):
+			var cell := Vector2i(x, y)
+			if not _occupied.has(cell):
+				yard_cells.append(cell)
+	var spill := ["crate", "crate", "crate_stack", "pallet", "barrel"]
+	for i in _rng.randi_range(4, 6):
+		if yard_cells.is_empty():
+			break
+		var item: String = _pick_variant(spill[_rng.randi_range(0, spill.size() - 1)])
+		_add_prop_at_cell(item, _take_random_cell(yard_cells), Vector2(6, 3))
+	# the yard is dressed: keep the ambient scatter pass out of it entirely
+	for y in range(LOT.position.y, LOT.end.y):
+		for x in range(LOT.position.x, LOT.end.x):
+			_occupied[Vector2i(x, y)] = true
 
 
 func _place_perimeter() -> void:
