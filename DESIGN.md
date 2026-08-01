@@ -60,8 +60,9 @@ gun-feel, at 32 pixels tall.*
    trader unlocks. Persist to a local config file.
 
 ### v1 scope (defaults — adjustable by the user, not by Claude)
-- **1 map** (~120×120 tiles): a ruined industrial/urban zone with interiors, chokepoints,
-  3–4 extraction points.
+- **1 map**: "the stacks" — a 320×320 ruined industrial/urban district with interiors,
+  chokepoints, 3–4 extraction points. A fresh layout is generated per deploy from a seed
+  (pinnable for testing); the road grid / forest / building DNA stays recognizable.
 - **6–10 guns** across classes (pistol / SMG / shotgun / rifle / DMR) with rarity tiers
   (white→green→blue→purple→gold, Destiny-style colors within the palette).
 - **AI factions:**
@@ -78,6 +79,20 @@ gun-feel, at 32 pixels tall.*
   raid timer, extraction, stash persistence, trader, death = loss.
 - **Explicitly out of v1:** multiplayer/netcode, attachments/modding, quests, hideout
   upgrades, limb damage, insurance.
+
+### World rules (shipped in v0.6.3 — keep true)
+- The map is walkable to its true diamond edge; there is no visible void, ever.
+- The last stretch before the edge is **sniper country**: a centered warning
+  ("turn back or you will get sniped"), a 3 s grace period, then off-screen rounds.
+  Three hits kill; death currently respawns at the spawn crossroads (M4 turns this
+  into real raid loss).
+- Building doors are **closed and interactive** (F opens/closes, swing animation,
+  collision while shut). Entrances — inside pocket and outside approach — always
+  spawn clear of props.
+- Nights are dark for real; the flashlight (E) and the surviving minority of
+  flickering street lamps are the light sources until M5 lighting.
+- Weather is world-anchored: raindrops fall to real ground points and splash where
+  they land, in the puddles' blue.
 
 ### Multiplayer future (build-for, don't build-yet)
 The long-term goal is real PvPvE. **Architecture rule from day one:** gameplay state changes

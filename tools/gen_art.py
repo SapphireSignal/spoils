@@ -181,9 +181,9 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
     c = Canvas(64, 32)
 
     if kind == "concrete":
-        _floor_base(c, rng, CONC_BASE, CONC_D1, CONC_L1, 0.05, 0.025)
+        _floor_base(c, rng, CONC_BASE, CONC_D1, CONC_L1, 0.032, 0.016)
     elif kind == "crack":
-        region = _floor_base(c, rng, CONC_BASE, CONC_D1, CONC_L1, 0.05, 0.025)
+        region = _floor_base(c, rng, CONC_BASE, CONC_D1, CONC_L1, 0.032, 0.016)
         x, y = 20 + rng.randrange(24), 8 + rng.randrange(16)
         dx = rng.choice((-1, 1))
         for _ in range(rng.randint(12, 18)):
@@ -194,7 +194,7 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
             x += dx if rng.random() < 0.75 else -dx
             y += rng.choice((0, 1, 1, -1))
     elif kind == "stain":
-        region = _floor_base(c, rng, CONC_BASE, CONC_D1, CONC_L1, 0.05, 0.025)
+        region = _floor_base(c, rng, CONC_BASE, CONC_D1, CONC_L1, 0.032, 0.016)
         core = blob(rng, 32 + rng.randint(-10, 10), 16 + rng.randint(-4, 4),
                     rng.randint(25, 50), region)
         for (x, y) in core:
@@ -204,7 +204,7 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
                 if (nx, ny) in region and (nx, ny) not in core and (nx + ny) % 2 == 0:
                     c.set(nx, ny, CONC_D1)
     elif kind == "moss":
-        region = _floor_base(c, rng, CONC_BASE, CONC_D1, CONC_L1, 0.05, 0.025)
+        region = _floor_base(c, rng, CONC_BASE, CONC_D1, CONC_L1, 0.032, 0.016)
         m = blob(rng, 32 + rng.randint(-12, 12), 16 + rng.randint(-5, 5),
                  rng.randint(20, 40), region)
         for (x, y) in m:
@@ -213,10 +213,10 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
             elif rng.random() < 0.3:
                 c.set(x, y, C("25562e"))
     elif kind == "dirt":
-        _floor_base(c, rng, C("341c27"), C("241527"), C("4d2b32"), 0.06, 0.10)
+        _floor_base(c, rng, C("341c27"), C("241527"), C("4d2b32"), 0.045, 0.07)
     elif kind == "dirt_blend":
-        region = _floor_base(c, rng, CONC_BASE, CONC_D1, CONC_L1, 0.05, 0.02)
-        speckle(c, rng, region, [C("341c27"), C("4d2b32")], [0.13, 0.09])
+        region = _floor_base(c, rng, CONC_BASE, CONC_D1, CONC_L1, 0.032, 0.014)
+        speckle(c, rng, region, [C("341c27"), C("4d2b32")], [0.09, 0.06])
     elif kind == "wood":
         # interior plank floor: boards run along one iso axis, seams + grain
         region = {(x, y) for y in range(32) for x in range(64) if in_diamond(x, y)}
@@ -226,38 +226,47 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
             col = tones[(board * 7 + variant * 3) % 3]
             if (x + 2 * y) % 8 == 0:
                 col = C("241527")  # board seam
-            elif rng.random() < 0.05:
-                col = C("241527")  # grain/knots
-            c.set(x, y, col)
+            elif rng.random() < 0.02:
+                col = C("241527")  # sparse grain — a whole house repeats this
+            c.set(x, y, col)       # tile, so baked features must stay subtle
 
     elif kind == "screed":
-        # warehouse floor: smooth finished concrete - lighter and far less
-        # noisy than the street outside, so it clearly reads as interior
-        region = _floor_base(c, rng, CONC_BASE, CONC_D1, CONC_L1, 0.015, 0.10)
+        # warehouse floor: smooth finished concrete, one uniform surface.
+        # A building uses ONE screed variant for every cell, so the tile must
+        # be feature-free: any baked blob would repeat like wallpaper
         if variant == 1:
-            oil = blob(rng, 32 + rng.randint(-10, 10), 16 + rng.randint(-4, 4),
-                       rng.randint(18, 36), region)
-            for (x, y) in oil:
-                c.set(x, y, CONC_D1)
+            _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.012, 0.03)
+        else:
+            _floor_base(c, rng, CONC_BASE, CONC_D1, CONC_L1, 0.012, 0.03)
 
     elif kind == "forest":
-        # woodland floor: dark mulch with undergrowth flecks
-        region = _floor_base(c, rng, C("19332d"), C("341c27"), C("241527"), 0.16, 0.10)
-        speckle(c, rng, region, [C("25562e"), C("4d2b32")], [0.05, 0.04])
+        # woodland floor: dark mulch with undergrowth flecks (speckle kept low —
+        # dense dots shimmer when the camera scrolls back and forth)
+        region = _floor_base(c, rng, C("19332d"), C("341c27"), C("241527"), 0.11, 0.07)
+        speckle(c, rng, region, [C("25562e"), C("4d2b32")], [0.035, 0.028])
 
     elif kind == "asphalt_stall":
         # parking stall separator: pale worn line along the lower-left edge
-        region = _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.06, 0.03)
+        region = _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.04, 0.02)
         for (x, y) in region:
             if not in_diamond(x - 2, y + 1) and rng.random() < 0.8:
                 c.set(x, y, C("819796"))
 
     elif kind == "asphalt":
-        _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.06, 0.03)
+        _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.04, 0.02)
     elif kind == "asphalt_line":
-        region = _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.06, 0.03)
+        # center dashes for roads running along the cell +y axis (screen SW).
+        # dash period 16 px: 64/16 tessellates, so dashes continue seamlessly
+        # from tile to tile (a 20 px period phased randomly at every seam)
+        region = _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.04, 0.02)
         for (x, y) in region:
-            if abs((x - 32) * 0.5 + (y - 16)) < 1.5 and (x // 10) % 2 == 0 and rng.random() < 0.92:
+            if abs((x - 32) * 0.5 + (y - 16)) < 1.5 and (x // 8) % 2 == 0 and rng.random() < 0.94:
+                c.set(x, y, C("de9e41"))
+    elif kind == "asphalt_line_h":
+        # same dashes for roads running along the cell +x axis (screen SE)
+        region = _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.04, 0.02)
+        for (x, y) in region:
+            if abs((x - 32) * 0.5 - (y - 16)) < 1.5 and (x // 8) % 2 == 0 and rng.random() < 0.94:
                 c.set(x, y, C("de9e41"))
     else:
         raise ValueError(kind)
@@ -273,7 +282,7 @@ FLOOR_TILES = [
     ("dirt_0", ("dirt", 0)), ("dirt_1", ("dirt", 1)), ("dirt_2", ("dirt", 2)),
     ("dirt_blend_0", ("dirt_blend", 0)), ("dirt_blend_1", ("dirt_blend", 1)),
     ("asphalt_0", ("asphalt", 0)), ("asphalt_1", ("asphalt", 1)),
-    ("asphalt_line", ("asphalt_line", 0)),
+    ("asphalt_line", ("asphalt_line", 0)), ("asphalt_line_h", ("asphalt_line_h", 0)),
     ("wood_0", ("wood", 0)), ("wood_1", ("wood", 1)), ("wood_2", ("wood", 2)),
     ("asphalt_stall", ("asphalt_stall", 0)),
     ("screed_0", ("screed", 0)), ("screed_1", ("screed", 1)),
@@ -498,28 +507,20 @@ def make_roof_fascia(tone: str, axis: str) -> tuple[Canvas, tuple, list | None]:
     return c, (ox + 16, oy), None
 
 def make_roof_eave(tone: str, side: str) -> tuple[Canvas, tuple, list | None]:
-    """North/west eave: extends the roof plane OUTWARD over the wall coping
-    (the symmetric caps stick out ~8px past the roof line on the far sides).
-    side 'n': out direction (+2,-1) from an x-axis edge; 'w': (-2,-1), y-axis."""
-    rng = random.Random(f"{SEED}:eave:{tone}:{side}")
+    """North/west roof edge: a FLAT, flush 3px closure over the wall coping.
+    Straight rows that follow the tile edge slope exactly — the old deep
+    speckled eave staircased against the tile grid and read as a rippling
+    mesh hanging off half the roof. side 'n': x-axis edge; 'w': y-axis."""
     base_col, dark_col, lite_col = (C(n) for n in ROOF_TONES[tone])
     axis = "x" if side == "n" else "y"
-    step = 1 if side == "n" else -1
-    c = Canvas(56, 28)
-    ox, oy = 12, 16
+    c = Canvas(44, 22)
+    ox, oy = 6, 14
     for i in range(32):
         x = ox + 16 + (-16 + i)
         by = oy + _seg_base_fy(axis, i)
-        for j in range(10):
-            px_x = x + step * j
-            px_y = by - (j + 1) // 2
-            r = rng.random()
-            col = base_col
-            if r < 0.08:
-                col = dark_col
-            elif j == 9:
-                col = lite_col  # lit outer rim
-            c.set(px_x, px_y, col)
+        c.set(x, by - 1, lite_col)   # thin straight lit rim
+        c.set(x, by - 2, base_col)   # flush closure over the coping
+        c.set(x, by - 3, INK)        # clean outline, no serration
     return c, (ox + 16, oy), None
 
 def make_roof_corner(tone: str) -> tuple[Canvas, tuple, list | None]:
@@ -1007,11 +1008,30 @@ def _paste_canvas(c: Canvas, piece: Canvas, x: int, y: int,
     c.img.alpha_composite(img, (x, y))
     c.px = c.img.load()
 
+def crop_canvas(c: Canvas, origin: tuple[int, int],
+                margin: int = 1) -> tuple[Canvas, tuple[int, int]]:
+    """Trim a canvas to its opaque bounding box (+margin), keeping the origin
+    anchored to the same pixel. Lets tall/piled sprites draw on a roomy canvas
+    without shipping dead space — and guarantees nothing is ever clipped."""
+    bbox = c.img.getbbox()
+    if bbox is None:
+        return c, origin
+    x0 = max(0, bbox[0] - margin)
+    y0 = max(0, bbox[1] - margin)
+    x1 = min(c.w, bbox[2] + margin)
+    y1 = min(c.h, bbox[3] + margin)
+    out = Canvas(x1 - x0, y1 - y0)
+    out.img.alpha_composite(c.img.crop((x0, y0, x1, y1)))
+    out.px = out.img.load()
+    return out, (origin[0] - x0, origin[1] - y0)
+
 def make_crate_stack(variant: int) -> tuple[Canvas, tuple, list]:
     """Messy human-piled stack: every box gets cumulative random offsets,
     its own size, and sometimes a mirrored orientation — no perfect stacking."""
     rng = random.Random(f"{SEED}:cratestack:{variant}")
-    c = Canvas(44, 52)
+    # roomy canvas + crop: piled boxes could climb past the old fixed canvas
+    # top, which clipped the top crate's lid flat
+    c = Canvas(48, 76)
     base_w = rng.choice((24, 28))
     base_h = rng.randint(11, 14)
     base, base_origin, _ = draw_crate(rng, base_w, base_h, rng.randrange(2),
@@ -1032,7 +1052,8 @@ def make_crate_stack(variant: int) -> tuple[Canvas, tuple, list]:
         top_y = top_y - h - rng.randint(1, 3)
         _paste_canvas(c, box, top_x, top_y, rng.random() < 0.5)
         prev = box
-    return c, (c.w // 2, base_y + base_origin[1]), ["diamond", base_w / 2 + 1.0, base_w / 4 + 1.0]
+    cropped, origin = crop_canvas(c, (c.w // 2, base_y + base_origin[1]))
+    return cropped, origin, ["diamond", base_w / 2 + 1.0, base_w / 4 + 1.0]
 
 def make_rack(variant: int) -> tuple[Canvas, tuple, list]:
     """Industrial shelving with a UNIQUE, unevenly-jostled load per variant."""
@@ -1062,12 +1083,18 @@ def make_rack(variant: int) -> tuple[Canvas, tuple, list]:
     c.outline_auto()
     return c, (30, 50), ["diamond", 28.0, 12.0]
 
-def make_vehicle(kind: str, scheme: int) -> tuple[Canvas, tuple, list]:
-    """Side-profile extruded vehicle (the prism 'boxes on wheels' never read
-    as vehicles). The body's SIDE faces the camera: real silhouette with
-    hood/roof steps, window band with pillars, wheel arches with visible
-    wheels, lights - then a shallow 2.5D roof toward the back."""
-    rng = random.Random(f"{SEED}:vehicle:{kind}:{scheme}")
+ROOF_DEPTH = 12  # top-face depth in px — the old 6 read as a paper-thin car
+
+def make_vehicle(kind: str, scheme: int, rev: bool = False,
+                 broken: bool = False) -> tuple[Canvas, tuple, list]:
+    """Iso vehicle along the screen (2,1) diagonal: side face + a DEEP roof
+    plane + a visible SE end cap, so it reads as a solid body, not a cutout.
+    rev=False: front at the NW end (heading NW, tail lights on the end cap).
+    rev=True:  profile reversed (heading SE, head lights + grille on the cap,
+    windshield glass on the roof near the cap). Mirrored copies of both give
+    the NE / SW headings — all four lane directions ship pre-baked.
+    broken=True: shattered glass, rust, dents — looted where it stands."""
+    rng = random.Random(f"{SEED}:vehicle:{kind}:{scheme}:{rev}:{broken}")
     palettes = [
         ("752438", "411d31", "241527"),   # oxblood
         ("577277", "394a50", "202e37"),   # gray
@@ -1076,7 +1103,7 @@ def make_vehicle(kind: str, scheme: int) -> tuple[Canvas, tuple, list]:
     ]
     body_c, body_d, body_dd = (C(n) for n in palettes[scheme])
     glass, glass_d = C("3c5e8b"), C("253a5e")
-    L = 46  # length along the (2,1) axis
+    L = 46
     prof = []
     if kind == "car":
         for i in range(L):
@@ -1096,6 +1123,7 @@ def make_vehicle(kind: str, scheme: int) -> tuple[Canvas, tuple, list]:
                 h = 8
             prof.append(h)
         win_lo, win_hi = 17, 33
+        glass_roof = (12, 18)           # raked glass region (front)
     else:  # pickup: tall cab front, low open bed rear
         for i in range(L):
             if i < 3:
@@ -1114,22 +1142,42 @@ def make_vehicle(kind: str, scheme: int) -> tuple[Canvas, tuple, list]:
                 h = 8
             prof.append(h)
         win_lo, win_hi = 13, 25
+        glass_roof = (9, 14)
+    bed_spots = (27, 36)
+    if rev:
+        prof = prof[::-1]
+        win_lo, win_hi = L - win_hi, L - win_lo
+        glass_roof = (L - glass_roof[1], L - glass_roof[0])
+        bed_spots = (L - 44 + 2, L - 44 + 11)
     clear = 4  # ground clearance (wheels fill it)
     oy = 34
     ox = 6
-    c = Canvas(76, 62)
+    c = Canvas(84, 70)
     for i in range(L):  # body side face
         x = ox + i
         base = oy + i // 2
         for y in range(base - clear - prof[i], base - clear + 1):
             c.set(x, y, body_d)
-    for i in range(L):  # shallow roof toward NE
+    for i in range(L):  # roof plane toward NE — deep enough to read as width
         x = ox + i
         base = oy + i // 2
         top = base - clear - prof[i]
-        for t in range(1, 7):
-            c.set(x + t, top - (t + 1) // 2, body_c)
-    for i in range(win_lo, win_hi):  # window band with pillars
+        for t in range(1, ROOF_DEPTH + 1):
+            col = body_c
+            if t == ROOF_DEPTH:
+                col = body_d            # far rim
+            elif rng.random() < 0.02:
+                col = body_d
+            c.set(x + t, top - (t + 1) // 2, col)
+    # raked glass on the roof plane (windshield when heading SE, rear glass
+    # when heading NW) — this is what makes the facing readable from above
+    for i in range(glass_roof[0], glass_roof[1]):
+        x = ox + i
+        base = oy + i // 2
+        top = base - clear - prof[i]
+        for t in range(2, ROOF_DEPTH - 1):
+            c.set(x + t, top - (t + 1) // 2, glass if t < 5 else glass_d)
+    for i in range(win_lo, win_hi):  # side window band with pillars
         x = ox + i
         base = oy + i // 2
         top = base - clear - prof[i]
@@ -1146,6 +1194,25 @@ def make_vehicle(kind: str, scheme: int) -> tuple[Canvas, tuple, list]:
     seam = (win_lo + win_hi) // 2
     for y in range(oy + seam // 2 - clear - prof[seam] + 2, oy + seam // 2 - clear):
         c.set(ox + seam, y, body_dd)
+    # SE end cap: the only end face the camera can see. Rear of an NW-bound
+    # car (tail lights), front of an SE-bound one (head lights + grille).
+    cap_h = prof[L - 1]
+    for t in range(3):
+        x = ox + L + t
+        base = oy + (L + t) // 2
+        for y in range(base - clear - cap_h + (t + 1) // 2, base - clear + 1):
+            c.set(x, y, body_dd)
+        c.set(x, base - clear, C("202e37"))       # bumper
+        c.set(x, base - clear - 1, C("202e37"))
+    cap_top = oy + L // 2 - clear - cap_h
+    if rev:  # head lights + grille slits
+        c.set(ox + L, cap_top + 2, C("e8c170"))
+        c.set(ox + L + 2, cap_top + 3, C("e8c170"))
+        c.set(ox + L + 1, cap_top + 5, C("151d28"))
+        c.set(ox + L + 1, cap_top + 6, C("151d28"))
+    else:    # tail lights
+        c.set(ox + L, cap_top + 2, C("cf573c") if scheme == 0 else C("a53030"))
+        c.set(ox + L + 2, cap_top + 3, C("cf573c") if scheme == 0 else C("a53030"))
     for wf in (8, 34):  # wheel arches + wheels
         cxw = ox + wf + 3
         cyw = oy + (wf + 3) // 2 - 1
@@ -1159,10 +1226,6 @@ def make_vehicle(kind: str, scheme: int) -> tuple[Canvas, tuple, list]:
                 if d <= 10:
                     c.set(cxw + dx, cyw + dy, C("10141f") if d > 3 else C("202e37"))
         c.set(cxw, cyw, C("577277"))
-    c.set(ox + 1, oy - clear - 4, C("e8c170"))   # headlight
-    c.set(ox + 2, oy - clear - 4, C("e8c170"))
-    c.set(ox + L - 2, oy + (L - 2) // 2 - clear - 4,
-          C("752438") if scheme != 0 else C("cf573c"))  # taillight
     if kind == "pickup":  # cargo in the bed
         for i in range(rng.randint(1, 2)):
             w = rng.choice((12, 16))
@@ -1172,90 +1235,380 @@ def make_vehicle(kind: str, scheme: int) -> tuple[Canvas, tuple, list]:
             for mx in range(w):
                 mini.set(2 + mx, mb[mx] + 2, C("341c27"))
             mini.outline_auto()
-            bx = ox + 27 + i * 9 + rng.randint(-1, 1)
-            c.img.alpha_composite(mini.img, (bx, oy + (27 + i * 9) // 2 - 24))
+            bi = bed_spots[0] + i * (bed_spots[1] - bed_spots[0]) + rng.randint(-1, 1)
+            c.img.alpha_composite(mini.img, (ox + bi, oy + bi // 2 - 24))
             c.px = c.img.load()
+    if broken:
+        # shattered glass: every glass pixel goes dark, a few bright shards
+        shard_spots = []
+        for y in range(c.h):
+            for x in range(c.w):
+                if c.get(x, y)[:3] in (glass[:3], glass_d[:3]):
+                    c.set(x, y, C("090a14"))
+                    shard_spots.append((x, y))
+        for (x, y) in rng.sample(shard_spots, k=min(9, len(shard_spots))):
+            c.set(x, y, C("a8b5b2"))
+        for _ in range(rng.randint(10, 16)):  # rust bloom
+            x = ox + rng.randrange(2, L - 2)
+            base = oy + x // 2
+            y = base - clear - rng.randrange(1, max(2, prof[min(L - 1, x - ox)] - 1))
+            c.set(x, y, C("884b2b") if rng.random() < 0.6 else C("602c2c"))
+        dent_i = rng.randrange(6, L - 10)  # a caved panel
+        for dd in range(rng.randint(3, 5)):
+            x = ox + dent_i + dd
+            base = oy + (dent_i + dd) // 2
+            c.set(x, base - clear - 3, body_dd)
+            c.set(x, base - clear - 4, body_dd)
+        door_i = win_lo + rng.randrange(0, max(1, (win_hi - win_lo) - 4))
+        for y in range(oy + door_i // 2 - clear - prof[door_i] + 2,
+                       oy + door_i // 2 - clear):
+            c.set(ox + door_i, y, C("090a14"))  # sprung door seam
     c.outline_auto()
-    return c, (ox + L // 2 + 3, oy + L // 4 + 2), ["diamond", 26.0, 13.0]
+    cropped, origin = crop_canvas(
+        c, (ox + (L + 3) // 2 + ROOF_DEPTH // 2, oy + (L + 3) // 4 - ROOF_DEPTH // 4))
+    return cropped, origin, ["diamond", 29.0, 15.0]
+
+def mirror_prop(prop: tuple[Canvas, tuple, list]) -> tuple[Canvas, tuple, list]:
+    """Bake the horizontal mirror of a prop (origin re-anchored, collider is
+    symmetric). Mirroring at generation time keeps runtime transform-free."""
+    canvas, origin, collider = prop
+    return canvas.mirrored(), (canvas.w - 1 - origin[0], origin[1]), collider
 
 def make_tree(kind: str, variant: int) -> tuple[Canvas, tuple, list]:
+    """Trees, rebuilt. Every kind draws trunk FIRST, then grows the canopy
+    down ONTO it with guaranteed overlap — a floating canopy is impossible by
+    construction (the old code sized trunk and canopy independently and tall
+    variants opened a gap). Drawn roomy, then cropped to content."""
     rng = random.Random(f"{SEED}:tree:{kind}:{variant}")
+    c = Canvas(52, 92)
+    cx = 26
+    feet = c.h - 6
+
     if kind == "pine":
-        h = rng.randint(44, 62)
-        c = Canvas(40, h + 12)
-        cx = 20
-        for y in range(h - 14, h + 4):  # trunk
+        trunk_len = rng.randint(14, 19)
+        trunk_top = feet - trunk_len
+        for y in range(trunk_top, feet + 2):
             c.set(cx - 1, y, C("4d2b32"))
             c.set(cx, y, C("341c27"))
-        layers = rng.randint(3, 4)
-        base_w = rng.randint(13, 17)
-        ty = 4
+        c.set(cx - 2, feet + 1, C("341c27"))  # root flare
+        c.set(cx + 1, feet + 1, C("241527"))
+        layers = rng.randint(3, 5)
+        base_half = rng.randint(11, 15)
+        bottom = trunk_top + 5  # bottom layer bites into the trunk: connected
         for li in range(layers):
-            half = base_w - li * 4
-            lh = rng.randint(10, 13)
+            half = max(3, base_half - li * max(2, base_half // layers))
+            lh = rng.randint(9, 12)
+            top = bottom - lh
             for yy in range(lh):
                 w = max(1, half * (yy + 1) // lh)
-                for x in range(cx - w, cx + w):
+                jag = 1 if (yy % 3 == 2 and rng.random() < 0.6) else 0
+                for x in range(cx - w - jag, cx + w + jag):
                     col = C("19332d")
                     if x < cx - w + 2:
-                        col = C("25562e")
-                    elif rng.random() < 0.06:
+                        col = C("25562e")          # lit western edge
+                    elif x > cx + w - 3:
+                        col = C("10141f")          # shaded east
+                    elif rng.random() < 0.05:
                         col = C("10141f")
-                    c.set(x, ty + yy, col)
-            ty += lh - 4
+                    c.set(x, top + yy, col)
+            for x in range(cx - half, cx + half):  # dark under-rim per layer
+                if c.get(x, top + lh - 1)[3] > 0 and rng.random() < 0.75:
+                    c.set(x, top + lh - 1, C("10141f"))
+            bottom = top + rng.randint(3, 4)       # next layer overlaps this
         c.outline_auto()
-        return c, (cx, h + 2), ["circle", 3.0]
-    h = rng.randint(36, 50)  # dead tree
-    c = Canvas(36, h + 10)
-    cx = 18
-    for y in range(6, h + 4):
-        c.set(cx - 1, y, C("341c27"))
-        c.set(cx, y, C("241527"))
-    for i in range(rng.randint(3, 5)):
-        by = 8 + rng.randint(0, h - 22)
-        dxs = 1 if rng.random() < 0.5 else -1
-        bl = rng.randint(6, 12)
-        for s in range(bl):
-            c.set(cx + dxs * s, by - s // 2, C("341c27"))
-    c.outline_auto()
-    return c, (cx, h + 2), ["circle", 2.0]
+        cropped, origin = crop_canvas(c, (cx, feet + 1))
+        return cropped, origin, ["circle", 3.0]
 
-def make_street_lamp() -> tuple[Canvas, tuple, list]:
+    if kind == "oak":
+        trunk_len = rng.randint(11, 15)
+        trunk_top = feet - trunk_len
+        lean = rng.choice((-1, 0, 0, 1))
+        for y in range(trunk_top, feet + 2):
+            dx = lean if y < trunk_top + trunk_len // 2 else 0
+            c.set(cx - 1 + dx, y, C("4d2b32"))
+            c.set(cx + dx, y, C("341c27"))
+            if y > feet - 2:  # widening base
+                c.set(cx - 2 + dx, y, C("4d2b32"))
+                c.set(cx + 1 + dx, y, C("241527"))
+        # canopy: 2-3 elliptical lobes, the lowest one swallowing the trunk top
+        lobes = [(cx + lean, trunk_top - 2, rng.randint(11, 14), rng.randint(8, 10))]
+        for i in range(rng.randint(1, 2)):
+            lobes.append((cx + lean + rng.randint(-7, 7),
+                          trunk_top - 6 - rng.randint(4, 9),
+                          rng.randint(8, 12), rng.randint(6, 8)))
+        pts: set = set()
+        for (ox_, oy_, a, b) in lobes:
+            for y in range(oy_ - b, oy_ + b + 1):
+                for x in range(ox_ - a, ox_ + a + 1):
+                    d = ((x - ox_) / a) ** 2 + ((y - oy_) / b) ** 2
+                    if d < 1.0 + rng.uniform(-0.14, 0.05):
+                        pts.add((x, y))
+        for (x, y) in pts:
+            col = C("19332d")
+            if (x - 1, y) not in pts or (x, y - 1) not in pts:
+                col = C("25562e") if x < cx + lean else C("10141f")
+            elif rng.random() < 0.10:
+                col = C("25562e")
+            elif rng.random() < 0.05:
+                col = C("468232")   # bright leaf sparks
+            elif (x, y + 1) not in pts:
+                col = C("10141f")   # dark under-rim
+            c.set(x, y, col)
+        c.outline_auto()
+        cropped, origin = crop_canvas(c, (cx, feet + 1))
+        return cropped, origin, ["circle", 3.5]
+
+    # dead tree: tapering snag with forked branches
+    h = rng.randint(34, 52)
+    top = feet - h
+    for y in range(top, feet + 2):
+        c.set(cx - 1, y, C("341c27"))
+        if y > top + h // 3:  # lower trunk is thicker
+            c.set(cx, y, C("241527"))
+    c.set(cx - 2, feet + 1, C("341c27"))
+    c.set(cx + 1, feet + 1, C("241527"))
+    for i in range(rng.randint(3, 5)):
+        by = top + 3 + rng.randint(0, max(1, h - 18))
+        dxs = 1 if rng.random() < 0.5 else -1
+        bl = rng.randint(5, 11)
+        for s in range(bl):
+            c.set(cx - 1 + dxs * s, by - (s * 2) // 3, C("341c27"))
+        if bl > 7 and rng.random() < 0.7:  # twig fork at the branch tip
+            fx = cx - 1 + dxs * (bl - 2)
+            fy = by - ((bl - 2) * 2) // 3
+            for s in range(rng.randint(2, 4)):
+                c.set(fx + dxs * s, fy + (1 if rng.random() < 0.5 else -1) * (s // 2),
+                      C("241527"))
+    c.outline_auto()
+    cropped, origin = crop_canvas(c, (cx, feet + 1))
+    return cropped, origin, ["circle", 2.0]
+
+def make_street_lamp(state: str) -> tuple[Canvas, tuple, list]:
+    """Lamp fixture with a DARK bulb — the lit look is a separate glow overlay
+    the game fades in at night (working lamps only). Dead variants are part of
+    the 'nobody left' dressing: bent heads, smashed panes."""
+    rng = random.Random(f"{SEED}:lamp:{state}")
     c = Canvas(26, 70)
     px_, py = 8, 62
     for y in range(10, py + 1):
         c.set(px_, y, C("394a50"))
         c.set(px_ + 1, y, C("202e37"))
-    for x in range(px_, px_ + 12):
-        c.set(x, 10, C("394a50"))
-        c.set(x, 11, C("202e37"))
-    c.rect(px_ + 10, 12, px_ + 15, 15, C("202e37"))
-    c.rect(px_ + 11, 14, px_ + 14, 15, C("e8c170"))
+    droop = 2 if state == "dead_bent" else 0
+    for xi, x in enumerate(range(px_, px_ + 12)):
+        dy = droop * xi // 11
+        c.set(x, 10 + dy, C("394a50"))
+        c.set(x, 11 + dy, C("202e37"))
+    hy = 12 + droop
+    c.rect(px_ + 10, hy, px_ + 15, hy + 3, C("202e37"))
+    if state == "dead_smashed":
+        c.rect(px_ + 11, hy + 2, px_ + 14, hy + 3, C("10141f"))   # empty pane
+        c.set(px_ + 12, hy + 4, C("394a50"))                       # glass drop
+        c.set(px_ + 11, hy + 6, C("151d28"))                       # dangling wire
+        c.set(px_ + 11, hy + 7, C("151d28"))
+    else:
+        c.rect(px_ + 11, hy + 2, px_ + 14, hy + 3, C("394a50"))    # dark bulb
+    if state == "dead_bent":
+        c.set(px_ + 9, 11, C("151d28"))  # kink at the bend
+    for y in range(py - 26, py, 7):      # pole wear
+        if rng.random() < 0.6:
+            c.set(px_, y, C("577277"))
     c.rect(px_ - 2, py, px_ + 3, py + 2, C("202e37"))
     c.outline_auto()
     return c, (px_, py + 2), ["circle", 2.0]
 
-def make_door(kind: str) -> tuple[Canvas, tuple, list | None]:
-    """Open door leaf standing against the inner wall beside the doorway."""
-    ln = 18 if kind == "wood" else 24
-    c = Canvas(ln + 8, 52)
-    if kind == "wood":
-        base, dark = C("7a4841"), C("4d2b32")
+def make_lamp_glow() -> Image.Image:
+    """Warm halo around a lit lamp head. Smooth alpha by design (light, like
+    dust/vignette — palette-exempt)."""
+    w, h = 26, 18
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    px = img.load()
+    r, g, b, _ = C("e8c170")
+    for y in range(h):
+        for x in range(w):
+            d = ((x - w / 2) / (w / 2)) ** 2 + ((y - h / 2) / (h / 2)) ** 2
+            if d < 1.0:
+                px[x, y] = (r, g, b, int(150 * (1.0 - d) ** 2))
+    px[12, 8] = (235, 237, 233, 230)  # hot core on the bulb
+    px[13, 8] = (235, 237, 233, 230)
+    return img
+
+def make_light_radial() -> Image.Image:
+    """PointLight2D texture: smooth white radial falloff (light: exempt)."""
+    size = 256
+    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    px = img.load()
+    half = size / 2.0
+    for y in range(size):
+        for x in range(size):
+            d = (((x - half) / half) ** 2 + ((y - half) / half) ** 2) ** 0.5
+            if d < 1.0:
+                a = int(255 * (1.0 - d) ** 1.7)
+                px[x, y] = (255, 255, 255, a)
+    return img
+
+def make_light_cone() -> Image.Image:
+    """Flashlight cone pointing +x, origin at the left-center edge."""
+    import math
+    size = 256
+    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    px = img.load()
+    cy = size / 2.0
+    half_angle = math.radians(26.0)
+    for y in range(size):
+        for x in range(1, size):
+            dy = y - cy
+            dist = (x * x + dy * dy) ** 0.5
+            if dist >= size - 2:
+                continue
+            ang = abs(math.atan2(dy, x))
+            if ang > half_angle:
+                continue
+            radial = 1.0 - dist / (size - 2)
+            angular = 1.0 - (ang / half_angle) ** 2
+            near_soft = min(1.0, x / 26.0)
+            a = int(235 * (radial ** 1.35) * angular * near_soft)
+            if a > 0:
+                px[x, y] = (255, 255, 255, a)
+    return img
+
+def make_sniper_round() -> Image.Image:
+    """Bright tracer round for the map-edge sniper (effect: alpha-graded)."""
+    img = Image.new("RGBA", (6, 6), (0, 0, 0, 0))
+    px = img.load()
+    core = C("ebede9")
+    warm = C("e8c170")
+    px[2, 2] = core
+    px[3, 2] = core
+    px[2, 3] = core
+    px[3, 3] = core
+    for p in ((1, 2), (1, 3), (4, 2), (4, 3), (2, 1), (3, 1), (2, 4), (3, 4)):
+        px[p] = (warm[0], warm[1], warm[2], 170)
+    for p in ((1, 1), (4, 1), (1, 4), (4, 4)):
+        px[p] = (warm[0], warm[1], warm[2], 70)
+    return img
+
+DOOR_FRAMES = 4
+DOOR_LEAF = 20      # leaf length along the edge, px
+DOOR_H = 34         # leaf height
+
+def make_door_strip(kind: str, axis: str) -> tuple[Canvas, tuple, list]:
+    """Interactive door: a DOOR_FRAMES-frame swing strip. Frame 0 = closed,
+    flush IN the wall plane (nothing pokes through the wall any more); last
+    frame = swung fully inward. Static jamb boards fill the edge beside the
+    leaf on every frame. axis 'x' fits south (yp) walls, 'y' fits east (xp).
+    Collider = thin quad along the full edge (game disables it while open)."""
+    base, dark = (C("7a4841"), C("4d2b32")) if kind == "wood" \
+        else (C("577277"), C("394a50"))
+    frame_w, frame_h = 48, 60
+    strip = Canvas(frame_w * DOOR_FRAMES, frame_h)
+    # hinge sits 6 edge-px in from the first jamb; edge midpoint is the origin
+    for f in range(DOOR_FRAMES):
+        c = Canvas(frame_w, frame_h)
+        hx, hy = 14, 46
+        edge_dy = 0.5 if axis == "x" else -0.5
+        # jamb boards: the fixed 6 px of edge on each side of the leaf
+        for j in list(range(-6, 0)) + list(range(DOOR_LEAF, DOOR_LEAF + 6)):
+            x = hx + j
+            by = hy + round(j * edge_dy)
+            for y in range(by - DOOR_H - 2, by + 1):
+                c.set(x, y, dark if (y - by) % 5 else C("341c27"))
+        # the leaf: swings from along-the-edge to inward-perpendicular
+        t = f / float(DOOR_FRAMES - 1)
+        if axis == "x":   # closed dir (2,1) -> open dir (2,-1)
+            dx_step, dy_step = 1.0, 0.5 - t
+        else:             # closed dir (2,-1) -> open dir (-2,-1)
+            dx_step, dy_step = 1.0 - 2.0 * t, -0.5
+        for i in range(DOOR_LEAF):
+            x = hx + round(i * dx_step)
+            by = hy + round(i * dy_step)
+            for y in range(by - DOOR_H, by + 1):
+                col = base
+                if kind == "wood" and i % 5 == 4:
+                    col = dark
+                if kind == "metal" and (y - (by - DOOR_H)) % 6 == 5:
+                    col = dark
+                c.set(x, y, col)
+            c.set(x, by - DOOR_H, dark)  # top edge
+        # handle near the free end, fades as the leaf turns edge-on
+        if abs(dx_step) > 0.4:
+            handle_x = hx + round((DOOR_LEAF - 3) * dx_step)
+            handle_y = hy + round((DOOR_LEAF - 3) * dy_step) - DOOR_H // 2
+            c.set(handle_x, handle_y, C("10141f"))
+        c.outline_auto()
+        _paste_canvas(strip, c, f * frame_w, 0)
+    # origin: edge midpoint at the leaf base (matches wall-segment anchoring)
+    origin = (14 + 10, 46 + (5 if axis == "x" else -5))
+    if axis == "x":
+        a, b = (-16.0, -8.0), (16.0, 8.0)
+        n = (-2.4, 4.8)
     else:
-        base, dark = C("577277"), C("394a50")
+        a, b = (-16.0, 8.0), (16.0, -8.0)
+        n = (2.4, 4.8)
+    poly = [a[0] - n[0], a[1] - n[1], b[0] - n[0], b[1] - n[1],
+            b[0] + n[0], b[1] + n[1], a[0] + n[0], a[1] + n[1]]
+    return strip, origin, ["poly", poly]
+
+def draw_stick(rng: random.Random, variant: int) -> tuple[Canvas, tuple, list | None]:
+    """Fallen branch litter for the woods and grove floors."""
+    ln = rng.randint(8, 16)
+    c = Canvas(ln + 6, 10)
+    x, y = 3, 5 + rng.randint(-1, 1)
+    slope = rng.choice((-1, 1)) * rng.uniform(0.15, 0.4)
+    cols = (C("4d2b32"), C("341c27"), C("602c2c"))
     for i in range(ln):
-        x = 3 + i
-        by = 44 + i // 2
-        for y in range(by - 36, by + 1):
-            col = base
-            if kind == "wood" and i % 5 == 4:
-                col = dark
-            if kind == "metal" and (y - (by - 36)) % 6 == 5:
-                col = dark
-            c.set(x, y, col)
-    c.set(3 + ln - 4, 44 + (ln - 4) // 2 - 18, C("10141f"))
+        col = cols[0] if i % 5 else cols[2]
+        c.set(x + i, y + round(i * slope), col)
+        if rng.random() < 0.3:
+            c.set(x + i, y + round(i * slope) + 1, cols[1])
+    if ln > 10 and rng.random() < 0.8:  # fork
+        fx = x + rng.randrange(3, ln - 4)
+        fy = y + round((fx - x) * slope)
+        fdir = -1 if slope > 0 else 1
+        for s in range(rng.randint(2, 4)):
+            c.set(fx + s, fy + fdir * ((s + 1) // 2), cols[1])
     c.outline_auto()
-    return c, (3 + ln // 2, 46 + ln // 4), None
+    return c, (c.w // 2, 6), None
+
+def draw_trash(rng: random.Random, kind: str) -> tuple[Canvas, tuple, list | None]:
+    """Tiny litter: cans, bottles, paper scraps — dressing around broken-into
+    cars and doorways. No colliders, pure set dressing."""
+    if kind.startswith("can"):
+        tones = {"can_a": ("819796", "577277"), "can_b": ("a53030", "752438"),
+                 "can_c": ("468232", "25562e")}
+        lite, dark = (C(n) for n in tones[kind])
+        c = Canvas(9, 8)
+        fallen = rng.random() < 0.5
+        if fallen:
+            for i in range(5):
+                c.set(2 + i, 3, lite)
+                c.set(2 + i, 4, dark)
+            c.set(1, 3, C("a8b5b2"))  # open lid ring
+            c.set(1, 4, C("a8b5b2"))
+        else:
+            for y in range(2, 6):
+                c.set(3, y, lite)
+                c.set(4, y, dark)
+            c.set(3, 2, C("a8b5b2"))
+            c.set(4, 2, C("819796"))
+        c.outline_auto()
+        return c, (4, 6), None
+    if kind == "bottle":
+        c = Canvas(10, 7)
+        glass, glint = C("19332d"), C("468232")
+        for i in range(5):  # lying on its side
+            c.set(2 + i, 3, glass)
+            if i in (1, 3):
+                c.set(2 + i, 2, glint)
+        c.set(7, 3, glass)  # neck
+        c.set(8, 3, C("341c27"))
+        c.outline_auto()
+        return c, (5, 4), None
+    # paper scrap
+    c = Canvas(8, 6)
+    for (x, y) in ((2, 2), (3, 2), (4, 2), (2, 3), (3, 3), (5, 3), (4, 4)):
+        c.set(x, y, C("a8b5b2") if (x + y) % 2 else C("c7cfcc"))
+    c.outline_auto()
+    return c, (4, 4), None
 
 def make_puddle(variant: int) -> tuple[Canvas, tuple, list | None]:
     rng = random.Random(f"{SEED}:puddle:{variant}")
@@ -1331,16 +1684,35 @@ def prop_inventory() -> tuple[dict, dict]:
         fam("crate_stack", i, make_crate_stack(i))
     for i in range(4):
         fam("rack", i, make_rack(i))
-    for i, (kind, scheme) in enumerate(
-            [("car", 0), ("car", 1), ("car", 3), ("pickup", 1), ("pickup", 2), ("pickup", 3)]):
-        fam("vehicle", i, make_vehicle(kind, scheme))
+    # vehicles: every lane heading pre-baked (nw/se drawn, ne/sw mirrored);
+    # the last two specs are broken-into wrecks
+    veh_specs = [("car", 0, False), ("car", 1, False), ("pickup", 2, False),
+                 ("car", 3, True), ("pickup", 1, True)]
+    for i, (kind, scheme, broken) in enumerate(veh_specs):
+        art_nw = make_vehicle(kind, scheme, rev=False, broken=broken)
+        art_se = make_vehicle(kind, scheme, rev=True, broken=broken)
+        fam("vehicle_nw", i, art_nw)
+        fam("vehicle_se", i, art_se)
+        fam("vehicle_ne", i, mirror_prop(art_nw))
+        fam("vehicle_sw", i, mirror_prop(art_se))
     for i in range(4):
         fam("tree", i, make_tree("pine", i))
+    for i in range(3):
+        fam("tree", 4 + i, make_tree("oak", i))
     for i in range(2):
-        fam("tree", 4 + i, make_tree("dead", i))
-    props["street_lamp"] = make_street_lamp()
-    props["door_wood"] = make_door("wood")
-    props["door_metal"] = make_door("metal")
+        fam("tree", 7 + i, make_tree("dead", i))
+    props["street_lamp"] = make_street_lamp("working")
+    fam("street_lamp_dead", 0, make_street_lamp("dead_bent"))
+    fam("street_lamp_dead", 1, make_street_lamp("dead_smashed"))
+    for kind in ("wood", "metal"):
+        for axis in ("x", "y"):
+            props[f"door_{kind}_{axis}"] = make_door_strip(kind, axis)
+    for i in range(4):
+        rng = random.Random(f"{SEED}:stick:{i}")
+        fam("stick", i, draw_stick(rng, i))
+    for i, kind in enumerate(("can_a", "can_b", "can_c", "bottle", "paper")):
+        rng = random.Random(f"{SEED}:trash:{i}")
+        fam("trash", i, draw_trash(rng, kind))
     for i in range(3):
         props[f"puddle_{i}"] = make_puddle(i)
     return props, families
@@ -1446,7 +1818,8 @@ def draw_torso(c: Canvas, view: str, bob: int, crouch: bool = False) -> None:
     c.rect(x0, y0, x1, y1, JKT)
     c.hline(x0, x1, y0, JKT_L)
     c.vline(x1, y0 + 1, y1, JKT_D)
-    c.hline(x0, x1, y1, JKT_D)
+    c.vline(x0, y0 + 1, y1, JKT_D)  # left edge shaded like the right one, so
+    c.hline(x0, x1, y1, JKT_D)      # BOTH arms read separate from the torso
     if view == "front":
         c.vline(CX, y0 + 1, y1, INK)
         c.vline(CX - 3, y0, y0 + 4, STRAP)
@@ -1496,6 +1869,8 @@ def draw_arms(c: Canvas, view: str, bob: int, frame: int, crouch: bool = False) 
         for side, sw in ((-1, swing), (1, -swing)):
             x = ((CX - 5) if side < 0 else (CX + 4)) + sw
             c.rect(x, y0, x + 1, y0 + arm_len, JKT)
+            if side < 0:  # this arm overlaps the torso: shade its inner column
+                c.vline(x + 1, y0, y0 + arm_len, JKT_D)
             c.rect(x, y0 + arm_len + 1, x + 1, y0 + arm_len + 2, SKIN)
     else:
         x = CX + 1 + SIDE_SWING[frame]
@@ -1894,14 +2269,48 @@ def make_dust() -> Image.Image:
         img.putpixel(p, (255, 255, 255, 90))
     return img
 
+RAIN_RGB = C("3c5e8b")[:3]  # the puddles' glint blue — rain matches them now
+
 def make_rain_streak() -> Image.Image:
     img = Image.new("RGBA", (2, 9), (0, 0, 0, 0))
-    r, g, b, _ = (115, 190, 211, 255)  # 73bed3
+    r, g, b = RAIN_RGB
     for y in range(9):
-        a = 40 + y * 16
-        img.putpixel((0, y), (r, g, b, min(190, a)))
+        a = 50 + y * 18
+        img.putpixel((0, y), (r, g, b, min(210, a)))
         if y > 3:
-            img.putpixel((1, y), (r, g, b, min(120, a - 40)))
+            img.putpixel((1, y), (r, g, b, min(140, a - 40)))
+    return img
+
+SPLASH_FRAMES = 4
+SPLASH_W, SPLASH_H = 14, 10
+
+def make_rain_splash() -> Image.Image:
+    """4-frame ground splash, same blue as the rain and the puddles. The
+    impact point is at (7,7) of every frame; the game leaves the sprite at
+    the drop's landing spot in the WORLD (splashes must never follow the
+    camera) and frees it after the last frame."""
+    img = Image.new("RGBA", (SPLASH_W * SPLASH_FRAMES, SPLASH_H), (0, 0, 0, 0))
+    r, g, b = RAIN_RGB
+
+    def put(f: int, x: int, y: int, a: int) -> None:
+        img.putpixel((f * SPLASH_W + 7 + x, 7 + y), (r, g, b, a))
+
+    # f0: the drop core hitting
+    put(0, 0, 0, 230)
+    put(0, 0, -1, 200)
+    put(0, 1, 0, 140)
+    # f1: crown up
+    for (x, y, a) in ((-1, -1, 210), (1, -1, 210), (0, -2, 190), (0, 0, 150),
+                      (-2, 0, 120), (2, 0, 120)):
+        put(1, x, y, a)
+    # f2: ring widening, crown falling
+    for (x, y, a) in ((-3, 0, 150), (3, 0, 150), (-2, -1, 130), (2, -1, 130),
+                      (0, -1, 90), (-4, 0, 80), (4, 0, 80)):
+        put(2, x, y, a)
+    # f3: flat fading ripple
+    for (x, y, a) in ((-4, 0, 90), (4, 0, 90), (-3, 1, 70), (3, 1, 70),
+                      (-5, 0, 50), (5, 0, 50), (0, 1, 40)):
+        put(3, x, y, a)
     return img
 
 # ---------------------------------------------------------------- output -----
@@ -1979,6 +2388,11 @@ def main() -> None:
     make_vignette().save(OUT / "vignette.png")    # soft alpha by design
     make_dust().save(OUT / "dust.png")            # white, tinted at runtime
     make_rain_streak().save(OUT / "rain_streak.png")
+    make_rain_splash().save(OUT / "rain_splash.png")
+    make_lamp_glow().save(OUT / "lamp_glow.png")      # light halo: soft alpha
+    make_light_radial().save(OUT / "light_radial.png")  # Light2D textures
+    make_light_cone().save(OUT / "light_cone.png")
+    make_sniper_round().save(OUT / "sniper_round.png")
 
     # rotating main-menu backdrops (+ their animated overlay layers)
     scene_hoard = make_scene_hoard(entries)
@@ -2009,11 +2423,13 @@ def main() -> None:
                   "seg_brick_b_y_win_1", "post_brick_b",
                   "roof_tile_charcoal_0", "roof_fascia_charcoal_s", "roof_vent"]
     fam_show = [n for fam in families.values() for n in fam]
+    third = (len(fam_show) + 2) // 3
     rows_imgs = [
         [x3(floors)],
         [x3(entries[n][0].img) for n in show_walls],
-        [x3(entries[n][0].img) for n in fam_show[:16]],
-        [x3(entries[n][0].img) for n in fam_show[16:]],
+        [x3(entries[n][0].img) for n in fam_show[:third]],
+        [x3(entries[n][0].img) for n in fam_show[third:2 * third]],
+        [x3(entries[n][0].img) for n in fam_show[2 * third:]],
         [x3(sheet), title_img],
     ]
     W = max(sum(i.width + pad for i in row) for row in rows_imgs) + pad

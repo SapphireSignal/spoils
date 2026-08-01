@@ -51,8 +51,11 @@ var vsync := true
 var show_fps := false
 var crouch_toggle := false  # false = hold to crouch, true = toggle
 var binds: Dictionary = {}  # action -> physical keycode
+var pixel_scale := 1   # current integer window scale (world px -> screen px)
 
 var _fps_label: Label
+var _fps_frames := 0
+var _fps_time := 0.0
 
 
 func _ready() -> void:
@@ -104,17 +107,23 @@ func bind_label(action: String) -> String:
 	return label if label != "" else OS.get_keycode_string(code)
 
 
-func _process(_delta: float) -> void:
-	if _fps_label.visible:
-		_fps_label.text = "%d FPS" % roundi(Engine.get_frames_per_second())
+func _process(delta: float) -> void:
+	# own 0.2 s window instead of Engine.get_frames_per_second() (which only
+	# updates once a second — too slow to catch a real dip)
+	_fps_frames += 1
+	_fps_time += delta
+	if _fps_time >= 0.2:
+		_fps_label.text = "%d fps" % roundi(_fps_frames / _fps_time)
+		_fps_frames = 0
+		_fps_time = 0.0
 
 
 func resolution_label(index: int) -> String:
 	if index == 0:
 		var s := DisplayServer.screen_get_size()
-		return "DESKTOP (%dX%d)" % [s.x, s.y]
+		return "desktop (%dx%d)" % [s.x, s.y]
 	var r := RESOLUTIONS[index]
-	return "%dX%d" % [r.x, r.y]
+	return "%dx%d" % [r.x, r.y]
 
 
 func apply_all() -> void:
@@ -134,6 +143,9 @@ func apply_all() -> void:
 	DisplayServer.window_set_vsync_mode(
 		DisplayServer.VSYNC_ENABLED if vsync else DisplayServer.VSYNC_DISABLED)
 	_fps_label.visible = show_fps
+	set_process(show_fps)  # the counter costs nothing while hidden
+	_fps_frames = 0
+	_fps_time = 0.0
 	_save()
 	_update_scale()
 
@@ -145,6 +157,7 @@ func _update_scale() -> void:
 		return
 	@warning_ignore("integer_division")
 	var scale := maxi(1, mini(size.x / BASE_VIEW.x, size.y / BASE_VIEW.y))
+	pixel_scale = scale
 	win.content_scale_size = Vector2i(
 		ceili(size.x / float(scale)), ceili(size.y / float(scale)))
 

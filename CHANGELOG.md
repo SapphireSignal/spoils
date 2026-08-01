@@ -3,6 +3,83 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.3] — 2026-08-01
+
+The stacks update: the district got a name, real edges, real doors, real rain —
+and the first damage in the game.
+
+### Added
+- **320x320 map** (4x the area) named **"the stacks"**. Every deploy generates a
+  fresh district from a seed; `--seed=<text>` pins a layout for testing. All
+  builder randomness now flows through the seeded rng (`Array.shuffle()` had
+  silently broken determinism).
+- **Walkable map edge**: the border collision hugs the true iso-diamond edge
+  (tips chamfered for the camera), and the camera clamps to an inset diamond —
+  the void outside the tiles can never appear on screen.
+- **Edge sniper**: near the boundary a centered warning appears ("turn back or
+  you will get sniped"); after 3 seconds, tracer rounds come in from off-screen.
+  Three hits kill: hurt flash per hit, death fade, respawn at the spawn
+  crossroads. First damage/health/death systems in the game (routed through
+  Authority).
+- **Interactive doors**: closed by default, flush in the wall plane (no more
+  leaf clipping through walls). Walk up and press F to swing them open or shut
+  (4-frame animation, synthesized thunk, collision while closed).
+- **Flashlight** on E: a cone of light snapped to the 8 facings. Deep night is
+  now actually dark, so it matters.
+- **Street lamps live and die**: fewer lamps overall, under half of them work.
+  Working lamps glow and cast a real light pool at night with per-lamp
+  randomized flicker and dropouts; the rest are bent or smashed.
+- **World-anchored rain**: each drop falls to a real ground point, splashes
+  there (4-frame splash that STAYS in the world), and never lands inside a
+  roofed building. Drops and splashes are the puddles' blue (3c5e8b).
+- **Interior greenery**: 26 large woods + ~90 small groves inside the map, plus
+  ~240 lone trees breaking through the concrete on their own green pockets.
+- **Trees rebuilt**: canopy always overlaps the trunk by construction (tall
+  pines used to float), new leafy oak kind, better dead snags with twig forks.
+- **Sticks and litter**: fallen branches in the woods; cans/bottles/paper
+  around broken-into vehicles.
+- **Vehicles v2**: wider bodies (12px roof plane), a visible end cap with head
+  or tail lights, roof glass that shows the facing, all four lane headings
+  pre-baked, and broken-into variants (shattered glass, rust, dents, sprung
+  door). Road cars sit in correct lanes; yard cars face their buildings.
+- Harness: `--perf` (frame pacing probe), `--probe-world` (content census),
+  `--seed=`, `--flashlight`; smoke now covers doors and the edge sniper.
+
+### Changed
+- **Native-resolution rendering** (`canvas_items` stretch): the camera snaps to
+  screen pixels instead of world pixels. At 2x scale, walking at 120 px/s is
+  exactly one screen pixel per frame at 240 Hz — the "smeary / looks like lower
+  fps" walk is gone. Art stays pixel-perfect; props sit on whole world pixels.
+- **The deploy hitch is gone**: the world builds as a coroutine across frames
+  behind an animated "deploying to the stacks..." screen, and every texture is
+  pre-warmed during it.
+- Day is 20 minutes (was 8); deep night is much darker.
+- Rain spells last 2.5–5 minutes with slow ramps; lightning is a longer
+  double-strike, stronger at night.
+- One floor look per building (single wood tone per house, single clean screed
+  per warehouse) — interiors were a per-cell patchwork. Screed lost its baked
+  oil blob (it repeated like wallpaper), wood grain is subtler.
+- Road center dashes on BOTH road directions with a 16px period that
+  tessellates seamlessly (was one direction, 20px, phase-broken at seams).
+- Ground speckle reduced ~35% on all outdoor tiles (forest floor most —
+  it shimmered when walking back and forth).
+- Roof north/west edges are a clean flush 3px closure (the old 10px speckled
+  eave read as a rippling mesh hanging off half the roof).
+- Fewer street lamps (every 14–22 tiles), FPS counter updates 5x/second from
+  its own frame window, entrances (inside and out) always spawn clear.
+
+### Fixed
+- **Instant day-to-night snap**: the tint gradient's endpoint was never set
+  (index bug), so late evening lerped toward pure white and jump-cut to night
+  at the wrap. The gradient is now one continuous loop.
+- Crate stacks could paste their top box above the sprite canvas, clipping it
+  flat. Sprites now auto-crop to content.
+- The character's left arm had no separating seam and blended into the torso;
+  both arms now read separately (symmetric), on all sheets.
+- Rain splashes rode the camera (they were screen-space particles).
+- Couch (or any furniture/stock) could block a building entrance.
+- Non-deterministic world layout across runs with the same seed.
+
 ## [0.6.2] — 2026-07-31
 
 The district update: the world got 10x bigger and came alive.

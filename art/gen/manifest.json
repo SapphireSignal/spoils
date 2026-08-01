@@ -85,40 +85,44 @@
       3,
       4
     ],
-    "wood_0": [
+    "asphalt_line_h": [
       0,
+      5
+    ],
+    "wood_0": [
+      1,
       5
     ],
     "wood_1": [
-      1,
+      2,
       5
     ],
     "wood_2": [
-      2,
+      3,
       5
     ],
     "asphalt_stall": [
-      3,
-      5
-    ],
-    "screed_0": [
       0,
       6
     ],
-    "screed_1": [
+    "screed_0": [
       1,
       6
     ],
-    "forest_0": [
+    "screed_1": [
       2,
       6
     ],
-    "forest_1": [
+    "forest_0": [
       3,
       6
     ],
-    "forest_2": [
+    "forest_1": [
       0,
+      7
+    ],
+    "forest_2": [
+      1,
       7
     ]
   },
@@ -653,12 +657,12 @@
     },
     "crate_stack_0": {
       "size": [
-        44,
-        52
+        32,
+        54
       ],
       "origin": [
-        22,
-        40
+        16,
+        45
       ],
       "collider": [
         "diamond",
@@ -668,12 +672,12 @@
     },
     "crate_stack_1": {
       "size": [
-        44,
-        52
+        28,
+        57
       ],
       "origin": [
-        22,
-        41
+        14,
+        49
       ],
       "collider": [
         "diamond",
@@ -683,12 +687,12 @@
     },
     "crate_stack_2": {
       "size": [
-        44,
+        30,
         52
       ],
       "origin": [
-        22,
-        41
+        16,
+        44
       ],
       "collider": [
         "diamond",
@@ -698,12 +702,12 @@
     },
     "crate_stack_3": {
       "size": [
-        44,
+        31,
         52
       ],
       "origin": [
-        22,
-        41
+        14,
+        44
       ],
       "collider": [
         "diamond",
@@ -771,104 +775,314 @@
         12.0
       ]
     },
-    "vehicle_0": {
+    "vehicle_nw_0": {
       "size": [
-        76,
-        62
+        62,
+        47
       ],
       "origin": [
         32,
-        47
+        33
       ],
       "collider": [
         "diamond",
-        26.0,
-        13.0
+        29.0,
+        15.0
       ]
     },
-    "vehicle_1": {
+    "vehicle_se_0": {
       "size": [
-        76,
-        62
+        62,
+        48
       ],
       "origin": [
         32,
-        47
+        34
       ],
       "collider": [
         "diamond",
-        26.0,
-        13.0
+        29.0,
+        15.0
       ]
     },
-    "vehicle_2": {
+    "vehicle_ne_0": {
       "size": [
-        76,
-        62
+        62,
+        47
       ],
       "origin": [
-        32,
-        47
+        29,
+        33
       ],
       "collider": [
         "diamond",
-        26.0,
-        13.0
+        29.0,
+        15.0
       ]
     },
-    "vehicle_3": {
+    "vehicle_sw_0": {
       "size": [
-        76,
-        62
+        62,
+        48
       ],
       "origin": [
-        32,
-        47
+        29,
+        34
       ],
       "collider": [
         "diamond",
-        26.0,
-        13.0
+        29.0,
+        15.0
       ]
     },
-    "vehicle_4": {
+    "vehicle_nw_1": {
       "size": [
-        76,
-        62
+        62,
+        47
       ],
       "origin": [
         32,
-        47
+        33
       ],
       "collider": [
         "diamond",
-        26.0,
-        13.0
+        29.0,
+        15.0
       ]
     },
-    "vehicle_5": {
+    "vehicle_se_1": {
       "size": [
-        76,
-        62
+        62,
+        48
       ],
       "origin": [
         32,
-        47
+        34
       ],
       "collider": [
         "diamond",
-        26.0,
-        13.0
+        29.0,
+        15.0
+      ]
+    },
+    "vehicle_ne_1": {
+      "size": [
+        62,
+        47
+      ],
+      "origin": [
+        29,
+        33
+      ],
+      "collider": [
+        "diamond",
+        29.0,
+        15.0
+      ]
+    },
+    "vehicle_sw_1": {
+      "size": [
+        62,
+        48
+      ],
+      "origin": [
+        29,
+        34
+      ],
+      "collider": [
+        "diamond",
+        29.0,
+        15.0
+      ]
+    },
+    "vehicle_nw_2": {
+      "size": [
+        62,
+        49
+      ],
+      "origin": [
+        32,
+        35
+      ],
+      "collider": [
+        "diamond",
+        29.0,
+        15.0
+      ]
+    },
+    "vehicle_se_2": {
+      "size": [
+        62,
+        48
+      ],
+      "origin": [
+        32,
+        34
+      ],
+      "collider": [
+        "diamond",
+        29.0,
+        15.0
+      ]
+    },
+    "vehicle_ne_2": {
+      "size": [
+        62,
+        49
+      ],
+      "origin": [
+        29,
+        35
+      ],
+      "collider": [
+        "diamond",
+        29.0,
+        15.0
+      ]
+    },
+    "vehicle_sw_2": {
+      "size": [
+        62,
+        48
+      ],
+      "origin": [
+        29,
+        34
+      ],
+      "collider": [
+        "diamond",
+        29.0,
+        15.0
+      ]
+    },
+    "vehicle_nw_3": {
+      "size": [
+        62,
+        47
+      ],
+      "origin": [
+        32,
+        33
+      ],
+      "collider": [
+        "diamond",
+        29.0,
+        15.0
+      ]
+    },
+    "vehicle_se_3": {
+      "size": [
+        62,
+        48
+      ],
+      "origin": [
+        32,
+        34
+      ],
+      "collider": [
+        "diamond",
+        29.0,
+        15.0
+      ]
+    },
+    "vehicle_ne_3": {
+      "size": [
+        62,
+        47
+      ],
+      "origin": [
+        29,
+        33
+      ],
+      "collider": [
+        "diamond",
+        29.0,
+        15.0
+      ]
+    },
+    "vehicle_sw_3": {
+      "size": [
+        62,
+        48
+      ],
+      "origin": [
+        29,
+        34
+      ],
+      "collider": [
+        "diamond",
+        29.0,
+        15.0
+      ]
+    },
+    "vehicle_nw_4": {
+      "size": [
+        62,
+        49
+      ],
+      "origin": [
+        32,
+        35
+      ],
+      "collider": [
+        "diamond",
+        29.0,
+        15.0
+      ]
+    },
+    "vehicle_se_4": {
+      "size": [
+        62,
+        47
+      ],
+      "origin": [
+        32,
+        33
+      ],
+      "collider": [
+        "diamond",
+        29.0,
+        15.0
+      ]
+    },
+    "vehicle_ne_4": {
+      "size": [
+        62,
+        49
+      ],
+      "origin": [
+        29,
+        35
+      ],
+      "collider": [
+        "diamond",
+        29.0,
+        15.0
+      ]
+    },
+    "vehicle_sw_4": {
+      "size": [
+        62,
+        47
+      ],
+      "origin": [
+        29,
+        33
+      ],
+      "collider": [
+        "diamond",
+        29.0,
+        15.0
       ]
     },
     "tree_0": {
       "size": [
-        40,
-        69
+        26,
+        41
       ],
       "origin": [
-        20,
-        59
+        13,
+        38
       ],
       "collider": [
         "circle",
@@ -877,12 +1091,12 @@
     },
     "tree_1": {
       "size": [
-        40,
-        56
+        28,
+        55
       ],
       "origin": [
-        20,
-        46
+        14,
+        52
       ],
       "collider": [
         "circle",
@@ -891,12 +1105,12 @@
     },
     "tree_2": {
       "size": [
-        40,
-        59
+        32,
+        38
       ],
       "origin": [
-        20,
-        49
+        16,
+        35
       ],
       "collider": [
         "circle",
@@ -905,12 +1119,12 @@
     },
     "tree_3": {
       "size": [
-        40,
-        60
+        30,
+        42
       ],
       "origin": [
-        20,
-        50
+        15,
+        39
       ],
       "collider": [
         "circle",
@@ -919,26 +1133,68 @@
     },
     "tree_4": {
       "size": [
-        36,
-        54
+        32,
+        37
       ],
       "origin": [
-        18,
-        46
+        15,
+        34
+      ],
+      "collider": [
+        "circle",
+        3.5
+      ]
+    },
+    "tree_5": {
+      "size": [
+        29,
+        32
+      ],
+      "origin": [
+        15,
+        29
+      ],
+      "collider": [
+        "circle",
+        3.5
+      ]
+    },
+    "tree_6": {
+      "size": [
+        28,
+        38
+      ],
+      "origin": [
+        14,
+        35
+      ],
+      "collider": [
+        "circle",
+        3.5
+      ]
+    },
+    "tree_7": {
+      "size": [
+        21,
+        56
+      ],
+      "origin": [
+        8,
+        53
       ],
       "collider": [
         "circle",
         2.0
       ]
     },
-    "tree_5": {
+    "tree_8": {
       "size": [
-        36,
+        24,
         52
       ],
       "origin": [
-        18,
-        44
+        12,
+        49
       ],
       "collider": [
         "circle",
@@ -959,25 +1215,222 @@
         2.0
       ]
     },
-    "door_wood": {
+    "street_lamp_dead_0": {
       "size": [
         26,
-        52
+        70
       ],
       "origin": [
-        12,
-        50
+        8,
+        64
+      ],
+      "collider": [
+        "circle",
+        2.0
+      ]
+    },
+    "street_lamp_dead_1": {
+      "size": [
+        26,
+        70
+      ],
+      "origin": [
+        8,
+        64
+      ],
+      "collider": [
+        "circle",
+        2.0
+      ]
+    },
+    "door_wood_x": {
+      "size": [
+        192,
+        60
+      ],
+      "origin": [
+        24,
+        51
+      ],
+      "collider": [
+        "poly",
+        [
+          -13.6,
+          -12.8,
+          18.4,
+          3.2,
+          13.6,
+          12.8,
+          -18.4,
+          -3.2
+        ]
+      ]
+    },
+    "door_wood_y": {
+      "size": [
+        192,
+        60
+      ],
+      "origin": [
+        24,
+        41
+      ],
+      "collider": [
+        "poly",
+        [
+          -18.4,
+          3.2,
+          13.6,
+          -12.8,
+          18.4,
+          -3.2,
+          -13.6,
+          12.8
+        ]
+      ]
+    },
+    "door_metal_x": {
+      "size": [
+        192,
+        60
+      ],
+      "origin": [
+        24,
+        51
+      ],
+      "collider": [
+        "poly",
+        [
+          -13.6,
+          -12.8,
+          18.4,
+          3.2,
+          13.6,
+          12.8,
+          -18.4,
+          -3.2
+        ]
+      ]
+    },
+    "door_metal_y": {
+      "size": [
+        192,
+        60
+      ],
+      "origin": [
+        24,
+        41
+      ],
+      "collider": [
+        "poly",
+        [
+          -18.4,
+          3.2,
+          13.6,
+          -12.8,
+          18.4,
+          -3.2,
+          -13.6,
+          12.8
+        ]
+      ]
+    },
+    "stick_0": {
+      "size": [
+        19,
+        10
+      ],
+      "origin": [
+        9,
+        6
       ],
       "collider": null
     },
-    "door_metal": {
+    "stick_1": {
       "size": [
-        32,
-        52
+        15,
+        10
       ],
       "origin": [
-        15,
-        52
+        7,
+        6
+      ],
+      "collider": null
+    },
+    "stick_2": {
+      "size": [
+        14,
+        10
+      ],
+      "origin": [
+        7,
+        6
+      ],
+      "collider": null
+    },
+    "stick_3": {
+      "size": [
+        14,
+        10
+      ],
+      "origin": [
+        7,
+        6
+      ],
+      "collider": null
+    },
+    "trash_0": {
+      "size": [
+        9,
+        8
+      ],
+      "origin": [
+        4,
+        6
+      ],
+      "collider": null
+    },
+    "trash_1": {
+      "size": [
+        9,
+        8
+      ],
+      "origin": [
+        4,
+        6
+      ],
+      "collider": null
+    },
+    "trash_2": {
+      "size": [
+        9,
+        8
+      ],
+      "origin": [
+        4,
+        6
+      ],
+      "collider": null
+    },
+    "trash_3": {
+      "size": [
+        10,
+        7
+      ],
+      "origin": [
+        5,
+        4
+      ],
+      "collider": null
+    },
+    "trash_4": {
+      "size": [
+        8,
+        6
+      ],
+      "origin": [
+        4,
+        4
       ],
       "collider": null
     },
@@ -1662,23 +2115,23 @@
     },
     "roof_eave_charcoal_n": {
       "size": [
-        56,
-        28
+        44,
+        22
       ],
       "origin": [
-        28,
-        16
+        22,
+        14
       ],
       "collider": null
     },
     "roof_eave_charcoal_w": {
       "size": [
-        56,
-        28
+        44,
+        22
       ],
       "origin": [
-        28,
-        16
+        22,
+        14
       ],
       "collider": null
     },
@@ -1761,23 +2214,23 @@
     },
     "roof_eave_pitch_n": {
       "size": [
-        56,
-        28
+        44,
+        22
       ],
       "origin": [
-        28,
-        16
+        22,
+        14
       ],
       "collider": null
     },
     "roof_eave_pitch_w": {
       "size": [
-        56,
-        28
+        44,
+        22
       ],
       "origin": [
-        28,
-        16
+        22,
+        14
       ],
       "collider": null
     },
@@ -1898,13 +2351,33 @@
       "rack_2",
       "rack_3"
     ],
-    "vehicle": [
-      "vehicle_0",
-      "vehicle_1",
-      "vehicle_2",
-      "vehicle_3",
-      "vehicle_4",
-      "vehicle_5"
+    "vehicle_nw": [
+      "vehicle_nw_0",
+      "vehicle_nw_1",
+      "vehicle_nw_2",
+      "vehicle_nw_3",
+      "vehicle_nw_4"
+    ],
+    "vehicle_se": [
+      "vehicle_se_0",
+      "vehicle_se_1",
+      "vehicle_se_2",
+      "vehicle_se_3",
+      "vehicle_se_4"
+    ],
+    "vehicle_ne": [
+      "vehicle_ne_0",
+      "vehicle_ne_1",
+      "vehicle_ne_2",
+      "vehicle_ne_3",
+      "vehicle_ne_4"
+    ],
+    "vehicle_sw": [
+      "vehicle_sw_0",
+      "vehicle_sw_1",
+      "vehicle_sw_2",
+      "vehicle_sw_3",
+      "vehicle_sw_4"
     ],
     "tree": [
       "tree_0",
@@ -1912,7 +2385,27 @@
       "tree_2",
       "tree_3",
       "tree_4",
-      "tree_5"
+      "tree_5",
+      "tree_6",
+      "tree_7",
+      "tree_8"
+    ],
+    "street_lamp_dead": [
+      "street_lamp_dead_0",
+      "street_lamp_dead_1"
+    ],
+    "stick": [
+      "stick_0",
+      "stick_1",
+      "stick_2",
+      "stick_3"
+    ],
+    "trash": [
+      "trash_0",
+      "trash_1",
+      "trash_2",
+      "trash_3",
+      "trash_4"
     ]
   },
   "char": {

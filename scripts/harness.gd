@@ -7,6 +7,8 @@ extends Node
 ##   --at=X,Y         teleport the player to tile X,Y before the shot
 ##   --probe-exclusive  report display mode capabilities and quit
 
+var world_seed := ""  # --seed=<text>: pin the district layout (shots/probes)
+
 var _shot_menu := ""
 var _shot_scene := "game"
 var _shot_at := ""
@@ -18,7 +20,9 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	var args := OS.get_cmdline_user_args()
 	for arg in args:
-		if arg.begins_with("--menu="):
+		if arg.begins_with("--seed="):
+			world_seed = arg.trim_prefix("--seed=")
+		elif arg.begins_with("--menu="):
 			_shot_menu = arg.trim_prefix("--menu=")
 		elif arg.begins_with("--scene="):
 			_shot_scene = arg.trim_prefix("--scene=")
@@ -33,6 +37,10 @@ func _ready() -> void:
 			_smoke.call_deferred()
 		elif arg.begins_with("--shot="):
 			_shot.call_deferred(arg.trim_prefix("--shot="))
+		elif arg == "--perf":
+			_perf.call_deferred()
+		elif arg == "--probe-world":
+			_probe_world.call_deferred()
 		elif arg == "--probe-exclusive":
 			_probe_exclusive.call_deferred()
 
@@ -45,11 +53,14 @@ func _ensure_game_scene() -> void:
 		get_tree().change_scene_to_file("res://scenes/main.tscn")
 		for i in 4:
 			await get_tree().process_frame
-	# the world builds asynchronously behind the deploy screen — wait for it
+	# the world builds asynchronously behind the deploy screen — wait for it,
+	# AND for the deploy screen to fully fade (a half-faded label was ghosting
+	# into captures)
 	var waited := 0.0
 	while waited < 30.0:
 		current = get_tree().current_scene
-		if current != null and not (current.get("world_info") as Dictionary).is_empty():
+		if current != null and not (current.get("world_info") as Dictionary).is_empty() \
+				and current.get("_deploy_screen") == null:
 			break
 		await get_tree().create_timer(0.2).timeout
 		waited += 0.2
@@ -138,6 +149,33 @@ func _smoke() -> void:
 				if roof.modulate.a < 0.9:
 					failures.append("roof did not return outside (a=%.2f)" % roof.modulate.a)
 
+	# edge sniper: standing at the map edge past the grace period draws fire
+	if player != null and floor_layer != null:
+		var full_hp: int = player.hp
+		player.position = floor_layer.map_to_local(Vector2i(2, 160))
+		await get_tree().create_timer(5.6).timeout
+		if player.hp >= full_hp:
+			failures.append("edge sniper never hit (hp still %d)" % player.hp)
+		player.respawn(info["spawn"])
+		await get_tree().process_frame
+
+	# doors: closed by default, F-toggle opens (collider off) and closes back
+	var doors := get_tree().get_nodes_in_group("doors")
+	if doors.is_empty():
+		failures.append("no doors in the world")
+	else:
+		var door := doors[0] as Door
+		if door.is_open():
+			failures.append("door started open")
+		door.toggle()
+		await get_tree().create_timer(0.5).timeout
+		if not door.is_open():
+			failures.append("door did not open on toggle")
+		door.toggle()
+		await get_tree().create_timer(0.5).timeout
+		if door.is_open():
+			failures.append("door did not close on second toggle")
+
 	# pause menu: Esc opens + pauses, Esc again closes + resumes
 	_tap_action("ui_cancel")
 	for i in 3:
@@ -194,6 +232,10 @@ func _shot(shot_name: String) -> void:
 			face_player.set("_dir_index", dirs.find(_shot_face))
 	if "--crouch" in OS.get_cmdline_user_args():
 		Input.action_press("crouch")
+	if "--flashlight" in OS.get_cmdline_user_args():
+		var lit_player := get_tree().current_scene.get_node_or_null("World/Player") as Player
+		if lit_player != null:
+			lit_player.set_flashlight(true)
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--weather=") or arg.begins_with("--tod="):
 			var environment := get_tree().get_first_node_in_group("environment")
@@ -225,6 +267,88 @@ func _shot(shot_name: String) -> void:
 	var path := dir.path_join(shot_name + ".png")
 	image.save_png(path)
 	print("SHOT SAVED: " + path)
+	get_tree().quit(0)
+
+
+func _perf() -> void:
+	## Frame pacing probe: build the district, settle, then sample 6 seconds
+	## of real frames and report the average and the worst hitch.
+	await _ensure_game_scene()
+	for arg in OS.get_cmdline_user_args():  # same scene flags as --shot
+		if arg == "--weather=rain" or arg.begins_with("--tod="):
+			var environment := get_tree().get_first_node_in_group("environment")
+			if environment != null:
+				if arg == "--weather=rain":
+					environment.call("force_weather", true)
+				else:
+					environment.call("force_time", float(arg.trim_prefix("--tod=")))
+		elif arg == "--flashlight":
+			var lit := get_tree().current_scene.get_node_or_null("World/Player") as Player
+			if lit != null:
+				lit.set_flashlight(true)
+	for i in 40:
+		await get_tree().process_frame
+	var frames := 0
+	var worst_ms := 0.0
+	var start_us := Time.get_ticks_usec()
+	var prev_us := start_us
+	while Time.get_ticks_usec() - start_us < 6_000_000:
+		await get_tree().process_frame
+		var now_us := Time.get_ticks_usec()
+		worst_ms = maxf(worst_ms, float(now_us - prev_us) / 1000.0)
+		prev_us = now_us
+		frames += 1
+	var seconds := float(Time.get_ticks_usec() - start_us) / 1_000_000.0
+	print("PERF frames=%d avg_fps=%.1f worst_frame_ms=%.2f process_ms=%.3f nodes=%d" % [
+		frames, frames / seconds, worst_ms,
+		Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0,
+		int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT))])
+	get_tree().quit(0)
+
+
+func _probe_world() -> void:
+	## Content census: lamp/vehicle/door counts and shot-aimable positions.
+	await _ensure_game_scene()
+	var main := get_tree().current_scene
+	var info: Dictionary = main.get("world_info")
+	var floor_layer: TileMapLayer = info["floor"]
+
+	var lamps := get_tree().get_nodes_in_group("street_lamps")
+	var working_cells: Array[Vector2i] = []
+	for lamp in lamps:
+		if lamp.get("working"):
+			working_cells.append(floor_layer.local_to_map((lamp as Node2D).position))
+	print("LAMPS total=%d working=%d cells=%s" % [
+		lamps.size(), working_cells.size(), working_cells.slice(0, 6)])
+
+	var lit: StreetLamp = null
+	for lamp in lamps:
+		if lamp.get("working"):
+			lit = lamp
+			break
+	if lit != null:
+		# force night through the environment (the real driver), then sample
+		var environment := get_tree().get_first_node_in_group("environment")
+		if environment != null:
+			environment.call("force_time", 0.0)
+		for i in 10:
+			await get_tree().process_frame
+		var glow: Sprite2D = lit.get("_glow")
+		var light: PointLight2D = lit.get("_light")
+		print("SAMPLE lamp world_pos=%s glow_a=%.2f light_energy=%.2f processing=%s night=%.2f" % [
+			(lit as Node2D).global_position, glow.modulate.a, light.energy,
+			str(lit.is_processing()), float(environment.get("night_amount"))])
+
+	var vehicle_cells: Array[Vector2i] = []
+	var world: Node2D = info["ysort"]
+	for child in world.get_children():
+		for sub in child.get_children():
+			if sub is Sprite2D and (sub as Sprite2D).texture != null \
+					and "vehicle_" in (sub as Sprite2D).texture.resource_path:
+				vehicle_cells.append(floor_layer.local_to_map((child as Node2D).position))
+				break
+	print("VEHICLES total=%d cells=%s" % [vehicle_cells.size(), vehicle_cells.slice(0, 10)])
+	print("DOORS total=%d" % get_tree().get_nodes_in_group("doors").size())
 	get_tree().quit(0)
 
 

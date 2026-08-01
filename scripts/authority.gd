@@ -11,3 +11,7 @@ func spawn_player(parent: Node, pos: Vector2) -> Player:
 	player.position = pos
 	parent.add_child(player)
 	return player
+
+
+func damage_player(player: Player) -> void:
+	player.take_hit()

@@ -34,12 +34,12 @@ func _ready() -> void:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 8)
 	var title := Label.new()
-	title.text = "RAID PAUSED"
+	title.text = "raid paused"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_color_override("font_color", UITheme.ACCENT)
 	box.add_child(title)
 	var hint := Label.new()
-	hint.text = "THE TIMER DOES NOT CARE."
+	hint.text = "the timer does not care."
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	box.add_child(hint)
