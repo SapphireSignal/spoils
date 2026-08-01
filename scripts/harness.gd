@@ -11,6 +11,7 @@ var _shot_menu := ""
 var _shot_scene := "game"
 var _shot_at := ""
 var _shot_backdrop := -1
+var _shot_face := ""
 
 
 func _ready() -> void:
@@ -25,6 +26,8 @@ func _ready() -> void:
 			_shot_at = arg.trim_prefix("--at=")
 		elif arg.begins_with("--backdrop="):
 			_shot_backdrop = int(arg.trim_prefix("--backdrop="))
+		elif arg.begins_with("--face="):
+			_shot_face = arg.trim_prefix("--face=")
 	for arg in args:
 		if arg == "--smoke":
 			_smoke.call_deferred()
@@ -153,6 +156,11 @@ func _shot(shot_name: String) -> void:
 		if player != null and floor_layer != null and parts.size() == 2:
 			player.position = floor_layer.map_to_local(
 				Vector2i(int(parts[0]), int(parts[1])))
+	if _shot_face != "":
+		var dirs := ["E", "SE", "S", "SW", "W", "NW", "N", "NE"]
+		var face_player := get_tree().current_scene.get_node_or_null("World/Player")
+		if face_player != null and dirs.has(_shot_face):
+			face_player.set("_dir_index", dirs.find(_shot_face))
 	if _shot_menu != "":
 		var menu := get_tree().get_first_node_in_group("pause_menu") as PauseMenu
 		if menu != null:

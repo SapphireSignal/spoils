@@ -3,6 +3,22 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.5.2] — 2026-07-31
+
+### Fixed
+- Roofs sit flush on the walls (the slab was overhanging ~8px past them);
+  corners line up with the wall corners.
+- The interior reveal triggers only when the player is actually INSIDE the
+  walls — standing next to a building no longer hides its roof.
+- The back-view neck for good: no exposed skin sliver from behind at all —
+  hair tapers straight into the collar, mirroring the front. Verified with an
+  in-game capture, not just the sprite sheet.
+
+### Changed
+- The two buildings are different materials now: red brick vs. gray weathered
+  masonry — and their roofs are two different near-blacks (charcoal blue vs.
+  dark umber). More per-thing variation, per the standing direction.
+
 ## [0.5.1] — 2026-07-31
 
 ### Added
@@ -167,3 +183,4 @@ Milestone 1: the walkable world. First playtest build.
 - Self-verification harness: headless smoke test (`--smoke`) and screenshot
   capture (`--shot=<name>`).
 - `Play.bat` one-click launcher.
+

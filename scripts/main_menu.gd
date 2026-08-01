@@ -1,4 +1,4 @@
-extends Node2D
+﻿extends Node2D
 ## Main menu. Generated backdrop scenes rotate with a slow crossfade,
 ## each with its own living detail:
 ##   hoard      - gold sparkles rising past the buttons
@@ -264,7 +264,7 @@ func _build_ui() -> void:
 	root.add_child(center)
 
 	var version := Label.new()
-	version.text = "pre-alpha v0.5.1"
+	version.text = "pre-alpha v0.5.2"
 	version.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	version.offset_left = -130
 	version.offset_top = -16

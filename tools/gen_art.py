@@ -265,9 +265,9 @@ WALL_H = 40
 SEG_THICK = 7  # coping depth in screen px
 
 BRICK_STYLES = {
-    # y-faces are the shaded side but must stay readable against the ground
-    "brick_a": {"x": ("884b2b", "602c2c"), "y": ("7a4841", "4d2b32")},
-    "brick_b": {"x": ("7a4841", "4d2b32"), "y": ("602c2c", "341c27")},
+    # two clearly different materials (user: buildings must not match)
+    "brick_a": {"x": ("884b2b", "602c2c"), "y": ("7a4841", "4d2b32")},   # red brick
+    "brick_b": {"x": ("577277", "394a50"), "y": ("394a50", "202e37")},   # gray masonry
 }
 
 # window variants: (start i along edge, top row in face coords, w, h, boarded)
@@ -411,8 +411,15 @@ def wall_piece_inventory() -> dict[str, tuple[Canvas, tuple, list]]:
 # small overhang so it caps the walls exactly; fascia trim on the lower edges,
 # vents/hatch baked in. The game fades it for the interior reveal.
 
-def make_building_roof(tiles_w: int, tiles_h: int) -> tuple[Canvas, tuple, list | None]:
-    rng = random.Random(f"{SEED}:roof:{tiles_w}x{tiles_h}")
+ROOF_TONES = {  # different shades of "black" per building
+    "charcoal": ("151d28", "10141f", "394a50"),
+    "umber": ("241527", "10141f", "4d2b32"),
+}
+
+def make_building_roof(tiles_w: int, tiles_h: int,
+                       tone: str) -> tuple[Canvas, tuple, list | None]:
+    rng = random.Random(f"{SEED}:roof:{tiles_w}x{tiles_h}:{tone}")
+    base_col, dark_col, lite_col = (C(n) for n in ROOF_TONES[tone])
     margin = 8
     span_w = (tiles_w + tiles_h) * 32 + 2 * margin
     span_h = (tiles_w + tiles_h) * 16 + 2 * margin
@@ -430,35 +437,34 @@ def make_building_roof(tiles_w: int, tiles_h: int) -> tuple[Canvas, tuple, list 
                 if s:
                     for x in range(s[0], s[1] + 1):
                         mask.add((sx + x, sy + y))
-    for _ in range(4):  # dilate: slight overhang past the wall line
-        grown = set(mask)
-        for (x, y) in mask:
-            for dx, dy in ((2, 1), (-2, 1), (2, -1), (-2, -1), (1, 0), (-1, 0)):
-                grown.add((x + dx, y + dy))
-        mask = grown
+    # single 2px dilation: the roof edge sits flush on the wall plane
+    grown = set(mask)
+    for (x, y) in mask:
+        for dx, dy in ((2, 1), (-2, 1), (2, -1), (-2, -1), (1, 0), (-1, 0)):
+            grown.add((x + dx, y + dy))
+    mask = grown
 
     for (x, y) in mask:
         r = rng.random()
-        col = CONC_D1
+        col = base_col
         if r < 0.09:
-            col = C("151d28")
+            col = dark_col
         elif r < 0.13:
-            col = CONC_BASE
+            col = lite_col
         c.set(x, y, col)
     # a few tar patch blobs
     for i in range(3):
-        seed_pt = (off_x + rng.randint(0, 64), off_y + rng.randint(0, (tiles_w + tiles_h) * 8))
         patch = blob(rng, off_x + (tiles_w - 1) * 16 + rng.randint(-40, 40),
                      off_y + (tiles_w + tiles_h) * 8 + rng.randint(-30, 30),
                      rng.randint(30, 70), mask)
         for (x, y) in patch:
-            c.set(x, y, C("151d28"))
+            c.set(x, y, dark_col)
     # edges: highlight on upper rims, fascia trim hanging off lower rims
     for (x, y) in list(mask):
         if (x, y - 1) not in mask:
-            c.set(x, y, CONC_BASE)
+            c.set(x, y, lite_col)
         if (x, y + 1) not in mask:
-            c.set(x, y, C("151d28"))
+            c.set(x, y, dark_col)
             c.set(x, y + 1, INK)
             c.set(x, y + 2, INK)
     # vents + hatch, kept off the edges
@@ -935,16 +941,16 @@ def draw_head(c: Canvas, view: str, bob: int) -> None:
         c.set(CX + 2, y0 + 5, OUTLINE)
         c.hline(CX, CX + 3, y0 + 7, SKIN_SH)
     elif view == "back34":
-        c.rect(CX - 3, y0, CX + 4, y0 + 5, HAIR)
-        c.vline(CX + 4, y0 + 1, y0 + 5, HAIR_D)
-        c.rect(CX - 3, y0 + 6, CX + 3, y0 + 6, HAIR_D)  # nape
+        # no exposed neck from behind: hair tapers straight into the collar,
+        # mirroring the front view (which has no visible neck either)
+        c.rect(CX - 3, y0, CX + 4, y0 + 6, HAIR)
+        c.vline(CX + 4, y0 + 1, y0 + 6, HAIR_D)
         c.set(CX + 4, y0 + 6, SKIN_SH)                  # ear sliver
-        c.rect(CX - 2, y0 + 7, CX + 3, y0 + 7, SKIN_SH)  # neck, near head width
+        c.rect(CX - 3, y0 + 7, CX + 4, y0 + 7, HAIR_D)
     elif view == "back":
-        c.rect(CX - 4, y0, CX + 3, y0 + 5, HAIR)
-        c.vline(CX + 3, y0 + 1, y0 + 5, HAIR_D)
-        c.rect(CX - 3, y0 + 6, CX + 2, y0 + 6, HAIR_D)  # nape
-        c.rect(CX - 3, y0 + 7, CX + 2, y0 + 7, SKIN_SH)  # neck, near head width
+        c.rect(CX - 4, y0, CX + 3, y0 + 6, HAIR)
+        c.vline(CX + 3, y0 + 1, y0 + 6, HAIR_D)
+        c.rect(CX - 4, y0 + 7, CX + 3, y0 + 7, HAIR_D)
 
 
 def draw_torso(c: Canvas, view: str, bob: int) -> None:
@@ -1398,8 +1404,8 @@ def main() -> None:
         entries[name] = (canvas, origin, collider)
     for name, piece in wall_piece_inventory().items():
         entries[name] = piece
-    entries["roof_7x5"] = make_building_roof(7, 5)   # building A interior
-    entries["roof_6x5"] = make_building_roof(6, 5)   # building B interior
+    entries["roof_7x5"] = make_building_roof(7, 5, "charcoal")  # building A
+    entries["roof_6x5"] = make_building_roof(6, 5, "umber")     # building B
     entries["shadow"] = (make_shadow(), (12, 6), None)
 
     grabber = Canvas(8, 12)  # HSlider knob for the UI theme

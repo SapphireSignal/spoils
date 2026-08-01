@@ -306,7 +306,9 @@ func _build_roof(rect: Rect2i, interior: Rect2i) -> void:
 	# RoofReveal fades it out when the player is inside.
 	var south_corner := interior.end - Vector2i(1, 1)
 	var roof := RoofReveal.new()
-	roof.cells = rect
+	# trigger strictly when the player is INSIDE the walls, not on the
+	# surrounding ground
+	roof.cells = interior
 	# y-sort: draws over everything of this building (walls, posts, interior)
 	roof.position = _floor_layer.map_to_local(south_corner) + Vector2(0, 24)
 	var slab := _prop_sprite("roof_%dx%d" % [interior.size.x, interior.size.y])
