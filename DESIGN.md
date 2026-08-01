@@ -63,8 +63,12 @@ that feel like Destiny, at 32 pixels tall.*
 
 ### v1 scope (defaults — adjustable by the user, not by Claude)
 - **1 map**: "transit" — a 320×320 ruined industrial/urban district with interiors,
-  chokepoints, 3–4 extraction points. A fresh layout is generated per deploy from a seed
-  (pinnable for testing); the road grid / forest / building DNA stays recognizable.
+  chokepoints, 3–4 extraction points. The layout is **FIXED** (user call 2026-08-01:
+  no procedural rerolls, ever — quests will point at real addresses and players must
+  be able to learn the district). The deterministic generator plus the pinned
+  `DISTRICT_SEED` in world_builder.gd ARE the map file; changing that seed is a
+  deliberate map revision, never a roll. Per-raid variety comes from weather, time
+  of day, and (later) loot/AI — never from layout.
 - **6–10 guns** across classes (pistol / SMG / shotgun / rifle / DMR), told apart by
   stats, feel, and condition — NOT rarity colors (user call: Tarkov has none).
 - **AI factions — all human, all armed** (user call: no machines):

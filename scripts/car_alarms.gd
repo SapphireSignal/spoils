@@ -15,10 +15,13 @@ var _active: Array[Dictionary] = []    # {sprites, until}
 var _player: Player
 var _time := 0.0
 var _light_tex: Texture2D
+var _radial_tex: Texture2D
+var _environment: Node = null          # cached; looked up once, not per frame
 
 
 func _ready() -> void:
 	_light_tex = load("res://art/gen/alarm_light.png")
+	_radial_tex = load("res://art/gen/light_radial.png")
 	add_to_group("car_alarms")
 
 
@@ -61,11 +64,14 @@ func _process(delta: float) -> void:
 				entry["fired"] = true
 				_fire(car, entry["lights"] as Array)
 
+	if _active.is_empty():
+		return                          # nothing flashing: skip all of it
 	var blink_on := fmod(_time, BLINK_PERIOD) < BLINK_PERIOD * 0.5
 	var night := 0.0
-	var environment := get_tree().get_first_node_in_group("environment")
-	if environment != null:
-		night = float(environment.get("night_amount"))
+	if _environment == null or not is_instance_valid(_environment):
+		_environment = get_tree().get_first_node_in_group("environment")
+	if _environment != null:
+		night = float(_environment.get("night_amount"))
 	var i := _active.size() - 1
 	while i >= 0:
 		var active: Dictionary = _active[i]
@@ -112,7 +118,7 @@ func _fire(car: Node2D, lights: Array) -> void:
 		car.add_child(dot)
 		sprites.append(dot)
 		var glow := PointLight2D.new()
-		glow.texture = load("res://art/gen/light_radial.png")
+		glow.texture = _radial_tex
 		glow.position = dot.position
 		glow.color = Color("de9e41")
 		glow.texture_scale = 0.5

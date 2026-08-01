@@ -40,6 +40,12 @@ const BUILD_BUDGET_US := 2400  # max build work per frame: the deploy screen
 # sniper is the real wall). Tips chamfered a little for good measure.
 const TIP_CUT_X := 560.0
 const TIP_CUT_Y := 256.0
+# THE district (user call 2026-08-01: procedural rerolls are OFF — one
+# fixed, learnable transit layout, because quests will point at real
+# addresses and players must be able to remember where everything is).
+# Change ONLY as a deliberate map revision; harness --seed still
+# overrides for tests. Picked by auditioning candidates in v0.6.22.
+const DISTRICT_SEED := "transit-01"
 
 var _rng := RandomNumberGenerator.new()
 var _manifest: Dictionary = {}
@@ -98,10 +104,11 @@ var _cars: Array[Dictionary] = []    # driveable car records for main.gd
 
 
 func build(root: Node2D, seed_text: String = "") -> Dictionary:
-	# every deploy rolls a fresh district; a pinned seed (harness --seed=x)
-	# reproduces a layout exactly — ALL randomness below flows from _rng
+	# ONE canonical district every deploy (fixed-map call, v0.6.22) —
+	# ALL randomness below flows from _rng, so the layout is bit-identical
+	# every time. Harness --seed=x still swaps worlds for testing.
 	if seed_text.is_empty():
-		seed_text = "district-%d" % Time.get_ticks_usec()
+		seed_text = DISTRICT_SEED
 	_rng.seed = hash(seed_text)
 	_scene_tree = root.get_tree()
 	_deadline_us = Time.get_ticks_usec() + BUILD_BUDGET_US
@@ -525,6 +532,8 @@ func _plan_plots() -> void:
 				court_placed = true
 			"warehouse":
 				await _plan_warehouse_block(b)
+			"scrapyard":
+				await _plan_scrap_hall(b)
 			"school":
 				_plan_school_block(b)
 			"depot":
@@ -695,11 +704,13 @@ func _place_safehouse_ring() -> void:
 		if plot.get("safehouse", false):
 			door_out = plot["door_out"]
 	for x in range(ring.position.x, ring.end.x, 2):
+		await _tick()
 		if absi(x - door_out.x) > 2:
 			_fence_piece(Vector2i(x, ring.position.y), "x")
-		_fence_piece(Vector2i(x, ring.end.y - 1), "x") if absi(x - door_out.x) > 2 \
-			or ring.end.y - 1 != door_out.y + 1 else null
+		if absi(x - door_out.x) > 2 or ring.end.y - 1 != door_out.y + 1:
+			_fence_piece(Vector2i(x, ring.end.y - 1), "x")
 	for y in range(ring.position.y + 1, ring.end.y - 1, 2):
+		await _tick()
 		_fence_piece(Vector2i(ring.position.x, y), "y")
 		_fence_piece(Vector2i(ring.end.x - 1, y), "y")
 	for corner in [ring.position, Vector2i(ring.end.x - 1, ring.position.y),
@@ -804,6 +815,58 @@ func _plan_warehouse_block(b: Vector2i) -> void:
 			"door_side": "yp",
 			"door_out": Vector2i(-99, -99),
 		})
+
+
+func _plan_scrap_hall(b: Vector2i) -> void:
+	# the yard's own hall (user: racks and boxes in the open read wrong —
+	# "i know there used to be one there"). ONE modest warehouse anchors
+	# the scrapyard, GUARANTEED, in the south half so the rack line out
+	# front becomes its overflow storage.
+	var r: Rect2i = _block_rects[b]
+	var attempts := 0
+	while attempts < 200:
+		attempts += 1
+		await _tick()
+		var size := Vector2i(
+			_rng.randi_range(11, maxi(11, mini(14, r.size.x - 6))),
+			_rng.randi_range(7, maxi(7, mini(9, (r.size.y / 2) - 2))))
+		if size.x > r.size.x - 2 or size.y > r.size.y - 2:
+			continue
+		var lo_y := maxi(r.position.y, r.end.y - size.y - 5)
+		var pos := Vector2i(
+			_rng.randi_range(r.position.x + 1,
+				maxi(r.position.x + 1, r.end.x - size.x - 1)),
+			_rng.randi_range(lo_y, maxi(lo_y, r.end.y - size.y - 3)))
+		var rect := Rect2i(pos, size)
+		if not _rect_clear_for_building(rect.grow(2)):
+			continue
+		_claim_building_ground(rect)
+		_plots.append({
+			"rect": rect, "kind": "warehouse",
+			"style": "brick_a" if _rng.randf() < 0.5 else "brick_b",
+			"tone": "charcoal" if _rng.randf() < 0.5 else "pitch",
+			"ruined": false,
+			"stories": 1,
+			"door_side": "yp",
+			"door_out": Vector2i(-99, -99),
+		})
+		return
+	# every roll failed (usually the rail cutting the south half): center
+	# it with the same rail dodge the main warehouse fallback uses
+	var size := Vector2i(mini(12, r.size.x - 2), mini(8, r.size.y - 2))
+	var pos := r.position + (r.size - size) / 2
+	if _rail_row >= r.position.y - 2 and _rail_row <= r.end.y + 2:
+		if _rail_row <= r.get_center().y:
+			pos.y = mini(r.end.y - size.y, _rail_row + 3)
+		else:
+			pos.y = maxi(r.position.y, _rail_row - size.y - 3)
+	var rect := Rect2i(pos, size)
+	_claim_building_ground(rect)
+	_plots.append({
+		"rect": rect, "kind": "warehouse",
+		"style": "brick_b", "tone": "charcoal", "ruined": false,
+		"stories": 1, "door_side": "yp", "door_out": Vector2i(-99, -99),
+	})
 
 
 func _rect_clear_for_building(rect: Rect2i) -> bool:
@@ -1809,6 +1872,7 @@ func _place_school_grounds() -> void:
 		return
 	var spots: Array[Vector2i] = []
 	for y in range(_playground.position.y + 1, _playground.end.y - 1):
+		await _tick()
 		for x in range(_playground.position.x + 2, _playground.end.x - 2):
 			var cell := Vector2i(x, y)
 			if not _occupied.has(cell) and not _on_road(cell) \
@@ -1930,16 +1994,32 @@ func _place_gallery() -> void:
 	var wall_x := r.position.x + 1
 	var walls := 0
 	while walls < 3 and wall_x < r.end.x - 2:
+		await _tick()
 		var cell := Vector2i(wall_x, wall_y + _rng.randi_range(0, 1))
 		if not _occupied.has(cell) and not _on_road(cell) \
 				and not _forest.has(cell) and not _sidewalk.has(cell):
 			_add_prop_at_cell("graffiti_x_%d" % (walls % 3), cell, Vector2(3, 1))
 			walls += 1
-			if _rng.randf() < 0.8:
-				var can_cell := cell + Vector2i(_rng.randi_range(-1, 1), 2)
-				if not _occupied.has(can_cell) and not _on_road(can_cell):
-					_add_prop_at_cell("spray_cans", can_cell, Vector2(8, 4))
+			# cans where the artists crouched: 1-2 per wall, varied drops
+			# in varied spots (user: the two placements looked identical)
+			for ci in _rng.randi_range(1, 2):
+				var can_cell := cell + Vector2i(_rng.randi_range(-1, 2),
+					_rng.randi_range(1, 3))
+				if not _occupied.has(can_cell) and not _on_road(can_cell) \
+						and not _sidewalk.has(can_cell):
+					_add_prop_at_cell(_pick_variant("spray_cans"), can_cell,
+						Vector2(10, 5))
 		wall_x += 2
+	for i in 2:                                  # strays dropped mid-flight
+		await _tick()
+		var stray_cell := Vector2i(
+			_rng.randi_range(r.position.x + 1, r.end.x - 2),
+			_rng.randi_range(r.position.y + 1, r.end.y - 2))
+		if not _occupied.has(stray_cell) and not _on_road(stray_cell) \
+				and not _forest.has(stray_cell) \
+				and not _sidewalk.has(stray_cell):
+			_add_prop_at_cell(_pick_variant("spray_cans"), stray_cell,
+				Vector2(10, 5))
 	var bench_y := r.end.y - 2
 	var smoker_placed := false
 	for i in 2:
@@ -1948,7 +2028,8 @@ func _place_gallery() -> void:
 		if _occupied.has(cell) or _on_road(cell) or _forest.has(cell) \
 				or _sidewalk.has(cell):
 			continue
-		var bench := _add_prop_at_cell("bench_x_0", cell, Vector2(2, 1))
+		var bench := _add_prop_at_cell("bench_x_0" if not smoker_placed
+			else _pick_variant("bench_x"), cell, Vector2(2, 1))
 		if not smoker_placed:
 			smoker_placed = true
 			var smoker := Smoker.new()

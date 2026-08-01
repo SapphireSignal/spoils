@@ -15,7 +15,7 @@ func _ready() -> void:
 	_sprite.texture = load("res://art/gen/smoker.png")
 	_sprite.hframes = 3
 	_sprite.centered = false
-	_sprite.offset = Vector2(-10, -22)
+	_sprite.offset = Vector2(-14, -34)   # player-scale sheet (28x36 frames)
 	add_child(_sprite)
 	_timer = randf_range(2.0, 5.0)
 
@@ -45,7 +45,7 @@ func _process(delta: float) -> void:
 			sprite.queue_free()
 			_wisps.remove_at(i)
 		else:
-			sprite.position += Vector2(-3.0, -9.0) * delta
+			sprite.position += Vector2(-3.0, -10.0) * delta
 			sprite.modulate.a = 0.5 * (1.0 - age / 1.4)
 		i -= 1
 
@@ -55,7 +55,7 @@ func _spawn_wisps() -> void:
 		var wisp := Sprite2D.new()
 		wisp.texture = load("res://art/gen/dust.png")
 		wisp.modulate = Color("a8b5b2", 0.5)
-		wisp.position = Vector2(5.0 + randf_range(-1.0, 1.0),
-			-15.0 + randf_range(-2.0, 0.0))
+		wisp.position = Vector2(3.0 + randf_range(-1.0, 1.0),
+			-25.0 + randf_range(-2.0, 0.0))
 		add_child(wisp)
 		_wisps.append({"sprite": wisp, "age": -0.25 * w})

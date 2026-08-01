@@ -3,6 +3,60 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.22] — 2026-08-01
+
+### Changed
+- **The fixed district** (user call: "i want everything on the map to be
+  fixed... theres going to be quests telling you to goto specific POIs and
+  do things there"): procedural rerolls are GONE. Every deploy builds the
+  same canonical transit — `DISTRICT_SEED = "transit-01"` in
+  world_builder.gd, picked by auditioning five candidate layouts (probes +
+  map shots). transit-01 won on city logic: both town blocks north, the
+  rail line running through the middle industrial belt
+  (depot/scrapyard/trainyard), school and gallery in the south band,
+  safehouse spawn south-center, autumn grove in the south-east corner.
+  The deterministic generator + pinned seed ARE the map file; changing the
+  seed is a deliberate map revision. Builder audited: zero unseeded
+  randomness in the layout path. Per-raid variety stays weather/time (and
+  later loot/AI). Harness `--seed` still overrides for tests.
+- **Scrapyard warehouse** (user: shelves and boxes in the open, "i know
+  there used to be one there"): the scrapyard block now plans its own
+  GUARANTEED hall in its south half (rail-dodging fallback like the main
+  warehouse), so the rack line out front reads as its overflow storage.
+- **Walk-in bushes** (user: "as if the character model can literally fit
+  inside of it and hide"): clumps 30-42 → 40-52 px, taller than the
+  standing sprite; the PLAYER now fades to half-alpha alongside the bush
+  while inside, so concealment is readable at a glance (foliage radius
+  24→28). Sway rebuilt: a slow 4-beat whole-pixel rummage with per-bush
+  phase — the old 6-frame toggle shivered, and in sync. The rustle plays
+  at full step volume going in (softer leaving), with an anti-spam gap.
+- **The gallery, grown up**: the smoker rebuilt at player scale (28×36
+  frames, seated height ~30 px vs the 36 px standing character), benches
+  lengthened and raised to match (four slats, taller backrest, bigger
+  collider), and spray cans became a 4-variant family — different colors,
+  counts, standing/tipped/crushed poses, dried spills — scattered 1-2 per
+  graffiti wall plus loose strays. The two identical drops are gone.
+
+### Fixed
+- The editor's one real warning was real: safehouse-ring fence placement
+  ran through a STANDALONE TERNARY (`_fence_piece(...) if cond else null`)
+  — rewritten as honest conditionals. Three build steps
+  (safehouse ring / gallery / school grounds) awaited functions that never
+  yielded; they are now true time-budgeted coroutines. Intentional iso
+  integer division no longer warns (project setting), so the Errors tab
+  stays meaningful.
+
+### Performance (audit pass, user request)
+- Foliage manager rebuilt on packed arrays with cached static positions
+  and an idle early-out (one distance check per idle bush per frame).
+- Street-lamp night broadcast only fires when the level changes (it ran
+  every frame, all day long).
+- Car alarms early-out when nothing is flashing (was a per-frame group
+  lookup + reflection get); edge guard, car alarms and the power box now
+  cache textures instead of re-`load()`ing per shot/burst.
+- Verified: 240 avg fps, worst frame 4.45 ms (day) / 6.25 ms (storm
+  night), ~5.2k nodes. SMOKE PASS.
+
 ## [0.6.21] — 2026-08-01
 
 ### Changed

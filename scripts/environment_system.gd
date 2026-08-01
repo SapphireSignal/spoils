@@ -34,6 +34,7 @@ const SPLASH_FRAMES := 4
 var day_time := 0.18                # 0..1, start in the morning
 var rain_intensity := 0.0           # 0..1, ramps in and out
 var night_amount := 0.0             # 0 day .. 1 deep night
+var _last_night_broadcast := -1.0   # last value sent to the lamp group
 
 var _raining := false
 var _storm_tint := 0.0              # visual darkening, slower than the rain
@@ -260,7 +261,11 @@ func _process(delta: float) -> void:
 		tint = tint.darkened(0.12 * smoothstep(0.0, 1.0, _storm_tint))
 	_tint.color = tint
 	night_amount = _night_amount_for(day_time)
-	get_tree().call_group("street_lamps", "set_night", night_amount)
+	# broadcast only when the level actually moves — all day and deep
+	# night it's a constant, and lamps gate their own processing off it
+	if absf(night_amount - _last_night_broadcast) > 0.0005:
+		_last_night_broadcast = night_amount
+		get_tree().call_group("street_lamps", "set_night", night_amount)
 
 	# weather state machine — long spells, slow ramps
 	_weather_timer -= delta

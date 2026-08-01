@@ -1971,11 +1971,10 @@ def make_tree(kind: str, variant: int) -> tuple[Canvas, tuple, list]:
 def draw_bush(rng: random.Random, variant: int) -> tuple[Canvas, tuple, list | None]:
     """A leafy clump the player can push through — no collider. The game's
     Foliage manager wiggles it and fades it while you're inside."""
-    # BIG clumps now (user: "make them alot bigger please so the user can
-    # hide in there against enemies or something later") — chest-height
-    # mounds a raider can disappear into, not garnish
-    w = rng.choice((30, 36, 42))
-    h = w // 2 + rng.randint(3, 6)
+    # FULL-HEIGHT clumps (user: the character "can literally fit inside
+    # of it and hide") — taller than the standing sprite, real cover
+    w = rng.choice((40, 46, 52))
+    h = w // 2 + rng.randint(14, 18)
     c = Canvas(w + 8, h + 10)
     cx = c.w // 2
     cy = h // 2 + 4
@@ -1994,13 +1993,13 @@ def draw_bush(rng: random.Random, variant: int) -> tuple[Canvas, tuple, list | N
         elif (x, y + 1) not in pts:
             col = C("10141f")                        # ground shadow rim
         c.set(x, y, col)
-    for i in range(rng.randint(2, 4)):               # leaf-cluster highlights
+    for i in range(rng.randint(4, 7)):               # leaf-cluster highlights
         x = cx + rng.randint(-w // 3, w // 3)
         y = cy + rng.randint(-h // 3, 0)
         c.set(x, y, C("468232"))
         c.set(x + 1, y, C("25562e"))
     if variant == 2:                                 # the berried one
-        for i in range(3):
+        for i in range(5):
             c.set(cx + rng.randint(-w // 3, w // 3),
                   cy + rng.randint(0, h // 3), C("a53030"))
     c.set(cx, cy + h // 2 + 1, C("341c27"))          # a hint of stem
@@ -2027,32 +2026,35 @@ def draw_tuft(rng: random.Random, variant: int) -> tuple[Canvas, tuple, list | N
 
 
 def draw_bench(rng: random.Random, broken: bool) -> tuple[Canvas, tuple, list]:
-    """Street bench along the (2,1) axis: metal frame, worn wood slats."""
-    c = Canvas(48, 40)
-    ox, oy = 8, 16
-    ln = 26
-    for i in range(ln):                              # three seat slats
+    """Street bench along the (2,1) axis: metal frame, worn wood slats.
+    Sized so a seated raider's feet reach the ground (user: bigger)."""
+    c = Canvas(58, 48)
+    ox, oy = 10, 20
+    ln = 32
+    for i in range(ln):                              # four seat slats
         x = ox + i
         by = oy + i // 2
-        for (s, col) in ((0, C("884b2b")), (2, C("602c2c")), (4, C("341c27"))):
-            if broken and s == 2 and 9 < i < 16:
+        for (s, col) in ((0, C("884b2b")), (2, C("602c2c")),
+                         (4, C("341c27")), (6, C("241527"))):
+            if broken and s == 2 and 11 < i < 19:
                 continue                             # a slat kicked out
             c.set(x, by + s // 2, col)
             c.set(x, by + s // 2 + 1 if s == 0 else by + s // 2, col)
-    for i in range(ln):                              # backrest rail
+    for i in range(ln):                              # backrest rails
         x = ox + i
-        c.set(x, oy + i // 2 - 6, C("394a50"))
-        c.set(x, oy + i // 2 - 5, C("202e37"))
+        c.set(x, oy + i // 2 - 9, C("394a50"))
+        c.set(x, oy + i // 2 - 8, C("202e37"))
+        c.set(x, oy + i // 2 - 4, C("394a50"))
     for (px_, lean) in ((ox + 2, 0), (ox + ln - 3, 0)):
         top = oy + (px_ - ox) // 2
-        for k in range(6):                           # legs
-            c.set(px_ + (k // 4 if broken and lean == 0 and px_ > ox + 4 else 0),
-                  top + 3 + k, C("202e37"))
-        c.set(px_, top - 6, C("202e37"))             # back post
-        c.set(px_, top - 4, C("202e37"))
+        for k in range(8):                           # legs
+            c.set(px_ + (k // 5 if broken and lean == 0 and px_ > ox + 4 else 0),
+                  top + 4 + k, C("202e37"))
+        for k in (9, 7, 5):                          # back posts up to the rails
+            c.set(px_, top - k, C("202e37"))
     c.outline_auto()
-    cr, orr = crop_canvas(c, (ox + ln // 2, oy + ln // 4 + 8))
-    return cr, orr, ["diamond", 12.0, 5.0]
+    cr, orr = crop_canvas(c, (ox + ln // 2, oy + ln // 4 + 10))
+    return cr, orr, ["diamond", 15.0, 6.0]
 
 
 def draw_shelter(rng: random.Random, wrecked: bool) -> tuple[Canvas, tuple, list]:
@@ -3378,77 +3380,101 @@ def make_graffiti_wall(variant: int) -> tuple[Canvas, tuple, list]:
     return c, (ox + 18, oy + 9), ["poly",
         [-17.0, -9.0, 17.0, 8.0, 17.0, 12.0, -17.0, -5.0]]
 
-def make_spray_cans() -> tuple[Canvas, tuple, list | None]:
-    """A few spent spray cans where the artist crouched."""
-    rng = random.Random(f"{SEED}:cans")
-    c = Canvas(26, 14)
-    caps = [C("a23e8c"), C("73bed3"), C("a8ca58")]
-    for i in range(3):
-        x = 3 + i * 8 + rng.randrange(2)
-        y = 5 + rng.randrange(3)
-        if i == 2:                             # one still standing
+def make_spray_cans(variant: int) -> tuple[Canvas, tuple, list | None]:
+    """Spent spray cans where an artist crouched — every drop reads
+    different (user: the two placements looked cloned): counts, cap
+    colors, standing/tipped/crushed poses, an odd dried spill."""
+    rng = random.Random(f"{SEED}:cans:{variant}")
+    c = Canvas(32, 18)
+    caps = [C("a23e8c"), C("73bed3"), C("a8ca58"), C("de9e41"),
+            C("cf573c"), C("c65197")]
+    rng.shuffle(caps)
+    spots = [(6, 6), (13, 9), (21, 5), (25, 11), (9, 12)]
+    rng.shuffle(spots)
+    for i in range(rng.randint(2, 4)):
+        x, y = spots[i]
+        pose = rng.randrange(3)
+        if pose == 0:                          # standing
             for k in range(5):
                 c.set(x, y + k - 3, C("819796") if k else caps[i])
                 c.set(x + 1, y + k - 3, C("577277"))
-        else:                                  # tipped
+        elif pose == 1:                        # tipped
+            d = rng.choice((-1, 1))
             for k in range(5):
-                c.set(x + k, y, C("819796") if k > 0 else caps[i])
+                c.set(x + k * d, y, C("819796") if k > 0 else caps[i])
+                c.set(x + k * d, y + 1, C("577277"))
+        else:                                  # crushed flat
+            for k in range(4):
+                c.set(x + k, y, C("819796"))
                 c.set(x + k, y + 1, C("577277"))
+            c.set(x + rng.randrange(4), y - 1, caps[i])
+    if variant % 2:                            # a dried spill by one can
+        sx = min(spots[0][0] + 3, 25)
+        sy = min(spots[0][1] + 2, 13)
+        col = caps[rng.randrange(3)]
+        for dx in range(-2, 3):
+            for dy in range(-1, 2):
+                if abs(dx) + abs(dy) < 3:
+                    c.set(sx + dx, sy + dy, col)
     c.outline_auto()
-    return c, (13, 11), None
+    return c, (16, 14), None
 
 def make_smoker_sheet() -> tuple[Canvas, tuple, list | None]:
     """The gallery regular: seated on a bench, spray can in one hand,
     cigarette in the other. 3 frames: resting, drag (ember hot), exhale.
-    The game overlays him on a bench and drifts smoke wisps up."""
+    Drawn at PLAYER scale (user: "make him the size of me") — seated
+    height ~30px against the 36px standing character."""
     frames = []
     for f in range(3):
-        fc = Canvas(20, 24)
-        cx = 9
-        # legs seated: thighs forward, shins down
-        for k in range(5):
-            fc.set(cx - 2 + k, 15, C("241527"))
-            fc.set(cx - 2 + k, 16, C("241527"))
-        for k in range(5):
-            fc.set(cx + 2, 16 + k, C("241527"))
-            fc.set(cx + 3, 16 + k, C("10141f"))
-        fc.set(cx + 1, 21, C("151d28"))        # boots
-        fc.set(cx + 2, 21, C("151d28"))
-        for y in range(7, 15):                 # torso: worn coat
-            for x in range(cx - 3, cx + 3):
+        fc = Canvas(28, 36)
+        cx = 13
+        # legs seated: thighs forward, shins down to the ground
+        for k in range(8):
+            fc.set(cx - 2 + k, 22, C("241527"))
+            fc.set(cx - 2 + k, 23, C("241527"))
+        for k in range(9):
+            fc.set(cx + 5, 24 + k, C("241527"))
+            fc.set(cx + 6, 24 + k, C("10141f"))
+        for bx in range(cx + 4, cx + 8):       # boots
+            fc.set(bx, 33, C("151d28"))
+        for y in range(11, 22):                # torso: worn coat
+            for x in range(cx - 4, cx + 4):
                 col = C("4d2b32")
-                if x == cx - 3 or y == 14:
+                if x == cx - 4 or y == 21:
                     col = C("341c27")
                 fc.set(x, y, col)
-        for y in range(3, 7):                  # head + beanie
-            for x in range(cx - 2, cx + 2):
-                fc.set(x, y, C("d7b594") if y > 4 else C("151d28"))
-        fc.set(cx + 1, 5, C("341c27"))         # stubble hint
-        # LEFT hand: the spray can resting on the knee
-        fc.set(cx - 4, 13, C("d7b594"))
-        for k in range(3):
-            fc.set(cx - 5, 11 + k, C("819796"))
-        fc.set(cx - 5, 10, C("a23e8c"))        # its cap
+        for y in range(4, 11):                 # head + beanie
+            for x in range(cx - 3, cx + 3):
+                fc.set(x, y, C("d7b594") if y > 6 else C("151d28"))
+        fc.set(cx + 1, 9, C("341c27"))         # stubble hint
+        fc.set(cx + 2, 9, C("341c27"))
+        # LEFT hand: the spray can parked on the seat beside him
+        fc.set(cx - 5, 20, C("d7b594"))
+        fc.set(cx - 6, 20, C("d7b594"))
+        for k in range(5):
+            fc.set(cx - 7, 17 + k, C("819796"))
+            fc.set(cx - 6, 17 + k, C("577277"))
+        fc.set(cx - 7, 16, C("a23e8c"))        # its cap
         # RIGHT hand + cigarette: down (f0), at the mouth (f1), easing (f2)
         if f == 0:
-            fc.set(cx + 3, 13, C("d7b594"))
-            fc.set(cx + 4, 12, C("c7cfcc"))
-            fc.set(cx + 5, 12, C("602c2c"))
+            fc.set(cx + 5, 20, C("d7b594"))
+            fc.set(cx + 6, 19, C("c7cfcc"))
+            fc.set(cx + 7, 19, C("602c2c"))
         elif f == 1:
-            fc.set(cx + 2, 8, C("d7b594"))
-            fc.set(cx + 3, 7, C("c7cfcc"))
-            fc.set(cx + 4, 7, C("cf573c"))     # ember, pulling hot
-        else:
             fc.set(cx + 3, 10, C("d7b594"))
             fc.set(cx + 4, 9, C("c7cfcc"))
-            fc.set(cx + 5, 9, C("de9e41"))     # ember cooling
+            fc.set(cx + 5, 9, C("cf573c"))     # ember, pulling hot
+        else:
+            fc.set(cx + 4, 14, C("d7b594"))
+            fc.set(cx + 5, 13, C("c7cfcc"))
+            fc.set(cx + 6, 13, C("de9e41"))    # ember cooling
         fc.outline_auto()
         frames.append(fc)
-    sheet = Canvas(20 * 3, 24)
+    sheet = Canvas(28 * 3, 36)
     for i, fr in enumerate(frames):
-        sheet.img.alpha_composite(fr.img, (i * 20, 0))
+        sheet.img.alpha_composite(fr.img, (i * 28, 0))
     sheet.px = sheet.img.load()
-    return sheet, (10, 22), None
+    return sheet, (14, 34), None
 
 def make_power_box(axis: str, broken: bool) -> tuple[Canvas, tuple, list | None]:
     """House power box on the wall face. Working: shut lid, meter, conduit.
@@ -3630,7 +3656,8 @@ def prop_inventory() -> tuple[dict, dict]:
         art = make_graffiti_wall(i)
         fam("graffiti_x", i, art)
         fam("graffiti_y", i, mirror_prop(art))
-    props["spray_cans"] = make_spray_cans()
+    for i in range(4):
+        fam("spray_cans", i, make_spray_cans(i))
     props["smoker"] = make_smoker_sheet()
     # house power
     for axis in ("x", "y"):

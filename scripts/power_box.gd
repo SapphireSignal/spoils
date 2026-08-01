@@ -8,6 +8,7 @@ var _spark: Sprite2D
 var _glow: PointLight2D
 var _timer := 0.0
 var _burst_left := 0.0
+var _spark_tex: Array[Texture2D] = []   # cached; not re-fetched mid-burst
 
 
 func setup(box_name: String) -> void:
@@ -17,8 +18,10 @@ func setup(box_name: String) -> void:
 	var info_offset := Vector2(-9, -21)
 	body.offset = info_offset
 	add_child(body)
+	for i in 3:
+		_spark_tex.append(load("res://art/gen/spark_%d.png" % i))
 	_spark = Sprite2D.new()
-	_spark.texture = load("res://art/gen/spark_0.png")
+	_spark.texture = _spark_tex[0]
 	_spark.position = Vector2(-2.0, -9.0)
 	_spark.visible = false
 	add_child(_spark)
@@ -35,7 +38,7 @@ func setup(box_name: String) -> void:
 func _process(delta: float) -> void:
 	if _burst_left > 0.0:
 		_burst_left -= delta
-		_spark.texture = load("res://art/gen/spark_%d.png" % (randi() % 3))
+		_spark.texture = _spark_tex[randi() % 3]
 		_spark.visible = fmod(_burst_left, 0.08) > 0.03
 		_glow.energy = 0.5 if _spark.visible else 0.15
 		if _burst_left <= 0.0:

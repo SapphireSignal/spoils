@@ -7,8 +7,28 @@ This file carries everything a fresh session needs that isn't in those two.
 
 ## Where we are
 
-- **Version v0.6.21 SHIPPED** (25th release on 2026-08-01 — read
-  CHANGELOG.md for v0.6.19/20/21; all same-day). v0.6.20: safehouse
+- **Version v0.6.22 SHIPPED** (26th release on 2026-08-01 — read
+  CHANGELOG.md for v0.6.19/20/21/22; all same-day). **v0.6.22 = THE FIXED
+  MAP** (user call, retroactive to day one: NO procedural rerolls, ever —
+  quests will point at real addresses). DISTRICT_SEED "transit-01" in
+  world_builder.gd IS the district (picked from a 5-seed audition: towns
+  north, rail through the middle industrial belt, school+gallery south,
+  safehouse spawn south-center, autumn grove SE corner); --seed still
+  overrides for tests; builder audited clean of unseeded layout
+  randomness. Also v0.6.22: scrapyard block plans its OWN guaranteed hall
+  (_plan_scrap_hall — the rack line reads as its yard now); walk-in bushes
+  40-52px + the PLAYER fades to 0.5 with the bush (player.hidden_in_bush,
+  foliage RADIUS 28); slow 4-beat whole-px sway w/ per-bush phase; rustle
+  at step volume in / quiet out, 250ms anti-spam gap; smoker at player
+  scale (28x36 frames); benches bigger (4 slats, diamond 15x6 collider);
+  spray_cans_0..3 variant family scattered 1-2 per graffiti wall + 2
+  strays; PERF PASS (foliage → packed arrays + cached static positions +
+  idle early-out, lamp night-broadcast gated on change, car-alarm idle
+  early-out, cached textures in edge_guard/alarms/power_box; 240 avg,
+  worst 4.45ms day / 6.25ms storm-night, ~5.2k nodes); FIXED the
+  standalone-ternary safehouse-fence bug (the editor's one real warning),
+  made 3 fake-coroutine placers really tick, integer-division warning off
+  in project.godot ([debug] section). v0.6.20: safehouse
   spawn (bulletproof placement — probe bands + exhaustive row-walk),
   free-angle cursor driving (max 190, `auto_target` hook for harness/
   future AI), diagonal-parallelogram colliders on all (2,1) vehicles
@@ -29,12 +49,15 @@ This file carries everything a fresh session needs that isn't in those two.
   next = M2 on "go". TRAILER: ffmpeg NOT installed; pitches sent —
   user picks a concept before any build (pipeline: --write-movie PNG
   frames 640x360 → 3x nearest → ffmpeg 1080p60 + davidkbd bed).
-- Watch-list: map size (~100 diamond now), THE MAP window (layout/zoom/
-  tooltips), map-select screen, FREE-ANGLE driving feel + 190 top speed,
-  safehouse spawn, autumn grove, hide-in bush size, collision feel,
-  scrapyard/gallery, smoker read, power-box sparks, prone/standing size,
-  den board text, splash SHATTER pacing, trails width, all sound levels,
-  day length (8-min offer stands), night darkness.
+- Watch-list: THE FIXED transit-01 LAYOUT (if the user dislikes THIS
+  district: audition more seeds, repin — never re-randomize), map size
+  (~100 diamond now), THE MAP window (layout/zoom/tooltips), map-select
+  screen, FREE-ANGLE driving feel + 190 top speed, safehouse spawn,
+  autumn grove, walk-in bush size + hide-fade + rustle level, slow-sway
+  speed, collision feel, scrapyard hall + gallery, smoker player-scale
+  read + bench size, spray-can spread, power-box sparks, prone/standing
+  size, den board text, splash SHATTER pacing, trails width, all sound
+  levels, day length (8-min offer stands), night darkness.
 
 ## OPEN DECISIONS the user owes (next session: act on their pick)
 
@@ -277,9 +300,11 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   none of it). `tools/gen_font.py` (invoked by gen_art) builds the lowercase
   bitmap font. `tools/gen_banner.py` → repo banner.
 - `scripts/world_builder.gd` — 256×256 planned map (ZONED since v0.6.18 —
-  see the systems section above), FRESH SEED PER DEPLOY
-  (build(root, seed_text); harness --seed pins it; ALL randomness through the
-  seeded _rng — `Array.shuffle()` is banned, use `_shuffle()`). Road grid with
+  see the systems section above), **FIXED DISTRICT since v0.6.22**:
+  build() defaults to DISTRICT_SEED ("transit-01"), so every deploy is
+  bit-identical; harness --seed swaps worlds for TESTS ONLY; ALL
+  randomness through the seeded _rng — `Array.shuffle()` is banned, use
+  `_shuffle()` (audited v0.6.22: zero unseeded calls in the layout path). Road grid with
   center dashes both axes, dirt roads, forests + interior groves + lone trees
   on green pockets, ~34 buildings (thin-wall shells, modular roofs, ONE floor
   look per building, interactive Door on a visible side, entrance pockets kept
@@ -428,6 +453,13 @@ then `godot_console --headless --path . --import`.
 
 ## Additional never-regress rules (learned 2026-08-01, the hard way)
 
+- **THE MAP IS FIXED** (user call 2026-08-01, retroactive to day one):
+  one canonical district per map, no procedural rerolls — quests point at
+  real addresses, players learn streets. Layout changes ONLY as
+  deliberate map revisions (new DISTRICT_SEED or builder change →
+  re-audition → changelog). Weather/time (and later loot/AI) stay
+  per-raid random; NEVER let unseeded randomness into the builder's
+  layout path.
 - The user perceives SINGLE 8-bit tint steps of slow full-screen fades: the
   dither film overlay (main.gd, dither.png) exists for this — never remove.
 - Audio taste: SUBTLE always. Rain = quiet smooth wash (no pops — 0.4%%/sample

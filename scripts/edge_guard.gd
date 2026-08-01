@@ -31,6 +31,7 @@ var _rounds: Array[Node2D] = []
 var _round_vel: Array[Vector2] = []
 var _round_age: Array[float] = []
 var _pending: Array[float] = []  # countdowns to the volley's staggered shots
+var _round_tex: Texture2D        # cached once — not re-fetched per shot
 
 
 func setup(player: Player, world: Node2D, map_center: Vector2, barrier_f: float) -> void:
@@ -39,6 +40,7 @@ func setup(player: Player, world: Node2D, map_center: Vector2, barrier_f: float)
 	_map_center = map_center
 	_barrier_f = barrier_f
 	_rng.randomize()
+	_round_tex = load("res://art/gen/sniper_round.png")
 
 	var layer := CanvasLayer.new()
 	layer.layer = 75
@@ -148,7 +150,7 @@ func _spawn_round() -> void:
 
 	var round_node := Node2D.new()
 	round_node.z_index = 70
-	var tex: Texture2D = load("res://art/gen/sniper_round.png")
+	var tex: Texture2D = _round_tex
 	var head := Sprite2D.new()
 	head.texture = tex
 	round_node.add_child(head)

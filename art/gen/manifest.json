@@ -3770,25 +3770,58 @@
         ]
       ]
     },
-    "spray_cans": {
+    "spray_cans_0": {
       "size": [
-        26,
-        14
+        32,
+        18
       ],
       "origin": [
-        13,
-        11
+        16,
+        14
+      ],
+      "collider": null
+    },
+    "spray_cans_1": {
+      "size": [
+        32,
+        18
+      ],
+      "origin": [
+        16,
+        14
+      ],
+      "collider": null
+    },
+    "spray_cans_2": {
+      "size": [
+        32,
+        18
+      ],
+      "origin": [
+        16,
+        14
+      ],
+      "collider": null
+    },
+    "spray_cans_3": {
+      "size": [
+        32,
+        18
+      ],
+      "origin": [
+        16,
+        14
       ],
       "collider": null
     },
     "smoker": {
       "size": [
-        60,
-        24
+        84,
+        36
       ],
       "origin": [
-        10,
-        22
+        14,
+        34
       ],
       "collider": null
     },
@@ -4318,34 +4351,34 @@
     },
     "bush_0": {
       "size": [
-        33,
-        24
+        43,
+        43
       ],
       "origin": [
-        16,
-        22
+        21,
+        40
       ],
       "collider": null
     },
     "bush_1": {
       "size": [
-        39,
-        28
+        49,
+        47
       ],
       "origin": [
-        19,
-        26
+        24,
+        44
       ],
       "collider": null
     },
     "bush_2": {
       "size": [
-        33,
-        25
+        43,
+        41
       ],
       "origin": [
-        16,
-        23
+        21,
+        39
       ],
       "collider": null
     },
@@ -4384,62 +4417,62 @@
     },
     "bench_x_0": {
       "size": [
-        30,
-        30
+        36,
+        39
       ],
       "origin": [
-        15,
-        22
+        18,
+        29
       ],
       "collider": [
         "diamond",
-        12.0,
-        5.0
+        15.0,
+        6.0
       ]
     },
     "bench_y_0": {
       "size": [
-        30,
-        30
+        36,
+        39
       ],
       "origin": [
-        14,
-        22
+        17,
+        29
       ],
       "collider": [
         "diamond",
-        12.0,
-        5.0
+        15.0,
+        6.0
       ]
     },
     "bench_x_1": {
       "size": [
-        30,
-        30
+        36,
+        39
       ],
       "origin": [
-        15,
-        22
+        18,
+        29
       ],
       "collider": [
         "diamond",
-        12.0,
-        5.0
+        15.0,
+        6.0
       ]
     },
     "bench_y_1": {
       "size": [
-        30,
-        30
+        36,
+        39
       ],
       "origin": [
-        14,
-        22
+        17,
+        29
       ],
       "collider": [
         "diamond",
-        12.0,
-        5.0
+        15.0,
+        6.0
       ]
     },
     "shelter_x_0": {
@@ -6721,6 +6754,12 @@
       "graffiti_y_0",
       "graffiti_y_1",
       "graffiti_y_2"
+    ],
+    "spray_cans": [
+      "spray_cans_0",
+      "spray_cans_1",
+      "spray_cans_2",
+      "spray_cans_3"
     ],
     "tree": [
       "tree_0",

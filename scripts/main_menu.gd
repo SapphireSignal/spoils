@@ -66,6 +66,16 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.22", ["the district is fixed now - one map, the same streets",
+		"every raid. learn it: quests will hand out addresses",
+		"the scrapyard got its warehouse back - the racks and",
+		"boxes finally belong to something",
+		"bushes are walk-in cover: taller than you, and you fade",
+		"with the bush so you always know when youre hidden",
+		"the rummage is slow and lazy now, and the rustle carries",
+		"the gallery regular is your size, on benches built for",
+		"grown raiders - and his spray cans differ drop to drop",
+		"under the hood: leaner frames, one real fence bug dead"]],
 	["v0.6.21", ["the bushes grew up - big enough to disappear into",
 		"(hiding from people in them comes with the people)",
 		"half the woods turned: an autumn grove of orange oaks",

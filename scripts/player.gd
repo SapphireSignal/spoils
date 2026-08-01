@@ -35,6 +35,8 @@ var dead := false
 var floor_lift := 0.0           # sprite+camera rise while on a second story
 var upstairs := false           # gates ground-floor doors while up there
 var driving: DriveableCar = null
+var hidden_in_bush := false     # Foliage sets it; the sprite fades so the
+                                # player can READ their own concealment
 
 var _sprite: Sprite2D
 var _shadow: Sprite2D
@@ -236,6 +238,12 @@ func _process(delta: float) -> void:
 			_step_zoom(1)
 		elif Input.is_action_just_pressed("zoom_out"):
 			_step_zoom(-1)
+
+	# hidden in a bush: raider fades like the bush does, so concealment
+	# is readable at a glance (user request). Same ramp speed as foliage.
+	var hide_a := 0.5 if (hidden_in_bush and not dead) else 1.0
+	_sprite.modulate.a = move_toward(_sprite.modulate.a, hide_a, delta * 4.0)
+	_shadow.modulate.a = _sprite.modulate.a
 
 	_update_camera(delta)
 	_animate(input_vec, delta)
