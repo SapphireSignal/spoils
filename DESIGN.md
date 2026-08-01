@@ -233,4 +233,11 @@ Claude must prove its own work without the user:
 5. **The living raid (v1.0):** human-like "fake player" bots, dynamic lighting pass,
    trader — then iterate on user playtests.
 6. **Quests (v1.1):** trader tasks (fetch / kill / extract-with), rewards, unlocks.
-7. **A second map (v1.2):** new district, new biome, new extraction geometry.
+7. **A second map (v1.2):** the next district off mara's board — see
+   LORE.md §3 for full map canon. HARD RULE (user call 2026-08-01): every
+   map is structurally NOTHING like transit (no roads/houses/warehouses/
+   tunnels reruns) and built for massive scale and depth: the mills = one
+   colossal continuous interior (halls/catwalks/furnaces), harbor = water
+   as the map (piers/container canyons/ships/rowboat crossings), old
+   ward = alley warren + courtyards + the rooftop road. The spires =
+   end-game, unnumbered.
