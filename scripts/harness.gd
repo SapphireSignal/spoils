@@ -235,10 +235,13 @@ func _smoke() -> void:
 			failures.append("player did not end up driving after enter()")
 		else:
 			car.engine_on = true
-			car.following = true   # cursor-follow: chases the pointer at speed
+			car.following = true
+			# headless has no real cursor — aim the chase somewhere far
+			car.auto_target = car.global_position + Vector2(400.0, 200.0)
 			var car_start := car.global_position
 			await get_tree().create_timer(1.0).timeout
 			car.following = false
+			car.auto_target = Vector2.INF
 			if car.global_position.distance_to(car_start) < 40.0:
 				failures.append("car barely moved while following (%.1f px)" %
 					car.global_position.distance_to(car_start))
@@ -446,8 +449,9 @@ func _perf_deploy() -> void:
 
 
 func _shot_splash(shot_name: String) -> void:
-	## Capture the studio splash mid-animation (the beam sweep).
-	await get_tree().create_timer(1.6).timeout
+	## Capture the studio splash mid-animation (just after the shatter:
+	## the revealed signal, its rings, the last shards).
+	await get_tree().create_timer(2.4).timeout
 	var image := get_viewport().get_texture().get_image()
 	var dir := ProjectSettings.globalize_path("res://shots")
 	DirAccess.make_dir_recursive_absolute(dir)

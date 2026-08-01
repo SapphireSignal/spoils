@@ -8,7 +8,7 @@ extends CharacterBody2D
 ## so the camera weld stays shimmer-free at any zoom. Broken-into cars
 ## never become one of these — they stay the static props they are.
 
-const MAX_SPEED := 260.0
+const MAX_SPEED := 190.0        # brisk, not a rocket (user: "way too fast")
 const ACCEL := 220.0
 const BRAKE := 340.0
 const COAST := 150.0            # engine braking while idling down
@@ -27,19 +27,38 @@ const EXIT_OFFSET := {
 }
 
 var heading := "nw"
-var index := 0                  # family variant index (intact: 0..2)
+var index := 0                  # family variant index (intact ones drive)
 var driven := false
 var engine_on := false
 var following := false          # left click toggles cursor-follow
 var speed := 0.0
+var auto_target := Vector2.INF  # harness/AI override for the cursor point
+var _drive_dir := Vector2.ZERO  # free-angle motion vector (cursor chase)
 
 var _sprite: Sprite2D
+var _poly: CollisionPolygon2D
 var _manifest: Dictionary = {}
 var _player: Player
 var _busy := false              # a door swing is in flight
 var _turn_left := 0.0
 var _click_held := false
 var _lights: Array[PointLight2D] = []
+
+
+func _collider_points(variant: String) -> PackedVector2Array:
+	# each heading's manifest entry carries the correctly-flipped poly for
+	# its diagonal (turning 90 degrees swaps diagonals — the shape must too)
+	var spec: Array = (_manifest["props"][variant] as Dictionary)["collider"]
+	var points := PackedVector2Array()
+	if spec[0] == "poly":
+		var flat: Array = spec[1]
+		for i in range(0, flat.size(), 2):
+			points.append(Vector2(float(flat[i]), float(flat[i + 1])))
+	else:
+		points = PackedVector2Array([
+			Vector2(0, -float(spec[2])), Vector2(float(spec[1]), 0),
+			Vector2(0, float(spec[2])), Vector2(-float(spec[1]), 0)])
+	return points
 
 
 func _init() -> void:
@@ -54,12 +73,9 @@ func setup(start_variant: String, start_heading: String, manifest: Dictionary) -
 	_sprite.centered = false
 	add_child(_sprite)
 	_apply_variant(_base_variant_name())
-	var poly := CollisionPolygon2D.new()
-	var spec: Array = (_manifest["props"][_base_variant_name()] as Dictionary)["collider"]
-	poly.polygon = PackedVector2Array([
-		Vector2(0, -float(spec[2])), Vector2(float(spec[1]), 0),
-		Vector2(0, float(spec[2])), Vector2(-float(spec[1]), 0)])
-	add_child(poly)
+	_poly = CollisionPolygon2D.new()
+	_poly.polygon = _collider_points(_base_variant_name())
+	add_child(_poly)
 	for i in 2:                 # headlights, dark until E
 		var light := PointLight2D.new()
 		light.texture = load("res://art/gen/light_cone.png")
@@ -160,33 +176,35 @@ func _process(delta: float) -> void:
 		following = false
 
 	if following:
-		var to_cursor := get_global_mouse_position() - global_position
+		var chase := get_global_mouse_position() if auto_target.x == INF \
+			else auto_target
+		var to_cursor := chase - global_position
 		if to_cursor.length() < ARRIVE_DIST:
 			speed = move_toward(speed, 0.0, BRAKE * delta)   # you're there
 		else:
-			# steer: step the heading toward whichever baked facing points
-			# most at the cursor, one 90-degree notch per cooldown
+			# FREE-ANGLE drive (user: "it can move around freely right?"):
+			# the car moves on the true cursor vector; the sprite just
+			# shows whichever of its four baked facings fits best
+			_drive_dir = to_cursor.normalized()
 			_turn_left -= delta
 			var want := ""
 			var best_dot := -2.0
 			for h in HEADINGS:
-				var d := (DIRS[h] as Vector2).normalized().dot(to_cursor.normalized())
+				var d := (DIRS[h] as Vector2).normalized().dot(_drive_dir)
 				if d > best_dot:
 					best_dot = d
 					want = h
 			if want != heading and _turn_left <= 0.0:
 				_turn_left = TURN_COOLDOWN
-				var hi := HEADINGS.find(heading)
-				var wi := HEADINGS.find(want)
-				var step := 1 if wrapi(wi - hi, 0, 4) <= 2 else -1
-				heading = HEADINGS[wrapi(hi + step, 0, 4)]
+				heading = want
 				_apply_variant(_base_variant_name())
+				_poly.set_deferred("polygon", _collider_points(_base_variant_name()))
 				_aim_lights()
 			speed = move_toward(speed, MAX_SPEED, ACCEL * delta)
 	else:
 		speed = move_toward(speed, 0.0, COAST * delta)
 
-	velocity = (DIRS[heading] as Vector2) * speed
+	velocity = _drive_dir * speed
 	move_and_slide()
 	if get_slide_collision_count() > 0:
 		speed *= 0.35           # you hit something; the car noticed

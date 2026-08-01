@@ -19,7 +19,7 @@ const FOG_COUNT := 32               # dawn fog puffs alive at once, near view
 const FOG_ALPHA_MAX := 0.5          # clearly visible — still never a wall
 const FOG_FADE_IN := 3.5            # long breathe-in — puffs must never pop
 const FOG_TEX_COUNT := 5            # small wisps + the big banks (fog_3/4)
-const LEAF_COUNT := 22              # falling leaves alive at once
+const LEAF_COUNT := 36              # falling leaves alive at once
 
 const DROP_COUNT := 240
 const SPLASH_COUNT := 220
@@ -419,7 +419,9 @@ func _update_leaves(delta: float) -> void:
 					_leaf_near.append(ti)
 	_leaf_timer -= delta
 	if _leaf_timer <= 0.0 and not _leaf_near.is_empty():
-		_leaf_timer = randf_range(0.5, 1.4)
+		# quick drip: with half the greenery shedding, several visible
+		# trees should be dropping at any moment (user call)
+		_leaf_timer = randf_range(0.22, 0.55)
 		var tree := _leaf_trees[_leaf_near[randi_range(0, _leaf_near.size() - 1)]]
 		for i in LEAF_COUNT:
 			if not _leaf_state[i]["active"]:

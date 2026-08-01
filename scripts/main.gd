@@ -220,10 +220,20 @@ func _on_stairs_used(index: int) -> void:
 		_set_upper_state(index, false)
 		_player_upper = -1
 		_player.floor_lift = 0.0
+		_player.upstairs = false
 	elif _player_upper == -1:
 		_set_upper_state(index, true)
 		_player_upper = index
 		_player.floor_lift = float(world_info.get("story_h", 32))
+		_player.upstairs = true
+		# the ground door is on the GROUND floor: shut it behind you so the
+		# doorway can't leak you outside mid-air (user walked out of one)
+		var cells: Rect2i = (_uppers[index] as Dictionary)["cells"]
+		for node in get_tree().get_nodes_in_group("doors"):
+			var door := node as Door
+			var door_cell := _floor_layer.local_to_map(door.global_position)
+			if cells.grow(2).has_point(door_cell) and door.is_open():
+				door.toggle()
 
 
 func _set_upper_state(index: int, up: bool) -> void:
@@ -248,12 +258,13 @@ func _update_prompt() -> void:
 		return
 	var best: Node2D = null
 	var best_d := 30.0 * 30.0
-	for node in get_tree().get_nodes_in_group("doors"):
-		var d := (node as Node2D).global_position.distance_squared_to(
-			_player.global_position)
-		if d < best_d:
-			best_d = d
-			best = node
+	if not _player.upstairs:   # no door prompts on the second floor
+		for node in get_tree().get_nodes_in_group("doors"):
+			var d := (node as Node2D).global_position.distance_squared_to(
+				_player.global_position)
+			if d < best_d:
+				best_d = d
+				best = node
 	for node in get_tree().get_nodes_in_group("stairs"):
 		var d := (node as Node2D).global_position.distance_squared_to(
 			_player.global_position)
@@ -356,6 +367,7 @@ func _on_player_died() -> void:
 		_set_upper_state(_player_upper, false)
 		_player_upper = -1
 		_player.floor_lift = 0.0
+		_player.upstairs = false
 	if _player.driving != null:  # death at the wheel leaves the car behind
 		_player.driving.driven = false
 		_player.driving = null

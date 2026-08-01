@@ -105,8 +105,8 @@ func play_crack() -> void:
 	_play(_crack)
 
 
-func play_click() -> void:
-	_play(_click)
+func play_click(quiet: bool = false) -> void:
+	_play(_click, -20.0 if quiet else -8.0)
 
 
 func play_splash_ping(quiet: bool = false) -> void:
@@ -167,6 +167,9 @@ func set_rain(intensity: float) -> void:
 var _engine_player: AudioStreamPlayer
 var _car_player: AudioStreamPlayer
 var _engine_db := -60.0
+var _engine_target := 0.0   # intensity 0..1; Sfx slews it DOWN on its own
+                            # (the loop once played forever after an exit —
+                            # nobody was calling set_engine anymore)
 
 func play_car_door(open: bool) -> void:
 	# STANDING RULE (user, after asking for the third time): every NEW
@@ -190,32 +193,38 @@ func play_engine_off() -> void:
 
 
 func set_engine(intensity: float) -> void:
-	# the driving bed: quiet rumble that follows the throttle, slewed like
-	# the rain wash so it never pops (subtle always — user taste)
-	var want_on := intensity > 0.02
-	var target := -60.0
-	if want_on:
-		target = lerpf(-38.0, -28.0, clampf(intensity, 0.0, 1.0))
-	_engine_db = move_toward(_engine_db, target, get_process_delta_time() * 8.0)
-	if want_on and not _engine_player.playing:
+	# callers just declare the throttle; the slew/stop lives in _process so
+	# the bed ALWAYS winds down even if the caller goes quiet
+	_engine_target = clampf(intensity, 0.0, 1.0)
+	if _engine_target > 0.02 and not _engine_player.playing:
 		_engine_db = -60.0
 		_engine_player.stream = _car_engine_loop
 		_engine_player.play()
-	elif not want_on and _engine_player.playing and _engine_db <= -58.0:
+
+
+func _process(delta: float) -> void:
+	if _engine_player == null or not _engine_player.playing:
+		return
+	var want_on := _engine_target > 0.02
+	var target := -60.0
+	if want_on:
+		target = lerpf(-38.0, -28.0, _engine_target)
+	_engine_db = move_toward(_engine_db, target, delta * 8.0)
+	if not want_on and _engine_db <= -58.0:
 		_engine_player.stop()
-	if _engine_player.playing:
-		_engine_player.volume_db = _engine_db
-		_engine_player.pitch_scale = 0.9 + 0.35 * clampf(intensity, 0.0, 1.0)
+		return
+	_engine_player.volume_db = _engine_db
+	_engine_player.pitch_scale = 0.9 + 0.35 * _engine_target
 
 
 func alarm_stream() -> AudioStreamWAV:
 	return _alarm  # null until the background render lands — callers skip
 
 
-func _play(stream: AudioStreamWAV) -> void:
+func _play(stream: AudioStreamWAV, db: float = -8.0) -> void:
 	var player := _players[_next]
 	_next = (_next + 1) % _players.size()
-	player.volume_db = -8.0
+	player.volume_db = db
 	player.stream = stream
 	player.play()
 

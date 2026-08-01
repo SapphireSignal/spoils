@@ -90,6 +90,7 @@ var _gallery_rect := Rect2i()        # the graffiti gallery corner
 var _scrap_rect := Rect2i()          # the scrapyard block
 var _map_marks: Array = []           # [cell, kind] static marks for the map
 var _spark_house := -1               # which house got the broken power box
+var _safehouse_rect := Rect2i()      # the spawn safehouse
 var _uppers: Array[Dictionary] = []  # second-story registries for main.gd
 var _cars: Array[Dictionary] = []    # driveable car records for main.gd
 
@@ -131,6 +132,7 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 	await _place_trainyard()
 	await _place_depot()
 	await _place_comms()
+	await _place_safehouse_ring()
 	await _place_gallery()
 	await _place_scrapyard()
 	await _place_power_boxes()
@@ -191,6 +193,8 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 				_gallery_rect.size.x, _gallery_rect.size.y],
 			"scrapyard": [_scrap_rect.position.x, _scrap_rect.position.y,
 				_scrap_rect.size.x, _scrap_rect.size.y],
+			"safehouse": [_safehouse_rect.position.x, _safehouse_rect.position.y,
+				_safehouse_rect.size.x, _safehouse_rect.size.y],
 			"rail_row": _rail_row,
 		},
 	}
@@ -509,6 +513,7 @@ func _plan_plots() -> void:
 	# around the courtyard, the industrial halls own the WAREHOUSE block,
 	# the SCHOOL gets its two-story building over a playground half, and
 	# the DEPOT block reserves its bus apron. No more uniform sprawl.
+	_plan_safehouse()
 	var court_placed := false
 	for b in _zones:
 		match _zones[b]:
@@ -521,8 +526,10 @@ func _plan_plots() -> void:
 				_plan_school_block(b)
 			"depot":
 				_plan_depot_block(b)
-			"open":
+			"forest":
 				_plan_comms_corner(b)
+			"open":
+				_plan_gallery_corner(b)
 	# one house per district gets the sparking power box (quest fodder)
 	var house_indices: Array[int] = []
 	for i in _plots.size():
@@ -537,13 +544,9 @@ func _plan_plots() -> void:
 		plot["door_cell"] = cell
 		plot["door_out"] = cell + (_DOOR_OUTWARD[plot["door_side"]] as Vector2i) * 2
 	_plan_house_paths()
-	# spawn: on the courtyard's south lip — you wake up in town
-	_spawn_cell = Vector2i(_court_rect.get_center().x, _court_rect.end.y + 2)
-	var guard := 0
-	while (_on_road(_spawn_cell) or _forest.has(_spawn_cell)
-			or _plaza.has(_spawn_cell)) and guard < 40:
-		_spawn_cell += Vector2i(1, 1)
-		guard += 1
+	# spawn: INSIDE the safehouse, dead center, every raid (user call — the
+	# roaming spawn once put them behind a bookshelf)
+	_spawn_cell = _safehouse_rect.grow(-1).get_center()
 
 
 func _plan_house_paths() -> void:
@@ -600,6 +603,109 @@ func _walk_dirt_path(from: Vector2i, to: Vector2i) -> void:
 			_dirt_path[cell] = true
 
 
+func _plan_safehouse() -> void:
+	# the SAFEHOUSE: the same squat house near the map's south edge every
+	# raid, ringed with barriers — where every deploy begins
+	var size := Vector2i(7, 6)
+	# just NORTH of the southmost road: "near the bottom" without landing
+	# on the road band or its sidewalks (the first probe row did exactly
+	# that and thirty x-shifts never escaped it)
+	var base_y: int = _roads_h[ROAD_COUNT - 1].x - size.y - 4
+	var base_x: int = MAP_W / 2
+	var placed := false
+	for probe in 240:
+		var dx := ((probe % 30) / 2 + 1) * (1 if probe % 2 == 0 else -1) * 2
+		var dy := -3 * (probe / 30)   # climb north band by band — a rail
+		var pos := Vector2i(base_x + dx - size.x / 2, base_y + dy)
+		var rect := Rect2i(pos, size)  # line can cross several of them
+		var blocked := false
+		for y in range(rect.position.y - 2, rect.end.y + 3):
+			for x in range(rect.position.x - 2, rect.end.x + 3):
+				var cell := Vector2i(x, y)
+				if _on_road(cell) or _rail_cells.has(cell) \
+						or _ballast.has(cell) or _sidewalk.has(cell) \
+						or _plaza.has(cell) or _apron.has(cell):
+					blocked = true
+					break
+			if blocked:
+				break
+		if blocked:
+			continue
+		if _comms_rect.grow(2).intersects(rect) \
+				or _gallery_rect.grow(2).intersects(rect) \
+				or _depot_rect.grow(2).intersects(rect) \
+				or _court_rect.grow(2).intersects(rect):
+			continue
+		_claim_building_ground(rect.grow(2))
+		_safehouse_rect = rect
+		_plots.append({
+			"rect": rect, "kind": "house",
+			"style": "brick_b",
+			"tone": "pitch",
+			"ruined": false,
+			"stories": 1,
+			"safehouse": true,
+			"door_side": "yp",
+			"door_out": Vector2i(-99, -99),
+		})
+		placed = true
+		break
+	if not placed:
+		# exhaustive sweep: walk north row by row, first clear slot wins —
+		# a seed once landed rail+court+depot across every probe band and
+		# left the spawn at the map corner (sniper country)
+		var y := base_y
+		while not placed and y > BARRIER_INSET + 6:
+			var x := BARRIER_INSET + 4
+			while not placed and x < MAP_W - BARRIER_INSET - size.x - 4:
+				var rect := Rect2i(Vector2i(x, y), size)
+				var blocked := false
+				for sy in range(rect.position.y - 2, rect.end.y + 3):
+					for sx in range(rect.position.x - 2, rect.end.x + 3):
+						var cell := Vector2i(sx, sy)
+						if _on_road(cell) or _rail_cells.has(cell) 								or _ballast.has(cell) or _sidewalk.has(cell) 								or _plaza.has(cell) or _apron.has(cell):
+							blocked = true
+							break
+					if blocked:
+						break
+				if not blocked:
+					_claim_building_ground(rect.grow(2))
+					_safehouse_rect = rect
+					_plots.append({
+						"rect": rect, "kind": "house",
+						"style": "brick_b", "tone": "pitch",
+						"ruined": false, "stories": 1, "safehouse": true,
+						"door_side": "yp", "door_out": Vector2i(-99, -99),
+					})
+					placed = true
+				x += 3
+			y -= 3
+
+
+func _place_safehouse_ring() -> void:
+	# barriers and pylons around the spawn house; the door side stays open
+	if _safehouse_rect.size.x == 0:
+		return
+	var ring := _safehouse_rect.grow(2)
+	var door_out := Vector2i(-99, -99)
+	for plot in _plots:
+		if plot.get("safehouse", false):
+			door_out = plot["door_out"]
+	for x in range(ring.position.x, ring.end.x, 2):
+		if absi(x - door_out.x) > 2:
+			_fence_piece(Vector2i(x, ring.position.y), "x")
+		_fence_piece(Vector2i(x, ring.end.y - 1), "x") if absi(x - door_out.x) > 2 \
+			or ring.end.y - 1 != door_out.y + 1 else null
+	for y in range(ring.position.y + 1, ring.end.y - 1, 2):
+		_fence_piece(Vector2i(ring.position.x, y), "y")
+		_fence_piece(Vector2i(ring.end.x - 1, y), "y")
+	for corner in [ring.position, Vector2i(ring.end.x - 1, ring.position.y),
+			Vector2i(ring.position.x, ring.end.y - 1), ring.end - Vector2i(1, 1)]:
+		if not _occupied.has(corner):
+			_add_prop_at_cell("pillar_%d" % _rng.randi_range(0, 1), corner,
+				Vector2(3, 2))
+
+
 func _plan_town_block(b: Vector2i, with_court: bool) -> void:
 	var r: Rect2i = _block_rects[b]
 	if with_court:
@@ -643,6 +749,10 @@ func _plan_town_block(b: Vector2i, with_court: bool) -> void:
 
 
 func _plan_warehouse_block(b: Vector2i) -> void:
+	# the hall is the POINT of this block: placement is GUARANTEED. A dirt
+	# trail is no reason not to build (the slab just covers it), and if the
+	# rolls all fail, the hall goes down at the block's center anyway —
+	# racks in the open with no warehouse was the bug the user screenshotted.
 	var r: Rect2i = _block_rects[b]
 	var placed := 0
 	var attempts := 0
@@ -658,8 +768,9 @@ func _plan_warehouse_block(b: Vector2i) -> void:
 			_rng.randi_range(r.position.x, r.end.x - size.x),
 			_rng.randi_range(r.position.y, r.end.y - size.y))
 		var rect := Rect2i(pos, size)
-		if not _rect_clear(rect.grow(2)):
+		if not _rect_clear_for_building(rect.grow(2)):
 			continue
+		_claim_building_ground(rect)
 		_plots.append({
 			"rect": rect, "kind": "warehouse",
 			"style": "brick_a" if _rng.randf() < 0.5 else "brick_b",
@@ -670,6 +781,55 @@ func _plan_warehouse_block(b: Vector2i) -> void:
 			"door_out": Vector2i(-99, -99),
 		})
 		placed += 1
+	if placed == 0:
+		var size := Vector2i(mini(13, r.size.x - 2), mini(9, r.size.y - 2))
+		var pos := r.position + (r.size - size) / 2
+		if _rail_row >= r.position.y - 2 and _rail_row <= r.end.y + 2:
+			# dodge the rail line if it cuts this block
+			if _rail_row <= r.get_center().y:
+				pos.y = mini(r.end.y - size.y, _rail_row + 3)
+			else:
+				pos.y = maxi(r.position.y, _rail_row - size.y - 3)
+		var rect := Rect2i(pos, size)
+		_claim_building_ground(rect)
+		_plots.append({
+			"rect": rect, "kind": "warehouse",
+			"style": "brick_b",
+			"tone": "pitch",
+			"ruined": false,
+			"stories": 1,
+			"door_side": "yp",
+			"door_out": Vector2i(-99, -99),
+		})
+
+
+func _rect_clear_for_building(rect: Rect2i) -> bool:
+	# like _rect_clear but dirt trails don't block — the building just
+	# covers them (they get erased at claim time)
+	for y in range(rect.position.y, rect.end.y):
+		for x in range(rect.position.x, rect.end.x):
+			var cell := Vector2i(x, y)
+			if _on_road(cell) or _forest.has(cell) \
+					or _rail_cells.has(cell) or _ballast.has(cell) \
+					or _plaza.has(cell) or _apron.has(cell) \
+					or _sidewalk.has(cell):
+				return false
+	for plot in _plots:
+		if (plot["rect"] as Rect2i).grow(2).intersects(rect):
+			return false
+	for yard in _yards:
+		if yard.grow(2).intersects(rect):
+			return false
+	return true
+
+
+func _claim_building_ground(rect: Rect2i) -> void:
+	# the slab wins: trails and stray green under a footprint get erased
+	for y in range(rect.position.y - 1, rect.end.y + 1):
+		for x in range(rect.position.x - 1, rect.end.x + 1):
+			var cell := Vector2i(x, y)
+			_dirt_path.erase(cell)
+			_forest.erase(cell)
 
 
 func _plan_school_block(b: Vector2i) -> void:
@@ -713,8 +873,9 @@ func _plan_depot_block(b: Vector2i) -> void:
 
 
 func _plan_comms_corner(b: Vector2i) -> void:
-	# the open block hosts BOTH small compounds: the relay in one corner,
-	# the graffiti gallery in the opposite one
+	# the relay lives at the WOODS' edge now (user: "near some empty space
+	# ... by some trees at least") — a clearing carved from a forest-block
+	# corner, trees crowding its fence
 	var r: Rect2i = _block_rects[b]
 	var cw := mini(9, r.size.x - 3)
 	var ch := mini(9, r.size.y - 3)
@@ -728,10 +889,16 @@ func _plan_comms_corner(b: Vector2i) -> void:
 	for y in range(_comms_rect.position.y, _comms_rect.end.y):
 		for x in range(_comms_rect.position.x, _comms_rect.end.x):
 			_forest.erase(Vector2i(x, y))
+
+
+func _plan_gallery_corner(b: Vector2i) -> void:
+	# the gallery keeps a corner of the open block
+	var r: Rect2i = _block_rects[b]
 	var gw := mini(10, r.size.x - 3)
 	var gh := mini(8, r.size.y - 3)
+	var corner := _rng.randi_range(0, 3)
 	var gpos := r.position + Vector2i(1, 1)
-	match (corner + 3) % 4:      # the opposite-ish corner
+	match corner:
 		1: gpos = Vector2i(r.end.x - gw - 1, r.position.y + 1)
 		2: gpos = Vector2i(r.position.x + 1, r.end.y - gh - 1)
 		3: gpos = Vector2i(r.end.x - gw - 1, r.end.y - gh - 1)
@@ -939,7 +1106,7 @@ func _add_prop_at_cell(prop_name: String, cell: Vector2i,
 
 func _maybe_arm_car(variant: String, node: Node2D) -> void:
 	# 50/50 on INTACT cars only — broken-into ones were stripped long ago
-	if variant.ends_with("_3") or variant.ends_with("_4"):
+	if variant.ends_with("_5") or variant.ends_with("_6"):
 		return
 	if _rng.randf() < 0.5:
 		var info: Dictionary = _manifest["props"][variant]
@@ -1133,18 +1300,33 @@ func _build_shell(plot: Dictionary) -> void:
 	if stories == 2:
 		# a full cell in from every wall: the flight's art is wider than one
 		# cell and poked through the west facade when it hugged the corner
-		stairs_cell = Vector2i(
-			interior.position.x + mini(2, maxi(1, interior.size.x - 2)),
-			interior.position.y + mini(2, maxi(1, interior.size.y - 2)))
-		if stairs_cell in pocket:
-			stairs_cell = Vector2i(maxi(interior.position.x + 1, interior.end.x - 3),
-				interior.position.y + mini(2, maxi(1, interior.size.y - 2)))
+		var stair_corners: Array[Vector2i] = [
+			interior.position + Vector2i(1, 1),
+			Vector2i(interior.end.x - 2, interior.position.y + 1),
+			Vector2i(interior.position.x + 1, interior.end.y - 2),
+			interior.end - Vector2i(2, 2),
+		]
+		stairs_cell = stair_corners[0]
+		for cand in stair_corners:
+			if cand not in pocket:
+				stairs_cell = cand
+				break
 		pocket.append(stairs_cell)
 		pocket.append(stairs_cell + Vector2i(0, 1))   # the approach stays clear
 		pocket.append(stairs_cell + Vector2i(1, 0))
 
 	var ground_props: Array[Node2D] = []
-	if kind == "house":
+	if plot.get("safehouse", false):
+		# the safehouse: one couch, one crate, and ROOM — the center cell
+		# is the spawn and stays clear forever
+		var couch_cell := Vector2i(interior.position.x + 1, interior.position.y + 1)
+		if couch_cell not in pocket:
+			ground_props.append(_add_prop_at_cell("couch", couch_cell, Vector2(4, 2)))
+		var crate_cell := Vector2i(interior.end.x - 2, interior.position.y + 1)
+		if crate_cell not in pocket:
+			ground_props.append(_add_prop_at_cell(
+				"crate_%d" % _rng.randi_range(0, 5), crate_cell, Vector2(4, 2)))
+	elif kind == "house":
 		_furnish_house(interior, pocket, ground_props)
 	elif kind == "school":
 		_furnish_school(interior, pocket, ground_props)
@@ -1435,7 +1617,7 @@ func _place_yards() -> void:
 			var stall_cell: Vector2i = stall_cells[i - 1]
 			var stall_pos := _floor_layer.map_to_local(stall_cell) + Vector2(
 				_rng.randf_range(-6.0, 6.0), _rng.randf_range(-3.0, 3.0))
-			if stall_variant.ends_with("_3") or stall_variant.ends_with("_4"):
+			if stall_variant.ends_with("_5") or stall_variant.ends_with("_6"):
 				_add_prop(stall_variant, stall_pos)
 				_occupied[stall_cell] = true
 			else:
@@ -1681,7 +1863,7 @@ func _place_scrapyard() -> void:
 				var variant := _pick_variant(fam)
 				var pos := _floor_layer.map_to_local(cell) + Vector2(
 					_rng.randf_range(-4.0, 4.0), _rng.randf_range(-2.0, 2.0))
-				if variant.ends_with("_3") or variant.ends_with("_4"):
+				if variant.ends_with("_5") or variant.ends_with("_6"):
 					_add_prop(variant, pos)
 					_occupied[cell] = true
 				else:
@@ -1916,8 +2098,10 @@ func _place_foliage() -> void:
 				or _cell_inset(cell) < BARRIER_INSET:
 			continue
 		if _rng.randf() < 0.06:
-			_bush_nodes.append(_add_prop_at_cell(_pick_variant("bush"),
-				cell as Vector2i, Vector2(12, 6)))
+			var forest_bush := _add_prop_at_cell(_pick_variant("bush"),
+				cell as Vector2i, Vector2(12, 6))
+			_bush_nodes.append(forest_bush)
+			_maybe_shed_bush(forest_bush)
 	for plot in _plots:
 		var ring: Rect2i = (plot["rect"] as Rect2i).grow(1)
 		for i in _rng.randi_range(2, 5):
@@ -1929,8 +2113,10 @@ func _place_foliage() -> void:
 					or _forest.has(cell) or _near_a_door(cell) \
 					or (plot["rect"] as Rect2i).has_point(cell):
 				continue
-			_bush_nodes.append(_add_prop_at_cell(_pick_variant("bush"),
-				cell, Vector2(8, 4)))
+			var ring_bush := _add_prop_at_cell(_pick_variant("bush"),
+				cell, Vector2(8, 4))
+			_bush_nodes.append(ring_bush)
+			_maybe_shed_bush(ring_bush)
 
 
 func _fill_dead_spots() -> void:
@@ -1962,8 +2148,10 @@ func _fill_dead_spots() -> void:
 			if roll < 0.22:
 				_add_prop_at_cell(_pick_variant("tuft"), cell, Vector2(14, 7))
 			elif roll < 0.28:
-				_bush_nodes.append(_add_prop_at_cell(_pick_variant("bush"),
-					cell, Vector2(10, 5)))
+				var spot_bush := _add_prop_at_cell(_pick_variant("bush"),
+					cell, Vector2(10, 5))
+				_bush_nodes.append(spot_bush)
+				_maybe_shed_bush(spot_bush)
 			elif roll < 0.33:
 				_add_prop_at_cell(_pick_variant("trash"), cell, Vector2(12, 6))
 
@@ -2084,7 +2272,7 @@ func _add_lamp(cell: Vector2i) -> void:
 	var lamp := StreetLamp.new()
 	var shape := CollisionShape2D.new()
 	var circle := CircleShape2D.new()
-	circle.radius = 2.0
+	circle.radius = 3.5   # a pole you actually bump into (user: collision)
 	shape.shape = circle
 	lamp.add_child(shape)
 	lamp.add_child(_prop_sprite(lamp_name))
@@ -2112,11 +2300,17 @@ func _place_trees() -> void:
 
 
 func _maybe_shed_leaves(variant: String, node: Node2D) -> void:
-	# only the leafy oaks (tree_4..6), and only a QUARTER of them — every
-	# tree shedding would look weird (user call)
-	var idx := int(variant.trim_prefix("tree_"))
-	if idx >= 4 and idx <= 6 and _rng.randf() < 0.25:
+	# HALF of every tree sheds now (user upgraded the ask twice: from a
+	# few oaks to "half of all the bushes/trees" on screen)
+	assert(variant != "")
+	if _rng.randf() < 0.5:
 		_leaf_trees.append(node.position + Vector2(0, -30.0))
+
+
+func _maybe_shed_bush(node: Node2D) -> void:
+	# bushes join in, dropping from lower crowns
+	if _rng.randf() < 0.5:
+		_leaf_trees.append(node.position + Vector2(0, -10.0))
 
 
 func _place_lone_trees() -> void:
@@ -2201,7 +2395,7 @@ func _place_road_vehicles() -> void:
 		var pos := _floor_layer.map_to_local(cell) \
 			+ Vector2(_rng.randf_range(-5.0, 5.0), _rng.randf_range(-3.0, 3.0))
 		_occupied[cell] = true
-		if variant.ends_with("_3") or variant.ends_with("_4"):
+		if variant.ends_with("_5") or variant.ends_with("_6"):
 			var wreck := _add_prop(variant, pos)
 			# its litter got dragged to the SHOULDER — the road itself stays
 			# clean (user: nothing on the asphalt but cracks and holes)

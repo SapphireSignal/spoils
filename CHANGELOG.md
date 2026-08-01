@@ -3,6 +3,52 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.20] — 2026-08-01
+
+### Added
+- **The safehouse**: every raid now starts inside the same squat house near
+  the map's south edge — lattice-fence ring with a door-side gap, pillar
+  "pylons" at the corners, a couch, a crate, and a spawn cell that can
+  never be furniture-trapped (the roaming spawn once put the user behind
+  a bookshelf). Placement is bulletproof: probe bands, then an exhaustive
+  row-walk (one seed landed rail+courtyard+depot across every band and
+  silently dumped the spawn into sniper country). On the map + POI dict.
+
+### Changed
+- **Free-angle driving** (user: "it can move around freely right?"): the
+  car moves on the true cursor vector; the sprite snaps to the nearest of
+  its four baked facings and the collision parallelogram swaps diagonals
+  with it. Top speed 260→190 ("way too fast").
+- **Collision pass** (user: walked through a bus, a broken car, trees,
+  lamps): vehicles/buses/boxcars now carry parallelogram colliders
+  ALIGNED to their (2,1) diagonal (the axis diamonds left nose and tail
+  open — mirrored variants flip the poly too), pallets got a low diamond,
+  tree trunks 3-3.5→5.5/4.0, lamp poles 2→3.5. Bushes stay walk-through
+  on purpose — that's the rustle feature.
+- **The truck door-flash** (user: "turns colours for a second when i click
+  f"): the door-open frame's art seed included the door flag, so pickup
+  bed cargo re-rolled for the swap. Seed unified — the door frame is the
+  same vehicle down to its rust.
+- **The warehouse always builds**: dirt trails no longer veto placement
+  (the slab claims the ground), and a forced center-of-block fallback
+  dodging the rail line guarantees the hall — racks/stock out in the open
+  with no warehouse was the screenshotted bug.
+- **Comms relay moved to the woods' edge** (user call): the compound now
+  carves a clearing in a forest-block corner; the gallery keeps the open
+  block.
+- **Leaves everywhere they should be** (user: "half of all the
+  bushes/trees"): 50% of ALL trees shed (was 25% of oaks), bushes shed
+  too, pool 22→36, drip 0.22-0.55 s.
+- **Fleet variety** (user: "3 green ones... two of the exact same truck"):
+  steel-blue and tan palettes join, intact specs 3→5 (three pickup
+  colors), broken indexes moved to _5/_6.
+- **One centerline**: the half-tile pair drew on the OUTER edges — swapped
+  to the shared boundary; roads show a single centered dash line again.
+- **Stairs in room corners** (user call), and the ground-floor door is
+  unusable from upstairs — it also shuts itself as you climb (you could
+  walk out of the building mid-air).
+- Perf: 240 avg, ~4.5 ms worst, ~5.0k nodes.
+
 ## [0.6.19] — 2026-08-01
 
 ### Added

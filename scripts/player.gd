@@ -33,6 +33,7 @@ var flashlight_on := false
 var hp := MAX_HP
 var dead := false
 var floor_lift := 0.0           # sprite+camera rise while on a second story
+var upstairs := false           # gates ground-floor doors while up there
 var driving: DriveableCar = null
 
 var _sprite: Sprite2D
@@ -286,11 +287,12 @@ func _interact() -> void:
 	# nearest interactable wins: doors, stairs, or a car worth taking
 	var best: Node2D = null
 	var best_d := Door.INTERACT_RANGE * Door.INTERACT_RANGE
-	for node in get_tree().get_nodes_in_group("doors"):
-		var d := (node as Node2D).global_position.distance_squared_to(global_position)
-		if d < best_d:
-			best_d = d
-			best = node
+	if not upstairs:   # the ground door doesn't exist on the second floor
+		for node in get_tree().get_nodes_in_group("doors"):
+			var d := (node as Node2D).global_position.distance_squared_to(global_position)
+			if d < best_d:
+				best_d = d
+				best = node
 	for node in get_tree().get_nodes_in_group("stairs"):
 		var d := (node as Node2D).global_position.distance_squared_to(global_position)
 		if d < best_d and d < Stairs.INTERACT_RANGE * Stairs.INTERACT_RANGE:

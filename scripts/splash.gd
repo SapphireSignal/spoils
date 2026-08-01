@@ -1,27 +1,34 @@
 extends Node2D
-## SapphireSignal studio splash. The sapphire wakes, broadcasts a signal
-## ping, and the FIRST BEAM sweeps across to reveal the studio name letter by
-## letter — then everything breathes once and hands off to the menu.
-## Any input skips it. Harness runs (shots/smoke/perf) skip it instantly.
+## SapphireSignal studio splash. The sapphire wakes, CRACKS, and SHATTERS —
+## revealing the signal that was always inside. The signal pings, its first
+## beam sweeps across to reveal the studio name letter by letter, and a
+## small "studio" line settles underneath. Any input skips it. Harness runs
+## (shots/smoke/perf) skip it instantly.
 
 const GEM_LIFT := Vector2(0, -30)
 const WORD_DROP := 26.0
 const BEAM_TIME := 1.4
-const DONE_AT := 5.2   # unhurried (user: "goes by too fast, i want to see
-                       # the sapphire break and see the signal")
+const SHATTER_AT := 2.05
+const DONE_AT := 5.8
 
 var _t := 0.0
 var _gem: Sprite2D
+var _signal_core: Sprite2D
 var _word_clip: Control
 var _word: TextureRect
+var _tag: TextureRect
 var _beam: Sprite2D
 var _word_width := 0.0
 var _word_left := 0.0
 var _rings_fired := 0
+var _crack_stage := -1
+var _shattered := false
 var _second_ping := false
 var _finishing := false
 var _center := Vector2.ZERO
 var _ring_texs: Array[Texture2D] = []
+var _crack_texs: Array[Texture2D] = []
+var _shards: Array[Dictionary] = []
 
 
 func _ready() -> void:
@@ -44,12 +51,20 @@ func _ready() -> void:
 
 	for i in 6:
 		_ring_texs.append(load("res://art/gen/signal_ring_%d.png" % i))
+	for i in 3:
+		_crack_texs.append(load("res://art/gen/studio_gem_crack_%d.png" % i))
 
 	_gem = Sprite2D.new()
 	_gem.texture = load("res://art/gen/studio_gem.png")
 	_gem.position = _center + GEM_LIFT
 	_gem.modulate.a = 0.0
 	add_child(_gem)
+
+	_signal_core = Sprite2D.new()
+	_signal_core.texture = load("res://art/gen/studio_signal.png")
+	_signal_core.position = _center + GEM_LIFT
+	_signal_core.visible = false
+	add_child(_signal_core)
 
 	var word_tex: Texture2D = load("res://art/gen/studio_word.png")
 	_word_width = float(word_tex.get_width())
@@ -63,6 +78,15 @@ func _ready() -> void:
 	_word.stretch_mode = TextureRect.STRETCH_KEEP
 	_word_clip.add_child(_word)
 	add_child(_word_clip)
+
+	var tag_tex: Texture2D = load("res://art/gen/studio_tag.png")
+	_tag = TextureRect.new()
+	_tag.texture = tag_tex
+	_tag.stretch_mode = TextureRect.STRETCH_KEEP
+	_tag.position = Vector2(_center.x - float(tag_tex.get_width()) * 0.5,
+		_center.y + WORD_DROP + float(word_tex.get_height()) + 6.0)
+	_tag.modulate.a = 0.0
+	add_child(_tag)
 
 	_beam = Sprite2D.new()
 	_beam.texture = load("res://art/gen/signal_beam.png")
@@ -90,24 +114,75 @@ func _process(delta: float) -> void:
 	if _t > 0.80:
 		_gem.modulate.a = 1.0
 
-	# first ping + expanding broadcast rings, slow enough to watch travel
-	if _t > 1.1 and _rings_fired == 0:
+	# cracks spread through the stone — three beats, each with a flinch
+	if not _shattered:
+		var want_stage := -1
+		if _t > 1.75:
+			want_stage = 2
+		elif _t > 1.45:
+			want_stage = 1
+		elif _t > 1.15:
+			want_stage = 0
+		if want_stage > _crack_stage:
+			_crack_stage = want_stage
+			_gem.texture = _crack_texs[_crack_stage]
+			_gem.position = _center + GEM_LIFT \
+				+ Vector2(1.0 if _crack_stage % 2 == 0 else -1.0, 0.0)
+			Sfx.play_click(true)   # a soft tick, not a snap (user call)
+
+	# THE SHATTER: shards fly, and the signal inside is just... there
+	if _t > SHATTER_AT and not _shattered:
+		_shattered = true
+		_gem.visible = false
+		_signal_core.visible = true
 		Sfx.play_splash_ping()
-		_rings_fired = 1
-	if _rings_fired >= 1 and _rings_fired <= 6 and _t > 1.1 + 0.12 * _rings_fired:
-		_spawn_ring(_rings_fired - 1)
-		_rings_fired += 1
+		for i in 6:
+			var shard := Sprite2D.new()
+			shard.texture = load("res://art/gen/studio_shard_%d.png" % i)
+			shard.position = _center + GEM_LIFT
+			add_child(shard)
+			var angle := TAU * float(i) / 6.0 + randf_range(-0.3, 0.3)
+			_shards.append({"sprite": shard, "age": 0.0,
+				"vel": Vector2(cos(angle), sin(angle)) * randf_range(38.0, 64.0)})
+
+	var i := _shards.size() - 1
+	while i >= 0:
+		var shard_state: Dictionary = _shards[i]
+		var sprite := shard_state["sprite"] as Sprite2D
+		shard_state["age"] = float(shard_state["age"]) + delta
+		var age: float = shard_state["age"]
+		if age >= 0.7:
+			sprite.queue_free()
+			_shards.remove_at(i)
+		else:
+			var vel: Vector2 = shard_state["vel"]
+			sprite.position += vel * delta
+			shard_state["vel"] = vel + Vector2(0.0, 55.0) * delta   # they fall
+			sprite.modulate.a = 1.0 - age / 0.7
+		i -= 1
+
+	# the revealed signal breathes and broadcasts
+	if _shattered:
+		_signal_core.modulate.a = 0.85 + 0.15 * sin(_t * 9.0)
+		if _rings_fired <= 6 and _t > SHATTER_AT + 0.1 + 0.12 * _rings_fired:
+			if _rings_fired > 0:
+				_spawn_ring(_rings_fired - 1)
+			_rings_fired += 1
 
 	# the first beam sweeps the name in
-	var sweep := clampf((_t - 2.0) / BEAM_TIME, 0.0, 1.0)
+	var sweep := clampf((_t - 2.7) / BEAM_TIME, 0.0, 1.0)
 	if sweep > 0.0:
 		var eased := 1.0 - pow(1.0 - sweep, 2.0)
 		_word_clip.size.x = roundf(_word_width * eased)
 		_beam.visible = sweep < 1.0
 		_beam.position.x = roundf(_word_left + _word_width * eased)
 
+	# "studio" settles in underneath
+	if _t > 4.3:
+		_tag.modulate.a = move_toward(_tag.modulate.a, 1.0, delta * 2.0)
+
 	# a second, quieter breath of signal
-	if _t > 3.9 and not _second_ping:
+	if _t > 4.6 and not _second_ping:
 		_second_ping = true
 		Sfx.play_splash_ping(true)
 		_spawn_ring(2)
@@ -120,7 +195,7 @@ func _process(delta: float) -> void:
 func _spawn_ring(index: int) -> void:
 	var ring := Sprite2D.new()
 	ring.texture = _ring_texs[index]
-	ring.position = _gem.position
+	ring.position = _center + GEM_LIFT
 	ring.modulate.a = 0.9 - 0.12 * index
 	add_child(ring)
 	var tween := create_tween()

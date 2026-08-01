@@ -432,7 +432,10 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
         far = kind.endswith("b")
         for (x, y) in region:
             p = (x - 32) * 0.5 - (y - 16) if horiz else (x - 32) * 0.5 + (y - 16)
-            on_edge = p >= 14.6 if not far else p <= -14.6
+            # sides SWAPPED from the first cut: each half must hug the edge
+            # it SHARES with its partner cell, not the outer one (the twin
+            # parallel lines the user screenshotted)
+            on_edge = p <= -14.6 if not far else p >= 14.6
             if on_edge and (x // 8) % 2 == 0 and rng.random() < 0.94:
                 c.set(x, y, C("de9e41"))
 
@@ -1204,7 +1207,7 @@ def draw_pallet(broken: bool, stacked: bool) -> tuple[Canvas, tuple, list]:
             for y in range(oy + bottoms[x] + 1, oy + bottoms[x] + 4):
                 c.set(ox + x, y, C("602c2c") if x < 16 else C("341c27"))
     c.outline_auto()
-    return c, (19, 17), None
+    return c, (19, 17), ["diamond", 12.0, 6.0]
 
 def draw_dumpster(rng: random.Random, lid_open: bool) -> tuple[Canvas, tuple, list]:
     W, D, H = 36, 18, 16
@@ -1515,6 +1518,25 @@ def make_rack(variant: int) -> tuple[Canvas, tuple, list]:
 
 ROOF_DEPTH = 12  # top-face depth in px — the old 6 read as a paper-thin car
 
+
+def _diag_poly(half_long: float, half_wide: float) -> list:
+    """Collision parallelogram along the screen (2,1) diagonal — vehicles
+    LIE on that diagonal, so an axis-aligned diamond either over-blocks the
+    sides or lets you walk through the nose (user report: it did both)."""
+    ux, uy = 0.8944, 0.4472
+    vx, vy = -0.4472, 0.8944
+    corners = [
+        (half_long * ux + half_wide * vx, half_long * uy + half_wide * vy),
+        (half_long * ux - half_wide * vx, half_long * uy - half_wide * vy),
+        (-half_long * ux - half_wide * vx, -half_long * uy - half_wide * vy),
+        (-half_long * ux + half_wide * vx, -half_long * uy + half_wide * vy),
+    ]
+    flat: list = []
+    for (px, py) in corners:
+        flat.append(round(px, 1))
+        flat.append(round(py, 1))
+    return ["poly", flat]
+
 def make_vehicle(kind: str, scheme: int, rev: bool = False,
                  broken: bool = False, door_open: bool = False) -> tuple[Canvas, tuple, list]:
     """Iso vehicle along the screen (2,1) diagonal: side face + a DEEP roof
@@ -1527,12 +1549,17 @@ def make_vehicle(kind: str, scheme: int, rev: bool = False,
     door_open=True: same intact car with its door swung out — the enter/exit
     frame for DRIVEABLE cars (texture swap is the animation).
     kind "bus": long transit body with a passenger door and roof hatches."""
-    rng = random.Random(f"{SEED}:vehicle:{kind}:{scheme}:{rev}:{broken}:{door_open}")
+    # door_open is EXCLUDED from the seed: the enter/exit frame must be the
+    # SAME vehicle down to its cargo and rust — a re-rolled pickup bed made
+    # trucks flash a different color for the door beat (user report)
+    rng = random.Random(f"{SEED}:vehicle:{kind}:{scheme}:{rev}:{broken}")
     palettes = [
         ("752438", "411d31", "241527"),   # oxblood
         ("577277", "394a50", "202e37"),   # gray
         ("25562e", "19332d", "10141f"),   # olive
         ("884b2b", "602c2c", "341c27"),   # rust
+        ("3c5e8b", "253a5e", "172038"),   # steel blue
+        ("ad7757", "7a4841", "4d2b32"),   # tan
     ]
     body_c, body_d, body_dd = (C(n) for n in palettes[scheme])
     glass, glass_d = C("3c5e8b"), C("253a5e")
@@ -1805,13 +1832,22 @@ def make_vehicle(kind: str, scheme: int, rev: bool = False,
     # light positions relative to the origin are crop-invariant — the alarm
     # system flashes small overlays exactly on the baked light pixels
     lights_rel = [[px - origin_full[0], py - origin_full[1]] for (px, py) in lights_px]
-    collider = ["diamond", 38.0, 19.0] if kind == "bus" else ["diamond", 29.0, 15.0]
-    return cropped, origin, collider, lights_rel
+    half_long = 42.0 if kind == "bus" else 29.0
+    half_wide = 12.0 if kind == "bus" else 9.0
+    return cropped, origin, _diag_poly(half_long, half_wide), lights_rel
 
 def mirror_prop(prop: tuple) -> tuple:
-    """Bake the horizontal mirror of a prop (origin re-anchored, collider is
-    symmetric, light offsets x-flipped). Keeps runtime transform-free."""
+    """Bake the horizontal mirror of a prop (origin re-anchored, colliders
+    x-flipped when directional, light offsets x-flipped). Runtime stays
+    transform-free."""
     canvas, origin, collider = prop[0], prop[1], prop[2]
+    if collider is not None and collider[0] == "poly":
+        flat = collider[1]
+        flipped: list = []
+        for i in range(0, len(flat), 2):
+            flipped.append(-flat[i])
+            flipped.append(flat[i + 1])
+        collider = ["poly", flipped]
     mirrored = (canvas.mirrored(), (canvas.w - 1 - origin[0], origin[1]), collider)
     if len(prop) > 3:
         return mirrored + ([[-lx, ly] for (lx, ly) in prop[3]],)
@@ -1860,7 +1896,7 @@ def make_tree(kind: str, variant: int) -> tuple[Canvas, tuple, list]:
             bottom = top + rng.randint(3, 4)       # next layer overlaps this
         c.outline_auto()
         cropped, origin = crop_canvas(c, (cx, feet + 1))
-        return cropped, origin, ["circle", 3.0]
+        return cropped, origin, ["circle", 5.5]
 
     if kind == "oak":
         trunk_len = rng.randint(11, 15)
@@ -1899,7 +1935,7 @@ def make_tree(kind: str, variant: int) -> tuple[Canvas, tuple, list]:
             c.set(x, y, col)
         c.outline_auto()
         cropped, origin = crop_canvas(c, (cx, feet + 1))
-        return cropped, origin, ["circle", 3.5]
+        return cropped, origin, ["circle", 5.5]
 
     # dead tree: tapering snag with forked branches
     h = rng.randint(34, 52)
@@ -1924,7 +1960,7 @@ def make_tree(kind: str, variant: int) -> tuple[Canvas, tuple, list]:
                       C("241527"))
     c.outline_auto()
     cropped, origin = crop_canvas(c, (cx, feet + 1))
-    return cropped, origin, ["circle", 2.0]
+    return cropped, origin, ["circle", 4.0]
 
 def draw_bush(rng: random.Random, variant: int) -> tuple[Canvas, tuple, list | None]:
     """A leafy clump the player can push through — no collider. The game's
@@ -2436,6 +2472,65 @@ def make_studio_gem() -> tuple[Canvas, tuple, list | None]:
     c.outline_auto()
     return c, (cx, 22), None
 
+
+def make_gem_cracked(stage: int) -> tuple[Canvas, tuple, list | None]:
+    """The sapphire with cracks spreading (stage 0..2) — the splash's
+    shatter build-up. Same silhouette as the whole gem."""
+    base, origin, _ = make_studio_gem()
+    c = base
+    rng = random.Random(f"{SEED}:gemcrack:{stage}")
+    for crack in range(2 + stage * 2):
+        x = 8 + rng.randrange(14)
+        y = 5 + rng.randrange(4)
+        for k in range(4 + stage * 3):
+            if 0 <= x < c.w and 0 <= y < c.h and c.px[x, y][3] > 0:
+                c.set(x, y, C("ebede9") if k % 3 == 0 else C("172038"))
+            x += rng.choice((-1, 0, 1))
+            y += 1 if rng.random() < 0.75 else 0
+    return c, origin, None
+
+def make_gem_shards() -> list:
+    """Flying fragments for the shatter beat."""
+    out = []
+    for i in range(6):
+        rng = random.Random(f"{SEED}:shard:{i}")
+        w = rng.randint(4, 7)
+        h = rng.randint(4, 6)
+        img = Image.new("RGBA", (w + 2, h + 2), (0, 0, 0, 0))
+        px = img.load()
+        for y in range(h):
+            for x in range(w):
+                if abs(x - w // 2) + abs(y - h // 2) <= max(w, h) // 2 + 1:
+                    cols = [(115, 190, 211, 255), (79, 143, 186, 255),
+                            (164, 221, 219, 255), (60, 94, 139, 255)]
+                    px[x + 1, y + 1] = cols[(x + y + i) % 4]
+        out.append(img)
+    return out
+
+def make_signal_core() -> tuple[Canvas, tuple, list | None]:
+    """What was inside the sapphire: the SIGNAL — a bright beacon mote with
+    a whip antenna, the studio's namesake."""
+    c = Canvas(18, 22)
+    cx = 9
+    for r_, col in ((5, "253a5e"), (4, "3c5e8b"), (3, "4f8fba"),
+                    (2, "73bed3"), (1, "a4dddb")):
+        for y in range(-r_, r_ + 1):
+            for x in range(-r_, r_ + 1):
+                if x * x + y * y <= r_ * r_:
+                    c.set(cx + x, 13 + y, C(col))
+    c.set(cx, 13, C("ebede9"))
+    for y in range(3, 8):                       # the whip
+        c.set(cx, y, C("a4dddb"))
+    c.set(cx, 2, C("ebede9"))
+    c.set(cx - 1, 9, C("73bed3"))
+    c.set(cx + 1, 9, C("73bed3"))
+    c.outline_auto()
+    return c, (cx, 18), None
+
+def make_studio_tag() -> Image.Image:
+    """'studio' — the small line under the wordmark."""
+    return _render_word("studio", C("577277"), C("394a50"))
+
 def make_signal_rings() -> list[Image.Image]:
     """Expanding broadcast rings for the splash — pixel circles, faded by
     the runtime via modulate."""
@@ -2794,7 +2889,7 @@ def make_boxcar(scheme: int, broken: bool) -> tuple[Canvas, tuple, list]:
     origin_full = (ox + (L + 3) // 2 + ROOF_DEPTH // 2,
                    oy + (L + 3) // 4 - ROOF_DEPTH // 4)
     cropped, origin = crop_canvas(c, origin_full)
-    return cropped, origin, ["diamond", 36.0, 18.0]
+    return cropped, origin, _diag_poly(38.0, 12.0)
 
 def make_buffer_stop() -> tuple[Canvas, tuple, list]:
     """End-of-siding buffer: concrete block, two raked steel beams, a red
@@ -3460,7 +3555,8 @@ def prop_inventory() -> tuple[dict, dict]:
         fam("rack", i, make_rack(i))
     # vehicles: every lane heading pre-baked (nw/se drawn, ne/sw mirrored);
     # the last two specs are broken-into wrecks
-    veh_specs = [("car", 0, False), ("car", 1, False), ("pickup", 2, False),
+    veh_specs = [("car", 0, False), ("car", 4, False), ("pickup", 5, False),
+                 ("pickup", 2, False), ("car", 1, False),
                  ("car", 3, True), ("pickup", 1, True)]
     for i, (kind, scheme, broken) in enumerate(veh_specs):
         art_nw = make_vehicle(kind, scheme, rev=False, broken=broken)
@@ -5304,6 +5400,14 @@ def main() -> None:
         puff.save(OUT / f"fog_{i}.png")               # atmosphere: soft alpha
     for i, spark in enumerate(make_spark_frames()):
         spark.save(OUT / f"spark_{i}.png")            # fx: bright alpha
+    for i in range(3):
+        crack_c, _, _ = make_gem_cracked(i)
+        crack_c.img.save(OUT / f"studio_gem_crack_{i}.png")
+    for i, shard in enumerate(make_gem_shards()):
+        shard.save(OUT / f"studio_shard_{i}.png")
+    core_c, _, _ = make_signal_core()
+    core_c.img.save(OUT / "studio_signal.png")
+    make_studio_tag().save(OUT / "studio_tag.png")
     thumb_canvas = make_menu_map_thumb()
     assert_palette(thumb_canvas.img, "menu_map_transit")
     thumb_canvas.img.save(OUT / "menu_map_transit.png")
