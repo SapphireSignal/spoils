@@ -1336,12 +1336,10 @@ def make_vehicle(kind: str, scheme: int, rev: bool = False,
         base = oy + (L + t) // 2
         top_y = base - clear - cap_h + (t + 1) // 2
         for y in range(top_y, base - clear + 1):
-            # MID tone, not darkest: a body_dd cap disappears against dark
-            # asphalt and reads as a missing end (three user reports)
-            c.set(x, y, body_d if t < cap_d - 1 else body_dd)
-        c.set(x, top_y, body_c)                   # lit top edge of the cap
-        c.set(x, base - clear, C("394a50"))       # steel bumper, visible
-        c.set(x, base - clear - 1, C("394a50"))
+            c.set(x, y, body_dd)
+        c.set(x, top_y, body_d)                   # lit top edge of the cap
+        c.set(x, base - clear, C("202e37"))       # bumper band
+        c.set(x, base - clear - 1, C("202e37"))
     # wrapped corner: the side face's last column darkens into the cap
     for y in range(oy + (L - 1) // 2 - clear - cap_h + 1, oy + (L - 1) // 2 - clear):
         c.set(ox + L - 1, y, body_dd)
@@ -1353,8 +1351,8 @@ def make_vehicle(kind: str, scheme: int, rev: bool = False,
         base = oy - (t + 1) // 2
         far_top = base - clear - far_h + (t + 1) // 2
         for y in range(far_top, base - clear + 1):
-            c.set(x, y, body_d if t == 1 else body_dd)
-        c.set(x, base - clear, C("394a50"))    # bumper hint, visible
+            c.set(x, y, body_dd)
+        c.set(x, base - clear, C("202e37"))    # bumper hint
     # a 1px light sliver on the far corner (headlight fwd art, tail rev art)
     c.set(ox - 2, oy - 1 - clear - far_h + 2, C("de9e41") if not rev else C("752438"))
     cap_top = oy + L // 2 - clear - cap_h
