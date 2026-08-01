@@ -3,6 +3,63 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.18] — 2026-08-01
+
+### Changed
+- **The districts update.** The map shrank AGAIN (user: "way smaller, its
+  still huge") — total grid 320→256, ring inset 68, playable diamond ~120
+  cells (under half the old area) — and what's left is ZONED: the 3x3 road
+  blocks are dealt out as a two-block **town**, two-block **forest**, the
+  **warehouses**, the **school**, the **trainyard**, the **bus depot**, and
+  an open block hosting the **comms relay**. Distinct places for the quests
+  to point at, with stray trees/groves keeping the randomness.
+- **Town**: houses packed around a paved **courtyard** — plaza pavers, dry
+  fountain, overgrown planters, benches. Spawn is on the courtyard's lip.
+- **Second stories** (user: "get some floors to it maybe, with stairs"):
+  ~45% of town houses and the school get two-story shells (taller walls,
+  stacked windows, a floor string course, transom over the door), interior
+  wooden stairs with an F-prompt, and an upper room that exists ONLY while
+  you're up there — floor sprites in a north-anchored container, furniture
+  with true-position colliders and lifted sprites, player sprite+camera
+  rise a whole 32 px together. You never see the floor you're not on.
+- **New POIs**: the school (two-story hall, desk rows, playground with
+  swings/slide/sandbox, flagpole, unreadable sign, gappy fence), the
+  trainyard (a main rail line crossing the whole district with level
+  crossings, ballast, sidings, boxcars — one livery burst open — and
+  buffer stops), the bus depot (asphalt apron, a rank of buses with
+  broken-into variants, shelters), and the comms relay (lattice mast,
+  dish, hazard-striped equipment shed, fenced with a gap).
+- **Driveable cars** (user request): every intact car starts F-enterable —
+  door-swing frame + real door recording, seat, door closes. Q wakes the
+  engine (real recording), W/S throttle/reverse, A/D step the four baked
+  headings (reverse steering mirrored), E throws twin headlight cones,
+  F steps out beside the door. A controls crash-course shows for a few
+  seconds after entering. Quiet engine loop bed follows the throttle;
+  entering an armed car disarms its alarm for good. Broken-into cars stay
+  the props they were. Sounds: CC0 pack by ggbotnet (LICENSES.md).
+- **Clean asphalt** (user: "i dont want any on the road"): the centerline,
+  crosswalk, manhole and stall tiles lost their baked wear patches — the
+  road family is smooth except cracks and potholes; broken-car litter now
+  lands on the shoulder, never the lanes.
+- **Sidewalks everywhere**: every road side gets its slab band full-length
+  (evicting forest cells if needed) and grass blends are suppressed beside
+  asphalt — grass never touches a road, intersections stay green-free.
+- **Glass windows** (user: "make them see through"): every wall window is
+  sky-blue panes with a diagonal sheen, interior shadow low, and a mullion
+  cross — boarded variants keep their planks.
+- **Quieter world**: scatter 380→210, coarser dead-spot lattice, lone
+  trees 130→55, fewer bodies/buffer pieces/puddles ("a bit too many
+  objects" — user).
+- **Fog**: two big bank sprites join the wisps (baked sizes, never runtime
+  scale), a 3.5 s breathe-in kills the spawn pop, and drift-before-dissolve
+  doubled — no more appearing/disappearing churn (user call).
+- **Longer music fades** (user call): menu in 5 s / out 2.5 s, raid tracks
+  in 7 s with a 7 s end tail, death stop 2.5 s.
+- **The storm menu backdrop retired** (user call) — den and drain rotate;
+  its generator and textures are gone.
+- **Perf** on the user's 240 Hz box: 240 avg fps day/dawn/night, worst
+  frame ~4.5 ms, process ~0.9-1.5 ms, ~6.3k nodes (down from ~10.4k).
+
 ## [0.6.17] — 2026-08-01
 
 ### Added

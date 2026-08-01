@@ -21,21 +21,21 @@ const BASE_VIEW := Vector2i(640, 360)
 # rebindable actions and their default physical keys
 const BIND_ACTIONS: Array[String] = [
 	"move_up", "move_down", "move_left", "move_right",
-	"interact", "crouch", "prone", "reload", "flashlight",
+	"interact", "crouch", "prone", "reload", "flashlight", "engine",
 	"slot_primary", "slot_secondary", "slot_melee",
 ]
 const BIND_LABELS := {
 	"move_up": "move up", "move_down": "move down",
 	"move_left": "move left", "move_right": "move right",
 	"interact": "interact", "crouch": "crouch", "prone": "prone",
-	"reload": "reload", "flashlight": "flashlight",
+	"reload": "reload", "flashlight": "flashlight", "engine": "start engine",
 	"slot_primary": "primary weapon", "slot_secondary": "secondary weapon",
 	"slot_melee": "melee weapon",
 }
 const DEFAULT_BINDS := {
 	"move_up": KEY_W, "move_down": KEY_S, "move_left": KEY_A, "move_right": KEY_D,
 	"interact": KEY_F, "crouch": KEY_CTRL, "prone": KEY_Z, "reload": KEY_R,
-	"flashlight": KEY_E,
+	"flashlight": KEY_E, "engine": KEY_Q,
 	"slot_primary": KEY_1, "slot_secondary": KEY_2, "slot_melee": KEY_3,
 }
 # arrows stay as secondary movement keys while on default binds

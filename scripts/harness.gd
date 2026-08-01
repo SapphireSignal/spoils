@@ -205,6 +205,50 @@ func _smoke() -> void:
 		if door.is_open():
 			failures.append("door did not close on second toggle")
 
+	# second stories: use the nearest stairs — the upper room appears, the
+	# player lifts, using them again comes back down
+	var stairs_nodes := get_tree().get_nodes_in_group("stairs")
+	if stairs_nodes.is_empty():
+		failures.append("no stairs in the world (two-story houses missing)")
+	elif player != null:
+		var stairs := stairs_nodes[0] as Stairs
+		player.position = stairs.global_position + Vector2(2.0, 16.0)
+		stairs.use()
+		await get_tree().create_timer(0.3).timeout
+		if player.floor_lift <= 0.0:
+			failures.append("stairs up did not lift the player")
+		stairs.use()
+		await get_tree().create_timer(0.3).timeout
+		if player.floor_lift != 0.0:
+			failures.append("stairs down did not ground the player")
+
+	# driveable cars: enter, start the engine, roll forward, step out
+	var car_nodes := get_tree().get_nodes_in_group("cars")
+	if car_nodes.is_empty():
+		failures.append("no driveable cars in the world")
+	elif player != null:
+		var car := car_nodes[0] as DriveableCar
+		player.position = car.global_position + Vector2(0.0, 30.0)
+		car.enter(player)
+		await get_tree().create_timer(0.6).timeout
+		if player.driving != car:
+			failures.append("player did not end up driving after enter()")
+		else:
+			car.engine_on = true
+			var car_start := car.global_position
+			Input.action_press("move_up")
+			await get_tree().create_timer(1.0).timeout
+			Input.action_release("move_up")
+			if car.global_position.distance_to(car_start) < 40.0:
+				failures.append("car barely moved under throttle (%.1f px)" %
+					car.global_position.distance_to(car_start))
+			car.exit_car()
+			await get_tree().create_timer(0.6).timeout
+			if player.driving != null or not player.visible:
+				failures.append("player did not step out of the car")
+		player.respawn(info["spawn"])
+		await get_tree().process_frame
+
 	# pause menu: Esc opens + pauses, Esc again closes + resumes
 	_tap_action("ui_cancel")
 	for i in 3:
@@ -283,6 +327,21 @@ func _shot(shot_name: String) -> void:
 	for i in 10:                # let the camera settle on the teleported
 		await get_tree().process_frame
 	_apply_env_flags()          # re-apply: env prefills (fog) at THIS view
+	if player != null and "--upstairs" in OS.get_cmdline_user_args():
+		# climb the nearest flight for second-story captures
+		var best_stairs: Node2D = null
+		var best_d := 1.0e12
+		for node in get_tree().get_nodes_in_group("stairs"):
+			var d: float = (node as Node2D).global_position.distance_squared_to(
+				player.global_position)
+			if d < best_d:
+				best_d = d
+				best_stairs = node
+		if best_stairs != null:
+			player.global_position = best_stairs.global_position + Vector2(2.0, 16.0)
+			(best_stairs as Stairs).use()
+			for i in 6:
+				await get_tree().process_frame
 	if _shot_menu != "":
 		var menu := get_tree().get_first_node_in_group("pause_menu") as PauseMenu
 		if menu != null:
@@ -459,6 +518,21 @@ func _probe_world() -> void:
 		bush_cells.append(floor_layer.local_to_map((bush as Node2D).position))
 	print("FOLIAGE bushes=%d cells=%s" % [bush_cells.size(), bush_cells.slice(0, 6)])
 	print("WALKS cells=%d" % int(info.get("walk_cells", -1)))
+	# v0.6.18 places: zone block rects (cell coords) + the interactables
+	var zones: Dictionary = info.get("zones", {})
+	for zone_name in zones:
+		print("ZONE %s blocks=%s" % [zone_name, zones[zone_name]])
+	var poi: Dictionary = info.get("poi", {})
+	for poi_name in poi:
+		print("POI %s=%s" % [poi_name, poi[poi_name]])
+	var stairs_cells: Array[Vector2i] = []
+	for s in get_tree().get_nodes_in_group("stairs"):
+		stairs_cells.append(floor_layer.local_to_map((s as Node2D).global_position))
+	print("STAIRS total=%d cells=%s" % [stairs_cells.size(), stairs_cells.slice(0, 8)])
+	var car_cells: Array[Vector2i] = []
+	for car in get_tree().get_nodes_in_group("cars"):
+		car_cells.append(floor_layer.local_to_map((car as Node2D).global_position))
+	print("CARS driveable=%d cells=%s" % [car_cells.size(), car_cells.slice(0, 8)])
 	var env := get_tree().get_first_node_in_group("environment")
 	if env != null:
 		env.call("force_time", 0.18)         # dawn: the fog window

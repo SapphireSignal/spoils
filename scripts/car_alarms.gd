@@ -19,6 +19,14 @@ var _light_tex: Texture2D
 
 func _ready() -> void:
 	_light_tex = load("res://art/gen/alarm_light.png")
+	add_to_group("car_alarms")
+
+
+func disarm(car: Node2D) -> void:
+	# climbing into your own ride ends the argument — permanently
+	for entry in _entries:
+		if entry["node"] == car:
+			entry["fired"] = true
 
 
 func register(car: Node2D, lights: Array) -> void:
@@ -32,7 +40,11 @@ func setup(player: Player) -> void:
 
 func _rearm() -> void:
 	# death resets the district's nerves — every armed car can fire again
+	# (except one you already claimed and are still sitting in)
 	for entry in _entries:
+		var car := entry["node"] as Node2D
+		if car is DriveableCar and (car as DriveableCar).driven:
+			continue
 		entry["fired"] = false
 
 

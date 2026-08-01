@@ -16,8 +16,13 @@ var _deploy_time := 0.0
 var _last_roof_cell := Vector2i(-9999, -9999)
 var _respawning := false
 var _prompt: Label
-var _prompt_door: Door
+var _prompt_target: Node2D
 var _prompt_open := false
+var _uppers: Array = []
+var _player_upper := -1        # index into _uppers while on a second story
+var _car_hint: Label
+var _car_hint_until := 0.0
+var _was_driving := false
 
 
 func _ready() -> void:
@@ -124,6 +129,10 @@ func _build_world() -> void:
 	for bush in (info["bushes"] as Array):
 		foliage.register(bush as Node2D)
 	foliage.setup(_player)
+	_uppers = info.get("uppers", [])
+	for i in _uppers.size():
+		((_uppers[i] as Dictionary)["stairs_node"] as Stairs).used.connect(
+			_on_stairs_used.bind(i))
 	_player.setup_surfaces(_floor_layer, _surface_kinds_from(info["floor_coords"]))
 	# (zoom never widens past the native view, so no edge camera-guard needed)
 	_build_prompt()
@@ -177,7 +186,7 @@ func _surface_kinds_from(floor_coords: Dictionary) -> Dictionary:
 
 
 func _build_prompt() -> void:
-	# floats in screen space but PINNED to the door it belongs to
+	# floats in screen space but PINNED to the thing it belongs to
 	var layer := CanvasLayer.new()
 	layer.layer = 70
 	_prompt = Label.new()
@@ -185,32 +194,96 @@ func _build_prompt() -> void:
 	_prompt.add_theme_color_override("font_color", UITheme.TEXT)
 	_prompt.visible = false
 	layer.add_child(_prompt)
+	# the driving crash course, shown for a few seconds after you get in
+	_car_hint = Label.new()
+	_car_hint.theme = UITheme.get_theme()
+	_car_hint.add_theme_color_override("font_color", UITheme.TEXT)
+	_car_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_car_hint.text = "q to start engine\nw to drive, s to reverse\na and d to turn\ne for headlights\nf to exit car"
+	_car_hint.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_car_hint.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_car_hint.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_car_hint.offset_bottom = -26
+	_car_hint.visible = false
+	layer.add_child(_car_hint)
 	add_child(layer)
 
 
+func _on_stairs_used(index: int) -> void:
+	# the floor switch: hide the room you left, show the one you're in.
+	# No teleport — you flip beside the flight and the lift does the rest.
+	if _player_upper == index:
+		_set_upper_state(index, false)
+		_player_upper = -1
+		_player.floor_lift = 0.0
+	elif _player_upper == -1:
+		_set_upper_state(index, true)
+		_player_upper = index
+		_player.floor_lift = float(world_info.get("story_h", 32))
+
+
+func _set_upper_state(index: int, up: bool) -> void:
+	var upper: Dictionary = _uppers[index]
+	(upper["container"] as Node2D).visible = up
+	for node in (upper["upper_props"] as Array):
+		(node as Node2D).visible = up
+		if node is StaticBody2D:
+			(node as StaticBody2D).collision_layer = 1 if up else 0
+	for node in (upper["ground_props"] as Array):
+		(node as Node2D).visible = not up
+		if node is StaticBody2D:
+			(node as StaticBody2D).collision_layer = 0 if up else 1
+
+
 func _update_prompt() -> void:
-	# "press f to open/close" — only right next to a door
-	var best: Door = null
+	# "press f to ..." — doors, stairs, and cars worth taking. Hidden while
+	# driving (the car hint covers that).
+	if _player.driving != null:
+		_prompt.visible = false
+		_prompt_target = null
+		return
+	var best: Node2D = null
 	var best_d := 30.0 * 30.0
 	for node in get_tree().get_nodes_in_group("doors"):
-		var door := node as Door
-		var d := door.global_position.distance_squared_to(_player.global_position)
+		var d := (node as Node2D).global_position.distance_squared_to(
+			_player.global_position)
 		if d < best_d:
 			best_d = d
-			best = door
+			best = node
+	for node in get_tree().get_nodes_in_group("stairs"):
+		var d := (node as Node2D).global_position.distance_squared_to(
+			_player.global_position)
+		if d < 38.0 * 38.0 and d < best_d:
+			best_d = d
+			best = node
+	for node in get_tree().get_nodes_in_group("cars"):
+		var car := node as DriveableCar
+		if car == null or not car.can_enter():
+			continue
+		var d := car.global_position.distance_squared_to(_player.global_position)
+		if d < 42.0 * 42.0 and d < best_d:
+			best_d = d
+			best = car
 	if best == null:
 		_prompt.visible = false
-		_prompt_door = null
+		_prompt_target = null
 		return
-	# rebuild the text only when the door or its state changes — bind_label
+	# rebuild the text only when the target or its state changes — bind_label
 	# asks the display server and must not run per frame
-	if best != _prompt_door or best.is_open() != _prompt_open:
-		_prompt_door = best
-		_prompt_open = best.is_open()
-		_prompt.text = "press %s to %s" % [
-			Settings.bind_label("interact").to_lower(),
-			"close" if _prompt_open else "open"]
-	# pin the label just above the door, following it on screen
+	var open_now := best is Door and (best as Door).is_open()
+	if best != _prompt_target or open_now != _prompt_open:
+		_prompt_target = best
+		_prompt_open = open_now
+		var key := Settings.bind_label("interact").to_lower()
+		if best is Door:
+			_prompt.text = "press %s to %s" % [key, "close" if open_now else "open"]
+		elif best is Stairs:
+			var going_up := _player_upper != (best as Stairs).upper_index
+			_prompt.text = "press %s to go %s" % [key,
+				"upstairs" if going_up else "back down"]
+		else:
+			_prompt.text = "press %s to enter the car" % key
+	# pin the label just above the target, following it on screen
 	var camera := get_viewport().get_camera_2d()
 	if camera != null:
 		var view := Vector2(get_window().content_scale_size)
@@ -232,6 +305,14 @@ func _process(delta: float) -> void:
 		return
 	if _prompt != null:
 		_update_prompt()
+	# the driving crash course pops for a few seconds whenever you get in
+	var now_driving := _player.driving != null
+	if now_driving and not _was_driving:
+		_car_hint_until = Time.get_ticks_msec() / 1000.0 + 7.0
+	_was_driving = now_driving
+	if _car_hint != null:
+		_car_hint.visible = now_driving \
+			and Time.get_ticks_msec() / 1000.0 < _car_hint_until
 	var cell := _floor_layer.local_to_map(_player.position)
 	if cell == _last_roof_cell:
 		return
@@ -245,7 +326,7 @@ func _on_player_died() -> void:
 	if _respawning:
 		return
 	_respawning = true
-	Music.stop_raid(1.0)  # the raid ends with you; a fresh one restarts it
+	Music.stop_raid(2.5)  # the raid ends with you; a fresh one restarts it
 	var layer := CanvasLayer.new()
 	layer.layer = 90
 	var black := ColorRect.new()
@@ -267,6 +348,16 @@ func _on_player_died() -> void:
 	await fade_in.finished
 	label.visible = true
 	await get_tree().create_timer(1.2).timeout
+	if _player_upper != -1:      # death upstairs respawns on the ground
+		_set_upper_state(_player_upper, false)
+		_player_upper = -1
+		_player.floor_lift = 0.0
+	if _player.driving != null:  # death at the wheel leaves the car behind
+		_player.driving.driven = false
+		_player.driving = null
+		_player.visible = true
+		_player.collision_layer = 1
+		Sfx.set_engine(0.0)
 	_player.respawn(world_info["spawn"])
 	label.visible = false
 	await get_tree().process_frame

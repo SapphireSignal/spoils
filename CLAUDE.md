@@ -7,41 +7,86 @@ This file carries everything a fresh session needs that isn't in those two.
 
 ## Where we are
 
-- **Version v0.6.17 SHIPPED** (twenty releases on 2026-08-01, v0.6.3 →
-  v0.6.17 — read CHANGELOG.md for the full arc). Fog + night shots viewed
-  and CONFIRMED GOOD, perf at 240-baseline (day/morning/night), 2x shots
-  sent to the user. **AWAITING USER REACTIONS on the v0.6.17 tuning
-  watch-list** (below); otherwise NEXT = Milestone 2 on their "go".
-- Watch-list: day length (10 min shipped; 8-min offer stands), night too
-  dark/not enough, fog strength, 24-38s music pause length, thunder/rain
-  levels. Small tunings → v0.6.18.
+- **Version v0.6.18 SHIPPED** ("the districts update", 21st release on
+  2026-08-01 — read CHANGELOG.md). All POI shots + menu shots verified,
+  smoke covers stairs + driving, perf 240 avg / worst ~4.5ms / ~6.3k
+  nodes. 2x shots sent. **AWAITING USER REACTIONS**; next = M2 on "go".
+- Watch-list: map size (now ~120 diamond — half of v0.6.17), POI feel,
+  driving feel (speed/turn cadence), car sound levels, upstairs look,
+  plaza pattern, fog sizes/churn, music fade lengths, day length
+  (8-min offer stands), night darkness, thunder/rain levels.
 
-## v0.6.17 systems (shipped 2026-08-01)
+## v0.6.18 systems (shipped 2026-08-01)
 
-- MORNING FOG: fog_0..2.png (soft alpha, gen_art make_fog_puffs), env fog
-  pool (32 puffs, FOG_ALPHA_MAX 0.5) anchored to builder fog_spots
-  (forest 5% + road spots every ~9 cells), spawns from a NEAR-VIEW list
-  (refresh 0.25s, ≤3/frame, alive ≤ near*4), drifts with per-morning
-  wind, dissolves ~90px past its anchor, morning window 0.10-0.38
-  (_morning_amount), force_time PREFILLS 90 iters (shots), headless
-  window reports cs=(64,64) → <128 fallback to 640x360 view.
-- FALLING LEAVES: leaves_0..2.png (2 flutter frames), builder marks 25%
-  of OAKS (tree_4..6) via _maybe_shed_leaves → env leaf pool (22), 3
-  fall patterns (sway/zigzag/wind-drift), spawn ≤1 per 0.5-1.4s near
-  view, fade at 80% of 2.2-3.8s fall.
-- DAY/NIGHT REWORK (user calls): DAY_SECONDS 600 (10 min; user floated
-  8 — offer stands), DEEP_NIGHT (0.085,0.095,0.24) = properly hard to
-  see, gradient offsets [0,.08,.17,.26,.52,.62,.74,.82,1] (night ~26%),
-  nightfall color (0.36,0.38,0.60), _night_amount_for windows
-  .08/.17/.64/.80 (lamps + flashlight from 0.64).
-- AUDIO TUNING (user calls): raid-track END fade (4s tail, _tail_started
-  in music._process), breaths 24-38s ("like 30 secs"); rain wash SLEWED
-  fade in/out (6 dB/s, quieter -49..-34, stop ≤-58, _rain_db in sfx);
-  thunder quieter (-24..-18) + faster after flash (0.15-0.5s).
-- HARNESS: probe prints FOG nearest/manual/spots/active/near lines;
-  _shot applies env flags, waits 10 frames, applies AGAIN (fog prefill
-  needs the SETTLED camera — flags run before the camera catches the
-  --at teleport).
+- ZONED MAP: 256×256 grid, BARRIER_INSET 68 (playable ~120), ROAD_COUNT
+  4/axis (jitter ±4 — bigger jitter squeezed blocks into the one-door
+  bug), 3x3 blocks dealt in _plan_zones: town×2(adjacent) forest×2
+  warehouse school trainyard depot open(+comms corner). _zone_summary →
+  info["zones"], POI rects → info["poi"] (probe prints ZONE/POI lines).
+- TOWN: houses 6-8×5-7 grow(1) packed, courtyard plaza (clampi(size-14,
+  9,12)) in first town block: fountain_dry/planters/benches/lamp; spawn
+  at court south lip. SCHOOL: 2-story, screed, desks+shelves
+  (_furnish_school), playground (swings/slide/sandbox/flagpole/sign +
+  gappy lattice fence, skips dirt paths). TRAINYARD: _plan_rail main
+  line full-width on _rail_row (rail_x tiles + ballast ±1, rail_cross on
+  roads), 2-3 sidings (12-18 long) w/ boxcar_x + buffer_stop props +
+  freight spill. DEPOT: apron rect (asphalt-painted) hugging south road,
+  ≤4 bus_nw/se (broken variants spill trash), shelters/bench on lip.
+  COMMS: 9×9 corner compound, tower+shed+dish+barrels, lattice-fence
+  ring w/ gap (_fence_piece reuses barricade fence family).
+- TWO-STORY: plot.stories=2 (~45% town houses + school; ruined forces 1)
+  → seg2_/post2_ pieces (STORY_H 32, string course, stacked windows,
+  door gets seg2_..._upper TRANSOM — bare door left a hole), roof lift
+  wall_h+story_h. _build_upper: floor-sprite container anchored NORTH
+  (-24-story_h) so it y-sorts under the player; upper furniture at TRUE
+  cell pos w/ sprite child lifted -32 (colliders toggle via
+  collision_layer); stairs prop (Stairs class, group "stairs", F) a full
+  cell in from walls (art pokes through facades when cornered); registry
+  info["uppers"] {container/upper_props/ground_props/stairs_node}.
+  main.gd _on_stairs_used flips visibility+colliders, player.floor_lift
+  (sprite+shadow+camera rise TOGETHER, whole px); no teleport. Death
+  upstairs/driving resets state.
+- DRIVEABLE CARS (driveable_car.gd, group "cars"): intact vehicles spawn
+  as CharacterBody2D via _spawn_driveable (roads + yard stalls; broken
+  _3/_4 stay props). F enter: door texture-swap frame (vehicle_*_door,
+  baked via make_vehicle door_open) + ggbotnet CC0 recordings
+  (assets/audio/car/, LICENSES.md), player.board_car (hidden, layer 0,
+  welded — camera math unchanged); Q engine (must be on to drive), W/S
+  ±speed (260 max, 90 reverse), A/D step heading nw→ne→se→sw (0.26s
+  cooldown, reverse mirrored), E twin headlight cones, F exit beside
+  door. Sfx.set_engine slewed loop bed w/ pitch 0.9-1.25. Car sprite
+  parks on the SAME screen-pixel grid (player zoom factor). Entering
+  disarms CarAlarms (group "car_alarms", disarm()). Controls hint label
+  ~7s on entry (main.gd). "engine" action = Q (project.godot +
+  settings.gd binds — rebindable).
+- ART: glass windows (_draw_seg_window: 3c5e8b/253a5e + 73bed3/a4dddb
+  sheen + 151d28 mullion; boarded keeps planks), smooth asphalt-family
+  bases (line/crosswalk/manhole/stall 0.0,0.0 — the "things along the
+  yellow line" were baked speckle), plaza tiles (joints + 1-2 whole worn
+  pavers — NO checker/dots, first cut violated no-dots), ballast/rail_x/
+  rail_y/rail_cross_x/y tiles (period 8), fog_3/4 big banks (env pool
+  i%5), buses (make_vehicle kind bus: L64, door, hatches, stripe),
+  make_boxcar/buffer/swings/slide/sandbox/flagpole/school_sign/planter/
+  fountain/comms_tower/dish/equip_shed/stairs/bed. Clip-audit exempts
+  seg2_/post2_ (grid modules).
+- DENSITY (user "tone it down"): scatter 210, dead-spot lattice step 4 +
+  lower rolls, lone trees 55 (never beside roads/rails/plaza/apron),
+  bodies 10-15, buffer 90, puddles 70, road vehicles 20.
+- FOG CHURN FIX: _fog_age breathe-in 3.5s (spawn-at-full-alpha was the
+  pop), dissolve slide 90/110 (was 46/52), prefill 300 iters.
+- MUSIC FADES LONGER (user): menu in 5s/out 2.5s, raid in 7s/tail 7s
+  (remaining ≤7), stops 2.5s; Music._exit_tree stops player (headless
+  leak noise). NOTE: ~4-6 ObjectDB instances "leaked at exit" in
+  headless runs = benign audio teardown noise, varies run to run.
+- STORM BACKDROP REMOVED (user): menu = den/drain only (scenes.size()
+  drives rotation; --backdrop=2 clamps to drain); make_scene_storm +
+  saves deleted from gen_art. Den board verified against the user's
+  08:49 spec (paper notes, tacked photos, transit ringed, traders).
+- v0.6.17 (same day): morning fog + falling leaves + 10-min day w/ hard
+  nights (DEEP_NIGHT .085/.095/.24, night ~26%, lamps from 0.64) + rain
+  slew (-49..-34) + thunder -24..-18 & 0.15-0.5s after flash; breaths
+  24-38s. Fog window 0.10-0.38; force_time prefills; _shot re-applies
+  env flags after camera settle.
 - v0.6.16: raid music = USER'S 3 AUDITIONED PICKS (guitar02/harp01/piano01
   as raid_0..2) rotating random-no-repeat, CONTINUOUS from raid start to
   death (2-5s breaths; stop on died, restart post-respawn; the audition
@@ -140,7 +185,8 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   (sizes, origins, collision shapes, variant families — the game hardcodes
   none of it). `tools/gen_font.py` (invoked by gen_art) builds the lowercase
   bitmap font. `tools/gen_banner.py` → repo banner.
-- `scripts/world_builder.gd` — 320×320 planned map, FRESH SEED PER DEPLOY
+- `scripts/world_builder.gd` — 256×256 planned map (ZONED since v0.6.18 —
+  see the systems section above), FRESH SEED PER DEPLOY
   (build(root, seed_text); harness --seed pins it; ALL randomness through the
   seeded _rng — `Array.shuffle()` is banned, use `_shuffle()`). Road grid with
   center dashes both axes, dirt roads, forests + interior groves + lone trees
@@ -169,6 +215,10 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   PointLight2D pool at night with per-lamp flicker/dropouts.
 - `scripts/door.gd` — closed-by-default door: F toggles, 4-frame swing,
   thin wall-line collider disabled while open, group "doors".
+- `scripts/stairs.gd` — second-story flight, group "stairs", F flips the
+  floor via main.gd. `scripts/driveable_car.gd` — intact cars as
+  CharacterBody2D: F enter/exit w/ door frames+sounds, Q engine, WASD
+  drive, E headlights (see v0.6.18 systems).
 - `scripts/edge_guard.gd` — barricade-line snipers with PREDICTIVE aim
   (lead the player's velocity by flight time, per-shooter 0.75-1.05x) and
   STAGGERED volleys (first shot instant, rest via _pending countdowns in

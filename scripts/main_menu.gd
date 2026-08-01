@@ -1,10 +1,9 @@
 ﻿extends Node2D
 ## Main menu. Generated backdrop scenes rotate with a slow crossfade,
 ## each with its own living detail:
-##   hoard      - gold sparkles rising past the buttons
-##   scrapyard  - flickering neon sign + drifting smog
-##   overlook   - clouds drifting over a dead city, dust on the wind
-## DEPLOY starts the raid.
+##   den   - the traders at home: candle vs radio glow, smoke, rig LEDs
+##   drain - the tunnel under the district: god-ray, motes, ringing drips
+## (the storm scene retired 2026-08-01 — user call). DEPLOY starts the raid.
 
 const SCENE_SECONDS := 20.0
 const FADE_SECONDS := 1.4
@@ -17,17 +16,6 @@ const TEX_DEN_NEEDLES := preload("res://art/gen/menu_den_needles.png")
 const TEX_DRAIN := preload("res://art/gen/menu_drain.png")
 const TEX_DRAIN_RAY := preload("res://art/gen/menu_drain_ray.png")
 const TEX_DRAIN_RIPPLE := preload("res://art/gen/menu_drain_ripple.png")
-const TEX_STORM := preload("res://art/gen/menu_storm.png")
-const TEX_STORM_LIT := preload("res://art/gen/menu_storm_lit.png")
-const TEX_BOLTS: Array[Texture2D] = [
-	preload("res://art/gen/menu_storm_bolt_0.png"),
-	preload("res://art/gen/menu_storm_bolt_1.png"),
-]
-const TEX_WINS: Array[Texture2D] = [
-	preload("res://art/gen/menu_storm_win_0.png"),
-	preload("res://art/gen/menu_storm_win_1.png"),
-	preload("res://art/gen/menu_storm_win_2.png"),
-]
 const TEX_RAIN := preload("res://art/gen/rain_streak.png")
 const TEX_DUST := preload("res://art/gen/dust.png")
 const TEX_VIGNETTE := preload("res://art/gen/vignette.png")
@@ -59,16 +47,6 @@ var _ripple_t: Array[float] = []
 var _ripple_age: Array[float] = []
 var _drip: Sprite2D
 var _drip_t := 0.0
-# storm life
-var _rain: CPUParticles2D
-var _storm_lit: Sprite2D
-var _flash_rect: ColorRect
-var _bolt: Sprite2D
-var _wins: Array[Sprite2D] = []
-var _win_state: Array[Dictionary] = []
-var _strike_at := 0.0
-var _flash_a := 0.0
-var _thunder_at := -1.0
 
 var _title: TextureRect
 var _title_base_y := 0.0
@@ -82,6 +60,21 @@ var _changelog_list: VBoxContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.18", ["the map got way smaller again - and it has real places now",
+		"the town: houses packed around a paved courtyard with a dry fountain",
+		"some houses grew a second floor - press f at the stairs to go up",
+		"upstairs you only see the room youre in, the way it should be",
+		"new spots: the school and its playground, a trainyard with boxcars,",
+		"the bus depot, and a fenced comms relay pointing at nothing",
+		"a real forest district too - with stray trees everywhere else",
+		"windows are glass now instead of black holes",
+		"sidewalks line every road, so grass never touches asphalt",
+		"roads keep only their cracks and potholes - nothing else on them",
+		"cars drive now: f to enter, q for the engine, e for headlights,",
+		"w s a d to roll around, f again to step out",
+		"fog comes in mixed sizes and stopped blinking in and out",
+		"music fades in and out longer and softer everywhere",
+		"the storm menu backdrop retired - the den and the drain remain"]],
 	["v0.6.17", ["morning fog: mist banks drift through the woods and roads at dawn",
 		"the oaks shed leaves now - watch them flutter down on the wind",
 		"a full day is 10 minutes now, down from 20",
@@ -367,8 +360,6 @@ func _process(delta: float) -> void:
 		_tick_den()
 	if _scenes[1].visible:
 		_tick_drain(delta)
-	if _scenes[2].visible:
-		_tick_storm(delta)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -478,43 +469,6 @@ func _build_scenes() -> void:
 	add_child(drain)
 	_scenes.append(drain)
 
-	# 3: STORM OVER THE CORDON — rain, strikes, bolts, windows that flicker
-	var storm := Node2D.new()
-	_backdrop(storm, TEX_STORM)
-	for i in TEX_WINS.size():
-		var win := Sprite2D.new()
-		win.texture = TEX_WINS[i]
-		storm.add_child(win)
-		_wins.append(win)
-		_win_state.append({"mode": "on", "t": randf_range(2.0, 6.0)})
-	_storm_lit = Sprite2D.new()
-	_storm_lit.texture = TEX_STORM_LIT
-	_storm_lit.modulate.a = 0.0
-	storm.add_child(_storm_lit)
-	_bolt = Sprite2D.new()
-	_bolt.texture = TEX_BOLTS[0]
-	_bolt.visible = false
-	_bolt.material = add_mat
-	storm.add_child(_bolt)
-	_rain = CPUParticles2D.new()
-	_rain.texture = TEX_RAIN
-	_rain.amount = 110
-	_rain.lifetime = 1.1
-	_rain.preprocess = 1.1
-	_rain.position = Vector2(30, -300)
-	_rain.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
-	_rain.emission_rect_extents = Vector2(560, 8)
-	_rain.direction = Vector2(-0.1, 1)
-	_rain.spread = 2.0
-	_rain.gravity = Vector2(0, 240)
-	_rain.initial_velocity_min = 430.0
-	_rain.initial_velocity_max = 560.0
-	_rain.color = Color("253a5e", 0.55)
-	storm.add_child(_rain)
-	add_child(storm)
-	_scenes.append(storm)
-	_strike_at = randf_range(4.0, 9.0)
-
 	for scene in _scenes:
 		scene.modulate.a = 0.0
 		scene.visible = false
@@ -564,74 +518,6 @@ func _tick_drain(delta: float) -> void:
 			_ripples[0].frame = 0
 
 
-func _tick_storm(delta: float) -> void:
-	_strike_at -= delta
-	if _strike_at <= 0.0:
-		_strike_at = randf_range(7.0, 16.0)
-		_do_strike()
-	_flash_rect.color.a = _flash_a if _scene_index == 2 else 0.0
-	_storm_lit.modulate.a = clampf(_flash_a * 2.6, 0.0, 1.0)
-	if _thunder_at > 0.0:
-		_thunder_at -= delta
-		if _thunder_at <= 0.0:
-			_thunder_at = -1.0
-			Sfx.play_thunder()
-	_rain.gravity.x = -900.0 * _flash_a             # gusts when the sky cracks
-	for i in _wins.size():                          # windows LIVE: flicker,
-		var st := _win_state[i]                     # brown out, die, revive
-		st["t"] = float(st["t"]) - delta
-		var win := _wins[i]
-		match str(st["mode"]):
-			"on":
-				win.modulate.a = 0.9
-				if float(st["t"]) <= 0.0:
-					var r := randf()
-					if r < 0.5:
-						st["mode"] = "flick"
-						st["t"] = 0.35
-					elif r < 0.75:
-						st["mode"] = "dim"
-						st["t"] = randf_range(0.4, 0.9)
-					elif r < 0.92:
-						st["mode"] = "off"
-						st["t"] = randf_range(2.5, 8.0)
-					else:
-						st["mode"] = "dead"       # gone until the scene returns
-						st["t"] = 9999.0
-			"flick":
-				win.modulate.a = 0.9 if fmod(_time * 24.0 + i, 1.0) < 0.55 else 0.15
-				if float(st["t"]) <= 0.0:
-					st["mode"] = "on"
-					st["t"] = randf_range(2.0, 7.0)
-			"dim":
-				win.modulate.a = 0.35
-				if float(st["t"]) <= 0.0:
-					st["mode"] = "on"
-					st["t"] = randf_range(2.0, 7.0)
-			_:
-				win.modulate.a = 0.0
-				if str(st["mode"]) == "off" and float(st["t"]) <= 0.0:
-					st["mode"] = "flick"          # struggles back to life
-					st["t"] = 0.4
-
-
-func _do_strike() -> void:
-	var tween := create_tween()
-	tween.tween_property(self, "_flash_a", 0.30, 0.05)
-	tween.tween_property(self, "_flash_a", 0.05, 0.09)
-	tween.tween_property(self, "_flash_a", 0.24, 0.05)
-	tween.tween_property(self, "_flash_a", 0.0, 0.45)
-	if randf() < 0.5:
-		_bolt.texture = TEX_BOLTS[randi_range(0, 1)]
-		_bolt.position = PC + Vector2(randf_range(140.0, 820.0), 260.0)
-		_bolt.visible = true
-		var bolt := _bolt
-		get_tree().create_timer(0.12).timeout.connect(func() -> void:
-			if is_instance_valid(bolt):
-				bolt.visible = false)
-	_thunder_at = randf_range(0.6, 1.4)
-
-
 func _fade_ramp() -> Gradient:
 	var ramp := Gradient.new()
 	ramp.set_color(0, Color(1, 1, 1, 0))
@@ -646,11 +532,6 @@ func _activate(index: int, instant: bool) -> void:
 	var next := _scenes[index]
 	_scene_index = index
 	next.visible = true
-	if index == 2:  # the storm resets: windows back on, first strike soon
-		for i in _win_state.size():
-			_win_state[i] = {"mode": "on", "t": randf_range(2.0, 6.0)}
-		_strike_at = randf_range(3.0, 8.0)
-		_flash_a = 0.0
 	if _fade_tween != null:
 		_fade_tween.kill()
 	if instant:
@@ -684,12 +565,6 @@ func _build_ui() -> void:
 	vignette.stretch_mode = TextureRect.STRETCH_SCALE
 	vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(vignette)
-
-	_flash_rect = ColorRect.new()  # the storm's lightning washes the frame
-	_flash_rect.color = Color("a4dddb", 0.0)
-	_flash_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_flash_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(_flash_rect)
 
 	_title = TextureRect.new()
 	_title.texture = TEX_TITLE

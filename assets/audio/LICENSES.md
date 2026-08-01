@@ -37,8 +37,17 @@ ping, rain bed, car alarm) is synthesized at runtime and needs no license.
   https://opengameart.org/content/thunder-lightning-ambience-field-recording
   license: **cc-by 4.0** — credit: *thunder recording by gregor quendel*.
 
+## car sounds
+
+- `car/car_door_open.ogg`, `car/car_door_close.ogg`,
+  `car/car_engine_start.ogg`, `car/car_engine_loop.ogg`,
+  `car/car_engine_off.ogg` — from **"car sound effects pack (low quality)"
+  by ggbotnet** https://opengameart.org/content/car-sound-effects-pack-low-quality
+  license: **cc0** (public domain, no credit required — credited anyway).
+  files renamed from the pack's TitleCase; no other edits.
+
 ## credit line (readme + any published build)
 
 > music by davidkbd (cc-by 4.0) - footsteps by congusbongus and freesound
 > contributors swuing, ceberation, ali_6868 (cc-by 3.0) - thunder by gregor
-> quendel (cc-by 4.0)
+> quendel (cc-by 4.0) - car sounds by ggbotnet (cc0)

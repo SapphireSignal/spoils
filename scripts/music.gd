@@ -36,6 +36,14 @@ func _ready() -> void:
 	add_child(_player)
 	set_process(false)
 
+func _exit_tree() -> void:
+	# stop cleanly at teardown — a playing ogg at process exit reports as a
+	# leaked AudioStreamPlayback in headless runs
+	if _fade != null:
+		_fade.kill()
+	_player.stop()
+
+
 func play_menu() -> void:
 	_mode = "menu"
 	set_process(false)
@@ -47,9 +55,9 @@ func play_menu() -> void:
 		_player.volume_db = -60.0
 		_player.play()
 	_fade = create_tween()
-	_fade.tween_property(_player, "volume_db", MENU_DB, 3.0)
+	_fade.tween_property(_player, "volume_db", MENU_DB, 5.0)
 
-func stop_menu(fade_seconds: float = 1.2) -> void:
+func stop_menu(fade_seconds: float = 2.5) -> void:
 	if _mode == "menu":
 		_stop(fade_seconds)
 
@@ -59,7 +67,7 @@ func play_raid() -> void:
 	_breath = 0.0                     # first track starts immediately
 	set_process(true)
 
-func stop_raid(fade_seconds: float = 1.0) -> void:
+func stop_raid(fade_seconds: float = 2.5) -> void:
 	if _mode == "raid":
 		_stop(fade_seconds)
 
@@ -77,11 +85,12 @@ func _process(delta: float) -> void:
 	if _mode != "raid":
 		return
 	if _player.playing:
-		# fade OUT over the track's last seconds — no cold endings
+		# fade OUT over the track's last seconds — no cold endings. LONG
+		# ramps both ways (user call: "make the fade in and out longer")
 		if not _tail_started:
 			var remaining := _player.stream.get_length() \
 				- _player.get_playback_position()
-			if remaining <= 4.0:
+			if remaining <= 7.0:
 				_tail_started = true
 				if _fade != null:
 					_fade.kill()
@@ -104,4 +113,4 @@ func _process(delta: float) -> void:
 	_player.volume_db = -60.0
 	_player.play()
 	_fade = create_tween()
-	_fade.tween_property(_player, "volume_db", RAID_DB, 4.0)
+	_fade.tween_property(_player, "volume_db", RAID_DB, 7.0)

@@ -361,7 +361,7 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
         # zebra stripes across the road at intersections, HEAVILY worn — most
         # paint is gone, what's left is faded and nibbled. Same iso families
         # as the sidewalk joints; period 8 divides 64 for seam continuity.
-        region = _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.04, 0.02)
+        region = _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.0, 0.0)  # smooth like the road (user: nothing on the asphalt but cracks/holes)
         for (x, y) in region:
             if kind == "crosswalk_v":
                 param = (x - 32) * 0.5 - (y - 16)   # stripes run along +x
@@ -376,7 +376,7 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
 
     elif kind == "manhole":
         # a manhole cover sunk into the asphalt — sparse street furniture
-        region = _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.04, 0.02)
+        region = _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.0, 0.0)  # smooth like the road (user: nothing on the asphalt but cracks/holes)
         cx_, cy_ = 32, 16
         for (x, y) in region:
             d = ((x - cx_) / 9.0) ** 2 + ((y - cy_) / 4.5) ** 2
@@ -389,7 +389,7 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
 
     elif kind == "asphalt_stall":
         # parking stall separator: pale worn line along the lower-left edge
-        region = _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.04, 0.02)
+        region = _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.0, 0.0)  # smooth like the road (user: nothing on the asphalt but cracks/holes)
         for (x, y) in region:
             if not in_diamond(x - 2, y + 1) and rng.random() < 0.8:
                 c.set(x, y, C("819796"))
@@ -423,16 +423,93 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
         # center dashes for roads running along the cell +y axis (screen SW).
         # dash period 16 px: 64/16 tessellates, so dashes continue seamlessly
         # from tile to tile (a 20 px period phased randomly at every seam)
-        region = _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.04, 0.02)
+        region = _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.0, 0.0)  # smooth like the road (user: nothing on the asphalt but cracks/holes)
         for (x, y) in region:
             if abs((x - 32) * 0.5 + (y - 16)) < 1.5 and (x // 8) % 2 == 0 and rng.random() < 0.94:
                 c.set(x, y, C("de9e41"))
     elif kind == "asphalt_line_h":
         # same dashes for roads running along the cell +x axis (screen SE)
-        region = _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.04, 0.02)
+        region = _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.0, 0.0)  # smooth like the road (user: nothing on the asphalt but cracks/holes)
         for (x, y) in region:
             if abs((x - 32) * 0.5 - (y - 16)) < 1.5 and (x // 8) % 2 == 0 and rng.random() < 0.94:
                 c.set(x, y, C("de9e41"))
+
+    elif kind == "ballast":
+        # trainyard gravel bed: dark base with STONES — small 2-4px shapes
+        # with their own shadow, clustered (structure, never dot noise)
+        region = _floor_base(c, rng, C("202e37"), C("151d28"), C("394a50"), 0.0, 0.0)
+        for _ in range(rng.randint(6, 9)):
+            cx_, cy_ = 6 + rng.randrange(52), 4 + rng.randrange(24)
+            for s in range(rng.randint(3, 6)):
+                sx = cx_ + rng.randint(-5, 5)
+                sy = cy_ + rng.randint(-3, 3)
+                if (sx, sy) in region and (sx + 1, sy) in region:
+                    c.set(sx, sy, C("394a50"))
+                    c.set(sx + 1, sy, C("577277") if (sx + sy) % 2 else C("394a50"))
+                    if (sx, sy + 1) in region:
+                        c.set(sx, sy + 1, C("151d28"))   # stone shadow
+
+    elif kind.startswith("rail_cross"):
+        # a level crossing: rails let into the asphalt, flange grooves beside
+        region = _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.0, 0.0)
+        along_x = kind.endswith("_x")
+        for (x, y) in region:
+            p = (x - 32) * 0.5 - (y - 16) if along_x else (x - 32) * 0.5 + (y - 16)
+            for rail_c in (-3.5, 3.5):
+                d = abs(p - rail_c)
+                if d < 0.8:
+                    c.set(x, y, C("819796") if (x + y) % 9 else C("577277"))
+                elif d < 1.7:
+                    c.set(x, y, C("090a14"))            # flange groove
+
+    elif kind.startswith("rail"):
+        # rails on the ballast bed, ties beneath — period 8 divides 64 so the
+        # track continues seamlessly tile to tile. rail_x runs along the cell
+        # +x axis (screen SE), rail_y along +y (screen SW).
+        region = _floor_base(c, rng, C("202e37"), C("151d28"), C("394a50"), 0.0, 0.0)
+        for _ in range(rng.randint(4, 6)):              # sparse stones outside the ties
+            sx, sy = 6 + rng.randrange(52), 4 + rng.randrange(24)
+            if (sx, sy) in region:
+                c.set(sx, sy, C("394a50"))
+                if (sx, sy + 1) in region:
+                    c.set(sx, sy + 1, C("151d28"))
+        along_x = kind.endswith("_x")
+        for (x, y) in region:
+            p = (x - 32) * 0.5 - (y - 16) if along_x else (x - 32) * 0.5 + (y - 16)
+            q = (x - 32) * 0.5 + (y - 16) if along_x else (x - 32) * 0.5 - (y - 16)
+            if abs(p) < 6.5 and q % 8 < 2.2:            # wooden tie
+                c.set(x, y, C("341c27") if q % 8 < 1.4 else C("241527"))
+        for (x, y) in region:                            # rails OVER the ties
+            p = (x - 32) * 0.5 - (y - 16) if along_x else (x - 32) * 0.5 + (y - 16)
+            for rail_c in (-3.5, 3.5):
+                d = p - rail_c
+                if abs(d) < 0.8:
+                    c.set(x, y, C("819796"))            # polished head
+                elif 0.8 <= d < 1.8:
+                    c.set(x, y, C("394a50"))            # web shadow side
+
+    elif kind == "plaza":
+        # courtyard pavers: pale slabs with a diamond joint grid, period 16
+        # (divides 64 — seams continue). A few WHOLE pavers sit a shade
+        # deeper — worn patchwork, never a checkerboard, never dots
+        region = _floor_base(c, rng, CONC_L1, CONC_BASE, CONC_L2, 0.0, 0.0)
+        worn = {(rng.randrange(-2, 2), rng.randrange(-2, 2))
+                for _ in range(rng.randint(1, 2))}
+        for (x, y) in region:
+            u = (x - 32) * 0.5 + (y - 16)
+            v = (x - 32) * 0.5 - (y - 16)
+            if (int(u // 16), int(v // 16)) in worn:
+                c.set(x, y, CONC_BASE)
+            if u % 16 < 1.1 or v % 16 < 1.1:
+                c.set(x, y, CONC_BASE)                  # joint lines
+        if variant == 2:                                 # one cracked slab
+            x, y = 14 + rng.randrange(28), 6 + rng.randrange(14)
+            dx = rng.choice((-1, 1))
+            for _ in range(rng.randint(12, 18)):
+                if (x, y) in region:
+                    c.set(x, y, CONC_D1)
+                x += dx if rng.random() < 0.7 else -dx
+                y += rng.choice((0, 1, 1, -1))
     else:
         raise ValueError(kind)
     return c
@@ -478,6 +555,11 @@ FLOOR_TILES = [
     ("sidewalk_h_broken_1", ("sidewalk_h_broken", 1)),
     ("crosswalk_v", ("crosswalk_v", 0)), ("crosswalk_h", ("crosswalk_h", 0)),
     ("manhole_0", ("manhole", 0)),
+    ("ballast_0", ("ballast", 0)), ("ballast_1", ("ballast", 1)),
+    ("ballast_2", ("ballast", 2)),
+    ("rail_x", ("rail_x", 0)), ("rail_y", ("rail_y", 0)),
+    ("rail_cross_x", ("rail_cross_x", 0)), ("rail_cross_y", ("rail_cross_y", 0)),
+    ("plaza_0", ("plaza", 0)), ("plaza_1", ("plaza", 1)), ("plaza_2", ("plaza", 2)),
 ]
 
 def make_floors_atlas() -> tuple[Image.Image, dict[str, list[int]]]:
@@ -533,15 +615,63 @@ def _seg_brick(rng: random.Random, base, mortar, i: int, fy: int) -> tuple:
         return mortar
     return base
 
+STORY_H = 32  # extra face height of a second story (roof lifts by this too)
+
+def _draw_seg_window(c: Canvas, ox: int, oy: int, axis: str,
+                     face_h: int, wi: int, top: int, w: int, h: int,
+                     boarded: bool) -> None:
+    """One window opening on a wall face. GLASS, not a black void (user:
+    "make them see through like how an actual window would look"): sky-blue
+    panes darkening toward the sill, a diagonal sheen streak, and a thin
+    mullion cross. Boarded variant keeps its planks over a dark gap."""
+    for i in range(wi, min(32, wi + w)):
+        x = ox + 16 + (-16 + i)
+        fy_base = oy + _seg_base_fy(axis, i)
+        face_top = fy_base - face_h + 1
+        for fy in range(top, top + h):
+            row = fy - top
+            col = C("3c5e8b")                        # daytime glass
+            if row >= int(h * 0.55):
+                col = C("253a5e")                    # interior shadow low
+            sheen = (i * 2 - row) % 23               # one diagonal reflection
+            if sheen in (4, 5):
+                col = C("73bed3")
+            elif sheen == 6:
+                col = C("a4dddb")
+            if boarded:
+                col = C("10141f")                    # dark gap behind boards
+            # mullion cross: one center column, one center row
+            if i == wi + w // 2 or row == h // 2:
+                col = C("151d28")
+            c.set(x, face_top + fy, col)
+        c.set(x, face_top + top - 1, C("341c27"))    # lintel
+        c.set(x, face_top + top + h, C("819796"))    # sill
+        if boarded:
+            for bi, plank in enumerate(range(top + 1, top + h, 3)):
+                c.set(x, face_top + plank + ((i + bi) % 2),
+                      C("884b2b") if (i + bi) % 2 else C("602c2c"))
+    for i in (wi - 1, wi + w):  # jambs
+        if 0 <= i < 32:
+            x = ox + 16 + (-16 + i)
+            fy_base = oy + _seg_base_fy(axis, i)
+            face_top = fy_base - face_h + 1
+            for fy in range(top - 1, top + h + 1):
+                c.set(x, face_top + fy, C("341c27"))
+
 def make_wall_segment(style: str, axis: str, window_variant: int = -1,
-                      broken_seed: int = -1, variant: int = 0) -> tuple[Canvas, tuple, list]:
+                      broken_seed: int = -1, variant: int = 0,
+                      stories: int = 1, upper_only: bool = False) -> tuple[Canvas, tuple, list]:
+    """upper_only: just the second-story band + coping — the transom piece
+    that closes the hole above a ground-floor door on two-story walls."""
     rng = random.Random(
-        f"{SEED}:seg:{style}:{axis}:{window_variant}:{broken_seed}:{variant}")
+        f"{SEED}:seg:{style}:{axis}:{window_variant}:{broken_seed}:{variant}:{stories}:{upper_only}")
     base_col, mortar_col = (C(n) for n in BRICK_STYLES[style][axis])
+    extra = STORY_H if stories == 2 else 0
+    face_h = WALL_H + extra
     # canvas: 32 wide edge + coping overhang + outline margins
-    c = Canvas(48, 66)
+    c = Canvas(48, 66 + extra)
     ox = 8
-    oy = 56
+    oy = 56 + extra
     cop_dx = SEG_THICK if axis == "x" else -SEG_THICK  # coping goes to the back
 
     heights: list[int] = []
@@ -552,17 +682,22 @@ def make_wall_segment(style: str, axis: str, window_variant: int = -1,
                 h = max(5, min(24, h + rng.choice((-6, -4, 4, 6))))
             heights.append(h)
     else:
-        heights = [WALL_H] * 32
+        heights = [face_h] * 32
 
     for i in range(32):
         x = ox + 16 + (-16 + i)
         fy_base = oy + _seg_base_fy(axis, i)
         h = heights[i]
         for k in range(h):
-            fy = WALL_H - 1 - k if broken_seed >= 0 else k  # face-local row
             y = fy_base - h + 1 + k
-            face_row = (y - (fy_base - WALL_H + 1))
-            c.set(x, y, _seg_brick(rng, base_col, mortar_col, i, face_row))
+            face_row = (y - (fy_base - face_h + 1))
+            if upper_only and face_row > STORY_H:
+                continue          # transom piece: nothing below the floor line
+            col = _seg_brick(rng, base_col, mortar_col, i, face_row)
+            if stories == 2 and face_row in (STORY_H - 1, STORY_H):
+                # string course: a pale concrete band marking the floor line
+                col = CONC_L1 if (i + face_row) % 2 else CONC_BASE
+            c.set(x, y, col)
         if broken_seed >= 0:  # broken lip
             cap_y = fy_base - h
             c.set(x, cap_y, C("819796") if rng.random() < 0.5 else base_col)
@@ -570,8 +705,7 @@ def make_wall_segment(style: str, axis: str, window_variant: int = -1,
             # coping: stepped parallelogram toward the back
             for j in range(abs(cop_dx) + 1):
                 jx = x + (j if cop_dx > 0 else -j)
-                jy = fy_base - WALL_H - ((j + 1) // 2 if axis == "x" else -((j + 1) // 2))
-                jy = fy_base - WALL_H - ((j + 1) // 2)
+                jy = fy_base - face_h - ((j + 1) // 2)
                 r = rng.random()
                 col = CONC_L1
                 if r < 0.06:
@@ -580,29 +714,16 @@ def make_wall_segment(style: str, axis: str, window_variant: int = -1,
                     col = CONC_L2
                 c.set(jx, jy, col)
             if i % 2 == 0:  # light crease where coping meets the face
-                c.set(x, fy_base - WALL_H, CONC_L2)
+                c.set(x, fy_base - face_h, CONC_L2)
 
     if window_variant >= 0:
         wi, top, w, h, boarded = SEG_WINDOWS[window_variant]
-        for i in range(wi, min(32, wi + w)):
-            x = ox + 16 + (-16 + i)
-            fy_base = oy + _seg_base_fy(axis, i)
-            face_top = fy_base - WALL_H + 1
-            for fy in range(top, top + h):
-                c.set(x, face_top + fy, C("090a14"))
-            c.set(x, face_top + top - 1, C("341c27"))   # lintel
-            c.set(x, face_top + top + h, C("819796"))   # sill
-            if boarded:
-                for bi, plank in enumerate(range(top + 1, top + h, 3)):
-                    c.set(x, face_top + plank + ((i + bi) % 2),
-                          C("884b2b") if (i + bi) % 2 else C("602c2c"))
-        for i in (wi - 1, wi + w):  # jambs
-            if 0 <= i < 32:
-                x = ox + 16 + (-16 + i)
-                fy_base = oy + _seg_base_fy(axis, i)
-                face_top = fy_base - WALL_H + 1
-                for fy in range(top - 1, top + h + 1):
-                    c.set(x, face_top + fy, C("341c27"))
+        # ground-floor window (below the string course on two-story walls)
+        _draw_seg_window(c, ox, oy, axis, face_h, wi, top + extra, w, h, boarded)
+        if stories == 2:
+            # the upper room's window, stacked over the ground one
+            up_h = min(h, STORY_H - 12)
+            _draw_seg_window(c, ox, oy, axis, face_h, wi, 7, w, up_h, False)
 
     c.outline_auto()
     origin = (ox + 16, oy)
@@ -615,26 +736,27 @@ def make_wall_segment(style: str, axis: str, window_variant: int = -1,
         n = (2.4, 4.8)
     poly = [a[0] - n[0], a[1] - n[1], b[0] - n[0], b[1] - n[1],
             b[0] + n[0], b[1] + n[1], a[0] + n[0], a[1] + n[1]]
-    return c, origin, ["poly", poly]
+    return c, origin, None if upper_only else ["poly", poly]
 
-def make_wall_post(style: str) -> tuple[Canvas, tuple, list]:
-    # exactly WALL_H tall: the cap sits flush in the roof plane, closing the
-    # fascia line at each corner instead of poking through the roof
-    rng = random.Random(f"{SEED}:post:{style}")
-    c = Canvas(18, 62)
+def make_wall_post(style: str, stories: int = 1) -> tuple[Canvas, tuple, list]:
+    # exactly the face height: the cap sits flush in the roof plane, closing
+    # the fascia line at each corner instead of poking through the roof
+    rng = random.Random(f"{SEED}:post:{style}:{stories}")
+    post_h = WALL_H + (STORY_H if stories == 2 else 0)
+    c = Canvas(18, 62 + (STORY_H if stories == 2 else 0))
     lit, dark = (C(n) for n in BRICK_STYLES[style]["x"])
     _, darker = (C(n) for n in BRICK_STYLES[style]["y"])
-    bottoms = iso_prism(c, 2, 1, 12, 6, WALL_H, lit, lit, dark)
+    bottoms = iso_prism(c, 2, 1, 12, 6, post_h, lit, lit, dark)
     for x in range(12):  # concrete cap
         y = bottoms[x]
         c.set(2 + x, y, CONC_L1)
         c.set(2 + x, y - 1, CONC_L1 if x % 2 else CONC_L2)
     for x in range(12):  # course shading
-        for y in range(bottoms[x] + 2, bottoms[x] + WALL_H, 4):
+        for y in range(bottoms[x] + 2, bottoms[x] + post_h, 4):
             if rng.random() < 0.6:
                 c.set(2 + x, y, dark if x < 6 else darker)
     c.outline_auto()
-    return c, (8, 1 + WALL_H + 3), ["circle", 4.0]
+    return c, (8, 1 + post_h + 3), ["circle", 4.0]
 
 def wall_piece_inventory() -> dict[str, tuple[Canvas, tuple, list]]:
     pieces: dict[str, tuple[Canvas, tuple, list]] = {}
@@ -651,7 +773,20 @@ def wall_piece_inventory() -> dict[str, tuple[Canvas, tuple, list]]:
             for b in range(2):
                 pieces[f"seg_{style}_{axis}_broken_{b}"] = make_wall_segment(
                     style, axis, -1, b)
+            # two-story pieces: taller face, floor string course, stacked
+            # windows — the town houses that grew a second floor
+            pieces[f"seg2_{style}_{axis}"] = make_wall_segment(
+                style, axis, -1, -1, 0, 2)
+            for sv in (1, 2):
+                pieces[f"seg2_{style}_{axis}_v{sv}"] = make_wall_segment(
+                    style, axis, -1, -1, sv, 2)
+            for v in range(len(SEG_WINDOWS)):
+                pieces[f"seg2_{style}_{axis}_win_{v}"] = make_wall_segment(
+                    style, axis, v, -1, 0, 2)
+            pieces[f"seg2_{style}_{axis}_upper"] = make_wall_segment(
+                style, axis, -1, -1, 0, 2, True)
         pieces[f"post_{style}"] = make_wall_post(style)
+        pieces[f"post2_{style}"] = make_wall_post(style, 2)
     return pieces
 
 # ----------------------------------------------------------------- roofs -----
@@ -1378,15 +1513,18 @@ def make_rack(variant: int) -> tuple[Canvas, tuple, list]:
 ROOF_DEPTH = 12  # top-face depth in px — the old 6 read as a paper-thin car
 
 def make_vehicle(kind: str, scheme: int, rev: bool = False,
-                 broken: bool = False) -> tuple[Canvas, tuple, list]:
+                 broken: bool = False, door_open: bool = False) -> tuple[Canvas, tuple, list]:
     """Iso vehicle along the screen (2,1) diagonal: side face + a DEEP roof
     plane + a visible SE end cap, so it reads as a solid body, not a cutout.
     rev=False: front at the NW end (heading NW, tail lights on the end cap).
     rev=True:  profile reversed (heading SE, head lights + grille on the cap,
     windshield glass on the roof near the cap). Mirrored copies of both give
     the NE / SW headings — all four lane directions ship pre-baked.
-    broken=True: shattered glass, rust, dents — looted where it stands."""
-    rng = random.Random(f"{SEED}:vehicle:{kind}:{scheme}:{rev}:{broken}")
+    broken=True: shattered glass, rust, dents — looted where it stands.
+    door_open=True: same intact car with its door swung out — the enter/exit
+    frame for DRIVEABLE cars (texture swap is the animation).
+    kind "bus": long transit body with a passenger door and roof hatches."""
+    rng = random.Random(f"{SEED}:vehicle:{kind}:{scheme}:{rev}:{broken}:{door_open}")
     palettes = [
         ("752438", "411d31", "241527"),   # oxblood
         ("577277", "394a50", "202e37"),   # gray
@@ -1395,9 +1533,21 @@ def make_vehicle(kind: str, scheme: int, rev: bool = False,
     ]
     body_c, body_d, body_dd = (C(n) for n in palettes[scheme])
     glass, glass_d = C("3c5e8b"), C("253a5e")
-    L = 46
+    L = 64 if kind == "bus" else 46
+    wheels = (9, 50) if kind == "bus" else (8, 34)
     prof = []
-    if kind == "car":
+    if kind == "bus":
+        for i in range(L):
+            if i < 2:
+                h = 9
+            elif i < 5:
+                h = 9 + (i - 1) * 5     # windshield rake up to the flat roof
+            else:
+                h = 24
+            prof.append(min(h, 24))
+        win_lo, win_hi = 7, L - 4
+        glass_roof = (2, 6)
+    elif kind == "car":
         for i in range(L):
             if i < 3:
                 h = 7
@@ -1444,9 +1594,9 @@ def make_vehicle(kind: str, scheme: int, rev: bool = False,
         glass_roof = (L - glass_roof[1], L - glass_roof[0])
         bed_lo, bed_hi = L - 44, L - 26
     clear = 4  # ground clearance (wheels fill it)
-    oy = 34
+    oy = 40 if kind == "bus" else 34  # tall flat bus roof needs headroom
     ox = 6
-    c = Canvas(84, 70)
+    c = Canvas(104 if kind == "bus" else 84, 86 if kind == "bus" else 70)
     for i in range(L):  # body side face
         x = ox + i
         base = oy + i // 2
@@ -1558,7 +1708,7 @@ def make_vehicle(kind: str, scheme: int, rev: bool = False,
         for gt in range(4, ROOF_DEPTH - 3):
             c.set(wall_x0 + gt, wall_top0 - gt // 2 + 4, C("151d28"))
             c.set(wall_x0 + gt, wall_top0 - gt // 2 + 6, C("151d28"))
-    for wf in (8, 34):  # wheel arches + wheels
+    for wf in wheels:  # wheel arches + wheels
         cxw = ox + wf + 3
         cyw = oy + (wf + 3) // 2 - 1
         # carve SMALL and only around the wheel itself: the old radius-4.2
@@ -1574,6 +1724,29 @@ def make_vehicle(kind: str, scheme: int, rev: bool = False,
                 if d <= 10:
                     c.set(cxw + dx, cyw + dy, C("10141f") if d > 3 else C("202e37"))
         c.set(cxw, cyw, C("577277"))
+    if kind == "bus":
+        # the passenger door: a full-height dark leaf pair near the visible
+        # end, with a center split and a step well
+        door_lo = (win_hi - 12) if not rev else (win_lo + 5)
+        for i in range(door_lo, door_lo + 6):
+            x = ox + i
+            base = oy + i // 2
+            top = base - clear - prof[i] + 3
+            for y in range(top, base - clear):
+                c.set(x, y, C("151d28") if i != door_lo + 3 else C("090a14"))
+            c.set(x, base - clear, C("090a14"))          # step well
+        for t in range(int(L * 0.30), int(L * 0.34)):    # roof hatch 1
+            x = ox + t
+            for rt in (5, 6, 7):
+                c.set(x + rt, oy + t // 2 - clear - prof[t] - (rt + 1) // 2, C("151d28"))
+        for t in range(int(L * 0.62), int(L * 0.66)):    # roof hatch 2
+            x = ox + t
+            for rt in (5, 6, 7):
+                c.set(x + rt, oy + t // 2 - clear - prof[t] - (rt + 1) // 2, C("151d28"))
+        for i in range(3, L - 3):                        # livery stripe
+            x = ox + i
+            base = oy + i // 2
+            c.set(x, base - clear - 4, C("c7cfcc") if scheme != 1 else C("de9e41"))
     if kind == "pickup":  # cargo strictly INSIDE the bed — no cab overlap
         inner_lo = bed_lo + 3   # margins off the cab wall and the tailgate
         inner_hi = bed_hi - 3
@@ -1592,16 +1765,10 @@ def make_vehicle(kind: str, scheme: int, rev: bool = False,
             c.img.alpha_composite(mini.img, (ox + bi, oy + bi // 2 - 24))
             c.px = c.img.load()
             cursor = bi + w + 5
-    if broken:
-        # broken into reads as EVENTS, not damage noise (user call): a door
-        # left hanging open, one flat tire, dark side glass, some rust
-        for _ in range(rng.randint(8, 12)):  # rust bloom
-            x = ox + rng.randrange(2, L - 2)
-            base = oy + x // 2
-            y = base - clear - rng.randrange(1, max(2, prof[min(L - 1, x - ox)] - 1))
-            c.set(x, y, C("884b2b") if rng.random() < 0.6 else C("602c2c"))
+    if broken or door_open:
         # the open door: a panel swung out over the sill — CONNECTED to the
-        # body (it hinges at the sill line, no floating debris)
+        # body (it hinges at the sill line, no floating debris). The same
+        # panel is the driveable cars' enter/exit frame (door_open).
         door_i = (win_lo + win_hi) // 2 + rng.randrange(-3, 3)
         for k in range(6):
             x = ox + door_i + k
@@ -1610,11 +1777,19 @@ def make_vehicle(kind: str, scheme: int, rev: bool = False,
             for y in range(top, top + 5 - (k // 3)):
                 c.set(x, y, body_d if 0 < k < 5 else body_dd)
             if 1 < k < 4:
-                c.set(x, top + 2, C("090a14"))     # its window, dark
+                c.set(x, top + 2, C("090a14") if broken else glass_d)
         c.set(ox + door_i + 4, oy + (door_i + 4) // 2 - clear + 2, C("819796"))  # handle
+    if broken:
+        # broken into reads as EVENTS, not damage noise (user call): the
+        # hanging door, one flat tire, dark side glass, some rust
+        for _ in range(rng.randint(8, 12)):  # rust bloom
+            x = ox + rng.randrange(2, L - 2)
+            base = oy + x // 2
+            y = base - clear - rng.randrange(1, max(2, prof[min(L - 1, x - ox)] - 1))
+            c.set(x, y, C("884b2b") if rng.random() < 0.6 else C("602c2c"))
         # one flat tire: the rear wheel squashes onto the ground
-        flat_x = ox + 34 + 3
-        flat_y = oy + (34 + 3) // 2 - 1
+        flat_x = ox + wheels[1] + 3
+        flat_y = oy + (wheels[1] + 3) // 2 - 1
         for dx in range(-3, 4):
             c.set(flat_x + dx, flat_y + 1, C("10141f"))
         for dx in range(-4, 5):
@@ -1627,7 +1802,8 @@ def make_vehicle(kind: str, scheme: int, rev: bool = False,
     # light positions relative to the origin are crop-invariant — the alarm
     # system flashes small overlays exactly on the baked light pixels
     lights_rel = [[px - origin_full[0], py - origin_full[1]] for (px, py) in lights_px]
-    return cropped, origin, ["diamond", 29.0, 15.0], lights_rel
+    collider = ["diamond", 38.0, 19.0] if kind == "bus" else ["diamond", 29.0, 15.0]
+    return cropped, origin, collider, lights_rel
 
 def mirror_prop(prop: tuple) -> tuple:
     """Bake the horizontal mirror of a prop (origin re-anchored, collider is
@@ -2458,6 +2634,457 @@ def make_puddle(variant: int) -> tuple[Canvas, tuple, list | None]:
             c.set(x, y, (r, g, b, 200))
     return c, (cx, cy), None
 
+
+# ------------------------------------------------- districts update props ----
+# v0.6.18: the POI set — stairs/beds for two-story houses, buses for the
+# depot, boxcars + buffers for the trainyard, the playground, courtyard
+# pieces, and the comms relay compound. All iso, all Apollo, all 3D-read.
+
+def make_stairs() -> tuple[Canvas, tuple, list]:
+    """Interior staircase: seven stacked iso steps climbing the cell -y axis
+    (screen up-right), solid wooden mass, pale tread noses. Drawn back to
+    front so occlusion is right. F-interact takes you up."""
+    c = Canvas(52, 56)
+    top_col, lit, dark = C("be772b"), C("884b2b"), C("602c2c")
+    for s in range(6, -1, -1):                # back-top first, front last
+        h = 4 * (s + 1)
+        ox = 6 + s * 5
+        oy = 48 - s * 2 - 4 - h
+        iso_prism(c, ox, oy, 8, 4, h, top_col, lit, dark)
+        for x in range(2, 6):                 # pale tread nose on the front lip
+            c.set(ox + x, oy + 4, C("ad7757"))
+    c.outline_auto()
+    return c, (10, 50), ["diamond", 12.0, 6.0]
+
+def make_bed() -> tuple[Canvas, tuple, list]:
+    """Upstairs bed: iso mattress, oxblood blanket over the near half,
+    pillow at the head, a wooden headboard rising along the NE edge."""
+    c = Canvas(36, 34)
+    iso_prism(c, 4, 14, 24, 12, 6, C("a8b5b2"), C("819796"), C("577277"))
+    rows = small_diamond_rows(24, 12)
+    for i, (x0, x1) in enumerate(rows):       # blanket over the lower half
+        if i >= 5:
+            for x in range(x0, x1 + 1):
+                col = C("752438")
+                if i == 5:
+                    col = C("411d31")         # fold line
+                elif (x + i) % 9 == 0:
+                    col = C("411d31")         # soft creases
+                c.set(4 + x, 14 + i, col)
+    for i in range(1, 4):                     # pillow at the head (NE)
+        (x0, x1) = rows[i]
+        for x in range(x1 - 6, x1 - 1):
+            c.set(4 + x, 14 + i, C("c7cfcc"))
+        c.set(4 + rows[3][1] - 6, 17, C("819796"))
+    # headboard: a slab along the NE-upper edge, rising above the mattress
+    for k in range(11):
+        x = 4 + 12 + k
+        edge_y = 14 + (k + 1) // 2
+        for up in range(1, 8 - k // 3):
+            c.set(x, edge_y - up, C("4d2b32") if up > 1 else C("7a4841"))
+    c.outline_auto()
+    return c, (18, 30), ["diamond", 13.0, 7.0]
+
+def make_boxcar(scheme: int, broken: bool) -> tuple[Canvas, tuple, list]:
+    """Freight boxcar on the (2,1) iso diagonal, same projection family as
+    the road vehicles: ribbed slab side, sliding door, roof walkway, full
+    end wall with a ladder, twin bogies. broken=True: door dragged open."""
+    rng = random.Random(f"{SEED}:boxcar:{scheme}:{broken}")
+    liveries = [("884b2b", "602c2c", "341c27"),
+                ("25562e", "19332d", "10141f"),
+                ("577277", "394a50", "202e37")]
+    body_c, body_d, body_dd = (C(n) for n in liveries[scheme])
+    L = 56
+    clear = 6
+    oy = 44
+    ox = 6
+    c = Canvas(96, 88)
+    prof = [24 if i < 2 or i >= L - 2 else 26 for i in range(L)]
+    for i in range(L):                       # side face with rib shading
+        x = ox + i
+        base = oy + i // 2
+        for y in range(base - clear - prof[i], base - clear + 1):
+            col = body_d if i % 4 else body_dd
+            c.set(x, y, col)
+    door_lo, door_hi = (20, 36)
+    open_shift = 9 if broken else 0
+    for i in range(door_lo, door_hi):        # sliding door (or its open gap)
+        x = ox + i
+        base = oy + i // 2
+        top = base - clear - prof[i] + 4
+        for y in range(top, base - clear - 1):
+            if broken and i < door_lo + open_shift:
+                c.set(x, y, C("090a14"))     # the gap: interior darkness
+            else:
+                c.set(x, y, body_c if (i + y) % 4 else body_d)
+    for i in range(door_lo - 1, door_hi + 1):  # door rails top + bottom
+        x = ox + i
+        base = oy + i // 2
+        c.set(x, base - clear - prof[i] + 3, C("151d28"))
+        c.set(x, base - clear - 1, C("151d28"))
+    if not broken:
+        c.set(ox + door_hi - 3, oy + (door_hi - 3) // 2 - clear - 10, C("c7cfcc"))
+    prev_top = None
+    for i in range(L):                       # roof plane with walkway strip
+        x = ox + i
+        base = oy + i // 2
+        top = base - clear - prof[i]
+        span = 1 if prev_top is None else abs(prev_top - top) + 1
+        rising = prev_top is not None and prev_top > top
+        for t in range(1, ROOF_DEPTH + 1):
+            col = body_c
+            if t == ROOF_DEPTH:
+                col = body_d
+            elif t in (5, 6):
+                col = body_d                 # the walkway plank line
+            elif rng.random() < 0.02:
+                col = body_d
+            for k in range(span):
+                yy = top + (k if rising else -k)
+                c.set(x + t, yy - (t + 1) // 2, col)
+                c.set(x + t, yy - t // 2, col)
+        prev_top = top
+    cap_h = prof[L - 1]
+    wall_x0 = ox + L - 1
+    wall_top0 = oy + (L - 1) // 2 - clear - cap_h
+    wall_bot0 = oy + (L - 1) // 2 - clear
+    for t in range(1, ROOF_DEPTH + 1):       # SE end wall, full width
+        x = wall_x0 + t
+        rise = t // 2
+        for y in range(wall_top0 - rise, wall_bot0 - rise + 1):
+            c.set(x, y, body_dd)
+        c.set(x, wall_top0 - rise, body_d)
+    for t in (2, 3, 4):                      # ladder rungs up the end wall
+        x = wall_x0 + t
+        for ry in range(3, cap_h - 2, 4):
+            c.set(x, wall_bot0 - t // 2 - ry, C("819796"))
+    for y in range(wall_top0 + 1, wall_bot0):
+        c.set(ox + L - 1, y, body_dd)
+    far_h = prof[0]
+    for t in range(1, 3):                    # far end closes the silhouette
+        x = ox - t
+        base = oy - (t + 1) // 2
+        for y in range(base - clear - far_h + (t + 1) // 2, base - clear + 1):
+            c.set(x, y, body_dd)
+    c.set(ox - 2, oy - 1 - clear - far_h + 3, C("151d28"))  # coupler hint
+    for wf in (8, 42):                       # twin bogies
+        for wx in range(10):
+            x = ox + wf + wx
+            base = oy + (wf + wx) // 2
+            c.set(x, base - clear + 1, C("10141f"))
+            c.set(x, base - clear + 2, C("10141f"))
+        for wcx in (2, 7):
+            cxw = ox + wf + wcx
+            cyw = oy + (wf + wcx) // 2 - clear + 3
+            for dy in range(-1, 2):
+                for dx in range(-2, 3):
+                    if dx * dx + dy * dy <= 3:
+                        c.set(cxw + dx, cyw + dy, C("151d28"))
+            c.set(cxw, cyw, C("394a50"))
+    if broken:
+        for _ in range(rng.randint(8, 13)):  # rust blooms
+            x = ox + rng.randrange(2, L - 2)
+            base = oy + x // 2
+            y = base - clear - rng.randrange(2, 22)
+            c.set(x, y, C("884b2b") if rng.random() < 0.6 else C("602c2c"))
+    c.outline_auto()
+    origin_full = (ox + (L + 3) // 2 + ROOF_DEPTH // 2,
+                   oy + (L + 3) // 4 - ROOF_DEPTH // 4)
+    cropped, origin = crop_canvas(c, origin_full)
+    return cropped, origin, ["diamond", 36.0, 18.0]
+
+def make_buffer_stop() -> tuple[Canvas, tuple, list]:
+    """End-of-siding buffer: concrete block, two raked steel beams, a red
+    crossbeam that has seen better days."""
+    c = Canvas(30, 34)
+    iso_prism(c, 7, 20, 16, 8, 4, CONC_L1, CONC_BASE, CONC_D1)
+    for s in range(10):                       # raked beams
+        y = 24 - s
+        c.set(10 + s // 2, y, C("577277"))
+        c.set(11 + s // 2, y, C("394a50"))
+        c.set(18 + s // 2, y, C("577277"))
+        c.set(19 + s // 2, y, C("394a50"))
+    for x in range(9, 25):                    # crossbeam with worn red
+        c.set(x, 14 + (x - 9) // 4, C("a53030") if x % 5 else C("411d31"))
+        c.set(x, 15 + (x - 9) // 4, C("341c27"))
+    c.outline_auto()
+    return c, (15, 28), ["diamond", 9.0, 5.0]
+
+def make_swing_set(broken: bool) -> tuple[Canvas, tuple, list]:
+    """Playground swings along the +x axis: A-frames, top bar, chain seats.
+    broken=True: one seat hangs from a single chain."""
+    c = Canvas(60, 48)
+    bar_y0 = 8
+    for i in range(44):                       # top bar (iso slope +1/2)
+        x = 8 + i
+        y = bar_y0 + i // 2
+        c.set(x, y, C("884b2b") if i % 7 else C("602c2c"))
+        c.set(x, y + 1, C("602c2c"))
+    for end in (0, 42):                       # A-frame legs at both ends
+        ex = 8 + end
+        ey = bar_y0 + end // 2
+        for leg in range(16):
+            c.set(ex - leg // 3, ey + leg, C("602c2c"))
+            c.set(ex + leg // 3 + 1, ey + leg, C("341c27"))
+    for si, seat_i in enumerate((12, 27)):    # two swings
+        sx = 8 + seat_i
+        sy = bar_y0 + seat_i // 2 + 2
+        broken_this = broken and si == 1
+        chains = (0, 5) if not broken_this else (2,)
+        for ch in chains:
+            for cy in range(9):
+                if cy % 2 == 0:
+                    c.set(sx + ch, sy + cy, C("577277"))
+        if broken_this:                       # seat dangling from one chain
+            for k in range(5):
+                c.set(sx + 2 + k // 2, sy + 9 + k, C("341c27"))
+        else:
+            for k in range(7):
+                c.set(sx + k - 1, sy + 9, C("341c27"))
+                c.set(sx + k - 1, sy + 10, C("241527"))
+    c.outline_auto()
+    return c, (30, 42), ["poly", [-21.0, -12.0, 23.0, 10.0, 23.0, 14.0, -21.0, -8.0]]
+
+def make_slide() -> tuple[Canvas, tuple, list]:
+    """Playground slide: platform + ladder at the NE end, pale chute
+    pouring toward the SW."""
+    c = Canvas(42, 38)
+    iso_prism(c, 24, 6, 12, 6, 3, C("577277"), C("394a50"), C("202e37"))
+    for leg in ((25, 14), (34, 12)):
+        for y in range(leg[1], 30):
+            c.set(leg[0], y, C("341c27"))
+            c.set(leg[0] + 1, y, C("341c27"))
+    for r in range(4):                        # ladder rungs behind
+        c.set(36, 12 + r * 4, C("819796"))
+        c.set(37, 12 + r * 4, C("819796"))
+        c.set(38, 13 + r * 4, C("577277"))
+    for s in range(22):                       # the chute
+        x = 26 - s
+        y = 10 + s
+        if y > 31:
+            break
+        for w in range(5):
+            col = C("819796")
+            if w == 2:
+                col = C("a8b5b2")             # center shine
+            if w in (0, 4):
+                col = C("577277")             # raised edge rails
+            c.set(x + w, y, col)
+    for s in range(6):                        # run-out flat at the bottom
+        for w in range(5):
+            c.set(4 + w + s, 32 + s // 3, C("819796") if w != 2 else C("a8b5b2"))
+    c.outline_auto()
+    return c, (20, 35), ["diamond", 14.0, 7.0]
+
+def make_sandbox() -> tuple[Canvas, tuple, list | None]:
+    """Low wooden sandbox, walk-over: plank frame, dug-up sand, one
+    half-buried tire. No collider by design."""
+    rng = random.Random(f"{SEED}:sandbox")
+    c = Canvas(48, 26)
+    rows = small_diamond_rows(44, 22)
+    for i, (x0, x1) in enumerate(rows):
+        for x in range(x0, x1 + 1):
+            u = (x - 22) * 0.5 + (i - 11)
+            v = (x - 22) * 0.5 - (i - 11)
+            if abs(u) > 8.2 or abs(v) > 8.2:
+                c.set(2 + x, 2 + i, C("884b2b") if (x + i) % 6 else C("602c2c"))
+            else:
+                c.set(2 + x, 2 + i, C("ad7757") if (x * 3 + i * 7) % 13 else C("c09473"))
+    for _ in range(4):                        # dig shadows
+        bx, by = 12 + rng.randrange(22), 7 + rng.randrange(10)
+        for (dx, dy) in ((0, 0), (1, 0), (2, 1), (1, 1)):
+            c.set(bx + dx, by + dy, C("7a4841"))
+    for a in range(10):                       # half-buried tire arc
+        c.set(28 + a, 12 - (a * (10 - a)) // 8, C("151d28"))
+        c.set(28 + a, 13 - (a * (10 - a)) // 8, C("10141f"))
+    c.outline_auto()
+    return c, (24, 20), None
+
+def make_flagpole() -> tuple[Canvas, tuple, list]:
+    """School flagpole: tall mast, halyard, a tattered dark strip of flag."""
+    rng = random.Random(f"{SEED}:flagpole")
+    c = Canvas(24, 70)
+    iso_prism(c, 6, 60, 8, 4, 3, CONC_L1, CONC_BASE, CONC_D1)
+    for y in range(8, 62):
+        c.set(10, y, C("819796") if y % 9 else C("577277"))
+        if y % 2:
+            c.set(11, y, C("577277"))
+    for y in range(10, 60, 2):                # halyard
+        c.set(13, y, C("341c27"))
+    for fy in range(9):                       # the flag: tattered, hanging
+        w = 8 - max(0, fy - 4) - (1 if rng.random() < 0.4 else 0)
+        for fx in range(w):
+            c.set(12 + fx, 9 + fy, C("411d31") if (fx + fy) % 7 else C("752438"))
+    c.outline_auto()
+    return c, (11, 65), ["circle", 2.5]
+
+def make_planter(variant: int) -> tuple[Canvas, tuple, list]:
+    """Courtyard concrete planter, overgrown — the district reclaims its
+    own decorations."""
+    rng = random.Random(f"{SEED}:planter:{variant}")
+    c = Canvas(28, 32)
+    iso_prism(c, 4, 12, 20, 10, 7, CONC_L1, CONC_BASE, CONC_D1)
+    rows = small_diamond_rows(20, 10)
+    for i, (x0, x1) in enumerate(rows):       # soil, inset from the rim
+        for x in range(x0 + 2, x1 - 1):
+            if 1 <= i < 9:
+                c.set(4 + x, 12 + i, C("341c27"))
+    for _ in range(rng.randint(3, 5)):        # the overgrowth mound
+        bx, by = 9 + rng.randrange(10), 8 + rng.randrange(6)
+        for (dx, dy) in ((0, 0), (1, 0), (-1, 0), (0, -1), (1, -1), (0, 1), (2, 0)):
+            qx, qy = bx + dx, by + dy
+            if 4 <= qx < 26 and 2 <= qy < 20:
+                c.set(qx, qy, C("25562e") if (dx + dy) % 2 else C("19332d"))
+    if variant == 1:                          # cracked face
+        x, y = 8, 16
+        for _ in range(7):
+            c.set(x, y, CONC_D1)
+            x += rng.choice((0, 1, 1))
+            y += rng.choice((0, 1))
+    c.outline_auto()
+    return c, (14, 26), ["diamond", 10.0, 5.0]
+
+def make_fountain_dry() -> tuple[Canvas, tuple, list]:
+    """The courtyard's dry fountain: wide basin, cracked bowl of leaf
+    litter, a center pedestal that stopped mattering years ago."""
+    rng = random.Random(f"{SEED}:fountain")
+    c = Canvas(52, 40)
+    rows = small_diamond_rows(44, 22)
+    for i, (x0, x1) in enumerate(rows):       # rim ring around a dead bowl
+        for x in range(x0, x1 + 1):
+            u = (x - 22) * 0.5 + (i - 11)
+            v = (x - 22) * 0.5 - (i - 11)
+            r2 = (u / 8.4) ** 2 + (v / 8.4) ** 2
+            if r2 > 1.0:
+                c.set(4 + x, 6 + i, CONC_L1 if (x + i) % 3 else CONC_L2)
+            else:
+                c.set(4 + x, 6 + i, C("151d28"))
+    for i, (x0, x1) in enumerate(rows):       # outer wall face on the near side
+        if i > 14:
+            for x in range(x0, x1 + 1):
+                c.set(4 + x, 6 + i + 4, CONC_BASE if x % 2 else CONC_D1)
+    for _ in range(5):                        # leaf litter drifts in the bowl
+        bx, by = 16 + rng.randrange(18), 12 + rng.randrange(8)
+        for (dx, dy) in ((0, 0), (1, 0), (2, 0), (1, 1)):
+            c.set(bx + dx, by + dy, C("341c27"))
+    iso_prism(c, 22, 8, 8, 4, 7, CONC_L1, CONC_BASE, CONC_D1)   # pedestal
+    x, y = 14, 18                             # the crack that ended it
+    for _ in range(9):
+        c.set(x, y, CONC_D1)
+        x += rng.choice((1, 1, 0))
+        y += rng.choice((0, 1, 0))
+    c.outline_auto()
+    return c, (26, 32), ["diamond", 21.0, 11.0]
+
+def make_comms_tower() -> tuple[Canvas, tuple, list]:
+    """The relay: a lattice mast with X-bracing, a mid-height dish, a top
+    platform and whip antenna. The tallest thing left standing out here."""
+    c = Canvas(40, 92)
+    top_y = 14
+    base_y = 84
+    for band in range(top_y + 4, base_y - 4, 8):  # X bracing behind the legs
+        t = (band - top_y) / (base_y - top_y)
+        off = int(3 + t * 9)
+        for i in range(2 * off):
+            x = 20 - off + i
+            up = band + (i * 8) // (2 * off)
+            dn = band + 8 - (i * 8) // (2 * off)
+            c.set(x, up, C("394a50"))
+            c.set(x, dn, C("394a50"))
+    for y in range(top_y, base_y):            # two visible legs, converging
+        t = (y - top_y) / (base_y - top_y)
+        off = 3 + t * 9
+        for leg_x in (int(20 - off), int(20 + off)):
+            col = C("577277") if y % 11 else C("884b2b")   # rust bites
+            c.set(leg_x, y, col)
+            c.set(leg_x + 1, y, C("394a50"))
+    for x in range(15, 26):                   # top platform
+        c.set(x, top_y, C("341c27"))
+        c.set(x, top_y + 1, C("151d28"))
+    for y in range(top_y - 10, top_y):        # whip antenna + beacon
+        c.set(20, y, C("577277"))
+    c.set(20, top_y - 11, C("a53030"))
+    c.set(20, top_y - 12, C("cf573c"))
+    for dy in range(6):                       # the mid-height dish
+        w = (6, 8, 8, 7, 5, 3)[dy]
+        for dx in range(w):
+            col = C("819796") if dy < 2 or dx in (0, w - 1) else C("577277")
+            c.set(7 + dx + dy // 2, 38 + dy, col)
+    c.set(13, 41, C("341c27"))                # feed arm
+    c.set(14, 40, C("341c27"))
+    iso_prism(c, 8, 82, 8, 4, 3, CONC_L1, CONC_BASE, CONC_D1)   # pads
+    iso_prism(c, 24, 82, 8, 4, 3, CONC_L1, CONC_BASE, CONC_D1)
+    c.outline_auto()
+    return c, (20, 86), ["diamond", 12.0, 6.0]
+
+def make_dish_ground() -> tuple[Canvas, tuple, list]:
+    """Ground-mounted dish aimed at nothing anymore."""
+    c = Canvas(32, 28)
+    for dy in range(11):                      # the reflector, tilted ellipse
+        w = (4, 8, 11, 13, 14, 14, 13, 11, 9, 6, 3)[dy]
+        for dx in range(w):
+            col = C("819796")
+            if 1 < dy < 9 and 1 < dx < w - 2:
+                col = C("577277") if (dx + dy) % 4 else C("394a50")
+            c.set(6 + dx + dy // 3, 3 + dy, col)
+    for k in range(6):                        # feed arm to the focus
+        c.set(20 - k, 5 + k, C("341c27"))
+    c.set(21, 4, C("151d28"))
+    for leg in ((11, 15), (19, 14)):          # A-mount legs
+        for y in range(leg[1], 24):
+            c.set(leg[0], y, C("394a50"))
+            c.set(leg[0] + 1, y, C("202e37"))
+    c.outline_auto()
+    return c, (16, 24), ["diamond", 10.0, 5.0]
+
+def make_equip_shed() -> tuple[Canvas, tuple, list]:
+    """Relay equipment shed: corrugated metal, hazard-striped door panel,
+    roof vent, a conduit running down the corner."""
+    c = Canvas(52, 50)
+    bottoms = iso_prism(c, 6, 8, 32, 16, 20, C("394a50"), C("577277"), C("202e37"))
+    for x in range(32):                       # corrugation ribs both faces
+        if x % 3 == 0:
+            b = bottoms[x]
+            for y in range(b + 1, b + 20):
+                c.set(6 + x, y, C("394a50") if x < 16 else C("151d28"))
+    for dx in range(8):                       # door on the lit SW face
+        for dy in range(13):
+            c.set(10 + dx, 22 + dy - dx // 2, C("341c27") if dy else C("241527"))
+    for dx in range(8):                       # hazard stripe over the door
+        col = C("de9e41") if (dx // 2) % 2 == 0 else C("151d28")
+        c.set(10 + dx, 22 - dx // 2, col)
+        c.set(10 + dx, 23 - dx // 2, col)
+    for y in range(4, 9):                     # roof vent
+        for x in range(5):
+            c.set(24 + x, y, C("151d28") if y % 2 else C("202e37"))
+    for y in range(12, 30):                   # conduit down the far corner
+        c.set(37, y, C("819796") if y % 5 else C("577277"))
+    c.outline_auto()
+    return c, (22, 42), ["diamond", 17.0, 9.0]
+
+def make_school_sign() -> tuple[Canvas, tuple, list]:
+    """The school's sign board: nobody can read it anymore — the letters
+    are weathered to scribbles, which is somehow worse."""
+    rng = random.Random(f"{SEED}:schoolsign")
+    c = Canvas(34, 36)
+    for qx in (8, 24):                        # posts
+        for y in range(16, 32):
+            c.set(qx, y, C("341c27"))
+            c.set(qx + 1, y, C("241527"))
+    for x in range(4, 30):                    # board frame + face
+        for y in range(6, 18):
+            edge = x in (4, 29) or y in (6, 17)
+            c.set(x, y, C("602c2c") if edge else C("151d28"))
+    for row_y in (9, 13):                     # unreadable scribble lines
+        x = 7
+        while x < 27:
+            run = rng.randint(2, 4)
+            for k in range(min(run, 27 - x)):
+                c.set(x + k, row_y + rng.choice((0, 0, 1)), C("a8b5b2"))
+            x += run + rng.randint(1, 2)
+    c.outline_auto()
+    return c, (17, 32), ["diamond", 12.0, 5.0]
+
 def prop_inventory() -> tuple[dict, dict]:
     """Returns ({name: (canvas, origin, collider)}, {family: [names]})."""
     props: dict = {}
@@ -2519,6 +3146,49 @@ def prop_inventory() -> tuple[dict, dict]:
         fam("vehicle_se", i, art_se)
         fam("vehicle_ne", i, mirror_prop(art_nw))
         fam("vehicle_sw", i, mirror_prop(art_se))
+        if not broken:
+            # driveable cars: the door-open enter/exit frame (texture swap)
+            door_nw = make_vehicle(kind, scheme, rev=False, door_open=True)
+            door_se = make_vehicle(kind, scheme, rev=True, door_open=True)
+            props[f"vehicle_nw_{i}_door"] = door_nw
+            props[f"vehicle_se_{i}_door"] = door_se
+            props[f"vehicle_ne_{i}_door"] = mirror_prop(door_nw)
+            props[f"vehicle_sw_{i}_door"] = mirror_prop(door_se)
+    # buses for the depot: two liveries parked, two broken into
+    bus_specs = [(1, False), (2, False), (0, True), (3, True)]
+    for i, (scheme, broken) in enumerate(bus_specs):
+        bus_nw = make_vehicle("bus", scheme, rev=False, broken=broken)
+        bus_se = make_vehicle("bus", scheme, rev=True, broken=broken)
+        fam("bus_nw", i, bus_nw)
+        fam("bus_se", i, bus_se)
+        fam("bus_ne", i, mirror_prop(bus_nw))
+        fam("bus_sw", i, mirror_prop(bus_se))
+    # trainyard rolling stock
+    for i, (scheme, broken) in enumerate([(0, False), (1, False), (2, False), (0, True)]):
+        art = make_boxcar(scheme, broken)
+        fam("boxcar_x", i, art)
+        fam("boxcar_y", i, mirror_prop(art))
+    buffer_art = make_buffer_stop()
+    fam("buffer_stop", 0, buffer_art)
+    fam("buffer_stop", 1, mirror_prop(buffer_art))
+    # two-story interiors
+    props["stairs"] = make_stairs()
+    props["bed"] = make_bed()
+    # the playground
+    for i, playground_broken in enumerate((False, True)):
+        fam("swing_set", i, make_swing_set(playground_broken))
+    props["slide"] = make_slide()
+    props["sandbox"] = make_sandbox()
+    props["flagpole"] = make_flagpole()
+    props["school_sign"] = make_school_sign()
+    # the courtyard
+    for i in range(2):
+        fam("planter", i, make_planter(i))
+    props["fountain_dry"] = make_fountain_dry()
+    # the comms relay
+    props["comms_tower"] = make_comms_tower()
+    props["dish_ground"] = make_dish_ground()
+    props["equip_shed"] = make_equip_shed()
     for i in range(4):
         fam("tree", i, make_tree("pine", i))
     for i in range(3):
@@ -3782,167 +4452,6 @@ def make_scene_den() -> tuple[Canvas, Image.Image, Canvas]:
     return c, glow, strip
 
 
-def make_scene_storm() -> tuple[Canvas, Canvas, list[Image.Image], list[Canvas]]:
-    """Menu 3 — STORM OVER THE CORDON: the whole sealed city under a
-    thunderstorm, seen from outside the wire (its silhouette crosses the
-    foreground). Returns (base, flash-lit overlay, bolt sprites, window
-    clusters) — rain/flash/bolts/dying windows animate at runtime."""
-    rng = random.Random(f"{SEED}:scene:storm")
-    c = Canvas(SCENE_W, SCENE_H)
-    _vgrad(c, [(110, C("090a14")), (220, C("10141f")), (330, C("172038")),
-               (420, C("1e1d39")), (SCENE_H, C("151d28"))])
-    # the storm DECK: dense overlapping masses pressing down from the top,
-    # ragged wisps along its bottom edge, and a clearer band above the
-    # skyline where the bolts get to live
-    for (count, y_lo, y_hi, rx_lo, rx_hi, ry_lo, ry_hi, density) in (
-            (16, 20, 110, 120, 200, 26, 48, 0.88),
-            (14, 110, 210, 90, 160, 20, 38, 0.78),
-            (10, 210, 268, 50, 90, 10, 20, 0.55)):
-        for i in range(count):
-            cx_ = rng.randrange(-60, SCENE_W + 60)
-            cy_ = rng.randrange(y_lo, y_hi)
-            rx_ = rng.randint(rx_lo, rx_hi)
-            ry_ = rng.randint(ry_lo, ry_hi)
-            # SOLID lumpy masses: per-column edge jitter, banded core/skirt,
-            # a solid lit underside line — zero per-pixel coin flips
-            jit_t = rng.uniform(17.0, 33.0)
-            jit_p = rng.uniform(0.0, math.tau)
-            deep = density > 0.7
-            for x in range(max(0, cx_ - rx_), min(SCENE_W, cx_ + rx_)):
-                e = 1.0 - ((x - cx_) / rx_) ** 2
-                if e <= 0.0:
-                    continue
-                half = ry_ * (e ** 0.5) * (0.82 + 0.18 * math.sin(x / jit_t + jit_p))
-                y0 = int(cy_ - half)
-                y1 = int(cy_ + half)
-                for y in range(y0, y1):
-                    band = (y - y0) / max(1.0, float(y1 - y0))
-                    c.set(x, y, C("090a14") if (deep and band < 0.55)
-                          else C("10141f"))
-                if half > 4:
-                    c.set(x, y1, C("253a5e"))                 # lit underside
-                    if not deep:
-                        c.set(x, y1 - 1, C("172038"))
-    # (no baked rain dots — the runtime rain layer is the rain)
-    # the city: three receding skyline rows
-    # depth: FAR is hazy-light, NEAR is near-black (it was inverted and the
-    # front row read as paper cutouts)
-    far = _skyline_row(c, rng, 400, 24, 90, C("151d28"))
-    mid = _skyline_row(c, rng, 442, 40, 150, C("10141f"), 22, 52, 3, 9)
-    near = _skyline_row(c, rng, 505, 60, 210, C("090a14"), 26, 64, 4, 12)
-    # dark windows on the near row (the lit versions live in the overlays)
-    win_spots: list[tuple[int, int]] = []
-    for (x0, x1, top) in near:
-        for i in range((x1 - x0) // 9):
-            wx = x0 + 3 + rng.randrange(max(1, x1 - x0 - 7))
-            wy = top + 8 + rng.randrange(max(1, 500 - top - 12))
-            c.rect(wx, wy, wx + 1, wy + 2, C("090a14"))
-            if rng.random() < 0.06 and len(win_spots) < 18:
-                win_spots.append((wx, wy))
-    # THE WIRE across the foreground: clean lattice panels, and floodlights
-    # that READ as lights — hot core, warm layered halo, cone to the ground
-    base_y = 512
-    x = 0
-    while x < SCENE_W:
-        pw = rng.randint(26, 36)
-        c.vline(x, base_y - 13, base_y, C("090a14"))
-        c.vline(x + 1, base_y - 12, base_y, C("10141f"))
-        for px_ in range(x + 2, min(SCENE_W, x + pw)):
-            c.set(px_, base_y - 11, C("090a14"))
-            c.set(px_, base_y, C("090a14"))
-            k = px_ - x
-            if k % 3 == 0 or (pw - k) % 3 == 0:
-                c.set(px_, base_y - 10 + (k * 7) % 9, C("10141f"))
-        x += pw
-    lx = 30
-    while lx < SCENE_W:
-        c.vline(lx, base_y - 30, base_y, C("090a14"))
-        c.vline(lx + 1, base_y - 29, base_y, C("10141f"))
-        c.rect(lx - 3, base_y - 34, lx + 4, base_y - 30, C("090a14"))
-        # halo: SOLID banded ellipses around the lamp head, then the core
-        for dx in range(-26, 27):
-            for dy in range(-13, 14):
-                d = (dx / 26.0) ** 2 + (dy / 13.0) ** 2
-                if d < 1.0:
-                    hx, hy = lx + dx, base_y - 32 + dy
-                    if d < 0.12:
-                        c.set(hx, hy, C("e8c170"))
-                    elif d < 0.36:
-                        c.set(hx, hy, C("de9e41"))
-                    elif d < 0.68:
-                        c.set(hx, hy, C("602c2c"))
-        c.set(lx - 1, base_y - 32, C("e8c170"))
-        c.set(lx, base_y - 32, C("ebede9"))                 # hot core
-        c.set(lx + 1, base_y - 32, C("e7d5b3"))
-        for dy in range(1, 24):                              # solid light cone
-            half = 2 + dy // 2
-            inner = max(0, half - 2)
-            for dx in range(-half, half + 1):
-                if abs(dx) <= inner:
-                    c.set(lx + dx, base_y - 30 + dy,
-                          C("819796") if dy < 9 else C("577277"))
-        lx += rng.randint(120, 190)
-    for y in range(base_y + 1, SCENE_H):                     # our side: dark
-        for x in range(SCENE_W):
-            c.set(x, y, C("10141f") if y > base_y + 14 else C("151d28"))
-
-    # flash-lit overlay: rims that catch the lightning (shown during strikes)
-    lit = Canvas(SCENE_W, SCENE_H)
-    for (x0, x1, top) in far:
-        for x in range(x0, x1):
-            step = 3 if (x // 6) % 2 else 0
-            lit.set(x, top + step, C("3c5e8b"))
-    for (x0, x1, top) in mid:
-        for x in range(x0, x1):
-            step = 3 if (x // 6) % 2 else 0
-            lit.set(x, top + step, C("73bed3"))
-            if rng.random() < 0.25:
-                lit.set(x, top + step + 1, C("3c5e8b"))
-    for (x0, x1, top) in near:
-        for x in range(x0, x1):
-            step = 3 if (x // 6) % 2 else 0
-            lit.set(x, top + step, C("a4dddb"))
-            lit.set(x, top + step + 1, C("73bed3"))
-    for x in range(0, SCENE_W, 2):                                # wire catches it
-        lit.set(x, 512, C("73bed3"))
-
-    # forked bolt sprites
-    bolts: list[Image.Image] = []
-    for b in range(2):
-        brng = random.Random(f"{SEED}:bolt:{b}")
-        img = Image.new("RGBA", (90, 240), (0, 0, 0, 0))
-        bp = img.load()
-        x = 45.0
-        forks = [(x, 0.0, 1.0)]
-        while forks:
-            fx, fy, life = forks.pop()
-            while fy < 238 and life > 0:
-                fx += brng.uniform(-3.2, 3.2)
-                fy += brng.uniform(3.0, 7.0)
-                if not (2 <= fx <= 87) or fy >= 238:
-                    break
-                core = C("a4dddb")
-                side = C("73bed3")
-                bp[int(fx), int(fy)] = core
-                if brng.random() < 0.7:
-                    bp[int(fx) + 1, int(fy)] = (side[0], side[1], side[2], 160)
-                if brng.random() < 0.10 and life > 0.5:
-                    forks.append((fx, fy, life * 0.45))
-                life -= 0.012
-        bolts.append(img)
-
-    # window clusters: small lit overlays the runtime extinguishes one by one
-    clusters: list[Canvas] = []
-    rng.shuffle(win_spots)
-    for ci in range(3):
-        cl = Canvas(SCENE_W, SCENE_H)
-        for (wx, wy) in win_spots[ci::3]:
-            cl.rect(wx, wy, wx + 1, wy + 2, C("de9e41"))
-            cl.set(wx, wy, C("e8c170"))
-        clusters.append(cl)
-    return c, lit, bolts, clusters
-
-
 def make_vignette() -> Image.Image:
     """Soft radial darkening for menus. Smooth alpha by design (not palette)."""
     w, h = 960, 544
@@ -3979,14 +4488,19 @@ def make_fog_puffs() -> list[Image.Image]:
     like light and dust). The runtime drifts them through the woods each
     morning at very low opacity; they must never block vision."""
     out: list[Image.Image] = []
-    for i in range(3):
+    # 0..2: wisps. 3..4: BIG banks, roughly double — mixed sizes read as real
+    # weather instead of a swarm of identical puffs (user call)
+    sizes = [((104, 150), (26, 38)), ((104, 150), (26, 38)), ((104, 150), (26, 38)),
+             ((200, 250), (44, 60)), ((230, 290), (50, 68))]
+    for i in range(5):
         rng = random.Random(f"{SEED}:fog:{i}")
-        w = rng.randint(104, 150)
-        h = rng.randint(26, 38)
+        (w_lo, w_hi), (h_lo, h_hi) = sizes[i]
+        w = rng.randint(w_lo, w_hi)
+        h = rng.randint(h_lo, h_hi)
         img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
         px = img.load()
         lobes = [(w * 0.5, h * 0.55, w * 0.42, h * 0.40)]
-        for L in range(rng.randint(2, 3)):
+        for L in range(rng.randint(2, 3) + (2 if i >= 3 else 0)):
             lobes.append((rng.uniform(w * 0.22, w * 0.78),
                           rng.uniform(h * 0.35, h * 0.72),
                           rng.uniform(w * 0.16, w * 0.30),
@@ -4089,7 +4603,7 @@ def main() -> None:
     for stale in OUT.glob("*.png"):
         stale.unlink()
 
-    manifest: dict = {"tile": [64, 32], "wall_h": WALL_H,
+    manifest: dict = {"tile": [64, 32], "wall_h": WALL_H, "story_h": STORY_H,
                       "floors": {}, "props": {}, "families": {}, "char": {}}
 
     floors, coords = make_floors_atlas()
@@ -4125,7 +4639,7 @@ def main() -> None:
     # canvas and got silently cut (tv stand, crate stacks... never again).
     # Grid modules that abut by design are exempt.
     _EDGE_OK = ("roof_tile_", "roof_fascia_", "roof_eave_", "roof_corner_",
-                "seg_", "post_", "door_", "ui_grabber")
+                "seg_", "seg2_", "post_", "post2_", "door_", "ui_grabber")
     clipped = []
     for name, entry in entries.items():
         if any(name.startswith(p) for p in _EDGE_OK):
@@ -4203,16 +4717,6 @@ def main() -> None:
     den_base.img.save(OUT / "menu_den.png")
     den_glow.save(OUT / "menu_den_glow.png")            # light: soft alpha
     den_needles.img.save(OUT / "menu_den_needles.png")
-    storm_base, storm_lit, storm_bolts, storm_wins = make_scene_storm()
-    assert_palette(storm_base.img, "menu_storm")
-    assert_palette(storm_lit.img, "menu_storm_lit")
-    storm_base.img.save(OUT / "menu_storm.png")
-    storm_lit.img.save(OUT / "menu_storm_lit.png")
-    for i, bolt in enumerate(storm_bolts):
-        bolt.save(OUT / f"menu_storm_bolt_{i}.png")
-    for i, cluster in enumerate(storm_wins):
-        assert_palette(cluster.img, f"menu_storm_win_{i}")
-        cluster.img.save(OUT / f"menu_storm_win_{i}.png")
 
     (OUT / "manifest.json").write_text(json.dumps(manifest, indent=2))
 

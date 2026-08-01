@@ -32,6 +32,8 @@ var prone := false
 var flashlight_on := false
 var hp := MAX_HP
 var dead := false
+var floor_lift := 0.0           # sprite+camera rise while on a second story
+var driving: DriveableCar = null
 
 var _sprite: Sprite2D
 var _shadow: Sprite2D
@@ -138,6 +140,21 @@ func set_flashlight(on: bool) -> void:
 	_light.enabled = on
 
 
+func board_car(car: DriveableCar) -> void:
+	driving = car
+	visible = false
+	collision_layer = 0          # the car must not collide with its driver
+	set_flashlight(false)
+
+
+func unboard_car(at: Vector2) -> void:
+	position = at
+	velocity = Vector2.ZERO
+	driving = null
+	visible = true
+	collision_layer = 1
+
+
 func setup_surfaces(floor_layer: TileMapLayer, kinds: Dictionary) -> void:
 	_floor_layer = floor_layer
 	_surface_kinds = kinds
@@ -159,6 +176,18 @@ func _process(delta: float) -> void:
 	if _hurt_left > 0.0:
 		_hurt_left -= delta
 		_hurt_rect.color.a = maxf(0.0, 0.30 * (_hurt_left / HURT_FLASH_TIME))
+
+	if driving != null:
+		# riding: the body is welded to the car (so the camera weld, zoom
+		# and snap all keep working off the same position they always use)
+		global_position = driving.global_position
+		if not dead:
+			if Input.is_action_just_pressed("zoom_in"):
+				_step_zoom(1)
+			elif Input.is_action_just_pressed("zoom_out"):
+				_step_zoom(-1)
+		_update_camera(delta)
+		return
 
 	var input_vec := Vector2.ZERO
 	if not dead:
@@ -207,6 +236,11 @@ func _process(delta: float) -> void:
 		elif Input.is_action_just_pressed("zoom_out"):
 			_step_zoom(-1)
 
+	_update_camera(delta)
+	_animate(input_vec, delta)
+
+
+func _update_camera(delta: float) -> void:
 	# ONE grid for everything on screen: the TRUE position stays continuous
 	# (never quantize it — that would inflate speed), but the RENDERED sprite
 	# parks on the screen-pixel grid, and the camera is defined off that same
@@ -214,6 +248,8 @@ func _process(delta: float) -> void:
 	# raider is pixel-welded to the screen, and the world scrolls on the
 	# identical grid. Two disagreeing grids read as shimmer/blur while
 	# walking (v0.6.4 lesson). The grid is 1/combined-zoom-factor wide.
+	# floor_lift raises sprite AND camera together (whole px) — the second
+	# story reads higher while the true position stays on the ground grid.
 	var s := float(maxi(1, Settings.pixel_scale))
 	var c := s if zoom_combined == 0 else float(zoom_combined)
 	# glide toward the target stop; rest states are always whole factors
@@ -223,10 +259,10 @@ func _process(delta: float) -> void:
 	camera.zoom = Vector2(_zoom_view / s, _zoom_view / s)
 	var snapped_pos := (global_position * c).round() / c
 	var visual_err := snapped_pos - global_position
-	_sprite.position = visual_err
-	_shadow.position = visual_err
-	camera.global_position = _camera_target(snapped_pos, c)
-	_animate(input_vec, delta)
+	var lift := Vector2(0.0, -floor_lift)
+	_sprite.position = visual_err + lift
+	_shadow.position = visual_err + lift
+	camera.global_position = _camera_target(snapped_pos + lift, c)
 
 
 func _step_zoom(direction: int) -> void:
@@ -244,16 +280,33 @@ func _camera_target(from: Vector2, s: float) -> Vector2:
 
 
 func _interact() -> void:
-	var best: Door = null
+	# nearest interactable wins: doors, stairs, or a car worth taking
+	var best: Node2D = null
 	var best_d := Door.INTERACT_RANGE * Door.INTERACT_RANGE
 	for node in get_tree().get_nodes_in_group("doors"):
-		var door := node as Door
-		var d := door.global_position.distance_squared_to(global_position)
+		var d := (node as Node2D).global_position.distance_squared_to(global_position)
 		if d < best_d:
 			best_d = d
-			best = door
-	if best != null:
-		best.toggle()
+			best = node
+	for node in get_tree().get_nodes_in_group("stairs"):
+		var d := (node as Node2D).global_position.distance_squared_to(global_position)
+		if d < best_d and d < Stairs.INTERACT_RANGE * Stairs.INTERACT_RANGE:
+			best_d = d
+			best = node
+	for node in get_tree().get_nodes_in_group("cars"):
+		var car := node as DriveableCar
+		if car == null or not car.can_enter():
+			continue
+		var d := car.global_position.distance_squared_to(global_position)
+		if d < 46.0 * 46.0 and d < best_d:
+			best_d = d
+			best = car
+	if best is Door:
+		(best as Door).toggle()
+	elif best is Stairs:
+		(best as Stairs).use()
+	elif best is DriveableCar:
+		(best as DriveableCar).enter(self)
 
 
 func _animate(input_vec: Vector2, delta: float) -> void:

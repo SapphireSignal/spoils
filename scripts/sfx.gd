@@ -22,6 +22,11 @@ var _steps: Dictionary = {}          # kind -> Array[AudioStream]
 var _thunder: Array[AudioStream] = []
 var _rain_loop: AudioStreamWAV
 var _alarm: AudioStreamWAV
+var _car_door_open: AudioStream      # licensed recordings (ggbotnet, cc0)
+var _car_door_close: AudioStream
+var _car_engine_start: AudioStream
+var _car_engine_off: AudioStream
+var _car_engine_loop: AudioStreamOggVorbis
 
 var _players: Array[AudioStreamPlayer] = []
 var _next := 0
@@ -47,6 +52,12 @@ func _ready() -> void:
 		_steps[kind] = variants
 	for i in THUNDER_COUNT:
 		_thunder.append(load("res://assets/audio/thunder_%d.ogg" % i))
+	_car_door_open = load("res://assets/audio/car/car_door_open.ogg")
+	_car_door_close = load("res://assets/audio/car/car_door_close.ogg")
+	_car_engine_start = load("res://assets/audio/car/car_engine_start.ogg")
+	_car_engine_off = load("res://assets/audio/car/car_engine_off.ogg")
+	_car_engine_loop = load("res://assets/audio/car/car_engine_loop.ogg")
+	_car_engine_loop.loop = true
 	for i in 4:
 		var player := AudioStreamPlayer.new()
 		player.volume_db = -8.0
@@ -57,6 +68,12 @@ func _ready() -> void:
 	_rain_player = AudioStreamPlayer.new()
 	_rain_player.volume_db = -80.0
 	add_child(_rain_player)
+	_engine_player = AudioStreamPlayer.new()
+	_engine_player.volume_db = -80.0
+	add_child(_engine_player)
+	_car_player = AudioStreamPlayer.new()
+	_car_player.volume_db = -13.0
+	add_child(_car_player)
 	_thunder_player = AudioStreamPlayer.new()
 	add_child(_thunder_player)
 	_heavy_thread = Thread.new()
@@ -142,6 +159,47 @@ func set_rain(intensity: float) -> void:
 		# slow non-loop-aligned drift so nothing reads as a repeating pattern
 		var drift := sin(Time.get_ticks_msec() / 1000.0 * TAU / 13.7) * 1.5
 		_rain_player.volume_db = _rain_db + drift
+
+
+var _engine_player: AudioStreamPlayer
+var _car_player: AudioStreamPlayer
+var _engine_db := -60.0
+
+func play_car_door(open: bool) -> void:
+	_car_player.volume_db = -13.0
+	_car_player.stream = _car_door_open if open else _car_door_close
+	_car_player.play()
+
+
+func play_engine_start() -> void:
+	_car_player.volume_db = -11.0
+	_car_player.stream = _car_engine_start
+	_car_player.play()
+
+
+func play_engine_off() -> void:
+	_car_player.volume_db = -14.0
+	_car_player.stream = _car_engine_off
+	_car_player.play()
+
+
+func set_engine(intensity: float) -> void:
+	# the driving bed: quiet rumble that follows the throttle, slewed like
+	# the rain wash so it never pops (subtle always — user taste)
+	var want_on := intensity > 0.02
+	var target := -60.0
+	if want_on:
+		target = lerpf(-34.0, -24.0, clampf(intensity, 0.0, 1.0))
+	_engine_db = move_toward(_engine_db, target, get_process_delta_time() * 8.0)
+	if want_on and not _engine_player.playing:
+		_engine_db = -60.0
+		_engine_player.stream = _car_engine_loop
+		_engine_player.play()
+	elif not want_on and _engine_player.playing and _engine_db <= -58.0:
+		_engine_player.stop()
+	if _engine_player.playing:
+		_engine_player.volume_db = _engine_db
+		_engine_player.pitch_scale = 0.9 + 0.35 * clampf(intensity, 0.0, 1.0)
 
 
 func alarm_stream() -> AudioStreamWAV:

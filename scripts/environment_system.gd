@@ -17,6 +17,8 @@ const STORM_TINT_SECONDS := 45.0    # storm darkening fades in over ~45 s —
 
 const FOG_COUNT := 32               # dawn fog puffs alive at once, near view
 const FOG_ALPHA_MAX := 0.5          # clearly visible — still never a wall
+const FOG_FADE_IN := 3.5            # long breathe-in — puffs must never pop
+const FOG_TEX_COUNT := 5            # small wisps + the big banks (fog_3/4)
 const LEAF_COUNT := 22              # falling leaves alive at once
 
 const DROP_COUNT := 240
@@ -66,6 +68,7 @@ var _fog_sprites: Array[Sprite2D] = []
 var _fog_anchor := PackedVector2Array()
 var _fog_speed := PackedFloat32Array()
 var _fog_level := PackedFloat32Array()   # per-puff alpha factor
+var _fog_age := PackedFloat32Array()     # seconds alive — drives the fade-in
 var _fog_active := PackedByteArray()
 var _fog_wind := 1.0
 var _was_morning := false
@@ -154,13 +157,16 @@ func setup(root: Node2D, floor_layer: TileMapLayer, puddle_spots: Array,
 	root.add_child(fog_layer)
 	for i in FOG_COUNT:
 		var sprite := Sprite2D.new()
-		sprite.texture = load("res://art/gen/fog_%d.png" % (i % 3))
+		# mixed sizes (user call): most slots wisps, every third slot one of
+		# the BIG banks — variety baked in art, never runtime scaling
+		sprite.texture = load("res://art/gen/fog_%d.png" % (i % FOG_TEX_COUNT))
 		sprite.visible = false
 		fog_layer.add_child(sprite)
 		_fog_sprites.append(sprite)
 		_fog_anchor.append(Vector2.ZERO)
 		_fog_speed.append(1.0)
 		_fog_level.append(1.0)
+		_fog_age.append(0.0)
 		_fog_active.append(0)
 
 	# leaves tumble just above the props
@@ -231,7 +237,7 @@ func force_time(t: float) -> void:  # harness hook, 0..1
 		_fog_wind = (1.0 if randf() < 0.5 else -1.0) * randf_range(6.0, 11.0)
 		_was_morning = true
 		_fog_refresh = 0.0
-		for i in 90:
+		for i in 300:   # ~10 s of sim: past the slow breathe-in, banks settled
 			_update_fog(1.0 / 30.0, morning)
 
 
@@ -362,12 +368,17 @@ func _update_fog(delta: float, morning: float) -> void:
 		var sprite := _fog_sprites[i]
 		if _fog_active[i] == 1:
 			sprite.position.x += _fog_wind * _fog_speed[i] * delta
+			_fog_age[i] += delta
 			var slide := absf(sprite.position.x - _fog_anchor[i].x)
-			# clear of its tree line -> dissolve (user call)
-			var edge := 1.0 - clampf((slide - 46.0) / 52.0, 0.0, 1.0)
+			# a LONG drift before the dissolve even starts, then a slow melt —
+			# short lives read as fog blinking in and out (user call)
+			var edge := 1.0 - clampf((slide - 90.0) / 110.0, 0.0, 1.0)
+			# slow breathe-in from nothing; spawning at full alpha was the pop
+			var breathe: float = clampf(_fog_age[i] / FOG_FADE_IN, 0.0, 1.0)
 			var out_of_view := absf(sprite.position.x - center.x) > view.x + 80.0 \
 				or absf(sprite.position.y - center.y) > view.y + 60.0
-			sprite.modulate.a = FOG_ALPHA_MAX * _fog_level[i] * morning * edge
+			sprite.modulate.a = FOG_ALPHA_MAX * _fog_level[i] * morning \
+				* edge * breathe
 			if edge <= 0.0 or morning <= 0.0 or out_of_view:
 				if sprite.modulate.a <= 0.02:
 					_fog_active[i] = 0
@@ -384,6 +395,7 @@ func _update_fog(delta: float, morning: float) -> void:
 			_fog_anchor[i] = spot
 			_fog_speed[i] = randf_range(0.7, 1.3)
 			_fog_level[i] = randf_range(0.55, 1.0)
+			_fog_age[i] = 0.0
 			sprite.position = spot + Vector2(randf_range(-18.0, 18.0),
 				randf_range(-10.0, 4.0))
 			sprite.modulate.a = 0.0
