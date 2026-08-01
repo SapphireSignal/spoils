@@ -7,8 +7,8 @@ This file carries everything a fresh session needs that isn't in those two.
 
 ## Where we are
 
-- **Version v0.6.3** ("the stacks update"), all committed & pushed. The map is
-  named **"the stacks"**, 320×320, fresh seeded layout per deploy, walkable to
+- **Version v0.6.3** ("the transit update"), all committed & pushed. The map is
+  named **"transit"** (user-chosen), 320×320, fresh seeded layout per deploy, walkable to
   its true diamond edge with the edge-sniper rule guarding it (first
   damage/hp/death in the game). Doors are interactive (F), flashlight works
   (E), nights are dark, lamps flicker, rain is world-anchored.
@@ -61,7 +61,7 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   crouch, flashlight cone on E (8 facings; smooth light textures may rotate,
   sprites never), hp/take_hit/hurt-flash/died + respawn, camera clamped to an
   inset DIAMOND then snapped to SCREEN pixels (see rule 1).
-- `scripts/main.gd` — deploy screen ("deploying to the stacks", animated
+- `scripts/main.gd` — deploy screen ("deploying to transit", animated
   dots) → texture prewarm → awaited async world build → environment → edge
   guard → pause menu; death fade → respawn. `scripts/main_menu.gd` — 3
   rotating backdrops, title shine, changelog viewer. `scripts/settings.gd` —

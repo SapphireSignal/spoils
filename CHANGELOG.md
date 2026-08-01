@@ -5,11 +5,11 @@ All notable changes to SPOILS are documented here. Versions follow a simple
 
 ## [0.6.3] — 2026-08-01
 
-The stacks update: the district got a name, real edges, real doors, real rain —
+The transit update: the district got a name, real edges, real doors, real rain —
 and the first damage in the game.
 
 ### Added
-- **320x320 map** (4x the area) named **"the stacks"**. Every deploy generates a
+- **320x320 map** (4x the area) named **"transit"**. Every deploy generates a
   fresh district from a seed; `--seed=<text>` pins a layout for testing. All
   builder randomness now flows through the seeded rng (`Array.shuffle()` had
   silently broken determinism).
@@ -51,7 +51,7 @@ and the first damage in the game.
   exactly one screen pixel per frame at 240 Hz — the "smeary / looks like lower
   fps" walk is gone. Art stays pixel-perfect; props sit on whole world pixels.
 - **The deploy hitch is gone**: the world builds as a coroutine across frames
-  behind an animated "deploying to the stacks..." screen, and every texture is
+  behind an animated "deploying to transit..." screen, and every texture is
   pre-warmed during it.
 - Day is 20 minutes (was 8); deep night is much darker.
 - Rain spells last 2.5–5 minutes with slow ramps; lightning is a longer

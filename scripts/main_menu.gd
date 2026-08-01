@@ -50,7 +50,7 @@ var _changelog: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
-	["v0.6.3", ["the map is 4x bigger again - and it has a name: the stacks",
+	["v0.6.3", ["the map is 4x bigger again - and it has a name: transit",
 		"every deploy now builds a fresh district",
 		"walk to the true edge of the map - no early wall, no black void",
 		"but the edge is sniper country: heed the warning or take 3 hits",

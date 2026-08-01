@@ -3,7 +3,7 @@ extends Node2D
 ## builds ASYNCHRONOUSLY (the builder yields to the render loop, so the frame
 ## never hitches no matter how big the map is), then fades into the raid.
 
-const MAP_NAME := "the stacks"
+const MAP_NAME := "transit"
 
 var world_info: Dictionary = {}
 

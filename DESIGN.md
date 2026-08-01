@@ -60,7 +60,7 @@ gun-feel, at 32 pixels tall.*
    trader unlocks. Persist to a local config file.
 
 ### v1 scope (defaults — adjustable by the user, not by Claude)
-- **1 map**: "the stacks" — a 320×320 ruined industrial/urban district with interiors,
+- **1 map**: "transit" — a 320×320 ruined industrial/urban district with interiors,
   chokepoints, 3–4 extraction points. A fresh layout is generated per deploy from a seed
   (pinnable for testing); the road grid / forest / building DNA stays recognizable.
 - **6–10 guns** across classes (pistol / SMG / shotgun / rifle / DMR) with rarity tiers
