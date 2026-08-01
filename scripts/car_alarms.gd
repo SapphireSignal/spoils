@@ -62,6 +62,10 @@ func _process(delta: float) -> void:
 				_fire(car, entry["lights"] as Array)
 
 	var blink_on := fmod(_time, BLINK_PERIOD) < BLINK_PERIOD * 0.5
+	var night := 0.0
+	var environment := get_tree().get_first_node_in_group("environment")
+	if environment != null:
+		night = float(environment.get("night_amount"))
 	var i := _active.size() - 1
 	while i >= 0:
 		var active: Dictionary = _active[i]
@@ -73,6 +77,15 @@ func _process(delta: float) -> void:
 					sprite.queue_free()
 				else:
 					sprite.visible = blink_on
+		for g in (active["glows"] as Array):
+			var glow := g as PointLight2D
+			if is_instance_valid(glow):
+				if done:
+					glow.queue_free()
+				else:
+					# at night the flashers actually THROW light (user call)
+					glow.enabled = blink_on and night > 0.35
+					glow.energy = 0.55 * night
 		if done:
 			_active.remove_at(i)
 		i -= 1
@@ -84,11 +97,12 @@ func _fire(car: Node2D, lights: Array) -> void:
 		var audio := AudioStreamPlayer2D.new()
 		audio.stream = stream
 		audio.max_distance = 900.0
-		audio.volume_db = -6.0
+		audio.volume_db = -14.0   # quieter (user; the standing sound rule)
 		car.add_child(audio)
 		audio.play()
 		audio.finished.connect(audio.queue_free)
 	var sprites: Array = []
+	var glows: Array = []
 	for l in lights:
 		var dot := Sprite2D.new()
 		dot.texture = _light_tex
@@ -97,4 +111,13 @@ func _fire(car: Node2D, lights: Array) -> void:
 		dot.visible = false
 		car.add_child(dot)
 		sprites.append(dot)
-	_active.append({"sprites": sprites, "until": _time + FLASH_SECONDS})
+		var glow := PointLight2D.new()
+		glow.texture = load("res://art/gen/light_radial.png")
+		glow.position = dot.position
+		glow.color = Color("de9e41")
+		glow.texture_scale = 0.5
+		glow.enabled = false
+		car.add_child(glow)
+		glows.append(glow)
+	_active.append({"sprites": sprites, "glows": glows,
+		"until": _time + FLASH_SECONDS})

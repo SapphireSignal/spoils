@@ -3,6 +3,73 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.19] — 2026-08-01
+
+### Added
+- **The map (M)**: a big window; the FIRST open shows the world view — the
+  cordon with transit clickable in the middle and three sealed districts
+  under question marks — and clicking transit opens the district map: a
+  1px-per-cell image baked from the same plans the terrain paints from
+  (roads, walks, woods, rails, trails, buildings, machine marks), live
+  player + car markers, drag-pan, wheel zoom (cursor-anchored), 0.5 s
+  hover tooltips on every POI (both views), the in-game clock and current
+  weather, a back button, and view memory (world only on the very first
+  open). M closes it again.
+- **Play → map select**: the menu's deploy button is now "play" — it opens
+  the cordon map-select screen (transit with a painted preview + district
+  blurb + deploy; locked maps blacked out under "?"), and deploy launches
+  the raid from there.
+- **The scrapyard** (new POI, its own block): rows of dead and driveable
+  vehicles, two forklifts, ONE lattice-boom crane, industrial racks, junk.
+- **The gallery** (new small POI): free-standing graffiti walls (three tag
+  palettes, drips, shine ticks), spray cans, benches — and a SMOKER who
+  sits there working a cigarette: 3-frame drag/exhale cycle with drifting
+  smoke wisps.
+- **Street extras**: vending machines and newspaper boxes on the walkways,
+  roughly double the dumpsters.
+- **Power boxes** on every house wall; exactly ONE per district hangs open
+  with dangling wires and periodic spark bursts + glow (repair quest
+  fodder). Keybinds panel lists m (map), q (start engine) and tab
+  (inventory — future).
+
+### Changed
+- **Cursor-follow driving** (user: the wasd steering "seems off"): one left
+  click and the car chases the cursor at full throttle, stepping its four
+  baked headings toward it; click again and it rolls to idle. The in-car
+  hint teaches exactly that. Engine start/doors/alarm all quieter (the
+  standing rule now: every new sound ships quiet), and alarm flashers
+  THROW light at night.
+- **Bushes and leaves actually visible** (user: "not working"): bush
+  trigger radius 14→17 with a continuous whole-pixel rustle the entire
+  time you're inside (plus a half-second settle), and leaves now spawn
+  from a refreshed NEAR-VIEW shedder list — the old code rolled one tree
+  from the whole district and almost never hit the screen.
+- **One thunder per flash** (user call): the 2-3 strike chains are gone —
+  they also restarted the thunder player mid-clap, which was the "cut
+  out". Rain a step quieter, thunder a hair louder.
+- **Second stories are sealed**: the upper floor covers every cell — the
+  stairwell hole showed the ground floor. The flashlight rides the
+  32 px floor lift too (it sat "inside" the character upstairs).
+- **Village trails**: narrow worn dirt paths connect the houses and the
+  courtyard, pausing at roads/sidewalks/plazas and resuming on the far
+  side, detouring around the compounds.
+- **Clean walkways**: the broken sidewalk tiles lost their baked weed
+  pixels (the "little green bits").
+- **The yellow line sits on the road's true center**: the dash is two
+  half-tiles sharing the middle boundary of the 4-cell road (it used to
+  run down one cell, half a lane off).
+- **Map smaller again**: ring inset 68→78, playable diamond ~100 cells.
+- **The character**: +2 px taller in all stances (crouch included), same
+  proportions in every direction; PRONE is properly bigger — real
+  shoulder span lying N/S, thick diagonal silhouettes (they were sticks).
+- **The den board reads like a board**: district names in tall near-black
+  ink strokes with underlines, and every sheet hangs from a colored pin
+  tack with a glint.
+- **The splash breathes**: 3.4→5.2 s — flickers, rings and the beam sweep
+  are all watchable now.
+- **Perf** on the user's box: 240 avg fps day/dawn/night, worst ~4.5 ms,
+  ~4.6k nodes.
+
 ## [0.6.18] — 2026-08-01
 
 ### Changed

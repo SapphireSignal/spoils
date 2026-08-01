@@ -347,8 +347,8 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
                         if (nx, ny) in region and (nx, ny) not in bite:
                             if (nx + ny) % 2 == 0:
                                 c.set(nx, ny, CONC_D2)
-                            elif rng.random() < 0.18:
-                                c.set(nx, ny, C("25562e"))  # weeds in the cracks
+                            # (the old weed pixels here were the "little green
+                            # bits" the user banned from walkways)
             x, y = 10 + rng.randrange(24), 6 + rng.randrange(16)
             dx = rng.choice((-1, 1))
             for _ in range(rng.randint(14, 22)):    # one long wandering crack
@@ -419,19 +419,21 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
             for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
                 if (nx, ny) in region and (nx, ny) not in hole:
                     c.set(nx, ny, CONC_BASE if (nx + ny) % 3 == 0 else CONC_D2)
-    elif kind == "asphalt_line":
-        # center dashes for roads running along the cell +y axis (screen SW).
-        # dash period 16 px: 64/16 tessellates, so dashes continue seamlessly
-        # from tile to tile (a 20 px period phased randomly at every seam)
+    elif kind.startswith("asphalt_line"):
+        # center dashes. The road is FOUR cells wide, so its true center is
+        # the BOUNDARY between the middle two cells — each of them paints
+        # half the dash along its shared edge ("the yellow line seems a bit
+        # off" — it used to run down the middle of one cell, half a lane
+        # out). "_h" = roads along +x (screen SE); plain = along +y (SW).
+        # "b" = the far-side half. Dash period 16 divides 64; the two halves
+        # share phase because the per-cell param shift is a multiple of 8.
         region = _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.0, 0.0)  # smooth like the road (user: nothing on the asphalt but cracks/holes)
+        horiz = "_h" in kind
+        far = kind.endswith("b")
         for (x, y) in region:
-            if abs((x - 32) * 0.5 + (y - 16)) < 1.5 and (x // 8) % 2 == 0 and rng.random() < 0.94:
-                c.set(x, y, C("de9e41"))
-    elif kind == "asphalt_line_h":
-        # same dashes for roads running along the cell +x axis (screen SE)
-        region = _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.0, 0.0)  # smooth like the road (user: nothing on the asphalt but cracks/holes)
-        for (x, y) in region:
-            if abs((x - 32) * 0.5 - (y - 16)) < 1.5 and (x // 8) % 2 == 0 and rng.random() < 0.94:
+            p = (x - 32) * 0.5 - (y - 16) if horiz else (x - 32) * 0.5 + (y - 16)
+            on_edge = p >= 14.6 if not far else p <= -14.6
+            if on_edge and (x // 8) % 2 == 0 and rng.random() < 0.94:
                 c.set(x, y, C("de9e41"))
 
     elif kind == "ballast":
@@ -529,7 +531,8 @@ FLOOR_TILES = [
     ("asphalt_0", ("asphalt", 0)), ("asphalt_1", ("asphalt", 1)),
     ("asphalt_crack_0", ("asphalt_crack", 0)), ("asphalt_crack_1", ("asphalt_crack", 1)),
     ("asphalt_hole_0", ("asphalt_hole", 0)), ("asphalt_hole_1", ("asphalt_hole", 1)),
-    ("asphalt_line", ("asphalt_line", 0)), ("asphalt_line_h", ("asphalt_line_h", 0)),
+    ("asphalt_line", ("asphalt_line", 0)), ("asphalt_line_b", ("asphalt_line_b", 0)),
+    ("asphalt_line_h", ("asphalt_line_h", 0)), ("asphalt_line_h_b", ("asphalt_line_h_b", 0)),
     ("wood_0", ("wood", 0)), ("wood_1", ("wood", 1)), ("wood_2", ("wood", 2)),
     ("wood_3", ("wood", 3)), ("wood_4", ("wood", 4)),
     ("asphalt_stall", ("asphalt_stall", 0)),
@@ -3085,6 +3088,326 @@ def make_school_sign() -> tuple[Canvas, tuple, list]:
     c.outline_auto()
     return c, (17, 32), ["diamond", 12.0, 5.0]
 
+
+# ------------------------------------------------ scrapyard + street set ----
+# v0.6.19: the scrapyard's machines, the gallery's art, the street's boxes,
+# and the houses' power. Same rules: iso, Apollo, 3D-read, quiet wear.
+
+def make_forklift(variant: int) -> tuple[Canvas, tuple, list]:
+    """Yard forklift: boxy body, roll cage, mast with the forks raised
+    (variant 0) or dropped (1). Small, dented, honest."""
+    rng = random.Random(f"{SEED}:forklift:{variant}")
+    c = Canvas(56, 50)
+    bx, by = 18, 26
+    # body: a low prism, warning-yellow with grime
+    bottoms = iso_prism(c, bx, by, 16, 8, 8, C("de9e41"), C("be772b"), C("602c2c"))
+    for x in range(16):
+        b = bottoms[x]
+        if x % 5 == 2:
+            c.set(bx + x, b + 3, C("602c2c"))          # grime streaks
+    # counterweight block at the rear (SE end)
+    for x in range(12, 16):
+        b = bottoms[x]
+        for y in range(b + 1, b + 9):
+            c.set(bx + x, y, C("341c27") if x > 13 else C("602c2c"))
+    # roll cage: four posts + a flat canopy diamond
+    for k in range(10):
+        c.set(bx + 3, by + 2 - k, C("341c27"))
+        c.set(bx + 12, by + 6 - k, C("341c27"))
+        c.set(bx + 8, by - k, C("241527"))
+    rows = small_diamond_rows(12, 6)
+    for i, (x0, x1) in enumerate(rows):                # canopy
+        for x in range(x0, x1 + 1):
+            c.set(bx + 1 + x, by - 10 + i, C("202e37") if (x + i) % 2 else C("341c27"))
+    # the mast at the NW end: twin rails
+    for k in range(16):
+        c.set(bx - 2, by + 1 - k, C("394a50"))
+        c.set(bx - 1, by + 1 - k, C("577277"))
+    # forks: two tines reaching NW, raised or dropped
+    fork_y = (by - 11) if variant == 0 else (by + 4)
+    for f in range(8):
+        c.set(bx - 3 - f, fork_y + (f + 1) // 2, C("819796"))
+        c.set(bx - 3 - f, fork_y + (f + 1) // 2 + 2, C("577277"))
+    for wf in (2, 12):                                 # wheels
+        cxw = bx + wf
+        cyw = by + wf // 2 + 8
+        for dy in range(-2, 3):
+            for dx in range(-2, 3):
+                if dx * dx + dy * dy <= 5:
+                    c.set(cxw + dx, cyw + dy,
+                          C("10141f") if dx * dx + dy * dy > 1 else C("202e37"))
+    c.outline_auto()
+    cr, orr = crop_canvas(c, (bx + 8, by + 12))
+    return cr, orr, ["diamond", 14.0, 7.0]
+
+def make_crane() -> tuple[Canvas, tuple, list]:
+    """THE crane: crawler base, cab, a long lattice boom over the yard and
+    a hook that hasn't lifted anything in years."""
+    rng = random.Random(f"{SEED}:crane")
+    c = Canvas(120, 114)
+    bx, by = 18, 84
+    iso_prism(c, bx, by, 28, 14, 8, C("202e37"), C("394a50"), C("151d28"))
+    for x in range(28):                        # crawler treads
+        b = by + 14 + 8
+        c.set(bx + x, b - 14 + (x // 2) % 2, C("10141f"))
+    iso_prism(c, bx + 10, by - 10, 12, 6, 9, C("de9e41"), C("be772b"), C("602c2c"))
+    for wy in range(3):                        # cab glass
+        for wx in range(4):
+            c.set(bx + 13 + wx, by - 7 + wy, C("3c5e8b") if wy else C("73bed3"))
+    # the lattice boom: two chords climbing up-right with X bracing
+    x0, y0 = bx + 18, by - 12
+    length = 62
+    for s in range(length):
+        x = x0 + s
+        y = y0 - int(s * 0.62)
+        c.set(x, y, C("577277"))
+        c.set(x, y + 4 + (2 if s < 40 else 1), C("577277"))
+        if s % 6 == 0:
+            for k in range(5):
+                c.set(x, y + k, C("394a50"))
+        if s % 11 == 0 and s > 4:              # rust bites
+            c.set(x, y, C("884b2b"))
+    tip_x, tip_y = x0 + length - 1, y0 - int((length - 1) * 0.62)
+    for k in range(26):                        # the cable
+        c.set(tip_x - 1, tip_y + 3 + k, C("341c27") if k % 2 else C("241527"))
+    for hy in range(4):                        # hook block
+        for hx in range(3):
+            c.set(tip_x - 2 + hx, tip_y + 29 + hy, C("de9e41") if hy < 2 else C("202e37"))
+    c.set(tip_x - 1, tip_y + 34, C("819796"))
+    c.outline_auto()
+    cr, orr = crop_canvas(c, (bx + 14, by + 20))
+    return cr, orr, ["diamond", 17.0, 9.0]
+
+def make_vending(variant: int) -> tuple[Canvas, tuple, list]:
+    """Street vending machine, long dead: brand band, dark glass with the
+    last products still racked, coin slot."""
+    rng = random.Random(f"{SEED}:vending:{variant}")
+    brand = C("a53030") if variant == 0 else C("4f8fba")
+    brand_d = C("752438") if variant == 0 else C("253a5e")
+    c = Canvas(30, 42)
+    bottoms = iso_prism(c, 4, 8, 16, 8, 24, C("394a50"), C("577277"), C("202e37"))
+    for x in range(16):                        # face: brand band top
+        b = bottoms[x]
+        for y in range(b + 1, b + 6):
+            if x < 8:
+                c.set(4 + x, y, brand if y > b + 1 else brand_d)
+    for x in range(1, 7):                      # glass window (lit face only)
+        b = bottoms[x]
+        for y in range(b + 7, b + 17):
+            col = C("151d28")
+            row = (y - b - 7) // 3
+            if (y - b - 7) % 3 == 2 and 0 < x < 6:
+                col = [C("cf573c"), C("a8ca58"), C("73bed3")][row % 3]  # products
+            c.set(4 + x, y, col)
+        c.set(4 + x, b + 17, C("819796"))
+    c.set(11, bottoms[7] + 9, C("e8c170"))     # coin slot
+    c.set(11, bottoms[7] + 10, C("341c27"))
+    c.outline_auto()
+    return c, (12, 38), ["diamond", 9.0, 5.0]
+
+def make_newsbox(variant: int) -> tuple[Canvas, tuple, list]:
+    """Newspaper box on stub legs, the news six years stale."""
+    body = C("cf573c") if variant == 0 else C("3c5e8b")
+    body_d = C("752438") if variant == 0 else C("253a5e")
+    c = Canvas(22, 30)
+    bottoms = iso_prism(c, 4, 6, 12, 6, 11, body, body, body_d)
+    for x in range(1, 6):                      # window with the last stack
+        b = bottoms[x]
+        for y in range(b + 2, b + 7):
+            c.set(4 + x, y, C("151d28") if y > b + 4 else C("c7cfcc"))
+    for lx in (5, 13):                         # legs
+        for k in range(3):
+            c.set(lx, 6 + 6 + 11 + k + 1, C("202e37"))
+    c.outline_auto()
+    return c, (10, 26), ["diamond", 7.0, 4.0]
+
+def make_graffiti_wall(variant: int) -> tuple[Canvas, tuple, list]:
+    """A free-standing slab the district uses as a canvas: bubbly tag
+    shapes, highlight sweeps, drips. The gallery's whole point."""
+    rng = random.Random(f"{SEED}:graffiti:{variant}")
+    c = Canvas(52, 58)
+    ox, oy = 8, 34
+    for i in range(36):                        # the slab (x-axis face)
+        x = ox + i
+        fy_base = oy + (-8 + i // 2) + 8
+        for k in range(22):
+            y = fy_base - k
+            col = CONC_BASE if (i + k) % 9 else CONC_D1
+            c.set(x, y, col)
+        c.set(x, fy_base - 22, CONC_L1)        # cap
+        c.set(x, fy_base - 23, CONC_L2 if i % 2 else CONC_L1)
+    palettes = [
+        (C("a23e8c"), C("c65197"), C("df84a5")),
+        (C("4f8fba"), C("73bed3"), C("a4dddb")),
+        (C("75a743"), C("a8ca58"), C("d0da91")),
+    ]
+    base_col, mid, lite = palettes[variant % 3]
+    # the tag: fat overlapping blobs sweeping across the face
+    cx0 = ox + 6 + rng.randrange(4)
+    for b in range(rng.randint(3, 4)):
+        bx = cx0 + b * rng.randint(6, 8)
+        byy = oy - 6 - rng.randint(0, 4) + (bx - ox) // 2
+        rx = rng.randint(3, 5)
+        ry = rng.randint(4, 6)
+        for dy in range(-ry, ry + 1):
+            for dx in range(-rx, rx + 1):
+                if (dx / rx) ** 2 + (dy / ry) ** 2 <= 1.0:
+                    col = base_col
+                    if dy < -ry // 3:
+                        col = mid
+                    if dx - dy > rx:
+                        col = lite
+                    px_, py_ = bx + dx, byy + dy
+                    if ox <= px_ < ox + 36:
+                        c.set(px_, py_, col)
+    for d in range(rng.randint(3, 5)):         # drips
+        dx_ = cx0 + rng.randrange(20)
+        dy0 = oy - 2 + (dx_ - ox) // 2
+        for k in range(rng.randint(2, 6)):
+            c.set(dx_, dy0 + k, base_col)
+    for s in range(rng.randint(2, 3)):         # white shine ticks
+        sx = cx0 + rng.randrange(18)
+        sy = oy - 10 + (sx - ox) // 2 - rng.randrange(4)
+        c.set(sx, sy, C("ebede9"))
+        c.set(sx + 1, sy + 1, C("ebede9"))
+    c.outline_auto()
+    return c, (ox + 18, oy + 9), ["poly",
+        [-17.0, -9.0, 17.0, 8.0, 17.0, 12.0, -17.0, -5.0]]
+
+def make_spray_cans() -> tuple[Canvas, tuple, list | None]:
+    """A few spent spray cans where the artist crouched."""
+    rng = random.Random(f"{SEED}:cans")
+    c = Canvas(26, 14)
+    caps = [C("a23e8c"), C("73bed3"), C("a8ca58")]
+    for i in range(3):
+        x = 3 + i * 8 + rng.randrange(2)
+        y = 5 + rng.randrange(3)
+        if i == 2:                             # one still standing
+            for k in range(5):
+                c.set(x, y + k - 3, C("819796") if k else caps[i])
+                c.set(x + 1, y + k - 3, C("577277"))
+        else:                                  # tipped
+            for k in range(5):
+                c.set(x + k, y, C("819796") if k > 0 else caps[i])
+                c.set(x + k, y + 1, C("577277"))
+    c.outline_auto()
+    return c, (13, 11), None
+
+def make_smoker_sheet() -> tuple[Canvas, tuple, list | None]:
+    """The gallery regular: seated on a bench, spray can in one hand,
+    cigarette in the other. 3 frames: resting, drag (ember hot), exhale.
+    The game overlays him on a bench and drifts smoke wisps up."""
+    frames = []
+    for f in range(3):
+        fc = Canvas(20, 24)
+        cx = 9
+        # legs seated: thighs forward, shins down
+        for k in range(5):
+            fc.set(cx - 2 + k, 15, C("241527"))
+            fc.set(cx - 2 + k, 16, C("241527"))
+        for k in range(5):
+            fc.set(cx + 2, 16 + k, C("241527"))
+            fc.set(cx + 3, 16 + k, C("10141f"))
+        fc.set(cx + 1, 21, C("151d28"))        # boots
+        fc.set(cx + 2, 21, C("151d28"))
+        for y in range(7, 15):                 # torso: worn coat
+            for x in range(cx - 3, cx + 3):
+                col = C("4d2b32")
+                if x == cx - 3 or y == 14:
+                    col = C("341c27")
+                fc.set(x, y, col)
+        for y in range(3, 7):                  # head + beanie
+            for x in range(cx - 2, cx + 2):
+                fc.set(x, y, C("d7b594") if y > 4 else C("151d28"))
+        fc.set(cx + 1, 5, C("341c27"))         # stubble hint
+        # LEFT hand: the spray can resting on the knee
+        fc.set(cx - 4, 13, C("d7b594"))
+        for k in range(3):
+            fc.set(cx - 5, 11 + k, C("819796"))
+        fc.set(cx - 5, 10, C("a23e8c"))        # its cap
+        # RIGHT hand + cigarette: down (f0), at the mouth (f1), easing (f2)
+        if f == 0:
+            fc.set(cx + 3, 13, C("d7b594"))
+            fc.set(cx + 4, 12, C("c7cfcc"))
+            fc.set(cx + 5, 12, C("602c2c"))
+        elif f == 1:
+            fc.set(cx + 2, 8, C("d7b594"))
+            fc.set(cx + 3, 7, C("c7cfcc"))
+            fc.set(cx + 4, 7, C("cf573c"))     # ember, pulling hot
+        else:
+            fc.set(cx + 3, 10, C("d7b594"))
+            fc.set(cx + 4, 9, C("c7cfcc"))
+            fc.set(cx + 5, 9, C("de9e41"))     # ember cooling
+        fc.outline_auto()
+        frames.append(fc)
+    sheet = Canvas(20 * 3, 24)
+    for i, fr in enumerate(frames):
+        sheet.img.alpha_composite(fr.img, (i * 20, 0))
+    sheet.px = sheet.img.load()
+    return sheet, (10, 22), None
+
+def make_power_box(axis: str, broken: bool) -> tuple[Canvas, tuple, list | None]:
+    """House power box on the wall face. Working: shut lid, meter, conduit.
+    Broken: lid ajar, dangling wires, scorch — sparks come at runtime
+    (exactly one broken box per district; a repair quest someday)."""
+    rng = random.Random(f"{SEED}:powerbox:{axis}:{broken}")
+    c = Canvas(20, 28)
+    ox, oy = 5, 8
+    slope = 1 if axis == "x" else -1
+    for i in range(8):                          # the box, on the wall slope
+        x = ox + i
+        y0 = oy + (i // 2) * slope
+        for k in range(9):
+            col = C("394a50")
+            if k == 0 or i == 0 or i == 7:
+                col = C("202e37")
+            c.set(x, y0 + k, col)
+    if broken:
+        for i in range(4):                      # lid hanging open
+            x = ox + 8 + i // 2
+            y = oy + (8 // 2) * slope + 2 + i
+            c.set(x, y, C("202e37"))
+        for w in range(3):                      # dangling wires
+            wx = ox + 2 + w * 2
+            wy = oy + (2 // 2) * slope + 9
+            for k in range(3 + w * 2):
+                c.set(wx + (k % 2 if w == 1 else 0), wy + k, C("090a14") if k % 2 else C("341c27"))
+            c.set(wx, wy + 3 + w * 2, C("cf573c"))   # live copper tip
+        c.set(ox + 3, oy + 1 * slope + 3, C("151d28"))  # scorch
+        c.set(ox + 4, oy + 1 * slope + 4, C("151d28"))
+    else:
+        cxm = ox + 3
+        cym = oy + (3 // 2) * slope + 3
+        c.set(cxm, cym, C("a8ca58"))            # the meter, faintly alive
+        c.set(cxm + 1, cym, C("577277"))
+    for k in range(5):                          # conduit down to the ground
+        c.set(ox + 6, oy + (6 // 2) * slope + 9 + k, C("577277") if k % 2 else C("394a50"))
+    c.outline_auto()
+    return c, (9, 21), None
+
+def make_spark_frames() -> list:
+    """Three tiny spark bursts for the broken box (runtime blinks them)."""
+    out = []
+    for f in range(3):
+        rng = random.Random(f"{SEED}:spark:{f}")
+        img = Image.new("RGBA", (12, 12), (0, 0, 0, 0))
+        px = img.load()
+        cx = cy = 6
+        for i in range(rng.randint(4, 6)):
+            ang_x = rng.choice((-1, 0, 1))
+            ang_y = rng.choice((-1, 0, 1))
+            lx, ly = cx, cy
+            for k in range(rng.randint(1, 3)):
+                lx += ang_x
+                ly += ang_y
+                if 0 <= lx < 12 and 0 <= ly < 12:
+                    col = [(232, 193, 112, 255), (235, 237, 233, 255),
+                           (222, 158, 65, 255)][rng.randrange(3)]
+                    px[lx, ly] = col
+        px[cx, cy] = (235, 237, 233, 255)
+        out.append(img)
+    return out
+
 def prop_inventory() -> tuple[dict, dict]:
     """Returns ({name: (canvas, origin, collider)}, {family: [names]})."""
     props: dict = {}
@@ -3189,6 +3512,25 @@ def prop_inventory() -> tuple[dict, dict]:
     props["comms_tower"] = make_comms_tower()
     props["dish_ground"] = make_dish_ground()
     props["equip_shed"] = make_equip_shed()
+    # the scrapyard's machines
+    for i in range(2):
+        fam("forklift", i, make_forklift(i))
+    props["crane"] = make_crane()
+    # street furniture round two
+    for i in range(2):
+        fam("vending", i, make_vending(i))
+        fam("newsbox", i, make_newsbox(i))
+    # the gallery
+    for i in range(3):
+        art = make_graffiti_wall(i)
+        fam("graffiti_x", i, art)
+        fam("graffiti_y", i, mirror_prop(art))
+    props["spray_cans"] = make_spray_cans()
+    props["smoker"] = make_smoker_sheet()
+    # house power
+    for axis in ("x", "y"):
+        props[f"power_box_{axis}"] = make_power_box(axis, False)
+        props[f"power_box_{axis}_broken"] = make_power_box(axis, True)
     for i in range(4):
         fam("tree", i, make_tree("pine", i))
     for i in range(3):
@@ -3296,7 +3638,7 @@ FRONT_SWING = {0: 0, 1: 1, 2: 1, 3: 0, 4: -1, 5: -1, 6: 0}
 
 
 def draw_head(c: Canvas, view: str, bob: int, crouch: bool = False) -> None:
-    y0 = (15 if crouch else 10) + bob
+    y0 = (13 if crouch else 8) + bob   # +2 frame height (user: a touch bigger)
     if view == "front":
         c.rect(CX - 4, y0, CX + 3, y0 + 2, HAIR)
         c.vline(CX + 3, y0, y0 + 2, HAIR_D)
@@ -3350,7 +3692,7 @@ def draw_head(c: Canvas, view: str, bob: int, crouch: bool = False) -> None:
 
 
 def draw_torso(c: Canvas, view: str, bob: int, crouch: bool = False) -> None:
-    y0 = (23 if crouch else 18) + bob
+    y0 = (21 if crouch else 16) + bob
     y1 = (30 if crouch else 27) + bob
     x0, x1 = CX - 4, CX + 3
     c.rect(x0, y0, x1, y1, JKT)
@@ -3372,7 +3714,7 @@ def draw_torso(c: Canvas, view: str, bob: int, crouch: bool = False) -> None:
 
 
 def draw_pack(c: Canvas, view: str, bob: int, crouch: bool = False) -> None:
-    y0 = (24 if crouch else 19) + bob
+    y0 = (22 if crouch else 17) + bob
     if view == "back":
         c.rect(CX - 3, y0, CX + 2, y0 + 8, PACK)
         c.rect(CX - 3, y0 + 6, CX + 2, y0 + 8, PACK_D)
@@ -3392,8 +3734,218 @@ def draw_arms(c: Canvas, view: str, bob: int, frame: int, crouch: bool = False) 
     # at this size, and mirrored direction rows make it jump sides
     # the torso spans CX-4..CX+3 (even width on an odd center), so arm columns
     # must be placed off the body EDGES to be symmetric, not off CX
-    y0 = (24 if crouch else 19) + bob
-    arm_len = 6 if crouch else 8
+    y0 = (22 if crouch else 17) + bob
+    arm_len = 7 if crouch else 9
+    if view in ("front", "back"):
+        swing = FRONT_SWING[frame]
+        for side, sw in ((-1, swing), (1, -swing)):
+            x = (CX - 6) if side < 0 else (CX + 4)
+            yy = y0 + (1 if sw > 0 else 0)
+            c.rect(x, yy, x + 1, yy + arm_len, JKT)
+            c.rect(x, yy + arm_len + 1, x + 1, yy + arm_len + 2,
+                   SKIN if view == "front" else SKIN_SH)
+    elif view in ("front34", "back34"):
+        swing = FRONT_SWING[frame]
+        for side, sw in ((-1, swing), (1, -swing)):
+            x = ((CX - 5) if side < 0 else (CX + 4)) + sw
+            c.rect(x, y0, x + 1, y0 + arm_len, JKT)
+            if side < 0:  # this arm overlaps the torso: shade its inner column
+                c.vline(x + 1, y0, y0 + arm_len, JKT_D)
+            c.rect(x, y0 + arm_len + 1, x + 1, y0 + arm_len + 2, SKIN)
+    else:
+        x = CX + 1 + SIDE_SWING[frame]
+        c.rect(x, y0, x + 1, y0 + arm_len, JKT)
+        c.rect(x, y0 + arm_len + 1, x + 1, y0 + arm_len + 2, SKIN)
+
+
+def draw_legs(c: Canvas, view: str, frame: int, crouch: bool = False) -> None:
+    # crouch: legs start lower (bent under the dropped torso), wider stance
+    leg_top = 33 if crouch else 28
+    if view in ("front", "front34", "back", "back34"):
+        lifts = STEP_LIFT[frame]
+        spread = 1 if crouch else 0
+        for (x0, lift, pcol) in ((CX - 4 - spread, lifts[0], PANT),
+                                 (CX + 1 + spread, lifts[1], PANT_D)):
+            lift = min(lift, 1) if crouch else lift
+            dy = -lift
+            c.rect(x0, leg_top, x0 + 2, 33 + dy, pcol)
+            c.rect(x0, 34 + dy, x0 + 2, 36 + dy, BOOT)
+            c.hline(x0, x0 + 2, FEET + dy, BOOT_D)
+    else:
+        front_dx, back_dx, front_lift, back_lift = SIDE_STRIDE[frame]
+        if crouch:
+            front_dx += 2   # bent knees: legs offset forward under the body
+            back_dx -= 1
+            front_lift = min(front_lift, 1)
+            back_lift = min(back_lift, 1)
+        for dx, lift, pcol, bcol in ((back_dx, back_lift, PANT_D, BOOT),
+                                     (front_dx, front_lift, PANT, BOOT)):
+            x0 = CX - 1 + dx
+            c.rect(x0, leg_top, x0 + 2, 33 - lift, pcol)
+            c.rect(x0, 34 - lift, x0 + 2, 36 - lift, bcol)
+            toe = x0 + (3 if dx >= 0 else 2)
+            c.hline(x0, toe, FEET - lift, BOOT_D)
+
+
+def draw_char_frame(view: str, frame: int, crouch: bool = False) -> Canvas:
+    c = Canvas(32, 40)
+    bob = BOB[frame]
+    if crouch:
+        bob = max(bob, -1)  # crouch keeps the bob subtle
+    if view in ("back", "back34"):
+        draw_legs(c, view, frame, crouch)
+        draw_torso(c, view, bob, crouch)
+        draw_arms(c, view, bob, frame, crouch)
+        draw_pack(c, view, bob, crouch)
+        draw_head(c, view, bob, crouch)
+    elif view == "side":
+        draw_pack(c, view, bob, crouch)
+        draw_legs(c, view, frame, crouch)
+        draw_torso(c, view, bob, crouch)
+        draw_arms(c, view, bob, frame, crouch)
+        draw_head(c, view, bob, crouch)
+    else:
+        draw_legs(c, view, frame, crouch)
+        draw_torso(c, view, bob, crouch)
+        draw_arms(c, view, bob, frame, crouch)
+        draw_head(c, view, bob, crouch)
+    c.outline_auto()
+    return c
+
+DIR_VIEWS = [
+    ("E", "side", False), ("SE", "front34", False), ("S", "front", False),
+    ("SW", "front34", True), ("W", "side", True), ("NW", "back34", True),
+    ("N", "back", False), ("NE", "back34", False),
+]
+
+# ------------------------------------------------------------- prone sheet ---
+# Lying flat on the stomach, crawling. Same sheet geometry as the other
+# stances (8 dirs x idle+6 frames, 32x40, feet-anchored origin), so the
+# player script only swaps textures. Five base views, mirrored like DIR_VIEWS.
+
+PRONE_VIEWS = [
+    ("E", "side", False), ("SE", "diag_front", False), ("S", "front", False),
+    ("SW", "diag_front", True), ("W", "side", True), ("NW", "diag_back", True),
+    ("N", "back", False), ("NE", "diag_back", False),
+]
+
+def _lying_figure(c: Canvas, view: str, phase: int, drag: int, colors: dict,
+                  hat=None, beard: bool = False, has_pack: bool = True) -> None:
+    """Shared lying-flat figure at TRUE character proportions (the standing
+    model is 8 wide with a 8x8 head — a prone body keeps that mass). Used by
+    the player's prone sheet AND the fallen raiders, so they always match.
+    phase: -1/0/1 crawl arm; drag: 0/1 body creep. colors: jkt/jkt_d/pant/
+    pant_d/boot/hair/skin/skin_sh/pack/pack_d."""
+    jkt, jkt_d = colors["jkt"], colors["jkt_d"]
+    pant, pant_d = colors["pant"], colors["pant_d"]
+    boot = colors["boot"]
+    hair, skin, skin_sh = colors["hair"], colors["skin"], colors["skin_sh"]
+    pack, pack_d = colors["pack"], colors["pack_d"]
+    head_top = hat if hat is not None else hair
+
+    if view == "side":  # facing E: head right, pack humped on the back
+        y = 28
+        c.rect(2, y + 3, 5, y + 5, boot)                 # boots trailing
+        c.rect(5, y + 2, 12, y + 5, pant)                # legs, leg-thick
+        c.hline(5, 12, y + 5, pant_d)
+        if phase > 0:
+            c.rect(7, y + 1, 9, y + 1, pant_d)           # a knee lifts
+        c.rect(12, y, 22, y + 5, jkt)                    # torso
+        c.hline(12, 22, y + 5, jkt_d)
+        c.vline(12, y, y + 4, jkt_d)
+        if has_pack:
+            c.rect(13, y - 3, 19, y, pack)               # pack rides the back
+            c.hline(13, 19, y - 3, pack_d)
+        c.rect(22 + drag, y, 28 + drag, y + 4, skin)     # head, standing-sized
+        c.rect(22 + drag, y - 2, 27 + drag, y + 1, head_top)
+        c.set(28 + drag, y + 3, skin_sh)
+        if beard:
+            c.rect(26 + drag, y + 4, 28 + drag, y + 4, hair)
+        reach = 30 if phase > 0 else 26                  # crawling arm
+        c.rect(23 + drag, y + 5, reach + drag, y + 6, jkt)
+        c.set(min(31, reach + drag + 1), y + 6, skin)
+
+    elif view == "front":  # facing S: head to camera, soles away.
+        # WIDE now: a body flat on the ground shows its whole shoulder
+        # span, not the standing silhouette (user: "really skinny")
+        cx = CX
+        base = 14
+        for side_x in (cx - 5, cx + 2):                  # boots (far end)
+            c.rect(side_x, base, side_x + 2, base + 2, boot)
+        lift = 1 if phase > 0 else 0
+        c.rect(cx - 5, base + 3, cx - 2, base + 7, pant)
+        c.rect(cx + 1, base + 3 + lift, cx + 4, base + 7, pant_d)
+        c.hline(cx - 5, cx - 2, base + 7, pant_d)
+        c.rect(cx - 5, base + 8, cx + 4, base + 15, jkt)  # torso, 10 wide
+        c.vline(cx - 5, base + 8, base + 15, jkt_d)
+        c.vline(cx + 4, base + 8, base + 15, jkt_d)
+        c.rect(cx - 6, base + 13, cx + 5, base + 15, jkt)  # shoulder span
+        c.set(cx - 6, base + 13, jkt_d)
+        c.set(cx + 5, base + 13, jkt_d)
+        if has_pack:
+            c.rect(cx - 3, base + 9, cx + 2, base + 14, pack)
+            c.vline(cx + 2, base + 9, base + 14, pack_d)
+        arm_y = base + 14
+        c.rect(cx - 7, arm_y - (1 if phase > 0 else 0), cx - 6, arm_y + 4, jkt)
+        c.rect(cx + 6, arm_y - (1 if phase < 0 else 0), cx + 7, arm_y + 4, jkt)
+        c.set(cx - 7, arm_y + 5, skin)
+        c.set(cx + 6, arm_y + 5, skin)
+        c.rect(cx - 4, base + 16 + drag, cx + 3, base + 20 + drag, head_top)
+        c.hline(cx - 4, cx + 3, base + 21 + drag, skin_sh)  # brow sliver
+        if beard:
+            c.hline(cx - 2, cx + 1, base + 22 + drag, hair)
+
+    elif view == "back":
+        c.rect(CX - 4, y0, CX + 3, y0 + 6, HAIR)
+        c.vline(CX + 3, y0 + 1, y0 + 6, HAIR_D)
+        c.rect(CX - 4, y0 + 7, CX + 3, y0 + 7, HAIR_D)
+
+
+def draw_torso(c: Canvas, view: str, bob: int, crouch: bool = False) -> None:
+    y0 = (21 if crouch else 16) + bob
+    y1 = (30 if crouch else 27) + bob
+    x0, x1 = CX - 4, CX + 3
+    c.rect(x0, y0, x1, y1, JKT)
+    c.hline(x0, x1, y0, JKT_L)
+    c.vline(x1, y0 + 1, y1, JKT_D)
+    c.vline(x0, y0 + 1, y1, JKT_D)  # left edge shaded like the right one, so
+    c.hline(x0, x1, y1, JKT_D)      # BOTH arms read separate from the torso
+    if view == "front":
+        c.vline(CX, y0 + 1, y1, INK)
+        c.vline(CX - 3, y0, y0 + 4, STRAP)
+        c.vline(CX + 2, y0, y0 + 4, STRAP)
+    if view == "front34":
+        c.vline(CX + 1, y0 + 1, y1, INK)
+        c.vline(CX - 2, y0, y0 + 4, STRAP)
+    if view == "side":
+        c.vline(CX + 3, y0 + 1, y1 - 1, JKT_D)
+    c.rect(CX - 4, y1 + 1, CX + 3, y1 + 2, PANT)
+    c.hline(CX - 4, CX + 3, y1 + 2, PANT_D)
+
+
+def draw_pack(c: Canvas, view: str, bob: int, crouch: bool = False) -> None:
+    y0 = (22 if crouch else 17) + bob
+    if view == "back":
+        c.rect(CX - 3, y0, CX + 2, y0 + 8, PACK)
+        c.rect(CX - 3, y0 + 6, CX + 2, y0 + 8, PACK_D)
+        c.hline(CX - 3, CX + 2, y0, C("ad7757"))
+        c.vline(CX, y0, y0 + 8, PACK_D)
+    elif view == "back34":
+        c.rect(CX - 4, y0, CX + 1, y0 + 8, PACK)
+        c.rect(CX - 4, y0 + 6, CX + 1, y0 + 8, PACK_D)
+        c.hline(CX - 4, CX + 1, y0, C("ad7757"))
+    elif view == "side":
+        c.rect(CX - 6, y0 + 1, CX - 4, y0 + 7, PACK)
+        c.vline(CX - 6, y0 + 1, y0 + 7, PACK_D)
+
+
+def draw_arms(c: Canvas, view: str, bob: int, frame: int, crouch: bool = False) -> None:
+    # both arms the same jacket tone: asymmetric arm shading reads as a bug
+    # at this size, and mirrored direction rows make it jump sides
+    # the torso spans CX-4..CX+3 (even width on an odd center), so arm columns
+    # must be placed off the body EDGES to be symmetric, not off CX
+    y0 = (22 if crouch else 17) + bob
+    arm_len = 7 if crouch else 9
     if view in ("front", "back"):
         swing = FRONT_SWING[frame]
         for side, sw in ((-1, swing), (1, -swing)):
@@ -3549,37 +4101,43 @@ def _lying_figure(c: Canvas, view: str, phase: int, drag: int, colors: dict,
 
     elif view == "back":  # facing N: head away (hair only), soles at camera
         cx = CX
-        base = 15
+        base = 13
         c.rect(cx - 4, base + drag, cx + 3, base + 4 + drag, head_top)
-        arm_y = base + 4
-        c.rect(cx - 6, arm_y, cx - 5, arm_y + 4 - (1 if phase > 0 else 0), jkt)
-        c.rect(cx + 4, arm_y, cx + 5, arm_y + 4 - (1 if phase < 0 else 0), jkt)
-        c.set(cx - 6, arm_y - 1, skin)
-        c.set(cx + 5, arm_y - 1, skin)
-        c.rect(cx - 4, base + 5, cx + 3, base + 12, jkt)
-        c.vline(cx - 4, base + 5, base + 12, jkt_d)
-        c.vline(cx + 3, base + 5, base + 12, jkt_d)
+        arm_y = base + 5
+        c.rect(cx - 7, arm_y, cx - 6, arm_y + 5 - (1 if phase > 0 else 0), jkt)
+        c.rect(cx + 6, arm_y, cx + 7, arm_y + 5 - (1 if phase < 0 else 0), jkt)
+        c.set(cx - 7, arm_y - 1, skin)
+        c.set(cx + 6, arm_y - 1, skin)
+        c.rect(cx - 6, base + 5, cx + 5, base + 7, jkt)   # shoulder span
+        c.set(cx - 6, base + 7, jkt_d)
+        c.set(cx + 5, base + 7, jkt_d)
+        c.rect(cx - 5, base + 5, cx + 4, base + 13, jkt)  # torso, 10 wide
+        c.vline(cx - 5, base + 5, base + 13, jkt_d)
+        c.vline(cx + 4, base + 5, base + 13, jkt_d)
         if has_pack:
-            c.rect(cx - 2, base + 6, cx + 1, base + 11, pack)
-            c.vline(cx - 2, base + 6, base + 11, pack_d)
+            c.rect(cx - 3, base + 6, cx + 2, base + 12, pack)
+            c.vline(cx - 3, base + 6, base + 12, pack_d)
         lift = 1 if phase > 0 else 0
-        c.rect(cx - 4, base + 12, cx - 2, base + 16, pant)
-        c.rect(cx + 1, base + 12, cx + 3, base + 16 - lift, pant_d)
-        for side_x in (cx - 4, cx + 1):                  # soles toward camera
-            c.rect(side_x, base + 17, side_x + 2, base + 19, boot)
+        c.rect(cx - 5, base + 13, cx - 2, base + 18, pant)
+        c.rect(cx + 1, base + 13, cx + 4, base + 18 - lift, pant_d)
+        for side_x in (cx - 5, cx + 2):                  # soles toward camera
+            c.rect(side_x, base + 19, side_x + 2, base + 21, boot)
 
-    elif view == "diag_front":  # facing SE: along the down-right diagonal
-        sx, sy = 4, 18
-        c.rect(sx, sy, sx + 2, sy + 2, boot)             # soles upper-left
-        for i in range(3):                               # legs, leg-thick
-            c.rect(sx + 2 + i * 2, sy + 1 + i, sx + 5 + i * 2, sy + 3 + i, pant)
+    elif view == "diag_front":  # facing SE: along the down-right diagonal.
+        # THICK ribbon now - the old 5-wide diagonal read as a stick
+        sx, sy = 3, 16
+        c.rect(sx, sy, sx + 2, sy + 3, boot)             # soles upper-left
+        for i in range(4):                               # legs, leg-thick
+            c.rect(sx + 2 + i * 2, sy + 1 + i, sx + 6 + i * 2, sy + 4 + i, pant)
+        c.set(sx + 4, sy + 2, pant_d)
         for i in range(5):                               # torso, full mass
-            c.rect(sx + 7 + i * 2, sy + 3 + i, sx + 11 + i * 2, sy + 6 + i, jkt)
+            c.rect(sx + 9 + i * 2, sy + 4 + i, sx + 15 + i * 2, sy + 8 + i, jkt)
+        c.set(sx + 10, sy + 5, jkt_d)
         if has_pack:
             for i in range(3):
-                c.rect(sx + 9 + i * 2, sy + 2 + i, sx + 12 + i * 2, sy + 4 + i, pack)
-        hx = sx + 17 + drag
-        hy = sy + 9 + drag // 2
+                c.rect(sx + 11 + i * 2, sy + 3 + i, sx + 15 + i * 2, sy + 6 + i, pack)
+        hx = sx + 20 + drag
+        hy = sy + 11 + drag // 2
         c.rect(hx, hy, hx + 5, hy + 3, head_top)         # standing-sized head
         c.rect(hx + 2, hy + 3, hx + 6, hy + 6, skin)
         if beard:
@@ -3588,18 +4146,19 @@ def _lying_figure(c: Canvas, view: str, phase: int, drag: int, colors: dict,
         c.rect(hx + 3, hy + 7, hx + 3 + reach, hy + 8, jkt)
         c.set(min(31, hx + 4 + reach), hy + 8, skin)
 
-    else:  # diag_back — facing NE: head upper-right, soles lower-left
-        sx, sy = 4, 34
-        c.rect(sx, sy - 1, sx + 2, sy + 1, boot)         # soles lower-left
-        for i in range(3):
-            c.rect(sx + 2 + i * 2, sy - 3 - i, sx + 5 + i * 2, sy - 1 - i, pant)
+    else:  # diag_back - facing NE: head upper-right, soles lower-left
+        sx, sy = 3, 36
+        c.rect(sx, sy - 2, sx + 2, sy + 1, boot)         # soles lower-left
+        for i in range(4):
+            c.rect(sx + 2 + i * 2, sy - 4 - i, sx + 6 + i * 2, sy - 1 - i, pant)
+        c.set(sx + 4, sy - 2, pant_d)
         for i in range(5):
-            c.rect(sx + 7 + i * 2, sy - 8 - i, sx + 11 + i * 2, sy - 5 - i, jkt)
+            c.rect(sx + 9 + i * 2, sy - 10 - i, sx + 15 + i * 2, sy - 6 - i, jkt)
         if has_pack:
             for i in range(3):
-                c.rect(sx + 8 + i * 2, sy - 9 - i, sx + 11 + i * 2, sy - 8 - i, pack)
-        hx = sx + 17 + drag
-        hy = sy - 15 - drag // 2
+                c.rect(sx + 10 + i * 2, sy - 11 - i, sx + 14 + i * 2, sy - 9 - i, pack)
+        hx = sx + 20 + drag
+        hy = sy - 17 - drag // 2
         c.rect(hx, hy, hx + 5, hy + 3, head_top)         # hair only, facing away
         reach = 4 if phase > 0 else 2
         c.rect(hx + 2, hy - 2, hx + 2 + reach, hy - 1, jkt)
@@ -4198,18 +4757,29 @@ def make_scene_den() -> tuple[Canvas, Image.Image, Canvas]:
                 if xx > pw - 3 or yy > ph - 3:
                     col = shade                # edge shading
                 c.set(sx + xx, sy + yy, col)
-        pin = (sx + pw // 2, sy + 1)
+        pin = (sx + pw // 2, sy + 2)
         pins.append(pin)
-        c.set(pin[0], pin[1], C("cf573c"))     # tack
-        c.set(pin[0], pin[1] + 1, C("de9e41"))
-        title = _render_word(word, C("241527"), C("341c27"))
-        c.img.alpha_composite(title, (sx + 4, sy + 5))
+        # a REAL pin tack holding the sheet up: round colored head, glint,
+        # its little shadow pressed into the paper (user call)
+        pin_col = [C("cf573c"), C("73bed3"), C("e8c170"), C("a8ca58")][len(pins) % 4]
+        for (dx, dy) in ((0, 0), (1, 0), (-1, 0), (0, -1), (0, 1)):
+            c.set(pin[0] + dx, pin[1] + dy, pin_col)
+        c.set(pin[0], pin[1] - 1, C("ebede9"))
+        c.set(pin[0], pin[1] + 2, C("341c27"))
+        # the district name, WRITTEN: near-black ink stretched tall like a
+        # marker stroke, underlined — readable across the room (user call)
+        title = _render_word(word, C("090a14"), C("241527"))
+        tall = title.resize((title.width, title.height * 2), Image.NEAREST)
+        c.img.alpha_composite(tall, (sx + 4, sy + 6))
         c.px = c.img.load()
-        mini_photo(sx + 4, sy + 18, word)
+        for ux in range(sx + 4, min(sx + 4 + tall.width, sx + pw - 4)):
+            c.set(ux, sy + 7 + tall.height + (1 if (ux % 9) > 6 else 0),
+                  C("341c27"))
+        mini_photo(sx + 4, sy + 24, word)
         for ln in range(3):                    # unreadable notes, right column
-            squiggle(sx + 31, sx + pw - 4, sy + 20 + ln * 6, C("341c27"))
-        squiggle(sx + 4, sx + pw - 4, sy + 38, C("341c27"))
-        squiggle(sx + 4, sx + pw - 18, sy + 44, C("341c27"))
+            squiggle(sx + 31, sx + pw - 4, sy + 26 + ln * 6, C("341c27"))
+        squiggle(sx + 4, sx + pw - 4, sy + 43, C("341c27"))
+        squiggle(sx + 4, sx + pw - 18, sy + 48, C("341c27"))
         if crossed:                            # struck off the rotation
             for k in range(pw - 8):
                 if rng.random() < 0.8:
@@ -4452,6 +5022,49 @@ def make_scene_den() -> tuple[Canvas, Image.Image, Canvas]:
     return c, glow, strip
 
 
+
+def make_menu_map_thumb() -> Canvas:
+    """The map-select screen's painted preview of transit: the diamond
+    district, its road grid, the woods, the rail line — stylized, not a
+    live bake (every raid rolls its own layout anyway)."""
+    rng = random.Random(f"{SEED}:mapthumb")
+    c = Canvas(96, 96)
+    cx = cy = 48
+    for y in range(96):
+        for x in range(96):
+            if abs(x - cx) + abs(y - cy) * 2 < 88:
+                c.set(x, y, C("10141f"))
+    for y in range(96):                        # the playable diamond
+        for x in range(96):
+            if abs(x - cx) + abs(y - cy) * 2 < 62:
+                c.set(x, y, C("202e37"))
+    for i in range(4):                         # road grid, both axes
+        off = -24 + i * 16 + rng.randint(-2, 2)
+        for t in range(-40, 41):
+            px_, py_ = cx + t + off, cy + t // 2 - off // 2
+            if abs(px_ - cx) + abs(py_ - cy) * 2 < 60:
+                c.set(px_, py_, C("151d28"))
+            px2, py2 = cx + t - off, cy - t // 2 - off // 2
+            if abs(px2 - cx) + abs(py2 - cy) * 2 < 60:
+                c.set(px2, py2, C("151d28"))
+    for i in range(60):                        # the woods, one corner
+        bx = cx - 20 + rng.randint(-8, 8)
+        by = cy + 8 + rng.randint(-5, 5)
+        if abs(bx - cx) + abs(by - cy) * 2 < 58:
+            c.set(bx, by, C("19332d"))
+            c.set(bx + 1, by, C("19332d"))
+    for t in range(-30, 31):                   # the rail line
+        px_, py_ = cx + t, cy - 10 + t // 4
+        if abs(px_ - cx) + abs(py_ - cy) * 2 < 58:
+            c.set(px_, py_, C("341c27"))
+    for i in range(7):                         # town blocks
+        bx = cx + 6 + rng.randint(-3, 12)
+        by = cy + 2 + rng.randint(-8, 8)
+        if abs(bx - cx) + abs(by - cy) * 2 < 52:
+            c.rect(bx, by, bx + 3, by + 2, C("884b2b"))
+    c.rect(cx - 2, cy - 2, cx + 1, cy, C("819796"))   # the courtyard glint
+    return c
+
 def make_vignette() -> Image.Image:
     """Soft radial darkening for menus. Smooth alpha by design (not palette)."""
     w, h = 960, 544
@@ -4689,6 +5302,11 @@ def main() -> None:
     make_rain_splash().save(OUT / "rain_splash.png")
     for i, puff in enumerate(make_fog_puffs()):
         puff.save(OUT / f"fog_{i}.png")               # atmosphere: soft alpha
+    for i, spark in enumerate(make_spark_frames()):
+        spark.save(OUT / f"spark_{i}.png")            # fx: bright alpha
+    thumb_canvas = make_menu_map_thumb()
+    assert_palette(thumb_canvas.img, "menu_map_transit")
+    thumb_canvas.img.save(OUT / "menu_map_transit.png")
     for i, leaf in enumerate(make_leaves()):
         leaf.save(OUT / f"leaves_{i}.png")
     make_lamp_glow().save(OUT / "lamp_glow.png")      # light halo: soft alpha

@@ -9,11 +9,11 @@ extends CharacterBody2D
 ## never become one of these — they stay the static props they are.
 
 const MAX_SPEED := 260.0
-const REVERSE_MAX := 90.0
-const ACCEL := 200.0
+const ACCEL := 220.0
 const BRAKE := 340.0
-const COAST := 130.0            # engine braking when no pedal is down
-const TURN_COOLDOWN := 0.26     # seconds between 90-degree heading steps
+const COAST := 150.0            # engine braking while idling down
+const ARRIVE_DIST := 34.0       # ease off when the cursor is this close
+const TURN_COOLDOWN := 0.22     # seconds between 90-degree heading steps
 const DOOR_TIME := 0.34
 const HEADINGS := ["nw", "ne", "se", "sw"]   # clockwise on screen
 const DIRS := {
@@ -30,6 +30,7 @@ var heading := "nw"
 var index := 0                  # family variant index (intact: 0..2)
 var driven := false
 var engine_on := false
+var following := false          # left click toggles cursor-follow
 var speed := 0.0
 
 var _sprite: Sprite2D
@@ -37,6 +38,7 @@ var _manifest: Dictionary = {}
 var _player: Player
 var _busy := false              # a door swing is in flight
 var _turn_left := 0.0
+var _click_held := false
 var _lights: Array[PointLight2D] = []
 
 
@@ -117,6 +119,7 @@ func exit_car() -> void:
 	if engine_on:
 		engine_on = false
 		Sfx.play_engine_off()
+	following = false
 	Sfx.set_engine(0.0)
 	for light in _lights:
 		light.enabled = false
@@ -146,24 +149,42 @@ func _process(delta: float) -> void:
 		engine_on = true
 		Sfx.play_engine_start()
 
-	if engine_on:
-		if Input.is_action_pressed("move_up"):
-			speed = move_toward(speed, MAX_SPEED, ACCEL * delta)
-		elif Input.is_action_pressed("move_down"):
-			speed = move_toward(speed, -REVERSE_MAX, BRAKE * delta)
+	# cursor-follow driving (user call — the wasd steering "seems off"):
+	# one left CLICK and the car chases the cursor at full throttle; another
+	# click and it rolls to an idle stop
+	var click := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+	if click and not _click_held and engine_on:
+		following = not following
+	_click_held = click
+	if not engine_on:
+		following = false
+
+	if following:
+		var to_cursor := get_global_mouse_position() - global_position
+		if to_cursor.length() < ARRIVE_DIST:
+			speed = move_toward(speed, 0.0, BRAKE * delta)   # you're there
 		else:
-			speed = move_toward(speed, 0.0, COAST * delta)
-		_turn_left -= delta
-		var turn := int(Input.is_action_pressed("move_right")) \
-			- int(Input.is_action_pressed("move_left"))
-		if turn != 0 and _turn_left <= 0.0 and absf(speed) > 14.0:
-			_turn_left = TURN_COOLDOWN
-			var step := turn if speed >= 0.0 else -turn   # reverse steering
-			heading = HEADINGS[wrapi(HEADINGS.find(heading) + step, 0, 4)]
-			_apply_variant(_base_variant_name())
-			_aim_lights()
+			# steer: step the heading toward whichever baked facing points
+			# most at the cursor, one 90-degree notch per cooldown
+			_turn_left -= delta
+			var want := ""
+			var best_dot := -2.0
+			for h in HEADINGS:
+				var d := (DIRS[h] as Vector2).normalized().dot(to_cursor.normalized())
+				if d > best_dot:
+					best_dot = d
+					want = h
+			if want != heading and _turn_left <= 0.0:
+				_turn_left = TURN_COOLDOWN
+				var hi := HEADINGS.find(heading)
+				var wi := HEADINGS.find(want)
+				var step := 1 if wrapi(wi - hi, 0, 4) <= 2 else -1
+				heading = HEADINGS[wrapi(hi + step, 0, 4)]
+				_apply_variant(_base_variant_name())
+				_aim_lights()
+			speed = move_toward(speed, MAX_SPEED, ACCEL * delta)
 	else:
-		speed = move_toward(speed, 0.0, BRAKE * delta)
+		speed = move_toward(speed, 0.0, COAST * delta)
 
 	velocity = (DIRS[heading] as Vector2) * speed
 	move_and_slide()

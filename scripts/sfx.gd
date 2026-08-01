@@ -131,7 +131,10 @@ func play_step(kind: String, quiet: bool) -> void:
 func play_thunder() -> void:
 	if _thunder.is_empty():
 		return
-	_thunder_player.volume_db = randf_range(-24.0, -18.0)  # subtle, always
+	_thunder_player.volume_db = randf_range(-22.0, -16.0)  # subtle, always
+	                                                       # (user: rain down
+	                                                       # a step, thunder
+	                                                       # up a hair)
 	_thunder_player.stream = _thunder[randi() % _thunder.size()]
 	_thunder_player.play()
 
@@ -147,7 +150,7 @@ func set_rain(intensity: float) -> void:
 	# touch quieter overall (user call)
 	var target := -60.0
 	if want_on:
-		target = lerpf(-49.0, -34.0, clampf(intensity, 0.0, 1.0))
+		target = lerpf(-52.0, -37.0, clampf(intensity, 0.0, 1.0))
 	_rain_db = move_toward(_rain_db, target, get_process_delta_time() * 6.0)
 	if want_on and not _rain_player.playing:
 		_rain_db = -60.0
@@ -166,19 +169,22 @@ var _car_player: AudioStreamPlayer
 var _engine_db := -60.0
 
 func play_car_door(open: bool) -> void:
-	_car_player.volume_db = -13.0
+	# STANDING RULE (user, after asking for the third time): every NEW
+	# sound ships QUIET first — organic/mechanical one-shots start at
+	# -18 dB or below and only come up if the user asks
+	_car_player.volume_db = -19.0
 	_car_player.stream = _car_door_open if open else _car_door_close
 	_car_player.play()
 
 
 func play_engine_start() -> void:
-	_car_player.volume_db = -11.0
+	_car_player.volume_db = -18.0
 	_car_player.stream = _car_engine_start
 	_car_player.play()
 
 
 func play_engine_off() -> void:
-	_car_player.volume_db = -14.0
+	_car_player.volume_db = -19.0
 	_car_player.stream = _car_engine_off
 	_car_player.play()
 
@@ -189,7 +195,7 @@ func set_engine(intensity: float) -> void:
 	var want_on := intensity > 0.02
 	var target := -60.0
 	if want_on:
-		target = lerpf(-34.0, -24.0, clampf(intensity, 0.0, 1.0))
+		target = lerpf(-38.0, -28.0, clampf(intensity, 0.0, 1.0))
 	_engine_db = move_toward(_engine_db, target, get_process_delta_time() * 8.0)
 	if want_on and not _engine_player.playing:
 		_engine_db = -60.0

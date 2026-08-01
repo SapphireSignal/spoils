@@ -19,6 +19,7 @@ const TEX_DRAIN_RIPPLE := preload("res://art/gen/menu_drain_ripple.png")
 const TEX_RAIN := preload("res://art/gen/rain_streak.png")
 const TEX_DUST := preload("res://art/gen/dust.png")
 const TEX_VIGNETTE := preload("res://art/gen/vignette.png")
+const TEX_MAP_THUMB := preload("res://art/gen/menu_map_transit.png")
 const TEX_TITLE := preload("res://art/gen/title.png")
 const TEX_SHINE := preload("res://art/gen/title_shine.png")
 const TEX_TAGLINE := preload("res://art/gen/tagline.png")
@@ -57,9 +58,35 @@ var _settings: SettingsPanel
 var _keybinds: KeybindsPanel
 var _changelog: PanelContainer
 var _changelog_list: VBoxContainer
+var _map_select: PanelContainer
+var _ms_name: Label
+var _ms_blurb: Label
+var _ms_deploy: Button
+var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.19", ["press m: the map. world view first, then transit in detail",
+		"drag to pan, scroll to zoom, hover anything for a tooltip",
+		"it shows where you are, the cars, the time and the weather",
+		"play replaces deploy: pick your raid off the cordon map",
+		"new places: the scrapyard (with its crane) and the gallery",
+		"someone still smokes at the gallery. he brought his cans",
+		"buses stop nowhere, but vending machines and newspaper",
+		"boxes and extra dumpsters still hold the corners down",
+		"every house got a power box - one is having a bad day",
+		"cars drive by cursor now: click and they chase it, click to stop",
+		"car doors, engines and alarms all sit quieter",
+		"the alarm lights actually glow at night",
+		"bushes really rustle now and oaks really shed - both were broken",
+		"one thunder per flash, and it doesn't cut out anymore",
+		"upstairs is a real ceiling - no peeking at the ground floor",
+		"worn trails link the houses, pausing at every road and walk",
+		"the yellow line sits on the true middle of the road",
+		"the map itself is a bit smaller again",
+		"your raider stands a touch taller - and prone got shoulders",
+		"the den board is legible now, and properly pinned up",
+		"the splash takes its time - watch the signal go out"]],
 	["v0.6.18", ["the map got way smaller again - and it has real places now",
 		"the town: houses packed around a paved courtyard with a dry fountain",
 		"some houses grew a second floor - press f at the stairs to go up",
@@ -374,6 +401,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif _changelog.visible:
 		get_viewport().set_input_as_handled()
 		_close_changelog()
+	elif _map_select.visible:
+		get_viewport().set_input_as_handled()
+		_close_map_select()
 
 
 # ------------------------------------------------------------- backdrops ----
@@ -618,11 +648,17 @@ func _build_ui() -> void:
 	_buttons.offset_right = 85
 	_buttons.grow_vertical = Control.GROW_DIRECTION_BOTH
 	_buttons.add_theme_constant_override("separation", 8)
-	_menu_button(_buttons, "deploy", func() -> void:
-		get_tree().change_scene_to_file("res://scenes/main.tscn"))
+	_menu_button(_buttons, "play", _open_map_select)
 	_menu_button(_buttons, "settings", _open_settings)
 	_menu_button(_buttons, "quit", func() -> void: get_tree().quit())
 	root.add_child(_buttons)
+
+	_map_select = _build_map_select()
+	var ms_center := CenterContainer.new()
+	ms_center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	ms_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ms_center.add_child(_map_select)
+	root.add_child(ms_center)
 
 	_settings = SettingsPanel.new()
 	_settings.visible = false
@@ -729,6 +765,105 @@ func _open_changelog() -> void:
 
 func _close_changelog() -> void:
 	_changelog.visible = false
+	_buttons.visible = true
+
+
+func _build_map_select() -> PanelContainer:
+	# PLAY opens this: the cordon's maps. Transit is open — pick it, read
+	# it, deploy. The other corridors sit blacked out under question marks
+	# until their milestones unseal them.
+	var panel := PanelContainer.new()
+	panel.visible = false
+	panel.custom_minimum_size = Vector2(430, 240)
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 14)
+	margin.add_theme_constant_override("margin_right", 14)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_bottom", 10)
+	panel.add_child(margin)
+	var rows := VBoxContainer.new()
+	rows.add_theme_constant_override("separation", 8)
+	margin.add_child(rows)
+	var title := Label.new()
+	title.text = "the cordon - pick your raid"
+	title.add_theme_color_override("font_color", UITheme.TEXT_BRIGHT)
+	rows.add_child(title)
+	var columns := HBoxContainer.new()
+	columns.add_theme_constant_override("separation", 16)
+	rows.add_child(columns)
+
+	var tiles := GridContainer.new()
+	tiles.columns = 2
+	tiles.add_theme_constant_override("h_separation", 10)
+	tiles.add_theme_constant_override("v_separation", 10)
+	columns.add_child(tiles)
+	_ms_transit_frame = PanelContainer.new()
+	var transit_btn := Button.new()
+	transit_btn.custom_minimum_size = Vector2(96, 96)
+	transit_btn.icon = TEX_MAP_THUMB
+	transit_btn.expand_icon = true
+	transit_btn.pressed.connect(_select_transit)
+	_ms_transit_frame.add_child(transit_btn)
+	tiles.add_child(_ms_transit_frame)
+	for i in 3:
+		var locked := PanelContainer.new()
+		locked.custom_minimum_size = Vector2(96, 96)
+		var lock_rect := ColorRect.new()
+		lock_rect.color = Color("090a14", 0.85)   # blacked out
+		lock_rect.custom_minimum_size = Vector2(96, 96)
+		locked.add_child(lock_rect)
+		var q := Label.new()
+		q.text = "?"
+		q.set_anchors_preset(Control.PRESET_CENTER)
+		q.grow_horizontal = Control.GROW_DIRECTION_BOTH
+		q.grow_vertical = Control.GROW_DIRECTION_BOTH
+		q.add_theme_color_override("font_color", UITheme.TEXT_DIM)
+		locked.add_child(q)
+		tiles.add_child(locked)
+
+	var info := VBoxContainer.new()
+	info.add_theme_constant_override("separation", 6)
+	info.custom_minimum_size = Vector2(180, 0)
+	columns.add_child(info)
+	_ms_name = Label.new()
+	_ms_name.text = "select a district"
+	_ms_name.add_theme_color_override("font_color", UITheme.TEXT_BRIGHT)
+	info.add_child(_ms_name)
+	_ms_blurb = Label.new()
+	_ms_blurb.text = "the wardens sealed four districts.\nonly one answers the radio."
+	_ms_blurb.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_ms_blurb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_ms_blurb.add_theme_color_override("font_color", UITheme.TEXT_DIM)
+	info.add_child(_ms_blurb)
+	var spacer := Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	info.add_child(spacer)
+	_ms_deploy = Button.new()
+	_ms_deploy.text = "deploy"
+	_ms_deploy.disabled = true
+	_ms_deploy.pressed.connect(func() -> void:
+		get_tree().change_scene_to_file("res://scenes/main.tscn"))
+	info.add_child(_ms_deploy)
+	var back := Button.new()
+	back.text = "back"
+	back.pressed.connect(_close_map_select)
+	info.add_child(back)
+	return panel
+
+
+func _select_transit() -> void:
+	_ms_name.text = "transit"
+	_ms_blurb.text = "the sealed transit district: a town and its courtyard, the school, a trainyard, the bus depot, a scrapyard, the comms relay - and the woods between them. snipers own the edge. bring a flashlight."
+	_ms_deploy.disabled = false
+
+
+func _open_map_select() -> void:
+	_buttons.visible = false
+	_map_select.visible = true
+
+
+func _close_map_select() -> void:
+	_map_select.visible = false
 	_buttons.visible = true
 
 

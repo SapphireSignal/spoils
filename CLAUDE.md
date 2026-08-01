@@ -7,14 +7,59 @@ This file carries everything a fresh session needs that isn't in those two.
 
 ## Where we are
 
-- **Version v0.6.18 SHIPPED** ("the districts update", 21st release on
-  2026-08-01 — read CHANGELOG.md). All POI shots + menu shots verified,
-  smoke covers stairs + driving, perf 240 avg / worst ~4.5ms / ~6.3k
-  nodes. 2x shots sent. **AWAITING USER REACTIONS**; next = M2 on "go".
-- Watch-list: map size (now ~120 diamond — half of v0.6.17), POI feel,
-  driving feel (speed/turn cadence), car sound levels, upstairs look,
-  plaza pattern, fog sizes/churn, music fade lengths, day length
-  (8-min offer stands), night darkness, thunder/rain levels.
+- **Version v0.6.19 SHIPPED** (22nd release on 2026-08-01 — read
+  CHANGELOG.md; v0.6.18 "districts" landed the same day). Everything
+  verified by shots; smoke covers stairs + cursor-follow driving; perf
+  240 avg / ~4.5ms worst / ~4.6k nodes. **AWAITING USER REACTIONS**;
+  next = M2 on "go".
+- Watch-list: map size (~100 diamond now), THE MAP window (layout/zoom/
+  tooltips), map-select screen, cursor driving feel, scrapyard/gallery,
+  smoker read, power-box sparks, prone/standing size, den board text,
+  splash pacing, trails width, all sound levels.
+
+## v0.6.19 systems (shipped 2026-08-01)
+
+- MAP (map_view.gd, CanvasLayer 75, action "map"=M): builder bakes
+  info["map_image"] (_bake_map_image: 1px/cell from plan dicts + plot
+  fills + _map_marks) → ImageTexture. World view (transit tile w/ painted
+  menu_map_transit.png thumb + 3 "?" tiles) ↔ transit view (custom-draw
+  canvas: draw_texture_rect + live car/player markers, ZOOMS [2,3,4,5,6,
+  8] cursor-anchored, drag-pan, clamp CENTERS when map < canvas — that
+  was the empty-left-half bug), back button, bottom "time %02d:%02d -
+  weather" bar, 0.5s POI tooltips both views (_pois from info poi+zones),
+  view remembered (_mode) across opens. Harness: --map=world|transit.
+- MENU: "play" → _open_map_select panel (thumb button + 3 blacked "?" +
+  info column + deploy/back); harness --menu=mapselect. Blurb single
+  string + autowrap (manual \\n double-wrapped).
+- SCRAPYARD zone block (forest went 2→1 block, DENSER 0.20 fill):
+  vehicle rows (driveables mixed), forklift_0/1, ONE crane, rack line,
+  junk. GALLERY corner of open block (opposite comms): graffiti_x_0..2
+  walls + spray_cans + benches + Smoker (smoker.gd: 3-frame drag/exhale
+  + dust-wisp smoke). Street extras: vending_0/1 + newsbox_0/1 on
+  sidewalk spacing counters; dumpster mix 0.08→0.15.
+- POWER BOXES (_place_power_boxes): power_box_{x,y}[_broken] on the door
+  wall ±2 cells; ONE house (_spark_house rolled at plan) gets PowerBox
+  node (power_box.gd: spark_0..2 frames, 1.2-4s bursts + light blink).
+- DRIVING: cursor-follow (click toggle `following`, heading steps toward
+  best-dot facing, ARRIVE_DIST ease); WASD steering REMOVED (user).
+  Sounds: doors -19, start -18, off -19, loop -38..-28, alarm -14.
+  Alarm flashers get PointLight2D glows (night>0.35, blink-synced).
+  STANDING SOUND RULE in prefs memory + sfx comment: new one-shots
+  ≤-18dB, beds ≤-28dB.
+- FIXES: bushes radius 17 + continuous wiggle while inside (+0.5s
+  settle); leaves near-view list refresh 0.5s (old: rolled 1 tree from
+  the whole district = never); ONE strike/thunder (chains restarted the
+  clap = "cut out"); rain -52..-37, thunder -22..-16; upper floor paints
+  EVERY cell (hole showed ground); flashlight rides floor_lift; dirt
+  trails 1-wide wobble 0.10 skipping POI rects (2-wide braided into
+  mud rivers); sidewalk broken tiles lost weed pixels; centerline =
+  asphalt_line[_h] + _b half-tile pairs on road cells +1/+2 (true
+  center); BARRIER_INSET 78 (playable ~100); char +2px tall all stances,
+  prone rebuilt (10-wide torso + 12 shoulder span N/S, thick diagonals);
+  den board titles tall-stretched 090a14 ink + underline + 3px colored
+  pin tacks; splash 5.2s slower timeline.
+- KEYBINDS: engine=Q, map=M, inventory=TAB (inert until M4) — in
+  project.godot [input] + settings BIND_* (panel auto-lists).
 
 ## v0.6.18 systems (shipped 2026-08-01)
 
@@ -342,6 +387,8 @@ then `godot_console --headless --path . --import`.
 - Audio taste: SUBTLE always. Rain = quiet smooth wash (no pops — 0.4%%/sample
   reads as crackle; no audible loops), footsteps distinct per surface but
   quiet, alarm pulses need attack/release ramps (hard gating reads "static").
+  STANDING RULE (user, third correction): every NEW sound ships QUIET on
+  first cut — one-shots ≤ -18 dB, beds/loops ≤ -28 dB; raise only on ask.
 - Lines of repeated infrastructure (barricades) = ONE dominant design with
   wear, not per-piece variety ("every one different is weird"); lattice
   fences dominant, jerseys accents; uneven spacing + off-line jitter.

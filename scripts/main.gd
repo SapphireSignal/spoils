@@ -138,6 +138,10 @@ func _build_world() -> void:
 	_build_prompt()
 	await get_tree().process_frame
 
+	var map_view := MapView.new()
+	map_view.name = "MapView"
+	add_child(map_view)
+	map_view.setup(info, _player, environment, _floor_layer)
 	add_child(PauseMenu.new())
 	await get_tree().process_frame
 	Music.play_raid()  # sparse ambient with long silences, -26 dB
@@ -199,7 +203,7 @@ func _build_prompt() -> void:
 	_car_hint.theme = UITheme.get_theme()
 	_car_hint.add_theme_color_override("font_color", UITheme.TEXT)
 	_car_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_car_hint.text = "q to start engine\nw to drive, s to reverse\na and d to turn\ne for headlights\nf to exit car"
+	_car_hint.text = "q to start engine\nclick left click to make the car follow your cursor\nclick again to stop\ne for headlights\nf to exit car"
 	_car_hint.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	_car_hint.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_car_hint.grow_vertical = Control.GROW_DIRECTION_BEGIN

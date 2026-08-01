@@ -235,12 +235,12 @@ func _smoke() -> void:
 			failures.append("player did not end up driving after enter()")
 		else:
 			car.engine_on = true
+			car.following = true   # cursor-follow: chases the pointer at speed
 			var car_start := car.global_position
-			Input.action_press("move_up")
 			await get_tree().create_timer(1.0).timeout
-			Input.action_release("move_up")
+			car.following = false
 			if car.global_position.distance_to(car_start) < 40.0:
-				failures.append("car barely moved under throttle (%.1f px)" %
+				failures.append("car barely moved while following (%.1f px)" %
 					car.global_position.distance_to(car_start))
 			car.exit_car()
 			await get_tree().create_timer(0.6).timeout
@@ -357,6 +357,20 @@ func _shot(shot_name: String) -> void:
 		var menu_scene := get_tree().get_first_node_in_group("main_menu")
 		if menu_scene != null:
 			menu_scene.call("_open_changelog")
+	if _shot_menu == "mapselect" and _shot_scene == "menu":
+		var select_scene := get_tree().get_first_node_in_group("main_menu")
+		if select_scene != null:
+			select_scene.call("_open_map_select")
+			select_scene.call("_select_transit")
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--map="):
+			var wanted := arg.trim_prefix("--map=")
+			var map_view := get_tree().current_scene.get_node_or_null("MapView")
+			if map_view != null:
+				map_view.set("visible", true)
+				map_view.call("_set_mode", wanted)
+				for i in 4:
+					await get_tree().process_frame
 	for i in 40:
 		await get_tree().process_frame
 	var image := get_viewport().get_texture().get_image()

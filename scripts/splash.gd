@@ -6,8 +6,9 @@ extends Node2D
 
 const GEM_LIFT := Vector2(0, -30)
 const WORD_DROP := 26.0
-const BEAM_TIME := 0.9
-const DONE_AT := 3.4
+const BEAM_TIME := 1.4
+const DONE_AT := 5.2   # unhurried (user: "goes by too fast, i want to see
+                       # the sapphire break and see the signal")
 
 var _t := 0.0
 var _gem: Sprite2D
@@ -81,24 +82,24 @@ func _process(delta: float) -> void:
 		return
 	_t += delta
 
-	# the sapphire locks on: two flickers, then solid
-	if _t > 0.25:
+	# the sapphire wakes: two slow flickers, then it locks on solid
+	if _t > 0.40:
 		_gem.modulate.a = 0.45
-	if _t > 0.38:
+	if _t > 0.62:
 		_gem.modulate.a = 0.2
-	if _t > 0.46:
+	if _t > 0.80:
 		_gem.modulate.a = 1.0
 
-	# first ping + expanding broadcast rings
-	if _t > 0.65 and _rings_fired == 0:
+	# first ping + expanding broadcast rings, slow enough to watch travel
+	if _t > 1.1 and _rings_fired == 0:
 		Sfx.play_splash_ping()
 		_rings_fired = 1
-	if _rings_fired >= 1 and _rings_fired <= 6 and _t > 0.65 + 0.07 * _rings_fired:
+	if _rings_fired >= 1 and _rings_fired <= 6 and _t > 1.1 + 0.12 * _rings_fired:
 		_spawn_ring(_rings_fired - 1)
 		_rings_fired += 1
 
 	# the first beam sweeps the name in
-	var sweep := clampf((_t - 1.05) / BEAM_TIME, 0.0, 1.0)
+	var sweep := clampf((_t - 2.0) / BEAM_TIME, 0.0, 1.0)
 	if sweep > 0.0:
 		var eased := 1.0 - pow(1.0 - sweep, 2.0)
 		_word_clip.size.x = roundf(_word_width * eased)
@@ -106,7 +107,7 @@ func _process(delta: float) -> void:
 		_beam.position.x = roundf(_word_left + _word_width * eased)
 
 	# a second, quieter breath of signal
-	if _t > 2.25 and not _second_ping:
+	if _t > 3.9 and not _second_ping:
 		_second_ping = true
 		Sfx.play_splash_ping(true)
 		_spawn_ring(2)
@@ -123,7 +124,7 @@ func _spawn_ring(index: int) -> void:
 	ring.modulate.a = 0.9 - 0.12 * index
 	add_child(ring)
 	var tween := create_tween()
-	tween.tween_property(ring, "modulate:a", 0.0, 0.5)
+	tween.tween_property(ring, "modulate:a", 0.0, 0.85)
 	tween.tween_callback(ring.queue_free)
 
 

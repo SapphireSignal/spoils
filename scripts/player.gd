@@ -262,6 +262,9 @@ func _update_camera(delta: float) -> void:
 	var lift := Vector2(0.0, -floor_lift)
 	_sprite.position = visual_err + lift
 	_shadow.position = visual_err + lift
+	# the flashlight rides the same lift — it lagged behind on the second
+	# floor and sat "inside" the character (user report)
+	_light.position = Vector2(0.0, -14.0) + lift
 	camera.global_position = _camera_target(snapped_pos + lift, c)
 
 

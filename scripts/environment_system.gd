@@ -81,6 +81,8 @@ var _leaf_trees := PackedVector2Array()
 var _leaf_sprites: Array[Sprite2D] = []
 var _leaf_state: Array[Dictionary] = []
 var _leaf_timer := 0.0
+var _leaf_near: Array[int] = []      # shedders near the view, kept fresh
+var _leaf_refresh := 0.0
 
 
 func setup(root: Node2D, floor_layer: TileMapLayer, puddle_spots: Array,
@@ -288,22 +290,14 @@ func _process(delta: float) -> void:
 	# the rain bed follows the density, always subtle
 	Sfx.set_rain(rain_intensity)
 
-	# lightning during heavy rain: sometimes one strike, sometimes a burst of
-	# two or three chasing each other, each with its own thunder behind it
+	# lightning during heavy rain: ONE strike, ONE thunder (user call —
+	# chained strikes also restarted the thunder player mid-clap, which
+	# read as the sound cutting out)
 	if _raining and rain_intensity > 0.6:
 		_lightning_timer -= delta
 		if _lightning_timer <= 0.0:
 			_lightning_timer = randf_range(18.0, 50.0)
-			var strikes := 1
-			var roll := randf()
-			if roll < 0.18:
-				strikes = 3
-			elif roll < 0.48:
-				strikes = 2
 			_strike()
-			for s in range(1, strikes):
-				get_tree().create_timer(
-					randf_range(0.5, 1.3) * float(s)).timeout.connect(_strike)
 
 
 func _strike() -> void:
@@ -405,26 +399,39 @@ func _update_fog(delta: float, morning: float) -> void:
 func _update_leaves(delta: float) -> void:
 	if _leaf_trees.is_empty():
 		return
+	# keep a fresh list of shedders the camera can see — the old code rolled
+	# ONE tree from the WHOLE district and only shed if that exact tree was
+	# on screen, so leaves basically never happened (user: "not working")
+	_leaf_refresh -= delta
+	if _leaf_refresh <= 0.0:
+		_leaf_refresh = 0.5
+		_leaf_near.clear()
+		var near_camera := get_viewport().get_camera_2d()
+		if near_camera != null:
+			var near_center := near_camera.get_screen_center_position()
+			var near_view := Vector2(_window.content_scale_size) * 0.5 + Vector2(40, 30)
+			if near_view.x < 128.0:
+				near_view = Vector2(360, 210)
+			for ti in _leaf_trees.size():
+				var tree := _leaf_trees[ti]
+				if absf(tree.x - near_center.x) <= near_view.x \
+						and absf(tree.y - near_center.y) <= near_view.y:
+					_leaf_near.append(ti)
 	_leaf_timer -= delta
-	if _leaf_timer <= 0.0:
+	if _leaf_timer <= 0.0 and not _leaf_near.is_empty():
 		_leaf_timer = randf_range(0.5, 1.4)
-		var camera := get_viewport().get_camera_2d()
-		if camera != null:
-			var center := camera.get_screen_center_position()
-			var view := Vector2(_window.content_scale_size) * 0.5 + Vector2(40, 30)
-			var tree := _leaf_trees[randi_range(0, _leaf_trees.size() - 1)]
-			if absf(tree.x - center.x) <= view.x and absf(tree.y - center.y) <= view.y:
-				for i in LEAF_COUNT:
-					if not _leaf_state[i]["active"]:
-						var state := _leaf_state[i]
-						state["active"] = true
-						state["t"] = 0.0
-						state["dur"] = randf_range(2.2, 3.8)
-						state["pattern"] = randi_range(0, 2)
-						state["origin"] = tree + Vector2(
-							randf_range(-11.0, 11.0), randf_range(-8.0, 2.0))
-						_leaf_sprites[i].visible = true
-						break
+		var tree := _leaf_trees[_leaf_near[randi_range(0, _leaf_near.size() - 1)]]
+		for i in LEAF_COUNT:
+			if not _leaf_state[i]["active"]:
+				var state := _leaf_state[i]
+				state["active"] = true
+				state["t"] = 0.0
+				state["dur"] = randf_range(2.2, 3.8)
+				state["pattern"] = randi_range(0, 2)
+				state["origin"] = tree + Vector2(
+					randf_range(-11.0, 11.0), randf_range(-8.0, 2.0))
+				_leaf_sprites[i].visible = true
+				break
 	for i in LEAF_COUNT:
 		var state := _leaf_state[i]
 		if not state["active"]:
