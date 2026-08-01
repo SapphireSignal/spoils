@@ -3251,19 +3251,43 @@ def make_locomotive() -> tuple[Canvas, tuple, list]:
     # a stripe down the flank so it reads at a distance
     for i in range(3, L - 3):
         c.set(ox + i, oy + i // 2 - clear - 8, C("de9e41"))
-    # the front end: full-width wall, headlight, coupler
-    wall_x0 = ox
-    wall_top0 = oy - clear - prof[0]
-    wall_bot0 = oy - clear
-    for t in range(1, 3):
-        x = wall_x0 - t
+    # THE NEAR END FACE — the cab's back wall. This is the exact bug the
+    # car saga was about (CLAUDE.md): an end drawn as a stub continuing
+    # LENGTHWISE instead of a full-width wall across the body's iso width
+    # axis leaves the vehicle looking sawn off. It has to span the same
+    # ROOF_DEPTH the roof plane does.
+    cap_h = prof[L - 1]
+    wall_x0 = ox + L - 1
+    wall_top0 = oy + (L - 1) // 2 - clear - cap_h
+    wall_bot0 = oy + (L - 1) // 2 - clear
+    for t in range(1, ROOF_DEPTH + 1):
+        x = wall_x0 + t
         rise = t // 2
-        for y in range(wall_top0 + rise, wall_bot0 + rise + 1):
+        for y in range(wall_top0 - rise, wall_bot0 - rise + 1):
             c.set(x, y, body_dd)
-    for k in range(3):                            # the headlight, burning
-        c.set(ox - 2 + k, oy - clear - prof[0] + 4, C("ebede9"))
-        c.set(ox - 2 + k, oy - clear - prof[0] + 5, C("e8c170"))
-    c.set(ox - 2, oy - clear - 2, C("10141f"))    # coupler
+        c.set(x, wall_top0 - rise, body_d)             # lit rim along the top
+        c.set(x, wall_bot0 - rise, C("202e37"))        # sill
+        c.set(x, wall_bot0 - rise - 1, C("202e37"))
+    for t in (2, 3, ROOF_DEPTH - 3, ROOF_DEPTH - 2):   # marker lamps
+        c.set(wall_x0 + t, wall_top0 - t // 2 + 4, C("a53030"))
+    for t in range(5, ROOF_DEPTH - 4):                 # the back window
+        c.set(wall_x0 + t, wall_top0 - t // 2 + 7, C("253a5e"))
+        c.set(wall_x0 + t, wall_top0 - t // 2 + 8, C("253a5e"))
+    # wrap the side's last column into the cap so the corner reads solid
+    for y in range(wall_top0 + 1, wall_bot0):
+        c.set(wall_x0, y, body_dd)
+    # the FAR end (the nose): closes the silhouette, carries the headlight
+    far_h = prof[0]
+    for t in range(1, 3):
+        x = ox - t
+        base = oy - (t + 1) // 2
+        far_top = base - clear - far_h + (t + 1) // 2
+        for y in range(far_top, base - clear + 1):
+            c.set(x, y, body_dd)
+        c.set(x, base - clear, C("202e37"))            # coupler plate
+    for k in range(3):                                 # the headlight, burning
+        c.set(ox - 2 + k, oy - clear - far_h + 4, C("ebede9"))
+        c.set(ox - 2 + k, oy - clear - far_h + 5, C("e8c170"))
     # the stack, and the smoke plate behind it
     stack_x = ox + int(L * 0.18)
     for k in range(7):

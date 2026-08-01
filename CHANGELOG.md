@@ -3,6 +3,21 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.39] — 2026-08-01
+
+### Fixed
+- **The locomotive was missing its end face** (user: "the extract train is
+  missing parts, its like that old car bug we had awhile ago" — and it
+  was exactly that bug). The cab end had no full-width wall across the
+  body's iso width axis, so the engine looked sawn off. It now carries a
+  proper end wall spanning the same ROOF_DEPTH the roof plane does, with
+  a lit top rim, a sill, red marker lamps, a cab window, and the side's
+  last column wrapped into the corner. The nose end got its wrap and
+  coupler plate rebuilt on the same convention.
+  **The lesson from the car saga holds: an end drawn as a stub running
+  LENGTHWISE off a corner instead of a wall across the width axis always
+  reads as missing.** Check every new vehicle against it.
+
 ## [0.6.38] — 2026-08-01
 
 ### Added
