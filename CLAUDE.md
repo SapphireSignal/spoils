@@ -30,9 +30,38 @@ This file carries everything a fresh session needs that isn't in those two.
   user picks a concept before any build (pipeline: --write-movie PNG
   frames 640x360 → 3x nearest → ffmpeg 1080p60 + davidkbd bed).
 - Watch-list: map size (~100 diamond now), THE MAP window (layout/zoom/
-  tooltips), map-select screen, cursor driving feel, scrapyard/gallery,
-  smoker read, power-box sparks, prone/standing size, den board text,
-  splash pacing, trails width, all sound levels.
+  tooltips), map-select screen, FREE-ANGLE driving feel + 190 top speed,
+  safehouse spawn, autumn grove, hide-in bush size, collision feel,
+  scrapyard/gallery, smoker read, power-box sparks, prone/standing size,
+  den board text, splash SHATTER pacing, trails width, all sound levels,
+  day length (8-min offer stands), night darkness.
+
+## OPEN DECISIONS the user owes (next session: act on their pick)
+
+1. **TRAILER concept** — pitches sent 2026-08-01, movie-style as they
+   asked ("real trailer vibes", for youtube + socials). THE USER PICKS;
+   do not build unpicked ones:
+   (a) "the wire" TEASER ~50s — slow dread: black + radio crackle,
+       lowercase title cards ("six years since they sealed the
+       districts" / "one still answers"), dawn-fog pans, night lamp
+       flicker, rain on the courtyard, ONE sniper tracer, hard cut to
+       black on the crack, title + "loot. extract. survive." + date.
+       RECOMMENDED FIRST (works pre-guns, cheapest to nail).
+   (b) "one raid" ~90s — one run as a story: safehouse wake, town,
+       school/trainyard beats, stealing a car at dusk (headlights),
+       storm, sprint past the wire under fire. BEST AFTER M2 (gunfire).
+   (c) "the district lives" ~60s — fast montage on music hits: every
+       POI, driving, map snap, upstairs, weather, night flashlight.
+   (d) social cut 15-30s vertical — derived from whichever exists.
+   PIPELINE (planned, NOT built): godot --write-movie (PNG frames,
+   fixed fps) driving scripted camera/scenario runs via a harness
+   cinematic mode → 640x360 frames → 3x NEAREST upscale → ffmpeg
+   1920x1080@60 (concat, fades, generated title cards, davidkbd music
+   bed) → mp4 for youtube + 9:16 crop for shorts. **ffmpeg NOT
+   INSTALLED on the box** — user must OK an install (e.g. winget
+   install Gyan.FFmpeg) or ship a portable copy into tools/.
+2. **M2 "go"** — guns + tunnels + the film + walk-in tutorial (v0.7.0).
+3. Watch-list reactions above → v0.6.22 tunings.
 
 ## v0.6.19 systems (shipped 2026-08-01)
 
