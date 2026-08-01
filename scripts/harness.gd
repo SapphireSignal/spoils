@@ -123,6 +123,19 @@ func _smoke() -> void:
 		Settings.crouch_toggle = prev_toggle
 		if crouch_moved >= moved * 0.85:
 			failures.append("crouch not slower (dx=%.1f vs %.1f)" % [crouch_moved, moved])
+		# prone crawl: slower again than the crouch (stance forced directly —
+		# simulated key presses can't make just_pressed edges, same as the
+		# crouch-toggle note above; the Z bind itself is covered below)
+		start = player.position
+		player.prone = true
+		Input.action_press("move_right")
+		await get_tree().create_timer(0.8).timeout
+		Input.action_release("move_right")
+		var prone_moved := player.position.x - start.x
+		player.prone = false
+		if prone_moved >= crouch_moved * 0.85:
+			failures.append("prone not slower than crouch (dx=%.1f vs %.1f)" % [
+				prone_moved, crouch_moved])
 		# keybinds registered
 		for action in Settings.BIND_ACTIONS:
 			if InputMap.action_get_events(action).is_empty():
@@ -241,6 +254,10 @@ func _shot(shot_name: String) -> void:
 			face_player.set("_dir_index", dirs.find(_shot_face))
 	if "--crouch" in OS.get_cmdline_user_args():
 		Input.action_press("crouch")
+	if "--prone" in OS.get_cmdline_user_args():
+		var prone_player := get_tree().current_scene.get_node_or_null("World/Player") as Player
+		if prone_player != null:
+			prone_player.prone = true
 	if "--flashlight" in OS.get_cmdline_user_args():
 		var lit_player := get_tree().current_scene.get_node_or_null("World/Player") as Player
 		if lit_player != null:

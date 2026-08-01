@@ -68,8 +68,10 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
 - `scripts/edge_guard.gd` — barricade-line sniper: centered warning ("turn
   back or you will get sniped") on crossing barrier_f, 3 s grace, off-screen
   tracer rounds, ESCALATING interval/accuracy with depth, 3 hits = death.
-- `scripts/player.gd` — render-rate movement (NOT physics tick), hold/toggle
-  crouch, flashlight cone on E (8 facings; smooth light textures may rotate,
+- `scripts/player.gd` — render-rate movement (NOT physics tick), THREE
+  stances: stand / crouch (ctrl, hold-or-toggle) / prone (Z toggle, 0.32x
+  speed, crouch input exits it; char_prone.png sheet, same layout as the
+  others), flashlight cone on E (8 facings; smooth light textures may rotate,
   sprites never), hp/take_hit/hurt-flash/died + respawn, camera UNCLAMPED and
   welded to the character, snapped to SCREEN pixels (see rule 1).
 - `scripts/main.gd` — deploy screen ("deploying to transit", animated
@@ -169,7 +171,7 @@ then `godot_console --headless --path . --import`.
 
 ## Registered-but-inert (activate in later milestones)
 
-- LIVE since v0.6.3: interact(F → doors), flashlight(E). Still inert:
+- LIVE: interact(F → doors), flashlight(E), prone(Z). Still inert:
   reload(R), weapon slots(1/2/3) — wire in M2 (guns).
 - Settings "graphics quality" is stored but drives nothing until M5
   lighting/effects.

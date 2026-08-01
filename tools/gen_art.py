@@ -2145,6 +2145,128 @@ DIR_VIEWS = [
     ("N", "back", False), ("NE", "back34", False),
 ]
 
+# ------------------------------------------------------------- prone sheet ---
+# Lying flat on the stomach, crawling. Same sheet geometry as the other
+# stances (8 dirs x idle+6 frames, 32x40, feet-anchored origin), so the
+# player script only swaps textures. Five base views, mirrored like DIR_VIEWS.
+
+PRONE_VIEWS = [
+    ("E", "side", False), ("SE", "diag_front", False), ("S", "front", False),
+    ("SW", "diag_front", True), ("W", "side", True), ("NW", "diag_back", True),
+    ("N", "back", False), ("NE", "diag_back", False),
+]
+
+def draw_prone_frame(view: str, frame: int) -> Canvas:
+    c = Canvas(32, 40)
+    # crawl cycle: 0 = still; 1-3 pull with one arm, 4-6 with the other
+    phase = 0 if frame == 0 else (1 if frame <= 3 else -1)
+    drag = 1 if frame in (2, 3, 5, 6) else 0  # the body creeps mid-pull
+
+    if view == "side":  # facing E: head at the right end, pack humped on top
+        y = 30
+        c.rect(4, y + 3, 6, y + 4, BOOT_D)              # soles trailing
+        c.rect(6, y + 2, 12, y + 3, PANT)               # legs
+        c.set(7 + (1 if phase > 0 else 0), y + 1, PANT_D)  # a knee lifts
+        c.rect(12, y, 21, y + 4, JKT)                   # torso
+        c.hline(12, 21, y + 4, JKT_D)
+        c.rect(13, y - 2, 18, y, PACK)                  # pack rides the back
+        c.hline(13, 18, y - 2, PACK_D)
+        c.rect(21 + drag, y, 26 + drag, y + 3, SKIN)    # head
+        c.rect(21 + drag, y - 1, 25 + drag, y + 1, HAIR)  # hair over the brow
+        c.set(26 + drag, y + 2, SKIN_SH)
+        reach = 28 if phase > 0 else 24                 # crawling arm
+        c.rect(22 + drag, y + 3, reach + drag, y + 4, JKT)
+        c.set(reach + drag + 1, y + 4, SKIN)
+
+    elif view == "front":  # facing S: head toward the camera, soles away
+        cx = CX
+        base = 18
+        for side_x in (cx - 3, cx + 1):                 # boots first (far end)
+            c.rect(side_x, base, side_x + 2, base + 1, BOOT_D)
+        lift = 1 if phase > 0 else 0
+        c.rect(cx - 3, base + 2, cx - 1, base + 6, PANT)
+        c.rect(cx + 1, base + 2 + lift, cx + 3, base + 6, PANT_D)
+        c.rect(cx - 4, base + 6, cx + 3, base + 12, JKT)   # torso (back up)
+        c.vline(cx - 4, base + 6, base + 12, JKT_D)
+        c.vline(cx + 3, base + 6, base + 12, JKT_D)
+        c.rect(cx - 2, base + 7, cx + 1, base + 11, PACK)  # pack centered
+        c.vline(cx + 1, base + 7, base + 11, PACK_D)
+        arm_y = base + 12
+        c.rect(cx - 6, arm_y - phase if phase > 0 else arm_y, cx - 5, arm_y + 2, JKT)
+        c.rect(cx + 4, arm_y - (1 if phase < 0 else 0), cx + 5, arm_y + 2, JKT)
+        c.set(cx - 6, arm_y + 3, SKIN)
+        c.set(cx + 5, arm_y + 3, SKIN)
+        c.rect(cx - 3, base + 13 + drag, cx + 2, base + 16 + drag, HAIR)  # crown
+        c.hline(cx - 3, cx + 2, base + 17 + drag, SKIN_SH)  # brow sliver
+
+    elif view == "back":  # facing N: head away (hair only), soles at camera
+        cx = CX
+        base = 18
+        c.rect(cx - 3, base + drag, cx + 2, base + 3 + drag, HAIR)  # head far
+        arm_y = base + 3
+        c.rect(cx - 6, arm_y, cx - 5, arm_y + 3 - (phase if phase > 0 else 0), JKT)
+        c.rect(cx + 4, arm_y, cx + 5, arm_y + 3 - (1 if phase < 0 else 0), JKT)
+        c.set(cx - 6, arm_y - 1, SKIN)
+        c.set(cx + 5, arm_y - 1, SKIN)
+        c.rect(cx - 4, base + 4, cx + 3, base + 10, JKT)
+        c.vline(cx - 4, base + 4, base + 10, JKT_D)
+        c.vline(cx + 3, base + 4, base + 10, JKT_D)
+        c.rect(cx - 2, base + 5, cx + 1, base + 9, PACK)
+        c.vline(cx - 2, base + 5, base + 9, PACK_D)
+        lift = 1 if phase > 0 else 0
+        c.rect(cx - 3, base + 10, cx - 1, base + 14, PANT)
+        c.rect(cx + 1, base + 10, cx + 3, base + 14 - lift, PANT_D)
+        for side_x in (cx - 3, cx + 1):                 # soles toward camera
+            c.rect(side_x, base + 15, side_x + 2, base + 16, BOOT_D)
+
+    elif view == "diag_front":  # facing SE: body along the down-right diagonal
+        sx, sy = 7, 20
+        c.rect(sx, sy, sx + 2, sy + 1, BOOT_D)          # soles upper-left
+        for i in range(4):                              # legs stepped down
+            c.rect(sx + 2 + i * 2, sy + 1 + i, sx + 4 + i * 2, sy + 2 + i, PANT)
+        for i in range(4):                              # torso
+            c.rect(sx + 8 + i * 2, sy + 4 + i, sx + 11 + i * 2, sy + 6 + i, JKT)
+        for i in range(2):                              # pack on the up-side
+            c.rect(sx + 10 + i * 2, sy + 3 + i, sx + 12 + i * 2, sy + 4 + i, PACK)
+        hx = sx + 16 + drag
+        hy = sy + 9 + drag // 2
+        c.rect(hx, hy, hx + 3, hy + 2, HAIR)            # head lower-right
+        c.rect(hx + 1, hy + 2, hx + 4, hy + 4, SKIN)
+        reach = 3 if phase > 0 else 1
+        c.rect(hx + 2, hy + 4, hx + 2 + reach, hy + 5, JKT)
+        c.set(hx + 3 + reach, hy + 5, SKIN)
+
+    else:  # diag_back — facing NE: head upper-right, soles lower-left
+        sx, sy = 7, 32
+        c.rect(sx, sy, sx + 2, sy + 1, BOOT_D)          # soles lower-left
+        for i in range(4):
+            c.rect(sx + 2 + i * 2, sy - 2 - i, sx + 4 + i * 2, sy - 1 - i, PANT)
+        for i in range(4):
+            c.rect(sx + 8 + i * 2, sy - 7 - i, sx + 11 + i * 2, sy - 5 - i, JKT)
+        for i in range(2):
+            c.rect(sx + 9 + i * 2, sy - 8 - i, sx + 11 + i * 2, sy - 7 - i, PACK)
+        hx = sx + 16 + drag
+        hy = sy - 13 - drag // 2
+        c.rect(hx, hy, hx + 3, hy + 2, HAIR)            # hair only (facing away)
+        reach = 3 if phase > 0 else 1
+        c.rect(hx + 1, hy - 2, hx + 1 + reach, hy - 1, JKT)
+        c.set(hx + 2 + reach, hy - 2, SKIN)
+
+    c.outline_auto()
+    return c
+
+
+def make_char_prone_sheet() -> Image.Image:
+    cols = 1 + WALK_FRAMES
+    sheet = Image.new("RGBA", (cols * 32, 8 * 40), (0, 0, 0, 0))
+    for row, (_, view, mirrored) in enumerate(PRONE_VIEWS):
+        for frame in range(cols):
+            fc = draw_prone_frame(view, frame)
+            if mirrored:
+                fc = fc.mirrored()
+            sheet.paste(fc.img, (frame * 32, row * 40))
+    return sheet
+
 def make_char_sheet(crouch: bool = False) -> Image.Image:
     cols = 1 + WALK_FRAMES
     sheet = Image.new("RGBA", (cols * 32, 8 * 40), (0, 0, 0, 0))
@@ -2579,6 +2701,9 @@ def main() -> None:
     crouch_sheet = make_char_sheet(crouch=True)
     assert_palette(crouch_sheet, "char_crouch")
     crouch_sheet.save(OUT / "char_crouch.png")
+    prone_sheet = make_char_prone_sheet()
+    assert_palette(prone_sheet, "char_prone")
+    prone_sheet.save(OUT / "char_prone.png")
     manifest["char"] = {
         "frame": [32, 40], "cols": 1 + WALK_FRAMES, "origin": [16, 37],
         "dirs": [d for d, _, _ in DIR_VIEWS],

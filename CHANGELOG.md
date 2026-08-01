@@ -3,6 +3,18 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.6] — 2026-08-01
+
+### Added
+- **Prone** on Z (rebindable): a full 8-direction crawl sheet (pack on the
+  back, boot soles when facing away, per-direction head orientation, 6-frame
+  crawl cycle). Slower than crouch (0.32x vs 0.55x); Z toggles, and any crouch
+  input stands you back up out of prone. Covered by the smoke test.
+
+### Changed
+- The door prompt ("press f to open/close") floats pinned above the door
+  itself instead of sitting at the bottom of the screen.
+
 ## [0.6.5] — 2026-08-01
 
 The barricade update: the map got honest edges, the deploy got smooth, and the

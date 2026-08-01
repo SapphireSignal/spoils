@@ -15,6 +15,8 @@ signal died
 
 const SPEED := 120.0
 const CROUCH_SPEED_MULT := 0.55
+const PRONE_SPEED_MULT := 0.32  # a crawl — slower than the crouch
+const PRONE_CRAWL_FPS := 6.0
 const Y_SQUASH := 0.6  # screen-vertical speed factor; sells iso perspective
 const WALK_FPS := 12.0
 const CROUCH_WALK_FPS := 9.0
@@ -26,6 +28,7 @@ const HURT_FLASH_TIME := 0.24
 
 var camera: Camera2D
 var crouching := false
+var prone := false
 var flashlight_on := false
 var hp := MAX_HP
 var dead := false
@@ -34,6 +37,7 @@ var _sprite: Sprite2D
 var _shadow: Sprite2D
 var _tex_stand: Texture2D
 var _tex_crouch: Texture2D
+var _tex_prone: Texture2D
 var _dir_index := 2  # sheet rows are E,SE,S,SW,W,NW,N,NE — start facing S
 var _anim_time := 0.0
 var _was_moving := false
@@ -54,6 +58,7 @@ func _init() -> void:
 
 	_tex_stand = load("res://art/gen/char.png")
 	_tex_crouch = load("res://art/gen/char_crouch.png")
+	_tex_prone = load("res://art/gen/char_prone.png")
 	_sprite = Sprite2D.new()
 	_sprite.texture = _tex_stand
 	_sprite.hframes = SHEET_COLS
@@ -135,18 +140,34 @@ func _process(delta: float) -> void:
 
 	var input_vec := Vector2.ZERO
 	if not dead:
+		# stances: prone (Z, toggle) beats crouch; taking a crouch input
+		# stands you back up out of prone
+		if Input.is_action_just_pressed("prone"):
+			prone = not prone
+			if prone:
+				crouching = false
 		if Settings.crouch_toggle:
 			if Input.is_action_just_pressed("crouch"):
 				crouching = not crouching
+				if crouching:
+					prone = false
 		else:
-			crouching = Input.is_action_pressed("crouch")
+			if Input.is_action_pressed("crouch"):
+				crouching = true
+				prone = false
+			else:
+				crouching = false
 		if Input.is_action_just_pressed("flashlight"):
 			set_flashlight(not flashlight_on)
 			Sfx.play_click()
 		if Input.is_action_just_pressed("interact"):
 			_interact()
 		input_vec = Input.get_vector("move_left", "move_right", "move_up", "move_down")
-	var speed := SPEED * (CROUCH_SPEED_MULT if crouching else 1.0)
+	var speed := SPEED
+	if prone:
+		speed *= PRONE_SPEED_MULT
+	elif crouching:
+		speed *= CROUCH_SPEED_MULT
 	velocity = Vector2(input_vec.x, input_vec.y * Y_SQUASH) * speed
 	move_and_slide()
 
@@ -194,12 +215,19 @@ func _interact() -> void:
 
 
 func _animate(input_vec: Vector2, delta: float) -> void:
-	_sprite.texture = _tex_crouch if crouching else _tex_stand
+	if prone:
+		_sprite.texture = _tex_prone
+	else:
+		_sprite.texture = _tex_crouch if crouching else _tex_stand
 	if input_vec.length_squared() > 0.01:
 		_dir_index = wrapi(roundi(rad_to_deg(input_vec.angle()) / 45.0), 0, 8)
 		_light.rotation = _dir_index * (PI / 4.0)
 		_anim_time += delta
-		var fps := CROUCH_WALK_FPS if crouching else WALK_FPS
+		var fps := WALK_FPS
+		if prone:
+			fps = PRONE_CRAWL_FPS
+		elif crouching:
+			fps = CROUCH_WALK_FPS
 		var step := int(_anim_time * fps) % WALK_FRAMES
 		_sprite.frame = _dir_index * SHEET_COLS + 1 + step
 	else:

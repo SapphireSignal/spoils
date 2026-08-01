@@ -76,6 +76,7 @@ Right now SPOILS runs from source with Godot:
 | --- | --- |
 | **WASD** / Arrow keys | Move |
 | **Ctrl** | Crouch (hold, or toggle — see settings) |
+| **Z** | Prone (crawl — slow, low) |
 | **F** | Interact (open / close doors) |
 | **E** | Flashlight |
 | **Esc** | Pause menu (settings, keybinds, quit) |

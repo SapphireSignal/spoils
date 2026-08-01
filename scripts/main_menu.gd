@@ -51,6 +51,10 @@ var _changelog_list: VBoxContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.6", ["go prone on z: flat on your stomach, crawling",
+		"prone is slower than crouch - low, slow, hard to spot",
+		"crouch input stands you back up out of prone",
+		"the door prompt now floats on the door itself"]],
 	["v0.6.5", ["the playable map is smaller - barricades mark the real edge now",
 		"the world visibly continues past the line, but the sniper owns it",
 		"fallen raiders lie out past the barricades. let them be a warning",
