@@ -8,13 +8,19 @@ ships with M2 (v0.7.0). Everything lowercase in-game, per the font rule.
 - Six years ago something broke the city. Nobody agrees on what — the game
   never says. (Deliberate: the mystery IS the tone. No robots, no monsters —
   the collapse was human.)
-- The government's answer was **the cordon**: the transit district wired
-  shut overnight — lattice fence, floodlights, and the **wardens**, the
-  marksmen who hold the line to this day. One rule: *nobody crosses,
-  nothing comes out.* (The wardens are the in-game edge snipers; the
-  fallen raiders past the barricades are the ones who tested the rule.)
+- The government's answer was **the cordon**: the WHOLE CITY wired shut
+  overnight — lattice fence, floodlights, and the **wardens**, the marksmen
+  who hold the line to this day. One rule: *nobody crosses, nothing comes
+  out.* (The wardens are the in-game edge snipers; the fallen raiders past
+  the barricades are the ones who tested the rule.)
+- Inside the wire the city is still all there: district after district,
+  each sealed, each stripped a little less the deeper you go. **transit**
+  is just the first — the district nearest the wire, the one raiders crack
+  before they earn the deeper ones. Names on mara's board for later maps:
+  **the mills**, **harbor**, **old ward** (M7+ picks from these; the game
+  is the CITY, never one district).
 - Everything valuable stayed inside. A trade grew in the cracks: **raiders**
-  slip in through gaps and drains, strip the district, sell what they
+  slip in through gaps and drains, strip the districts, sell what they
   carry out.
 
 ## the characters
@@ -41,7 +47,7 @@ menu guitar as score. Harness always skips (like the splash).
    brass, the tailgate photo. mara: "you sure about this one, magpie?"
 2. 0:12–0:26 "the last evening" — wide dusk cityscape, six years ago; twin
    rivers of headlights leaving in the rain. "six years since they wired
-   transit shut."
+   the city shut." (the CITY — the game is bigger than any one map)
 3. 0:26–0:40 "the wire goes up" — silhouettes hammer lattice panels under
    floodlights; a hand against the mesh; real thunder.
 4. 0:40–0:52 "the rule" — warden marksman close-up, breath fog, scope
@@ -49,11 +55,15 @@ menu guitar as score. Harness always skips (like the splash).
 5. 0:52–1:06 "six years in one corner" — one street corner, three cross-
    fading seasons of decay; the traffic light above it dies mid-shot.
 6. 1:06–1:22 "the den" — kettle counting brass, verne rolling bandages,
-   mara at the radio wall, the job board. kettle: "bring me anything that
+   mara at the radio wall, the job board: MANY district tags pinned
+   (transit, the mills, harbor, old ward — most crossed out or marked
+   "warden-heavy"; transit's tag is pulled). Visual lore: one city, many
+   districts, this is merely tonight's. kettle: "bring me anything that
    shines." verne: "bring yourself back. that's all."
 7. 1:22–1:36 "gearing up" — close-ups, no faces: straps, boots, pack, the
-   photo into the jacket. mara: "in through the drain. out before the fog
-   lifts." (seeds the M2 tunnels)
+   photo into the jacket. mara: "transit tonight. in through the drain.
+   out before the fog lifts." (names the district as ONE JOB of many;
+   seeds the M2 tunnels)
 8. 1:36–1:50 "the walk" — side-view long shot, magpie through dawn mist to
    the fence line, quiet real footsteps, slips through a gap.
 9. 1:50–2:05 "the transition" — camera rises behind magpie at the empty
@@ -77,5 +87,6 @@ Seen-flag persisted via settings (user://settings.cfg).
    district below; scope glint, ember pulse, dying lamps.
 5. dawn extraction — misted street, raider silhouette hauling a duffel to
    a fence gap; rolling mist, crows.
-6. storm over transit — skyline under double-strike lightning, rain
-   sheets, window lights dying.
+6. storm over the cordon — the WHOLE sealed city's skyline under
+   double-strike lightning, rain sheets, window lights dying — district
+   after district into the dark.
