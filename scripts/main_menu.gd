@@ -51,6 +51,13 @@ var _changelog_list: VBoxContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.13", ["cars and trucks have real backs now - you circled it, that was it",
+		"the rear is a full wall across the body: tailgate, trunk, grille",
+		"tail lights and head lights sit at both corners like they should",
+		"real menu music: a lonely guitar theme (the last pack, by davidkbd)",
+		"real recorded footsteps on every surface - and quieter overall",
+		"real thunder, cut from an actual storm recording. no more torch",
+		"code spring-clean under the hood - nothing should look different"]],
 	["v0.6.12", ["car look rolled back to the original dark ends (your call)",
 		"kept: the ramp fills, smaller wheel arches, attached door"]],
 	["v0.6.11", ["everything is 3d now: pillars are real columns with caps",

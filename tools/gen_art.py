@@ -1241,10 +1241,12 @@ def make_vehicle(kind: str, scheme: int, rev: bool = False,
                 h = 20                  # cab roof
             elif i < 26:
                 h = 12
-            elif i < 44:
-                h = 10                  # bed wall
             else:
-                h = 8
+                # bed wall, LEVEL all the way into a full-height tailgate.
+                # The old 2-column drop to 8 shaved the bed's rear corner
+                # into a diagonal ramp — the exact spot the user circled
+                # as "the back of the truck is missing"
+                h = 10
             prof.append(h)
         win_lo, win_hi = 13, 25
         glass_roof = (9, 14)
@@ -1324,16 +1326,25 @@ def make_vehicle(kind: str, scheme: int, rev: bool = False,
     # grille). 5px deep with a wrapped corner so the body clearly ENDS in a
     # face, not a flat cutoff (user report: "cars don't have fronts/backs").
     cap_h = prof[L - 1]
-    cap_d = 5
-    for t in range(cap_d):
-        x = ox + L + t
-        base = oy + (L + t) // 2
-        top_y = base - clear - cap_h + (t + 1) // 2
-        for y in range(top_y, base - clear + 1):
+    # the end face is a FULL-WIDTH wall: it spans the body along the NE
+    # width axis exactly like the roof plane does, hanging from the rear
+    # rim (tailgate / trunk lip / grille top) down to a bumper strip. The
+    # old lengthwise corner stub read as the whole back "hanging out" off
+    # one side (user, with the circled sheet: "it should be on the back
+    # like a normal truck" — then confirmed the same flaw on cars).
+    wall_x0 = ox + L - 1
+    wall_top0 = oy + (L - 1) // 2 - clear - cap_h
+    wall_bot0 = oy + (L - 1) // 2 - clear
+    for t in range(1, ROOF_DEPTH + 1):
+        x = wall_x0 + t
+        rise = t // 2
+        for y in range(wall_top0 - rise, wall_bot0 - rise + 1):
             c.set(x, y, body_dd)
-        c.set(x, top_y, body_d)                   # lit top edge of the cap
-        c.set(x, base - clear, C("202e37"))       # bumper band
-        c.set(x, base - clear - 1, C("202e37"))
+        c.set(x, wall_top0 - rise, body_d)             # lit rim along the top
+        if 1 < t < ROOF_DEPTH:                          # gate / trunk shutline
+            c.set(x, wall_top0 - rise + 2, C("10141f"))
+        c.set(x, wall_bot0 - rise, C("202e37"))        # bumper strip
+        c.set(x, wall_bot0 - rise - 1, C("202e37"))
     # wrapped corner: the side face's last column darkens into the cap
     for y in range(oy + (L - 1) // 2 - clear - cap_h + 1, oy + (L - 1) // 2 - clear):
         c.set(ox + L - 1, y, body_dd)
@@ -1349,28 +1360,17 @@ def make_vehicle(kind: str, scheme: int, rev: bool = False,
         c.set(x, base - clear, C("202e37"))    # bumper hint
     # a 1px light sliver on the far corner (headlight fwd art, tail rev art)
     c.set(ox - 2, oy - 1 - clear - far_h + 2, C("de9e41") if not rev else C("752438"))
-    cap_top = oy + L // 2 - clear - cap_h
-    lights_y = cap_top + 2
+    # lights sit at BOTH ends of the full-width face, like a real vehicle
     lights_px: list[tuple[int, int]] = []  # absolute px, for the alarm flashers
-    if rev:  # head lights + grille slits
-        for lx in (0, 1):
-            c.set(ox + L + lx, lights_y, C("e8c170"))
-        for lx in (3, 4):
-            c.set(ox + L + lx, lights_y + 1, C("e8c170"))
-        lights_px = [(ox + L, lights_y), (ox + L + 4, lights_y + 1)]
-        for gy in (lights_y + 3, lights_y + 5):
-            c.set(ox + L + 1, gy, C("151d28"))
-            c.set(ox + L + 2, gy, C("151d28"))
-            c.set(ox + L + 3, gy + 1, C("151d28"))
-    else:    # tail lights + trunk seam
-        tail = C("cf573c") if scheme == 0 else C("a53030")
-        for lx in (0, 1):
-            c.set(ox + L + lx, lights_y, tail)
-        for lx in (3, 4):
-            c.set(ox + L + lx, lights_y + 1, tail)
-        lights_px = [(ox + L, lights_y), (ox + L + 4, lights_y + 1)]
-        for sx_ in range(1, 4):
-            c.set(ox + L + sx_, lights_y + 3 + (sx_ // 2), C("10141f"))
+    light_col = C("e8c170") if rev else (C("cf573c") if scheme == 0 else C("a53030"))
+    for t in (1, 2, ROOF_DEPTH - 2, ROOF_DEPTH - 1):
+        c.set(wall_x0 + t, wall_top0 - t // 2 + 3, light_col)
+    lights_px = [(wall_x0 + 1, wall_top0 + 3),
+                 (wall_x0 + ROOF_DEPTH - 1, wall_top0 - (ROOF_DEPTH - 1) // 2 + 3)]
+    if rev:  # grille slits across the middle of the front face
+        for gt in range(4, ROOF_DEPTH - 3):
+            c.set(wall_x0 + gt, wall_top0 - gt // 2 + 4, C("151d28"))
+            c.set(wall_x0 + gt, wall_top0 - gt // 2 + 6, C("151d28"))
     for wf in (8, 34):  # wheel arches + wheels
         cxw = ox + wf + 3
         cyw = oy + (wf + 3) // 2 - 1

@@ -130,12 +130,15 @@ than being scattered through UI/input code — so a server can own them later. N
 
 ## 5. Audio direction
 
-- **Fully synthesized in GDScript at runtime** (AudioStreamGenerator or precomputed
-  AudioStreamWAV buffers at startup). **No audio files in the repo.**
-- Gunshots = shaped noise bursts with per-class character (bass thump for shotgun, crack
-  for DMR); impacts, footsteps (surface-aware later), UI ticks, extraction siren.
-- Sparse ambient dread over music: low wind/rumble loop, distant gunfire as a
-  *gameplay tell*. No melodies needed for v1.
+- **Hybrid (amended 2026-08-01, user call).** Mechanical one-shots are synthesized in
+  GDScript at runtime (UI ticks, door thunks, sniper crack, flashlight click, rain bed,
+  car alarm — and gun sounds in M2: shaped noise bursts with per-class character).
+  **Organic sounds are licensed recordings** committed under `assets/audio/` with
+  attribution tracked in `assets/audio/LICENSES.md`: per-surface footsteps, thunder,
+  and the menu music (DavidKBD's "The Last" pack — more tracks available there for
+  later milestones). Game-safe licenses only (CC0 / CC-BY / Pixabay-style).
+- **SUBTLE always** — every sound mixed quiet; the user is sensitive to loud or
+  obnoxious audio. Distant gunfire stays a *gameplay tell*.
 
 ## 6. Machine & toolchain facts (verified 2026-07-31)
 

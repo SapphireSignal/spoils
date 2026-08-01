@@ -3,6 +3,43 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.13] — 2026-08-01
+
+### Fixed
+- **Vehicles have real backs and fronts now — the saga is over.** The user's
+  circled screenshot pinpointed it: the end face was drawn as a short stub
+  continuing off the near corner (lengthwise), so the rear read as "hanging
+  out" beside the body instead of closing it. End faces are now FULL-WIDTH
+  walls spanning the body along the iso width axis — tailgate on pickups,
+  trunk wall on cars, grille face on front-on vehicles — with lights at both
+  corners, a shutline, and a bumper strip. Confirmed by the user on trucks
+  ("yes thats it, exactly like that"); the same fix applied to cars at their
+  request.
+
+### Changed
+- **Real audio arrives (design-doc amendment, user call).** The synth-only
+  rule is retired for organic sounds; licenses tracked in
+  `assets/audio/LICENSES.md`:
+  - **Menu music:** a lonely guitar loop from DavidKBD's "The Last"
+    post-apocalyptic pack (CC-BY 4.0) replaces the synthesized drone theme.
+  - **Footsteps:** real recordings per surface (concrete, tile-as-asphalt,
+    wood, grass, gravel-as-dirt) from congusbongus's OpenGameArt pack
+    (CC-BY 3.0), peak-normalized and mixed quieter than before — subtle,
+    never obnoxious (user report: steps were too loud).
+  - **Thunder:** three distant-rumble cuts from Gregor Quendel's storm field
+    recording (CC-BY 4.0) replace the synth burst that read as "a torch
+    starting up".
+- UI blips, door thunks, the sniper crack, flashlight click, splash ping,
+  rain bed and car alarms stay synthesized — they were approved as-is.
+
+## [0.6.12] — 2026-08-01
+
+### Changed
+- **Car end-cap colors rolled back to the original dark look** (user call —
+  the brightened caps from the visibility fix read worse). The v0.6.10
+  geometry fixes stayed: raked-ramp fills, smaller wheel arches, the
+  attached broken-car door.
+
 ## [0.6.11] — 2026-08-01
 
 ### Changed

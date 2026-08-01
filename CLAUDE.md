@@ -7,21 +7,23 @@ This file carries everything a fresh session needs that isn't in those two.
 
 ## Where we are
 
-- **Version v0.6.12**, all committed/tagged/pushed (fifteen releases on
-  2026-08-01, v0.6.3 → v0.6.12 — read CHANGELOG.md for the full arc).
+- **Version v0.6.13**, all committed/tagged/pushed (sixteen releases on
+  2026-08-01, v0.6.3 → v0.6.13 — read CHANGELOG.md for the full arc).
 
-## OPEN ITEM — resolve FIRST next session
+## RESOLVED 2026-08-01: the missing-car-part saga (six rounds)
 
-The user repeatedly reports vehicles "missing a part (front or back)".
-FIVE fixes attempted; real bugs found each time but the perception
-persists: (1) roof-plane checker holes filled, (2) raked windshield/trunk
-ramp gaps bridged, (3) end caps + far-end wraps added, (4) wheel-arch
-carve shrunk (it bit through 8px hoods/trunks) + broken-door reattached,
-(5) caps brightened → user said WORSE → reverted in v0.6.12 (dark caps
-kept; geometry fixes kept). A 6x two-facing truck sheet was sent; the
-user will CIRCLE the exact spot — wait for that image, fix precisely
-that, do NOT re-theorize. Sprite pixel-dumps prove the silhouettes are
-closed; the gap is perceptual, not geometric.
+The user circled the exact spot on a 6x truck sheet and that cracked it:
+the END FACE was drawn as a 5px stub CONTINUING LENGTHWISE off the near
+corner, instead of a full-width wall across the body's iso width axis.
+Rebuilt as full-width walls (tailgate/trunk/grille + corner lights +
+shutline + bumper strip) in v0.6.13. Trucks confirmed by the user ("yes
+thats it, exactly like that"); cars got the same treatment at their
+request ("i think the cars had that problem too") — they will confirm
+cars in their next playtest. LESSON: when the user reports something
+"missing/off" repeatedly, ask them to CIRCLE it on a zoomed sheet —
+five theory-driven fixes found real bugs but missed the actual one.
+Audio taste addendum learned the same day: footsteps at -18dB were
+"loud and obnoxious" — organic sounds now sit at -22dB and below.
 
 ## Recent-history context (v0.6.6-v0.6.11: prone stance on Z,
   splash screen + menu music + full audio suite, lattice-fence barricade
@@ -103,11 +105,15 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   integer window scale) + 0.2s-window fps counter. `scripts/keybinds_panel.gd`,
   `scripts/settings_panel.gd`, `scripts/pause_menu.gd`, `scripts/ui_theme.gd`
   (bitmap font + near-black/light-border buttons), `scripts/sfx.gd`
-  (ALL synthesized: UI blips, door thunks, sniper crack, flashlight click,
-  per-surface footsteps via play_step(kind, quiet), thunder, rain bed
-  (set_rain), car alarm stream, splash ping; heavy streams render on a
-  Thread), `scripts/music.gd` (menu theme, threaded render, play_menu/
-  stop_menu), `scripts/splash.gd` + `scenes/splash.tscn` (SapphireSignal
+  (HYBRID since v0.6.13: synth for UI blips, door thunks, sniper crack,
+  flashlight click, splash ping, rain bed (set_rain), car alarm; LICENSED
+  RECORDINGS under assets/audio/ for per-surface footsteps
+  (play_step(kind, quiet), -22/-27dB) and thunder — licenses in
+  assets/audio/LICENSES.md, DESIGN.md §5 amended; rain+alarm still render
+  on a Thread), `scripts/music.gd` (menu theme = licensed guitar loop
+  "The Last" by DavidKBD at -18dB, loop=true set at runtime, play_menu/
+  stop_menu fades; 46 more pack tracks re-downloadable for later
+  milestones), `scripts/splash.gd` + `scenes/splash.tscn` (SapphireSignal
   studio card — THE BOOT SCENE; harness args skip it instantly),
   `scripts/car_alarms.gd` (armed intact cars: proximity alarm + flashing
   light overlays from manifest "lights" coords, once per car until death),

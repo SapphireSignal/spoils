@@ -1,12 +1,15 @@
 extends Node
-## Sfx autoload: runtime-synthesized sounds (design doc: no audio files, ever).
-## UI blips auto-wire to every Button. World sounds are SUBTLE by direction:
-## quiet, clean, and matched to what they're for — per-surface footsteps,
-## door thunks, the sniper's crack, thunder rolling in after lightning, a soft
-## rain bed, and short two-tone car alarms. Heavy streams (thunder, rain,
-## alarm) render on a background thread so boot never waits on them.
+## Sfx autoload. SUBTLE by direction: quiet, clean, matched to what it's for.
+## Since v0.6.13 the organic sounds are licensed recordings (per-surface
+## footsteps, thunder — see assets/audio/LICENSES.md); the mechanical ones
+## stay synthesized (UI blips, door thunks, sniper crack, flashlight click,
+## splash ping, rain bed, car alarm). UI blips auto-wire to every Button.
+## Heavy synth streams (rain, alarm) render on a background thread.
 
 const RATE := 44100
+const STEP_KINDS := ["concrete", "asphalt", "wood", "grass", "dirt"]
+const STEP_VARIANTS := 4
+const THUNDER_COUNT := 3
 
 var _hover: AudioStreamWAV
 var _press: AudioStreamWAV
@@ -15,8 +18,8 @@ var _door_close: AudioStreamWAV
 var _crack: AudioStreamWAV
 var _click: AudioStreamWAV
 var _splash_ping: AudioStreamWAV
-var _steps: Dictionary = {}          # kind -> Array[AudioStreamWAV]
-var _thunder: Array[AudioStreamWAV] = []
+var _steps: Dictionary = {}          # kind -> Array[AudioStream]
+var _thunder: Array[AudioStream] = []
 var _rain_loop: AudioStreamWAV
 var _alarm: AudioStreamWAV
 
@@ -37,7 +40,13 @@ func _ready() -> void:
 	_crack = _synth_noise(0.07, 0.34)
 	_click = _synth_click()
 	_splash_ping = _synth_ping()
-	_synth_steps()
+	for kind in STEP_KINDS:
+		var variants: Array[AudioStream] = []
+		for i in STEP_VARIANTS:
+			variants.append(load("res://assets/audio/steps/%s_%d.ogg" % [kind, i]))
+		_steps[kind] = variants
+	for i in THUNDER_COUNT:
+		_thunder.append(load("res://assets/audio/thunder_%d.ogg" % i))
 	for i in 4:
 		var player := AudioStreamPlayer.new()
 		player.volume_db = -8.0
@@ -95,7 +104,8 @@ func play_step(kind: String, quiet: bool) -> void:
 	var variants: Array = _steps.get(kind, _steps.get("concrete", []))
 	if variants.is_empty():
 		return
-	_step_player.volume_db = -24.0 if quiet else -18.0  # subtle, always
+	_step_player.volume_db = -27.0 if quiet else -22.0  # subtle, always
+	                                                    # (user: never loud)
 	_step_player.pitch_scale = randf_range(0.95, 1.05)  # no two steps alike
 	_step_player.stream = variants[randi() % variants.size()]
 	_step_player.play()
@@ -104,7 +114,7 @@ func play_step(kind: String, quiet: bool) -> void:
 func play_thunder() -> void:
 	if _thunder.is_empty():
 		return
-	_thunder_player.volume_db = randf_range(-18.0, -12.0)
+	_thunder_player.volume_db = randf_range(-20.0, -14.0)
 	_thunder_player.stream = _thunder[randi() % _thunder.size()]
 	_thunder_player.play()
 
@@ -231,101 +241,17 @@ func _synth_noise(duration: float, amp: float) -> AudioStreamWAV:
 	return _wav(data)
 
 
-func _synth_steps() -> void:
-	## Per-surface footsteps, two variants each — each surface built with its
-	## OWN recipe so they are unmistakably different (user report: too samey):
-	## concrete = crisp dry tick; asphalt = low dull thud; wood = hollow
-	## two-tone knock; grass = a slow soft brush; dirt = a grainy crunch.
-	for kind in ["concrete", "asphalt", "wood", "grass", "dirt"]:
-		var variants: Array[AudioStreamWAV] = []
-		for v in 2:
-			variants.append(_synth_step_kind(kind, v))
-		_steps[kind] = variants
-
-
-func _synth_step_kind(kind: String, variant: int) -> AudioStreamWAV:
-	var dur := 0.045
-	match kind:
-		"asphalt": dur = 0.06
-		"wood": dur = 0.12
-		"grass": dur = 0.10
-		"dirt": dur = 0.075
-	var count := int(dur * RATE)
-	var data := PackedByteArray()
-	data.resize(count * 2)
-	var rng := RandomNumberGenerator.new()
-	rng.seed = hash("spoils-step-%s-%d" % [kind, variant])
-	var lp1 := 0.0
-	var lp2 := 0.0
-	for i in count:
-		var t := float(i) / count
-		var n := rng.randf_range(-1.0, 1.0)
-		var s := 0.0
-		match kind:
-			"concrete":  # bright dry tick, over instantly
-				var env := minf(float(i) / (0.0015 * RATE), 1.0) * pow(1.0 - t, 5.0)
-				s = n * 0.65 * env + sin(TAU * 2300.0 * float(i) / RATE) * 0.10 * env * env
-			"asphalt":   # low dull thud with a little grit
-				lp1 = n * 0.4 + lp1 * 0.6
-				var env := minf(float(i) / (0.002 * RATE), 1.0) * pow(1.0 - t, 4.0)
-				s = lp1 * 0.4 * env + sin(TAU * 105.0 * float(i) / RATE) * 0.35 * env
-			"wood":      # hollow knock: two low resonances ringing briefly
-				var env := minf(float(i) / (0.0015 * RATE), 1.0) * pow(1.0 - t, 2.4)
-				s = (sin(TAU * 165.0 * float(i) / RATE) * 0.55
-					+ sin(TAU * 332.0 * float(i) / RATE) * 0.28) * env
-				if t < 0.07:
-					s += n * 0.25 * (1.0 - t / 0.07)
-			"grass":     # a brush, not a tap: slow swell, deeply softened
-				lp1 = n * 0.15 + lp1 * 0.85
-				lp2 = lp1 * 0.15 + lp2 * 0.85
-				var env := smoothstep(0.0, 0.3, t) * (1.0 - smoothstep(0.35, 1.0, t))
-				s = lp2 * 1.5 * env
-			"dirt":      # grainy crunch: three little crush bursts inside
-				lp1 = n * 0.45 + lp1 * 0.55
-				var env := pow(1.0 - t, 3.0)
-				var grain := 1.0
-				for g in [0.08, 0.3, 0.55]:
-					if absf(t - float(g)) < 0.05:
-						grain = 1.9
-				s = lp1 * 0.4 * env * grain
-		data.encode_s16(i * 2, int(clampf(s, -1.0, 1.0) * 32767.0))
-	return _wav(data)
-
-
 func _render_heavy() -> void:
-	## Background render: thunder rolls, the rain bed, the car alarm.
-	var thunder_a := _synth_thunder("a", 1.7, 0.30)
-	var thunder_b := _synth_thunder("b", 2.2, 0.24)
+	## Background render: the rain bed and the car alarm (thunder is a
+	## licensed field recording now, loaded in _ready like the footsteps).
 	var rain := _synth_rain_bed()
 	var alarm := _synth_alarm()
-	_apply_heavy.call_deferred(thunder_a, thunder_b, rain, alarm)
+	_apply_heavy.call_deferred(rain, alarm)
 
 
-func _apply_heavy(a: AudioStreamWAV, b: AudioStreamWAV, rain: AudioStreamWAV,
-		alarm: AudioStreamWAV) -> void:
-	_thunder = [a, b]
+func _apply_heavy(rain: AudioStreamWAV, alarm: AudioStreamWAV) -> void:
 	_rain_loop = rain
 	_alarm = alarm
-
-
-func _synth_thunder(seed_text: String, duration: float, amp: float) -> AudioStreamWAV:
-	## A crack into a rolling low rumble — brown noise with a slow envelope.
-	var count := int(duration * RATE)
-	var data := PackedByteArray()
-	data.resize(count * 2)
-	var rng := RandomNumberGenerator.new()
-	rng.seed = hash("spoils-thunder-" + seed_text)
-	var brown := 0.0
-	for i in count:
-		var t := float(i) / count
-		brown = clampf(brown + rng.randf_range(-1.0, 1.0) * 0.08, -1.0, 1.0)
-		var env := pow(1.0 - t, 1.6)
-		var s := brown * env * amp
-		if t < 0.05:  # the initial crack
-			s += rng.randf_range(-1.0, 1.0) * (0.05 - t) * 6.0 * amp
-		var wobble := 0.75 + 0.25 * sin(t * 23.0 + float(seed_text.hash() % 7))
-		data.encode_s16(i * 2, int(clampf(s * wobble, -1.0, 1.0) * 32767.0))
-	return _wav(data)
 
 
 func _synth_rain_bed() -> AudioStreamWAV:
