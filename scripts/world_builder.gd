@@ -64,6 +64,8 @@ var _sidewalk: Dictionary = {}       # cell -> "v"/"h" (walkways flanking roads)
 var _traffic_cells: Array[Vector2i] = []
 var _zone_salt := 0                  # per-build salt for the weathering zones
 var _bush_nodes: Array[Node2D] = []  # registered with the Foliage manager
+var _fog_spots := PackedVector2Array()   # dawn-fog anchors (woods + roads)
+var _leaf_trees := PackedVector2Array()  # canopy points of shedder oaks
 
 
 func build(root: Node2D, seed_text: String = "") -> Dictionary:
@@ -108,6 +110,7 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 	await _place_foliage()
 	await _fill_dead_spots()
 	_collect_puddle_spots()
+	_collect_fog_spots()
 	_build_border_collision(root)
 
 	var spawn := _floor_layer.map_to_local(_spawn_cell)
@@ -130,6 +133,8 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 		"traffic_cells": _traffic_cells,
 		"bushes": _bush_nodes,
 		"walk_cells": _sidewalk.size(),
+		"fog_spots": _fog_spots,
+		"leaf_trees": _leaf_trees,
 	}
 
 
@@ -1163,10 +1168,20 @@ func _place_trees() -> void:
 			continue
 		var roll := _rng.randf()
 		if roll < 0.28:
-			_add_prop_at_cell(_pick_variant("tree"), cell as Vector2i, Vector2(12, 6))
+			var variant := _pick_variant("tree")
+			var node := _add_prop_at_cell(variant, cell as Vector2i, Vector2(12, 6))
+			_maybe_shed_leaves(variant, node)
 		elif roll < 0.33:
 			_add_prop_at_cell(_pick_variant("stick"), cell as Vector2i, Vector2(14, 7))
 		await _tick()
+
+
+func _maybe_shed_leaves(variant: String, node: Node2D) -> void:
+	# only the leafy oaks (tree_4..6), and only a QUARTER of them — every
+	# tree shedding would look weird (user call)
+	var idx := int(variant.trim_prefix("tree_"))
+	if idx >= 4 and idx <= 6 and _rng.randf() < 0.25:
+		_leaf_trees.append(node.position + Vector2(0, -30.0))
 
 
 func _place_lone_trees() -> void:
@@ -1205,7 +1220,8 @@ func _place_lone_trees() -> void:
 				if not _forest.has(ncell) and not _dirt_path.has(ncell) \
 						and not _on_road(ncell) and not _occupied.has(ncell):
 					_set_tile(ncell, "grass_blend_%d" % _rng.randi_range(0, 1))
-		_add_prop_at_cell(_pick_variant("tree"), cell, Vector2(10, 5))
+		var lone_variant := _pick_variant("tree")
+		_maybe_shed_leaves(lone_variant, _add_prop_at_cell(lone_variant, cell, Vector2(10, 5)))
 		if _rng.randf() < 0.5:
 			var scell := cell + Vector2i(_rng.randi_range(-1, 1), _rng.randi_range(-1, 1))
 			if not _occupied.has(scell) and not _on_road(scell):
@@ -1315,6 +1331,27 @@ func _scatter_warehouse_stock() -> void:
 				continue
 			var item := _pick_variant(["crate", "crate_stack", "pallet"][_rng.randi_range(0, 2)])
 			_add_prop_at_cell(item, cell, Vector2(8, 4))
+
+
+func _collect_fog_spots() -> void:
+	# where the dawn fog is allowed to live: through the woods, down the
+	# roads — never anchored inside buildings (roofed cells are skipped by
+	# the environment at spawn time anyway)
+	for cell in _forest:
+		if _rng.randf() < 0.05 and _cell_inset(cell as Vector2i) >= BARRIER_INSET:
+			_fog_spots.append(_floor_layer.map_to_local(cell as Vector2i))
+	for r in _roads_v:
+		var y := BARRIER_INSET + 4
+		while y < MAP_H - BARRIER_INSET:
+			if _rng.randf() < 0.4:
+				_fog_spots.append(_floor_layer.map_to_local(Vector2i(r.x + 1, y)))
+			y += 9
+	for r in _roads_h:
+		var x := BARRIER_INSET + 4
+		while x < MAP_W - BARRIER_INSET:
+			if _rng.randf() < 0.4:
+				_fog_spots.append(_floor_layer.map_to_local(Vector2i(x, r.x + 1)))
+			x += 9
 
 
 func _collect_puddle_spots() -> void:

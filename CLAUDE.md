@@ -7,8 +7,52 @@ This file carries everything a fresh session needs that isn't in those two.
 
 ## Where we are
 
-- **Version v0.6.16**, all committed/tagged/pushed (nineteen releases on
-  2026-08-01, v0.6.3 → v0.6.16 — read CHANGELOG.md for the full arc).
+- **Version v0.6.16 SHIPPED** (nineteen releases on 2026-08-01, v0.6.3 →
+  v0.6.16 — read CHANGELOG.md for the full arc). **v0.6.17 is WIP,
+  COMMITTED but NOT tagged/changelogged — FINISH IT FIRST next session.**
+
+## v0.6.17 WIP — state + exact remaining steps (2026-08-01 chat handoff)
+
+DONE (in the WIP commit, smoke-passing):
+- MORNING FOG: fog_0..2.png (soft alpha, gen_art make_fog_puffs), env fog
+  pool (32 puffs, FOG_ALPHA_MAX 0.5) anchored to builder fog_spots
+  (forest 5% + road spots every ~9 cells), spawns from a NEAR-VIEW list
+  (refresh 0.25s, ≤3/frame, alive ≤ near*4), drifts with per-morning
+  wind, dissolves ~90px past its anchor, morning window 0.10-0.38
+  (_morning_amount), force_time PREFILLS 90 iters (shots), headless
+  window reports cs=(64,64) → <128 fallback to 640x360 view.
+- FALLING LEAVES: leaves_0..2.png (2 flutter frames), builder marks 25%
+  of OAKS (tree_4..6) via _maybe_shed_leaves → env leaf pool (22), 3
+  fall patterns (sway/zigzag/wind-drift), spawn ≤1 per 0.5-1.4s near
+  view, fade at 80% of 2.2-3.8s fall.
+- DAY/NIGHT REWORK (user calls): DAY_SECONDS 600 (10 min; user floated
+  8 — offer stands), DEEP_NIGHT (0.085,0.095,0.24) = properly hard to
+  see, gradient offsets [0,.08,.17,.26,.52,.62,.74,.82,1] (night ~26%),
+  nightfall color (0.36,0.38,0.60), _night_amount_for windows
+  .08/.17/.64/.80 (lamps + flashlight from 0.64).
+- AUDIO TUNING (user calls): raid-track END fade (4s tail, _tail_started
+  in music._process), breaths 24-38s ("like 30 secs"); rain wash SLEWED
+  fade in/out (6 dB/s, quieter -49..-34, stop ≤-58, _rain_db in sfx);
+  thunder quieter (-24..-18) + faster after flash (0.15-0.5s).
+- HARNESS: probe prints FOG nearest/manual/spots/active/near lines;
+  _shot applies env flags, waits 10 frames, applies AGAIN (fog prefill
+  needs the SETTLED camera — flags run before the camera catches the
+  --at teleport).
+
+REMAINING for v0.6.17 (in order):
+1. **VIEW shots/v0617_fog.png** (taken with all fixes; NEVER visually
+   confirmed). If fog STILL invisible: debug rendered visibility itself
+   (temp alpha 1.0 test; check fog_layer z=55 renders; verify puffs'
+   positions vs camera in a rendered probe). Headless/rendered probes
+   PROVE spawning works (active=12-32) — only the LOOK is unconfirmed.
+2. VIEW shots/v0617_night.png — night darkness verify (user wants
+   "hard to see, that's why we have a flashlight").
+3. Perf run (--perf --seed=v0617 + a --tod=0.9 night pass).
+4. CHANGELOG_ENTRIES v0.6.17 + CHANGELOG.md (fog, leaves, 10-min day,
+   dark nights, all audio fades) → tag v0.6.17 → push --tags → send the
+   user fog + night shots.
+5. Watch for user reactions: day length (8 min?), night too dark/not
+   enough, fog strength, music pause length, thunder/rain levels.
 - v0.6.16: raid music = USER'S 3 AUDITIONED PICKS (guitar02/harp01/piano01
   as raid_0..2) rotating random-no-repeat, CONTINUOUS from raid start to
   death (2-5s breaths; stop on died, restart post-respawn; the audition

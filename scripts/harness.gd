@@ -280,6 +280,9 @@ func _shot(shot_name: String) -> void:
 	if player != null and "--flashlight" in OS.get_cmdline_user_args():
 		player.set_flashlight(true)
 	_apply_env_flags()
+	for i in 10:                # let the camera settle on the teleported
+		await get_tree().process_frame
+	_apply_env_flags()          # re-apply: env prefills (fog) at THIS view
 	if _shot_menu != "":
 		var menu := get_tree().get_first_node_in_group("pause_menu") as PauseMenu
 		if menu != null:
@@ -456,6 +459,35 @@ func _probe_world() -> void:
 		bush_cells.append(floor_layer.local_to_map((bush as Node2D).position))
 	print("FOLIAGE bushes=%d cells=%s" % [bush_cells.size(), bush_cells.slice(0, 6)])
 	print("WALKS cells=%d" % int(info.get("walk_cells", -1)))
+	var env := get_tree().get_first_node_in_group("environment")
+	if env != null:
+		env.call("force_time", 0.18)         # dawn: the fog window
+		for i in 40:
+			await get_tree().process_frame
+		var active := 0
+		var fog_flags: PackedByteArray = env.get("_fog_active")
+		for flag in fog_flags:
+			active += flag
+		var cam := get_viewport().get_camera_2d()
+		var nearest := 1e9
+		if cam != null:
+			for s in (env.get("_fog_spots") as PackedVector2Array):
+				nearest = minf(nearest, s.distance_to(cam.get_screen_center_position()))
+		print("FOG nearest_spot=%.0f" % nearest)
+		var manual_inside := 0
+		if cam != null:
+			var mc := cam.get_screen_center_position()
+			for s in (env.get("_fog_spots") as PackedVector2Array):
+				if absf(s.x - mc.x) <= 410.0 and absf(s.y - mc.y) <= 240.0:
+					manual_inside += 1
+		print("FOG manual_inside=%d cs=%s refresh=%.2f" % [manual_inside,
+			str(get_window().content_scale_size), float(env.get("_fog_refresh"))])
+		print("FOG spots=%d active=%d near=%d wind=%.1f morning_ok=%s cam=%s at=%s" % [
+			(env.get("_fog_spots") as PackedVector2Array).size(), active,
+			(env.get("_fog_near") as Array).size(),
+			float(env.get("_fog_wind")),
+			str(env.call("_morning_amount", 0.18)), str(cam != null),
+			str(cam.get_screen_center_position() if cam != null else Vector2.ZERO)])
 
 	# the interact prompt must appear when parked right at a door
 	var player := main.get_node_or_null("World/Player") as Player

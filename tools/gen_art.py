@@ -3974,6 +3974,54 @@ def make_dither() -> Image.Image:
                 px[x, y] = (0, 0, 0, 1)
     return img
 
+def make_fog_puffs() -> list[Image.Image]:
+    """Dawn fog wisps: lobed soft-alpha clouds (atmosphere — palette-exempt
+    like light and dust). The runtime drifts them through the woods each
+    morning at very low opacity; they must never block vision."""
+    out: list[Image.Image] = []
+    for i in range(3):
+        rng = random.Random(f"{SEED}:fog:{i}")
+        w = rng.randint(104, 150)
+        h = rng.randint(26, 38)
+        img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        px = img.load()
+        lobes = [(w * 0.5, h * 0.55, w * 0.42, h * 0.40)]
+        for L in range(rng.randint(2, 3)):
+            lobes.append((rng.uniform(w * 0.22, w * 0.78),
+                          rng.uniform(h * 0.35, h * 0.72),
+                          rng.uniform(w * 0.16, w * 0.30),
+                          rng.uniform(h * 0.22, h * 0.42)))
+        for y in range(h):
+            for x in range(w):
+                a = 0.0
+                for (cx, cy, rx, ry) in lobes:
+                    d = ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2
+                    if d < 1.0:
+                        a = max(a, (1.0 - d) ** 1.5)
+                if a > 0.02:
+                    px[x, y] = (168, 181, 178, int(200 * a))
+        out.append(img)
+    return out
+
+
+def make_leaves() -> list[Image.Image]:
+    """Falling-leaf strips: 2 flutter frames per color (green, bright,
+    dry). Tiny palette sprites the environment tumbles off shedder oaks."""
+    combos = [("25562e", "19332d"), ("468232", "25562e"), ("884b2b", "602c2c")]
+    out: list[Image.Image] = []
+    for (a, b) in combos:
+        ca, cb = C(a), C(b)
+        img = Image.new("RGBA", (6, 3), (0, 0, 0, 0))
+        img.putpixel((0, 1), ca)    # frame 0: lying flat
+        img.putpixel((1, 1), ca)
+        img.putpixel((1, 0), cb)
+        img.putpixel((4, 0), ca)    # frame 1: folded edge-on
+        img.putpixel((4, 1), ca)
+        img.putpixel((3, 1), cb)
+        out.append(img)
+    return out
+
+
 def make_dust() -> Image.Image:
     img = Image.new("RGBA", (3, 3), (0, 0, 0, 0))
     img.putpixel((1, 1), (255, 255, 255, 255))
@@ -4125,6 +4173,10 @@ def main() -> None:
     make_dust().save(OUT / "dust.png")            # white, tinted at runtime
     make_rain_streak().save(OUT / "rain_streak.png")
     make_rain_splash().save(OUT / "rain_splash.png")
+    for i, puff in enumerate(make_fog_puffs()):
+        puff.save(OUT / f"fog_{i}.png")               # atmosphere: soft alpha
+    for i, leaf in enumerate(make_leaves()):
+        leaf.save(OUT / f"leaves_{i}.png")
     make_lamp_glow().save(OUT / "lamp_glow.png")      # light halo: soft alpha
     make_light_radial().save(OUT / "light_radial.png")  # Light2D textures
     make_light_cone().save(OUT / "light_cone.png")

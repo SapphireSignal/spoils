@@ -11,8 +11,8 @@ extends Node
 
 const MENU_DB := -18.0
 const RAID_DB := -26.0                # under everything, felt more than heard
-const BREATH_MIN := 2.0               # seconds of quiet between raid tracks
-const BREATH_MAX := 5.0
+const BREATH_MIN := 24.0              # a real pause between raid tracks
+const BREATH_MAX := 38.0              # (user call: "like 30 secs")
 
 var _player: AudioStreamPlayer
 var _fade: Tween
@@ -21,6 +21,7 @@ var _raid_streams: Array[AudioStreamOggVorbis] = []
 var _mode := ""                       # "", "menu", "raid"
 var _raid_last := -1
 var _breath := 0.0
+var _tail_started := false            # each raid track fades out at its end
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -73,7 +74,20 @@ func _stop(fade_seconds: float) -> void:
 		_fade.tween_callback(_player.stop)
 
 func _process(delta: float) -> void:
-	if _mode != "raid" or _player.playing:
+	if _mode != "raid":
+		return
+	if _player.playing:
+		# fade OUT over the track's last seconds — no cold endings
+		if not _tail_started:
+			var remaining := _player.stream.get_length() \
+				- _player.get_playback_position()
+			if remaining <= 4.0:
+				_tail_started = true
+				if _fade != null:
+					_fade.kill()
+				_fade = create_tween()
+				_fade.tween_property(_player, "volume_db", -60.0,
+					maxf(0.5, remaining))
 		return
 	_breath -= delta
 	if _breath > 0.0:
@@ -83,6 +97,7 @@ func _process(delta: float) -> void:
 	if pick == _raid_last:            # never the same one twice running
 		pick = (pick + 1 + randi_range(0, 1)) % _raid_streams.size()
 	_raid_last = pick
+	_tail_started = false
 	if _fade != null:
 		_fade.kill()
 	_player.stream = _raid_streams[pick]

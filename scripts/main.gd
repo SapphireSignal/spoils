@@ -92,7 +92,8 @@ func _build_world() -> void:
 	# stacking ~1000 node instantiations into one
 	var environment := EnvironmentSystem.new()
 	add_child(environment)
-	await environment.setup(self, _floor_layer, info["puddle_spots"], _roofs)
+	await environment.setup(self, _floor_layer, info["puddle_spots"], _roofs,
+		info["fog_spots"], info["leaf_trees"])
 	# anti-banding film: breaks the day-cycle's uniform 8-bit tint steps into
 	# per-pixel grain (a slow full-screen fade otherwise visibly "clicks")
 	var dither_layer := CanvasLayer.new()

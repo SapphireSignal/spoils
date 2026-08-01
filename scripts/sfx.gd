@@ -114,25 +114,34 @@ func play_step(kind: String, quiet: bool) -> void:
 func play_thunder() -> void:
 	if _thunder.is_empty():
 		return
-	_thunder_player.volume_db = randf_range(-20.0, -14.0)
+	_thunder_player.volume_db = randf_range(-24.0, -18.0)  # subtle, always
 	_thunder_player.stream = _thunder[randi() % _thunder.size()]
 	_thunder_player.play()
 
 
+var _rain_db := -60.0
+
 func set_rain(intensity: float) -> void:
 	if _rain_loop == null:
 		return
-	if intensity <= 0.02:
-		if _rain_player.playing:
-			_rain_player.stop()
-		return
-	if not _rain_player.playing:
+	var want_on := intensity > 0.02
+	# SLEWED gain: the wash always fades in from silence and out to silence
+	# (it used to pop in mid-level when a storm was already rolling), and a
+	# touch quieter overall (user call)
+	var target := -60.0
+	if want_on:
+		target = lerpf(-49.0, -34.0, clampf(intensity, 0.0, 1.0))
+	_rain_db = move_toward(_rain_db, target, get_process_delta_time() * 6.0)
+	if want_on and not _rain_player.playing:
+		_rain_db = -60.0
 		_rain_player.stream = _rain_loop
 		_rain_player.play()
-	# VERY subtle, with a slow non-loop-aligned drift so nothing about it
-	# ever reads as a repeating pattern
-	var drift := sin(Time.get_ticks_msec() / 1000.0 * TAU / 13.7) * 1.5
-	_rain_player.volume_db = lerpf(-46.0, -30.0, clampf(intensity, 0.0, 1.0)) + drift
+	elif not want_on and _rain_player.playing and _rain_db <= -58.0:
+		_rain_player.stop()
+	if _rain_player.playing:
+		# slow non-loop-aligned drift so nothing reads as a repeating pattern
+		var drift := sin(Time.get_ticks_msec() / 1000.0 * TAU / 13.7) * 1.5
+		_rain_player.volume_db = _rain_db + drift
 
 
 func alarm_stream() -> AudioStreamWAV:

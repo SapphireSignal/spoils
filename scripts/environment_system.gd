@@ -8,10 +8,16 @@ extends Node
 ## Splashes never move with the camera, and no drop lands inside a roofed
 ## building. Every rain pixel — drop and splash — is the puddles' blue.
 
-const DAY_SECONDS := 1200.0         # one full day/night cycle (20 min)
-const DEEP_NIGHT := Color(0.14, 0.16, 0.34)  # night is DARK — that's the fun
+const DAY_SECONDS := 600.0          # one full day/night cycle (10 min, user
+                                    # call) — night must ARRIVE every session
+const DEEP_NIGHT := Color(0.085, 0.095, 0.24)  # HARD-to-see dark (user call:
+                                    # "that's why we have a flashlight")
 const STORM_TINT_SECONDS := 45.0    # storm darkening fades in over ~45 s —
                                     # the screen must never visibly "switch"
+
+const FOG_COUNT := 32               # dawn fog puffs alive at once, near view
+const FOG_ALPHA_MAX := 0.5          # clearly visible — still never a wall
+const LEAF_COUNT := 22              # falling leaves alive at once
 
 const DROP_COUNT := 240
 const SPLASH_COUNT := 220
@@ -53,9 +59,32 @@ var _splash_sprites: Array[Sprite2D] = []
 var _splash_age: PackedFloat32Array = PackedFloat32Array()
 var _splash_free: Array[int] = []
 
+# dawn fog pool: puffs anchor to forest/road spots, drift with the wind,
+# and dissolve once they've slid clear of their anchor (out of the trees)
+var _fog_spots := PackedVector2Array()
+var _fog_sprites: Array[Sprite2D] = []
+var _fog_anchor := PackedVector2Array()
+var _fog_speed := PackedFloat32Array()
+var _fog_level := PackedFloat32Array()   # per-puff alpha factor
+var _fog_active := PackedByteArray()
+var _fog_wind := 1.0
+var _was_morning := false
+var _fog_near: Array[int] = []      # spot indices near the view, kept fresh
+var _fog_refresh := 0.0
+var _fog_alive := 0                 # capped vs nearby spots — never a wall
+
+# falling leaves: a few shedder oaks flutter one leaf at a time
+var _leaf_trees := PackedVector2Array()
+var _leaf_sprites: Array[Sprite2D] = []
+var _leaf_state: Array[Dictionary] = []
+var _leaf_timer := 0.0
+
 
 func setup(root: Node2D, floor_layer: TileMapLayer, puddle_spots: Array,
-		roofs: Array) -> void:
+		roofs: Array, fog_spots := PackedVector2Array(),
+		leaf_trees := PackedVector2Array()) -> void:
+	_fog_spots = fog_spots
+	_leaf_trees = leaf_trees
 	# setup is async (pool creation yields) — _process must not run until
 	# everything below exists
 	set_process(false)
@@ -118,6 +147,37 @@ func setup(root: Node2D, floor_layer: TileMapLayer, puddle_spots: Array,
 		if i % 80 == 79:
 			await get_tree().process_frame
 
+	# dawn fog drifts ABOVE the world, below the rain
+	var fog_layer := Node2D.new()
+	fog_layer.name = "DawnFog"
+	fog_layer.z_index = 55
+	root.add_child(fog_layer)
+	for i in FOG_COUNT:
+		var sprite := Sprite2D.new()
+		sprite.texture = load("res://art/gen/fog_%d.png" % (i % 3))
+		sprite.visible = false
+		fog_layer.add_child(sprite)
+		_fog_sprites.append(sprite)
+		_fog_anchor.append(Vector2.ZERO)
+		_fog_speed.append(1.0)
+		_fog_level.append(1.0)
+		_fog_active.append(0)
+
+	# leaves tumble just above the props
+	var leaf_layer := Node2D.new()
+	leaf_layer.name = "Leaves"
+	leaf_layer.z_index = 45
+	root.add_child(leaf_layer)
+	for i in LEAF_COUNT:
+		var sprite := Sprite2D.new()
+		sprite.texture = load("res://art/gen/leaves_%d.png" % (i % 3))
+		sprite.hframes = 2
+		sprite.visible = false
+		leaf_layer.add_child(sprite)
+		_leaf_sprites.append(sprite)
+		_leaf_state.append({"active": false, "t": 0.0, "dur": 3.0,
+			"pattern": 0, "origin": Vector2.ZERO})
+
 	var sky := CanvasLayer.new()
 	sky.layer = 30
 	add_child(sky)
@@ -132,15 +192,17 @@ func setup(root: Node2D, floor_layer: TileMapLayer, puddle_spots: Array,
 	# table left the endpoint at default white, which brightened the late
 	# evening and then jump-cut to night when the day wrapped
 	_tint_gradient = Gradient.new()
+	# night owns ~26% of the clock now (was ~14%) and dusk lands earlier —
+	# a raid that starts at dawn reaches real darkness in the same sitting
 	_tint_gradient.offsets = PackedFloat32Array(
-		[0.0, 0.06, 0.16, 0.26, 0.58, 0.70, 0.84, 0.92, 1.0])
+		[0.0, 0.08, 0.17, 0.26, 0.52, 0.62, 0.74, 0.82, 1.0])
 	_tint_gradient.colors = PackedColorArray([
 		DEEP_NIGHT, DEEP_NIGHT,
 		Color(0.85, 0.72, 0.72),   # dawn
 		Color(1.0, 1.0, 1.0),      # day
 		Color(1.0, 0.98, 0.94),    # late day
 		Color(0.88, 0.72, 0.68),   # dusk
-		Color(0.50, 0.52, 0.72),   # nightfall
+		Color(0.36, 0.38, 0.60),   # nightfall, deeper than before
 		DEEP_NIGHT, DEEP_NIGHT,
 	])
 	_weather_timer = randf_range(60.0, 200.0)
@@ -162,6 +224,15 @@ func force_weather(rain_on: bool) -> void:  # harness hook
 
 func force_time(t: float) -> void:  # harness hook, 0..1
 	day_time = t
+	var morning := _morning_amount(t)
+	if morning > 0.0 and not _fog_sprites.is_empty():
+		# pre-fill the dawn fog (like force_weather prefills rain): shots
+		# teleport and capture faster than the 0.5s spot-refresh cadence
+		_fog_wind = (1.0 if randf() < 0.5 else -1.0) * randf_range(6.0, 11.0)
+		_was_morning = true
+		_fog_refresh = 0.0
+		for i in 90:
+			_update_fog(1.0 / 30.0, morning)
 
 
 func _process(delta: float) -> void:
@@ -188,6 +259,13 @@ func _process(delta: float) -> void:
 	rain_intensity = move_toward(rain_intensity, 1.0 if _raining else 0.0, delta / 14.0)
 
 	_update_rain(delta)
+	var morning := _morning_amount(day_time)
+	if morning > 0.0 and not _was_morning:
+		# a fresh morning rolls the wind: everything drifts one way today
+		_fog_wind = (1.0 if randf() < 0.5 else -1.0) * randf_range(6.0, 11.0)
+	_was_morning = morning > 0.0
+	_update_fog(delta, morning)
+	_update_leaves(delta)
 
 	# puddles fill while raining, dry out under the sun — and the loop sleeps
 	# entirely once every puddle has settled
@@ -229,19 +307,136 @@ func _strike() -> void:
 	tween.tween_property(_flash, "color:a", 0.05, 0.16)
 	tween.tween_property(_flash, "color:a", peak * 0.75, 0.08)
 	tween.tween_property(_flash, "color:a", 0.0, 0.50)
-	get_tree().create_timer(randf_range(0.4, 1.4)).timeout.connect(Sfx.play_thunder)
+	# tight on the flash's heels — a second of lag read as disconnected
+	get_tree().create_timer(randf_range(0.15, 0.5)).timeout.connect(Sfx.play_thunder)
 
 
 func _night_amount_for(t: float) -> float:
-	if t < 0.06:
+	# tracks the retuned gradient: lamps and the flashlight matter from
+	# nightfall (0.64) all the way to the deep-dark plateau (0.80..0.08)
+	if t < 0.08:
 		return 1.0
-	if t < 0.16:
-		return 1.0 - smoothstep(0.06, 0.16, t)
-	if t < 0.72:
+	if t < 0.17:
+		return 1.0 - smoothstep(0.08, 0.17, t)
+	if t < 0.64:
 		return 0.0
-	if t < 0.86:
-		return smoothstep(0.72, 0.86, t)
+	if t < 0.80:
+		return smoothstep(0.64, 0.80, t)
 	return 1.0
+
+
+func _morning_amount(t: float) -> float:
+	# the dawn fog window ("out before the fog lifts" — it's canon)
+	if t < 0.10 or t > 0.38:
+		return 0.0
+	if t < 0.14:
+		return smoothstep(0.10, 0.14, t)
+	if t > 0.30:
+		return 1.0 - smoothstep(0.30, 0.38, t)
+	return 1.0
+
+
+func _update_fog(delta: float, morning: float) -> void:
+	if _fog_spots.is_empty():
+		return
+	var camera := get_viewport().get_camera_2d()
+	if camera == null:
+		return
+	var center := camera.get_screen_center_position()
+	var cs := Vector2(_window.content_scale_size)
+	if cs.x < 128.0:                 # headless/degenerate window (reports 64):
+		cs = Vector2(640, 360)       # assume the base view instead
+	var view := cs * 0.5 + Vector2(90, 60)
+	_fog_refresh -= delta
+	if _fog_refresh <= 0.0:
+		# keep a fresh list of spots the camera can actually see — spawning
+		# from global random picks was a 0.3% lottery and fog never came
+		_fog_refresh = 0.25
+		_fog_near.clear()
+		for si in _fog_spots.size():
+			var s := _fog_spots[si]
+			if absf(s.x - center.x) <= view.x and absf(s.y - center.y) <= view.y:
+				_fog_near.append(si)
+	var spawned := 0
+	for i in FOG_COUNT:
+		var sprite := _fog_sprites[i]
+		if _fog_active[i] == 1:
+			sprite.position.x += _fog_wind * _fog_speed[i] * delta
+			var slide := absf(sprite.position.x - _fog_anchor[i].x)
+			# clear of its tree line -> dissolve (user call)
+			var edge := 1.0 - clampf((slide - 46.0) / 52.0, 0.0, 1.0)
+			var out_of_view := absf(sprite.position.x - center.x) > view.x + 80.0 \
+				or absf(sprite.position.y - center.y) > view.y + 60.0
+			sprite.modulate.a = FOG_ALPHA_MAX * _fog_level[i] * morning * edge
+			if edge <= 0.0 or morning <= 0.0 or out_of_view:
+				if sprite.modulate.a <= 0.02:
+					_fog_active[i] = 0
+					_fog_alive -= 1
+					sprite.visible = false
+		elif morning > 0.05 and spawned < 3 and not _fog_near.is_empty() \
+				and _fog_alive < _fog_near.size() * 4:
+			var spot := _fog_spots[_fog_near[randi_range(0, _fog_near.size() - 1)]]
+			if _roofed(spot):
+				continue
+			spawned += 1
+			_fog_active[i] = 1
+			_fog_alive += 1
+			_fog_anchor[i] = spot
+			_fog_speed[i] = randf_range(0.7, 1.3)
+			_fog_level[i] = randf_range(0.55, 1.0)
+			sprite.position = spot + Vector2(randf_range(-18.0, 18.0),
+				randf_range(-10.0, 4.0))
+			sprite.modulate.a = 0.0
+			sprite.visible = true
+
+
+func _update_leaves(delta: float) -> void:
+	if _leaf_trees.is_empty():
+		return
+	_leaf_timer -= delta
+	if _leaf_timer <= 0.0:
+		_leaf_timer = randf_range(0.5, 1.4)
+		var camera := get_viewport().get_camera_2d()
+		if camera != null:
+			var center := camera.get_screen_center_position()
+			var view := Vector2(_window.content_scale_size) * 0.5 + Vector2(40, 30)
+			var tree := _leaf_trees[randi_range(0, _leaf_trees.size() - 1)]
+			if absf(tree.x - center.x) <= view.x and absf(tree.y - center.y) <= view.y:
+				for i in LEAF_COUNT:
+					if not _leaf_state[i]["active"]:
+						var state := _leaf_state[i]
+						state["active"] = true
+						state["t"] = 0.0
+						state["dur"] = randf_range(2.2, 3.8)
+						state["pattern"] = randi_range(0, 2)
+						state["origin"] = tree + Vector2(
+							randf_range(-11.0, 11.0), randf_range(-8.0, 2.0))
+						_leaf_sprites[i].visible = true
+						break
+	for i in LEAF_COUNT:
+		var state := _leaf_state[i]
+		if not state["active"]:
+			continue
+		var sprite := _leaf_sprites[i]
+		state["t"] = float(state["t"]) + delta
+		var t: float = state["t"]
+		var p: float = t / float(state["dur"])
+		if p >= 1.0:
+			state["active"] = false
+			sprite.visible = false
+			continue
+		var origin: Vector2 = state["origin"]
+		var fall := 30.0
+		match int(state["pattern"]):
+			0:  # lazy sway
+				sprite.position = origin + Vector2(sin(t * 3.1) * 5.0, p * fall)
+			1:  # quick flutter zigzag
+				sprite.position = origin + Vector2(sin(t * 6.3) * 3.0, p * fall * 0.85)
+			2:  # caught by the wind
+				sprite.position = origin + Vector2(
+					t * 0.9 * _fog_wind + sin(t * 4.0) * 2.0, p * fall * 1.1)
+		sprite.frame = int(t * 6.0) % 2
+		sprite.modulate.a = 1.0 if p < 0.8 else 1.0 - (p - 0.8) / 0.2
 
 
 # ------------------------------------------------------------- world rain ---
