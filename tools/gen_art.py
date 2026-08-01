@@ -937,14 +937,14 @@ def draw_head(c: Canvas, view: str, bob: int) -> None:
     elif view == "back34":
         c.rect(CX - 3, y0, CX + 4, y0 + 5, HAIR)
         c.vline(CX + 4, y0 + 1, y0 + 5, HAIR_D)
-        c.rect(CX - 3, y0 + 6, CX + 3, y0 + 6, HAIR_D)  # tapered nape
+        c.rect(CX - 3, y0 + 6, CX + 3, y0 + 6, HAIR_D)  # nape
         c.set(CX + 4, y0 + 6, SKIN_SH)                  # ear sliver
-        c.rect(CX - 1, y0 + 7, CX + 2, y0 + 7, SKIN_SH)
+        c.rect(CX - 2, y0 + 7, CX + 3, y0 + 7, SKIN_SH)  # neck, near head width
     elif view == "back":
         c.rect(CX - 4, y0, CX + 3, y0 + 5, HAIR)
         c.vline(CX + 3, y0 + 1, y0 + 5, HAIR_D)
-        c.rect(CX - 3, y0 + 6, CX + 2, y0 + 6, HAIR_D)  # tapered nape
-        c.rect(CX - 2, y0 + 7, CX + 1, y0 + 7, SKIN_SH)
+        c.rect(CX - 3, y0 + 6, CX + 2, y0 + 6, HAIR_D)  # nape
+        c.rect(CX - 3, y0 + 7, CX + 2, y0 + 7, SKIN_SH)  # neck, near head width
 
 
 def draw_torso(c: Canvas, view: str, bob: int) -> None:
