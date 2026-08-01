@@ -1,4 +1,4 @@
-﻿extends Node2D
+extends Node2D
 ## Main menu. Generated backdrop scenes rotate with a slow crossfade,
 ## each with its own living detail:
 ##   hoard      - gold sparkles rising past the buttons
@@ -8,6 +8,17 @@
 
 const SCENE_SECONDS := 20.0
 const FADE_SECONDS := 1.4
+
+# preloaded once for the process lifetime: re-entering the menu from the game
+# must not re-decode these (that decode was a visible 1-2 frame hitch)
+const TEX_HOARD := preload("res://art/gen/menu_hoard.png")
+const TEX_SCRAP := preload("res://art/gen/menu_scrapyard.png")
+const TEX_SCRAP_NEON := preload("res://art/gen/menu_scrapyard_neon.png")
+const TEX_OVERLOOK := preload("res://art/gen/menu_overlook.png")
+const TEX_CLOUDS := preload("res://art/gen/menu_overlook_clouds.png")
+const TEX_DUST := preload("res://art/gen/dust.png")
+const TEX_VIGNETTE := preload("res://art/gen/vignette.png")
+const TEX_TITLE := preload("res://art/gen/title.png")
 
 var _scenes: Array[Node2D] = []
 var _scene_index := 0
@@ -74,9 +85,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
 # ------------------------------------------------------------- backdrops ----
 
-func _backdrop(scene_root: Node2D, texture_name: String) -> Sprite2D:
+func _backdrop(scene_root: Node2D, texture: Texture2D) -> Sprite2D:
 	var sprite := Sprite2D.new()
-	sprite.texture = load("res://art/gen/%s.png" % texture_name)
+	sprite.texture = texture
 	scene_root.add_child(sprite)
 	return sprite
 
@@ -84,12 +95,12 @@ func _backdrop(scene_root: Node2D, texture_name: String) -> Sprite2D:
 func _build_scenes() -> void:
 	# 1: the master hoard
 	var hoard := Node2D.new()
-	_backdrop(hoard, "menu_hoard")
+	_backdrop(hoard, TEX_HOARD)
 	_sparkles = CPUParticles2D.new()
-	_sparkles.texture = load("res://art/gen/dust.png")
+	_sparkles.texture = TEX_DUST
 	_sparkles.amount = 26
 	_sparkles.lifetime = 7.0
-	_sparkles.preprocess = 7.0
+	_sparkles.preprocess = 5.0
 	_sparkles.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
 	_sparkles.emission_rect_extents = Vector2(220, 40)
 	_sparkles.position = Vector2(0, 130)
@@ -106,17 +117,17 @@ func _build_scenes() -> void:
 
 	# 2: the neon scrapyard
 	var scrap := Node2D.new()
-	_backdrop(scrap, "menu_scrapyard")
+	_backdrop(scrap, TEX_SCRAP)
 	_neon = Sprite2D.new()
-	_neon.texture = load("res://art/gen/menu_scrapyard_neon.png")
+	_neon.texture = TEX_SCRAP_NEON
 	_neon.centered = false
 	_neon.position = Vector2(-480 + 148, -272 + 110)  # over the dark sign panel
 	scrap.add_child(_neon)
 	_smog = CPUParticles2D.new()
-	_smog.texture = load("res://art/gen/dust.png")
+	_smog.texture = TEX_DUST
 	_smog.amount = 30
 	_smog.lifetime = 11.0
-	_smog.preprocess = 11.0
+	_smog.preprocess = 0.0
 	_smog.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
 	_smog.emission_rect_extents = Vector2(460, 60)
 	_smog.position = Vector2(0, 200)
@@ -135,9 +146,9 @@ func _build_scenes() -> void:
 
 	# 3: the overlook
 	var overlook := Node2D.new()
-	_backdrop(overlook, "menu_overlook")
+	_backdrop(overlook, TEX_OVERLOOK)
 	_clouds_a = Sprite2D.new()
-	_clouds_a.texture = load("res://art/gen/menu_overlook_clouds.png")
+	_clouds_a.texture = TEX_CLOUDS
 	_clouds_a.position = Vector2(0, -180)
 	overlook.add_child(_clouds_a)
 	_clouds_b = Sprite2D.new()
@@ -145,10 +156,10 @@ func _build_scenes() -> void:
 	_clouds_b.position = Vector2(960, -180)
 	overlook.add_child(_clouds_b)
 	_dust = CPUParticles2D.new()
-	_dust.texture = load("res://art/gen/dust.png")
+	_dust.texture = TEX_DUST
 	_dust.amount = 24
 	_dust.lifetime = 8.0
-	_dust.preprocess = 8.0
+	_dust.preprocess = 0.0
 	_dust.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
 	_dust.emission_rect_extents = Vector2(460, 200)
 	_dust.direction = Vector2(1, 0.1)
@@ -209,14 +220,14 @@ func _build_ui() -> void:
 	layer.add_child(root)
 
 	var vignette := TextureRect.new()
-	vignette.texture = load("res://art/gen/vignette.png")
+	vignette.texture = TEX_VIGNETTE
 	vignette.set_anchors_preset(Control.PRESET_FULL_RECT)
 	vignette.stretch_mode = TextureRect.STRETCH_SCALE
 	vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(vignette)
 
 	_title = TextureRect.new()
-	_title.texture = load("res://art/gen/title.png")
+	_title.texture = TEX_TITLE
 	var tw := float(_title.texture.get_width())
 	_title.anchor_left = 0.5
 	_title.anchor_right = 0.5
