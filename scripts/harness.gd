@@ -371,7 +371,7 @@ func _shot(shot_name: String) -> void:
 			var wanted := arg.trim_prefix("--map=")
 			var map_view := get_tree().current_scene.get_node_or_null("MapView")
 			if map_view != null:
-				map_view.set("visible", true)
+				map_view.call("set_open", true)
 				map_view.call("_set_mode", wanted)
 				for i in 4:
 					await get_tree().process_frame

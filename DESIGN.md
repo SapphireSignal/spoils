@@ -26,8 +26,10 @@ Inspirations and what to take from each:
   flash, meaty sounds, satisfying reloads). Guns should feel great even when the
   fantasy is grim.
 
-One-line pitch: *Tarkov's raid loop and loot in a dead overrun district, with guns
-that feel like Destiny, at 32 pixels tall.*
+One-line pitch: *Tarkov's raid loop and loot in a sealed, picked-over district,
+with guns that feel like Destiny, at 32 pixels tall.* (Nothing "overran" this
+city — it was evacuated, walled in, and left to the people who stayed. Every
+threat is human; see LORE.md hard rule 1.)
 
 ## 2. The workflow contract (important)
 

@@ -184,7 +184,7 @@ func _process(delta: float) -> void:
 		# riding: the body is welded to the car (so the camera weld, zoom
 		# and snap all keep working off the same position they always use)
 		global_position = driving.global_position
-		if not dead:
+		if not dead and not Ui.blocks_gameplay():
 			if Input.is_action_just_pressed("zoom_in"):
 				_step_zoom(1)
 			elif Input.is_action_just_pressed("zoom_out"):
@@ -193,7 +193,7 @@ func _process(delta: float) -> void:
 		return
 
 	var input_vec := Vector2.ZERO
-	if not dead:
+	if not dead and not Ui.blocks_gameplay():
 		# stances: prone (Z, toggle) beats crouch; taking a crouch input
 		# stands you back up out of prone
 		if Input.is_action_just_pressed("prone"):
@@ -232,8 +232,10 @@ func _process(delta: float) -> void:
 		position = position.round()
 	_was_moving = moving
 
-	# wheel zoom: whole-factor steps only (fractional zoom shimmers)
-	if not dead:
+	# wheel zoom: whole-factor steps only (fractional zoom shimmers).
+	# A window on screen owns the wheel — it used to zoom the world AND
+	# the map at once (user report)
+	if not dead and not Ui.blocks_gameplay():
 		if Input.is_action_just_pressed("zoom_in"):
 			_step_zoom(1)
 		elif Input.is_action_just_pressed("zoom_out"):

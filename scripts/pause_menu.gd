@@ -82,6 +82,10 @@ func _button(parent: Container, text: String, handler: Callable) -> Button:
 func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_action_pressed("ui_cancel"):
 		return
+	# another window owns the screen: it gets the escape, not us (esc used
+	# to open the pause menu straight through the open map — user report)
+	if not visible and Ui.any_open():
+		return
 	get_viewport().set_input_as_handled()
 	if not visible:
 		open()
@@ -96,6 +100,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func open() -> void:
 	visible = true
 	get_tree().paused = true
+	Ui.open(&"pause")
 	_show_main()
 
 
@@ -107,6 +112,7 @@ func open_settings() -> void:
 func close() -> void:
 	visible = false
 	get_tree().paused = false
+	Ui.close(&"pause")
 
 
 func _show_main() -> void:

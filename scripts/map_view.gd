@@ -134,6 +134,18 @@ func _build_ui() -> void:
 	world_sub.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	world_sub.position = Vector2(14, 22)
 	_world_root.add_child(world_sub)
+	# the way out, always on screen: there was NO way to know how to
+	# leave this window (user report — esc was opening settings)
+	var world_close := Label.new()
+	world_close.text = "press m to close"
+	world_close.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	world_close.offset_left = -180
+	world_close.offset_top = -22
+	world_close.offset_right = -12
+	world_close.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	world_close.add_theme_color_override("font_color", UITheme.TEXT_DIM)
+	world_close.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_world_root.add_child(world_close)
 	# the tile board self-centers whatever the window aspect turns the
 	# UI space into (expand-aspect means it is NOT always 640x360)
 	var board := Control.new()
@@ -224,7 +236,7 @@ func _build_ui() -> void:
 	_status.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_transit_root.add_child(_status)
 	_hint = Label.new()
-	_hint.text = "drag to pan  -  wheel to zoom  -  m to close"
+	_hint.text = "drag to pan  -  wheel to zoom  -  press m to close"
 	_hint.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	_hint.offset_left = -260
 	_hint.offset_top = -22
@@ -284,17 +296,35 @@ func _clamp_pan() -> void:
 
 
 func toggle() -> void:
-	visible = not visible
-	if visible and _mode == "transit":
-		_recenter = true
+	set_open(not visible)
+
+
+func set_open(open: bool) -> void:
+	visible = open
+	if open:
+		Ui.open(&"map")
+		if _mode == "transit":
+			_recenter = true
+	else:
+		Ui.close(&"map")
 	_tooltip.visible = false
 	_hover_key = ""
+	_dragging = false
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("map") and _player != null and not _player.dead:
+	if visible and event.is_action_pressed("ui_cancel"):
+		# escape closes the map instead of opening the pause menu behind
+		# it (user report) — the window on top owns the key
 		get_viewport().set_input_as_handled()
-		toggle()
+		set_open(false)
+		return
+	if not event.is_action_pressed("map") or _player == null or _player.dead:
+		return
+	if not visible and Ui.any_open():
+		return                      # another window owns the screen
+	get_viewport().set_input_as_handled()
+	toggle()
 
 
 func _on_canvas_input(event: InputEvent) -> void:
@@ -330,6 +360,9 @@ func _step_zoom(direction: int) -> void:
 
 func _process(delta: float) -> void:
 	if not visible:
+		return
+	if _player == null or _player.dead:
+		set_open(false)     # dying with the map up must not wedge it open
 		return
 	_time_accum += delta
 	if _mode == "transit":

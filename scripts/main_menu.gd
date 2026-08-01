@@ -66,6 +66,14 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.25", ["windows behave now: whatever you have open owns the",
+		"screen, and nothing behind it listens",
+		"esc closes the map instead of opening settings behind it",
+		"the scroll wheel zooms the map OR the world, never both",
+		"every window says how to close it",
+		"lore: rewritten so its clear nothing but people ever",
+		"attacked this city (the mills machines are just factory",
+		"equipment) - and transit is written down as a real place"]],
 	["v0.6.24", ["cars point where theyre going - eight real angles now,",
 		"drawn from the side and head on, not just the four corners",
 		"every vehicle got wider: they were narrower than real cars",

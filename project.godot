@@ -20,6 +20,7 @@ Authority="*res://scripts/authority.gd"
 Settings="*res://scripts/settings.gd"
 Sfx="*res://scripts/sfx.gd"
 Music="*res://scripts/music.gd"
+Ui="*res://scripts/ui_state.gd"
 Harness="*res://scripts/harness.gd"
 
 [debug]

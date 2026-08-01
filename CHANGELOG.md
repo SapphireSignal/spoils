@@ -3,6 +3,35 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.25] — 2026-08-01
+
+### Fixed
+- **Windows own the screen** (user: "once a window is open i want only
+  that window to be functional"). New `Ui` autoload tracks open windows;
+  gameplay POLLS input every frame, so consuming events was never
+  enough — the player and the car now ask `Ui.blocks_gameplay()` and
+  stop reading input entirely while a window is up. Consequences the
+  user reported, all fixed: **ESC closes the map** instead of opening
+  the pause menu behind it, **the mouse wheel zooms the map OR the
+  world, never both at once**, and no window can open behind another.
+  Dying with the map open no longer wedges it open.
+- **Every window says how to leave it**: "press m to close" now sits on
+  the world view as well as the district view (there was no way to know
+  how to get out of the cordon screen).
+
+### Changed
+- **LORE.md rewritten at the top** (user asked, after seeing the word
+  "machines"): the hard rules are now the first thing in the document,
+  and rule 1 is unmissable — **every enemy is a human being; there are
+  no robots, drones, monsters or infected, ever.** Where the mills
+  chapter says "machines" it means industrial plant (looms, presses,
+  furnaces) and now says so in as many words. Added: the fixed-district
+  rule, transit written down as the real place it now is (which POI
+  sits where, plus the safehouse), the den's build-up loop — the wings
+  you restore and what each unlocks — and an extraction chapter with
+  six exit pitches for the user to pick from. DESIGN.md's "dead overrun
+  district" line reworded: nothing overran this city.
+
 ## [0.6.24] — 2026-08-01
 
 ### Changed

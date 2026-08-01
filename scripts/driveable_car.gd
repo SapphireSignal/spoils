@@ -162,6 +162,13 @@ func exit_car() -> void:
 func _process(delta: float) -> void:
 	if not driven or _busy:
 		return
+	if Ui.blocks_gameplay():
+		# a window is up: coast to a stop, read no input
+		speed = move_toward(speed, 0.0, COAST * delta)
+		velocity = Vector2(_drive_dir.x, _drive_dir.y * 0.6) * speed
+		move_and_slide()
+		Sfx.set_engine(0.3 if engine_on else 0.0)
+		return
 	if Input.is_action_just_pressed("interact"):
 		exit_car()
 		return

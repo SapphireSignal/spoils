@@ -1,10 +1,27 @@
 # SPOILS — the world bible (v1, 2026-08-01)
 
 Canon for everything the game will become. Written with the user; grows as
-milestones land. Everything lowercase in-game. Hard rules that shape all of
-it: enemies are HUMAN ONLY (no machines, user call), loot has NO rarity
-color tiers (scarcity and condition instead, user call), and the true cause
-of the collapse is never stated outright — the mystery is the tone.
+milestones land. Everything lowercase in-game.
+
+## the hard rules (these shape every other line in this document)
+
+1. **EVERY ENEMY IS A HUMAN BEING.** There are no robots, no drones, no
+   monsters, no infected — not now, not later. Nothing non-human ever
+   attacked this city and nothing non-human lives in it. When this
+   document says "machines" it means INDUSTRIAL PLANT — looms, presses,
+   furnaces, conveyors: the dead equipment inside the mills. The only
+   things that will ever shoot at you are people: strays, wardens,
+   hounds, the tollman's crew. (User call, permanent.)
+2. **No rarity color tiers on loot** — value is scarcity, condition and
+   weight instead.
+3. **The true cause of the collapse is never stated outright.** The
+   mystery is the tone. Three people give three answers; none is
+   confirmed in-game.
+4. **Every district is a FIXED, learnable place.** transit is one
+   permanent layout — the same streets every raid, forever — because
+   quests send you to real addresses and raiders are supposed to know
+   the ground. Weather, time of day, loot and people change; the map
+   never does. (User call 2026-08-01.)
 
 ---
 
@@ -60,20 +77,36 @@ nobody says that name either).
 - **structure:** streets, houses, warehouses, vehicles, and BENEATH it
   the tunnel system — brick storm mains from a century ago, utility
   crawls, and the passages raiders sledged between them (see 4).
+- **the ground itself (fixed forever — hard rule 4).** North: two
+  housing blocks, the courtyard with its dry fountain, and the supply
+  warehouses. The middle belt is industry, strung along the rail line
+  that cuts the district east to west: the bus depot, the scrapyard
+  with its crane and its own hall, the trainyard with the sidings.
+  South: the school over its playground, the gallery where somebody
+  still paints, the comms relay in the trees, and the autumn grove in
+  the south-east corner where the oaks turned and never turned back.
+  Roads run four by four; the barricade ring closes it all in.
+- **the safehouse.** Near the south wire, one squat house behind a
+  lattice fence with a parking pad: magpie's bolt-hole, and where every
+  raid begins. The drain run in the film comes up two streets from its
+  door. mara pretends not to know about it. kettle definitely does.
 - **hazard signature:** the wardens' overwatch on the ring, car alarms,
   and the strays who got here before you.
 
 ### the mills (map two — planned)
 - **what it was:** the river industry: flour, steel, textile — one
   continuous body of buildings grown together over a century.
-- **why it's rich:** the machines ran unmanned for months after the
-  sealing. whole order-books of product piled up inside before the power
-  finally died. legend says one hall is still warm.
+- **why it's rich:** the plant ran unmanned for months after the sealing
+  — looms, presses and furnaces grinding through their last work orders
+  with nobody on shift. whole order-books of product piled up inside
+  before the power finally died. legend says one hall is still warm.
+  (industrial equipment, standing dead. it is not alive, it does not
+  fight — see hard rule 1.)
 - **structure (nothing like transit):** ONE colossal interior. No
-  streets, no houses, no sky for most of it — machine halls the size of
+  streets, no houses, no sky for most of it — mill halls the size of
   city blocks, conveyor bridges, catwalk lattices over open floors,
   furnace rooms, silo clusters, freight elevators jammed between
-  levels. Movement is hall-to-hall through the machine, not block-to-
+  levels. Movement is hall-to-hall through the plant, not block-to-
   block down a road. Extraction through the coal gate or the river flume.
 - **hazard signature:** the hounds den here (see 6). No horizon, short
   sightlines, sound carries down the steel. Your flashlight is a flare.
@@ -212,6 +245,71 @@ How it became a den: year two, mara's stolen radio + kettle's money +
 verne's table, in the depot mara knew would still have power. The tally
 wall by the door keeps a chalk mark for every raider who went in and
 didn't come out. Nobody erases it. It's most of a wall now.
+
+## 7b. the den — home, and what it becomes
+
+The den is this game's home base: the old transit maintenance depot
+just OUTSIDE the wire, where mara's radio, kettle's money and verne's
+table met in year two. You leave from here and you come back here.
+It is not a menu — it is a place you stand in, with people in it.
+
+**What it is on day one:** the job board by the door (mara's district
+tags), kettle's scale and shelf, verne's table, the tally wall of
+chalk marks, a stove, and one corner that is yours.
+
+**What it becomes (the build-up loop).** The depot is huge and mostly
+dark. Every wing you restore turns on another part of the game, and
+the room visibly changes — lights come on, junk clears, someone moves
+in. Planned wings:
+- **your corner → your room:** the stash grows from a crate to
+  shelving to a real wall of it. Where gear lives between raids.
+- **verne's clinic:** better healing between raids, then treatments
+  that persist. Restoring it costs meds you'd rather sell.
+- **kettle's shop:** more stock, better prices, and eventually the
+  third suitcase opens.
+- **mara's radio room:** more jobs on the board, better intel before a
+  raid (weather, where the wire is singing), and finally the district
+  tags that unlock new maps.
+- **the workbench:** repair guns and armor instead of replacing them.
+- **the yard:** the depot's vehicle bay — get a truck running and you
+  carry more out.
+Every wing is paid for in SHINE (see 9), which is the whole point of
+the loop: what you carry out becomes the place you live in.
+
+## 7c. getting out — extraction
+
+Getting in is easy (the wire leaks in a hundred places and the wardens
+know it). **Getting OUT is the game.** You are carrying, and everything
+that owns a way out knows it. Every extract in SPOILS should cost
+something: time, brass, noise, or exposure.
+
+**Canon shape:** each district has several ways out. Some always work,
+some open only under conditions (the hour, the weather, a price paid),
+and the good ones are watched. You choose your exit when you choose
+what you're carrying.
+
+**PITCHES for transit's exits — THE USER PICKS; do not build unpicked
+ones.**
+- **the drain (always open, always slow).** Back down a manhole into
+  the storm mains and walk out under the wire. Free, reliable, and the
+  tollman's junction sits between you and the outside. Fits the film,
+  fits "going down". The baseline exit.
+- **the toll gate (pay to leave).** A stretch of wire under plastic
+  sheeting where the wardens look the other way for a price. Fast and
+  safe — and it charges you in brass, so it taxes greed exactly when
+  you have the most to lose.
+- **the night freight (timed).** The rail line still runs one train.
+  It comes when it comes; mara calls it over the radio. Get to the
+  trainyard in the window and ride out. Miss it and you're walking.
+- **the drive-out (loud).** Take a working vehicle through a road
+  breach in the barricades. The fastest way out with the most weight —
+  and an engine at night is a dinner bell for every gun in the sector.
+- **the outfall (conditional).** The drain's river mouth, only passable
+  when the rain has NOT been running (storms flood it). Weather picks
+  this one for you.
+- **the fog window (conditional).** During dawn fog the wardens'
+  optics are useless and one stretch of open wire is briefly crossable.
+  "out before the fog lifts" stops being a saying and becomes a rule.
 
 ## 8. magpie — the player, and the photo
 
