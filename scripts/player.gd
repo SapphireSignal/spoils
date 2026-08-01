@@ -35,6 +35,7 @@ var dead := false
 var floor_lift := 0.0           # sprite+camera rise while on a second story
 var upstairs := false           # gates ground-floor doors while up there
 var driving: DriveableCar = null
+var extracting := false         # on the rope: input frozen, camera still live
 var hidden_in_bush := false     # Foliage sets it; the sprite fades so the
                                 # player can READ their own concealment
 # THE INTERACTION RULE (user call 2026-08-01): you can only interact with
@@ -171,6 +172,7 @@ func respawn(at: Vector2) -> void:
 	if riding != null:
 		riding = null
 		ride_offset = Vector2.ZERO
+	extracting = false
 	visible = true
 	collision_layer = 1
 	floor_lift = 0.0
@@ -237,7 +239,7 @@ func _process(delta: float) -> void:
 		return
 
 	var input_vec := Vector2.ZERO
-	if not dead and not Ui.blocks_gameplay():
+	if not dead and not extracting and not Ui.blocks_gameplay():
 		# stances: prone (Z, toggle) beats crouch; taking a crouch input
 		# stands you back up out of prone
 		if Input.is_action_just_pressed("prone"):
@@ -279,7 +281,7 @@ func _process(delta: float) -> void:
 	# wheel zoom: whole-factor steps only (fractional zoom shimmers).
 	# A window on screen owns the wheel — it used to zoom the world AND
 	# the map at once (user report)
-	if not dead and not Ui.blocks_gameplay():
+	if not dead and not extracting and not Ui.blocks_gameplay():
 		if Input.is_action_just_pressed("zoom_in"):
 			_step_zoom(1)
 		elif Input.is_action_just_pressed("zoom_out"):

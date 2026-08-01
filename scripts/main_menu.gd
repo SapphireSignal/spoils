@@ -66,6 +66,17 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.43", ["the sweep, part two - fifteen more, none silent:",
+		"dying on the rope used to strand the helicopter in the",
+		"sky and quietly kill every later way out of the raid",
+		"you cant walk or drive away from your own lift anymore",
+		"paying the warden buys one crossing now - come back",
+		"inside the wire and the snipers shoulder their rifles",
+		"dying at the wheel left the headlights burning all night",
+		"a knocked-over barricade stopped clipping the toll booth",
+		"the deploy tail lost its last unbudgeted stalls",
+		"power box sparks arc in steps instead of shimmering",
+		"the smokers exhale drifts off in puffs like it should"]],
 	["v0.6.42", ["a code sweep found some bad ones:",
 		"quitting to the menu with a window open used to leave",
 		"every later raid unable to read your input at all",

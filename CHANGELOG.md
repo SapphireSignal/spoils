@@ -3,6 +3,84 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.43] — 2026-08-01 — the sweep, part two
+
+The remaining fifteen findings from the v0.6.42 audits, fixed. The two
+world-builder fixes were verified against the fixed district: the probe
+is bit-identical to before (only the unseeded per-raid fog wind
+differs), and the one visible change is the intended one.
+
+### Fixed — extraction & death
+- **Dying mid-lift stranded the raid.** The helicopter was never freed,
+  `_leaving` never reset, and the raider respawned while the sequence
+  tweens kept writing to him — no extraction worked for the rest of the
+  raid. Death now aborts the sequence: the live tween leg is killed (a
+  killed tween never fires `finished`, so the legs poll instead of
+  awaiting the signal), the bird is freed, and the state machine resets.
+- **You could walk or drive away from your own rope.**
+  `set_physics_process(false)` gated nothing — movement runs in
+  `_process`. A real `extracting` flag now freezes input (movement,
+  interact, flashlight, zoom, the F prompt) while the camera still rides
+  the lift; and the lift countdown no longer runs while you're sitting
+  in a car — the rope takes a raider, not a sedan.
+- **The sniper stand-down never ended.** Pay the toll once and the whole
+  ring stayed blind for the rest of the raid, anywhere on the map. It's
+  one crossing now: go past the wire and come back inside and the guns
+  re-arm — and a respawn always re-arms them.
+- **Dying at the wheel left the car running.** Engine state, headlights
+  and the driver reference were only cleared by the normal exit path;
+  death now runs `abandon()`, so the wreck isn't sitting there with its
+  lights burning and the next entry doesn't invert the light toggle.
+  Dying during the entry door-swing no longer seats your corpse either.
+- **The ground-floor door under a second story could stay open.** The
+  stairs auto-close called `toggle()`, which refuses while the leaf is
+  mid-swing — and an open doorway up there lets you walk out into the
+  air. A `force_closed()` now lands the door shut from any state.
+
+### Fixed — world builder (fixed-district safe)
+- **A barricade could spawn under the toll booth** — and on transit-01
+  one actually did: the ring pass dressed the booth's cells before the
+  booth existed. The booth's ground is now reserved before any ring
+  dressing; every rng roll still burns exactly as before, so the rest of
+  the district is untouched (verified: probe-identical, and the only
+  pixel change at the gate is the removed piece).
+- **The safehouse's overlap guards never guarded.** It plans before the
+  courtyard, depot apron, comms and gallery exist, so its intersect
+  checks always passed — on other seeds the depot apron could paint
+  straight through the spawn house. The dead checks are gone and the
+  protection now lives on the other side: the plaza and apron paint
+  around the safehouse, and the comms/gallery corner picks walk to a
+  free corner without extra rolls.
+
+### Fixed — polish
+- **Power-box sparks re-rolled their texture every frame at 240 Hz** —
+  read as shimmer, not electricity. Each arc frame now holds 45–80 ms.
+- **The smoker's exhale showed all its wisps at once, fully lit.** The
+  stagger ages were right and the visibility math ignored them; wisps
+  now appear one by one off the exhale (and the dust texture is cached).
+- **The world-map tooltip stuck between the two "???" tiles** — hover
+  state was keyed on the blurb text, which both tiles share. Keyed on
+  the tile now.
+- **Rain shots could come back empty.** Re-forcing weather (the shot
+  harness re-applies flags after the camera settles) double-counted
+  every live drop, so the spawner thought the sky was permanently full.
+  Live drops are now counted on the inactive→active transition only.
+
+### Performance
+- **The deploy tail lost its unbudgeted stalls**: the map bake, the
+  vector-map plan and the fog/puddle collectors ran 65k-cell loops with
+  no yield after the last placement pass — they tick on the same 2.4 ms
+  frame budget as everything else now, and the night freight no longer
+  re-parses the 137 KB art manifest (the builder's parsed copy rides
+  along in the world info).
+- The prop scatter dropped a redundant fixed-count yield that fought the
+  time budget, the freight/extraction countdown labels re-shape their
+  text only when the digit changes, and the landing-zone smoke column
+  stops simulating entirely once it can't be on screen (it ran the
+  whole raid).
+
+Perf after: 240 avg fps, worst frame 4.50 ms (baseline 4.45–4.72).
+
 ## [0.6.42] — 2026-08-01 — the sweep, part one
 
 Three parallel audits read every script end to end. These are the

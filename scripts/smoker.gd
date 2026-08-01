@@ -8,6 +8,7 @@ var _sprite: Sprite2D
 var _phase := 0          # 0 idle, 1 drag, 2 exhale
 var _timer := 0.0
 var _wisps: Array[Dictionary] = []
+var _dust_tex: Texture2D
 
 
 func _ready() -> void:
@@ -17,6 +18,7 @@ func _ready() -> void:
 	_sprite.centered = false
 	_sprite.offset = Vector2(-14, -34)   # player-scale sheet (28x36 frames)
 	add_child(_sprite)
+	_dust_tex = load("res://art/gen/dust.png")
 	_timer = randf_range(2.0, 5.0)
 
 
@@ -44,7 +46,10 @@ func _process(delta: float) -> void:
 		if age >= 1.4:
 			sprite.queue_free()
 			_wisps.remove_at(i)
-		else:
+		elif age >= 0.0:
+			# a negative age is the stagger: the wisp hasn't left the
+			# exhale yet (they all used to show at once, fully lit)
+			sprite.visible = true
 			sprite.position += Vector2(-3.0, -10.0) * delta
 			sprite.modulate.a = 0.5 * (1.0 - age / 1.4)
 		i -= 1
@@ -53,8 +58,9 @@ func _process(delta: float) -> void:
 func _spawn_wisps() -> void:
 	for w in randi_range(2, 3):
 		var wisp := Sprite2D.new()
-		wisp.texture = load("res://art/gen/dust.png")
+		wisp.texture = _dust_tex
 		wisp.modulate = Color("a8b5b2", 0.5)
+		wisp.visible = false
 		wisp.position = Vector2(3.0 + randf_range(-1.0, 1.0),
 			-25.0 + randf_range(-2.0, 0.0))
 		add_child(wisp)

@@ -123,6 +123,12 @@ func enter(player: Player) -> void:
 	Sfx.play_car_door(true)
 	_apply_variant("%s_door" % _base_variant_name())
 	await get_tree().create_timer(DOOR_TIME).timeout
+	if _player == null or _player.dead:
+		# shot during the door swing: nobody gets in, nothing wakes up
+		_apply_variant(_base_variant_name())
+		_player = null
+		_busy = false
+		return
 	player.board_car(self)
 	Sfx.play_car_door(false)
 	_apply_variant(_base_variant_name())
@@ -132,6 +138,22 @@ func enter(player: Player) -> void:
 	engine_on = true
 	Sfx.play_engine_start()
 	set_process(true)
+
+
+func abandon() -> void:
+	## death at the wheel: no door swing, no sounds — the raid already ended.
+	## Everything exit_car() clears gets cleared, so the next driver finds a
+	## sane car instead of burning headlights and an inverted engine state.
+	set_process(false)
+	speed = 0.0
+	velocity = Vector2.ZERO
+	engine_on = false
+	Sfx.set_engine(0.0)
+	for light in _lights:
+		light.enabled = false
+	_player = null
+	driven = false
+	_busy = false
 
 
 func exit_car() -> void:

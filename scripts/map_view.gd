@@ -432,11 +432,13 @@ func _update_tooltip(delta: float) -> void:
 	var blurb := ""
 	var mouse_global := get_viewport().get_mouse_position()
 	if _mode == "world":
-		for tile in _world_tiles:
-			var control := tile["control"] as Control
+		for i in _world_tiles.size():
+			var control := _world_tiles[i]["control"] as Control
 			if control.get_global_rect().has_point(mouse_global):
-				key = str(tile["blurb"])
-				blurb = tile["blurb"]
+				# key on the TILE, not its text — two "???" tiles share a
+				# blurb, and sliding between them kept the tooltip stuck
+				key = "world_%d" % i
+				blurb = _world_tiles[i]["blurb"]
 				break
 	else:
 		var mouse := _canvas.get_local_mouse_position()

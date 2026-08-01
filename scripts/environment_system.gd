@@ -553,8 +553,13 @@ func _spawn_drop(index: int, prefill: bool) -> void:
 	_drop_pos[index] = start.lerp(Vector2(ground.x, ground.y), progress)
 	_drop_vel[index] = vel
 	_drop_ground[index] = ground.y
+	# count the transition, not the call: force_weather prefills every index
+	# and a second force (the shot harness re-applies flags after the camera
+	# settles) used to double-count — the sky then read as full forever and
+	# rain shots came back empty
+	if _drop_active[index] == 0:
+		_drops_live += 1
 	_drop_active[index] = 1
-	_drops_live += 1
 	var sprite := _drop_sprites[index]
 	sprite.position = _drop_pos[index]
 	sprite.visible = true

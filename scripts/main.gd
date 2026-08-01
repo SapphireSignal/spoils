@@ -186,7 +186,8 @@ func _build_world() -> void:
 	var freight := NightFreight.new()
 	freight.name = "NightFreight"
 	ysort.add_child(freight)
-	freight.setup(info["freight_stop"] as Vector2, _player, radio)
+	freight.setup(info["freight_stop"] as Vector2, _player, radio,
+		info["manifest"] as Dictionary)
 	freight.extracted.connect(_on_extracted)
 	# the warden's crossing: his window, and what paying him buys
 	var toll: TollGate = info.get("toll_gate", null)
@@ -298,7 +299,9 @@ func _on_stairs_used(index: int) -> void:
 			var door := node as Door
 			var door_cell := _floor_layer.local_to_map(door.global_position)
 			if cells.grow(2).has_point(door_cell) and door.is_open():
-				door.toggle()
+				# force, not toggle: a leaf still mid-swing ignores toggle()
+				# and the doorway would leak you outside mid-air
+				door.force_closed()
 
 
 func _set_upper_state(index: int, up: bool) -> void:
@@ -317,7 +320,7 @@ func _set_upper_state(index: int, up: bool) -> void:
 func _update_prompt() -> void:
 	# "press f to ..." — doors, stairs, and cars worth taking. Hidden while
 	# driving (the car hint covers that).
-	if _player.driving != null:
+	if _player.driving != null or _player.extracting:
 		_prompt.visible = false
 		_prompt_target = null
 		_player.prompt_target = null
@@ -478,7 +481,9 @@ func _on_player_died() -> void:
 		_player.floor_lift = 0.0
 		_player.upstairs = false
 	if _player.driving != null:  # death at the wheel leaves the car behind
-		_player.driving.driven = false
+		# the car cleans up its whole cabin state — engine, headlights,
+		# driver ref — or the wreck sits there running all night
+		_player.driving.abandon()
 		_player.driving = null
 		_player.visible = true
 		_player.collision_layer = 1

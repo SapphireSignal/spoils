@@ -33,6 +33,7 @@ var _round_age: Array[float] = []
 var _pending: Array[float] = []  # countdowns to the volley's staggered shots
 var _round_tex: Texture2D        # cached once — not re-fetched per shot
 var stood_down := false          # the toll was paid: this stretch looks away
+var _was_beyond := false         # the runner actually went past the line
 
 
 func setup(player: Player, world: Node2D, map_center: Vector2, barrier_f: float) -> void:
@@ -79,13 +80,31 @@ func _process(delta: float) -> void:
 			_pending.remove_at(pi_)
 			_spawn_round()
 		pi_ -= 1
-	if _player == null or _player.dead or stood_down:
+	if _player == null or _player.dead:
+		# a new life gets no old favors: whatever the last one paid the
+		# warden, the ring is watching again when you respawn
+		stood_down = false
+		_was_beyond = false
+		_pending.clear()
+		_leave_zone()
+		return
+	if stood_down:
 		# paying the warden buys exactly this: the guns stop caring while
 		# you drive out past the line. Rounds ALREADY QUEUED have to die
 		# too — the staggered volley kept landing up to 0.84 s after the
 		# stand-down, which is the very thing v0.6.40 claimed to fix.
 		_pending.clear()
 		_leave_zone()
+		# but it buys ONE crossing: go past the wire and come back inside
+		# and the marksmen pick their rifles back up (the stand-down used
+		# to blind the whole ring for the rest of the raid)
+		var su := _player.global_position - _map_center
+		var sdepth := absf(su.x) * 0.5 + absf(su.y) - _barrier_f
+		if sdepth >= 8.0:
+			_was_beyond = true
+		elif _was_beyond:
+			stood_down = false
+			_was_beyond = false
 		return
 	var u := _player.global_position - _map_center
 	var f := absf(u.x) * 0.5 + absf(u.y)

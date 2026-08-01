@@ -39,6 +39,8 @@ var _countdown: Label
 var _steam_tex: Texture2D
 var _steam_timer := 0.0
 var _puffs: Array[Dictionary] = []
+var _notice_shown := -1        # last second on each label — text re-shapes
+var _count_shown := -1         # only when the number actually changes
 
 
 func _radio_say(text: String) -> void:
@@ -46,7 +48,8 @@ func _radio_say(text: String) -> void:
 		_radio.say(text)
 
 
-func setup(stop_pos: Vector2, player: Player, radio: Radio) -> void:
+func setup(stop_pos: Vector2, player: Player, radio: Radio,
+		manifest: Dictionary) -> void:
 	_stop_pos = stop_pos
 	_player = player
 	_radio = radio
@@ -59,20 +62,16 @@ func setup(stop_pos: Vector2, player: Player, radio: Radio) -> void:
 	_clock = PERIOD - FIRST_ARRIVAL
 
 	# origins come from the manifest like every other prop — guessing them
-	# put the hauled cars off the rails
-	var manifest: Dictionary = {}
-	var file := FileAccess.open("res://art/gen/manifest.json", FileAccess.READ)
-	if file != null:
-		var parsed: Variant = JSON.parse_string(file.get_as_text())
-		if parsed is Dictionary:
-			manifest = (parsed as Dictionary).get("props", {})
+	# put the hauled cars off the rails. The builder already parsed the
+	# json; re-reading 137 KB here used to stall the deploy tail.
+	var props: Dictionary = manifest.get("props", {})
 	var rake := ["locomotive", "boxcar_x_0", "boxcar_x_2"]
 	var back := 0.0
 	for prop_name in rake:
 		var sprite := Sprite2D.new()
 		sprite.texture = load("res://art/gen/%s.png" % prop_name)
 		sprite.centered = false
-		var origin: Array = (manifest.get(prop_name, {}) as Dictionary).get(
+		var origin: Array = (props.get(prop_name, {}) as Dictionary).get(
 			"origin", [48, 60])
 		sprite.offset = Vector2(-float(origin[0]), -float(origin[1]))
 		# every rail sprite sits on the same (2,1) axis, so the rake just
@@ -207,7 +206,7 @@ func _process(delta: float) -> void:
 					_half_called = true
 					_radio_say("twenty five seconds. if you're not close, "
 						+ "don't run for it - next one's five minutes.")
-				_show_notice("the freight leaves in %d" % maxi(0, int(left)))
+				_show_notice(maxi(0, int(left)))
 				if left <= 0.0:
 					_leave()
 		DEPARTING:
@@ -263,7 +262,10 @@ func _steam(delta: float) -> void:
 func _tick_countdown(delta: float) -> void:
 	_count_left -= delta
 	_notice.visible = false
-	_countdown.text = "departing in %d" % maxi(0, int(ceilf(_count_left)))
+	var n := maxi(0, int(ceilf(_count_left)))
+	if n != _count_shown:
+		_count_shown = n
+		_countdown.text = "departing in %d" % n
 	_countdown.visible = true
 	if _count_left <= 0.0:
 		_leave()
@@ -279,6 +281,8 @@ func _leave() -> void:
 			+ "next one - find something to do that isn't dying.")
 
 
-func _show_notice(text: String) -> void:
-	_notice.text = text
+func _show_notice(seconds: int) -> void:
+	if seconds != _notice_shown:
+		_notice_shown = seconds
+		_notice.text = "the freight leaves in %d" % seconds
 	_notice.visible = true

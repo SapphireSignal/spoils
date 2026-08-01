@@ -7,12 +7,16 @@ extends Node2D
 const PUFF_LIFE := 3.2
 const SPAWN_EVERY := 0.16
 const SMOKE := Color(0.459, 0.655, 0.263)
+# past this the smoke can't be on screen at any zoom — the column stops
+# simulating entirely (it used to churn sprites for the whole raid)
+const SLEEP_DIST := 700.0
 
 var _puffs: Array[Dictionary] = []
 var _timer := 0.0
 var _glow: PointLight2D
 var _wash: Sprite2D
 var _smoke_tex: Array[Texture2D] = []
+var _dormant := false
 
 
 func _ready() -> void:
@@ -41,6 +45,16 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	var camera := get_viewport().get_camera_2d()
+	if camera != null and camera.get_screen_center_position() \
+			.distance_squared_to(global_position) > SLEEP_DIST * SLEEP_DIST:
+		if not _dormant:
+			_dormant = true
+			for puff in _puffs:   # offscreen anyway; fresh ones fade back in
+				(puff["sprite"] as Sprite2D).queue_free()
+			_puffs.clear()
+		return
+	_dormant = false
 	var breathe := sin(float(Time.get_ticks_msec()) / 620.0)
 	_glow.energy = 0.42 + 0.16 * breathe
 	_wash.modulate.a = 0.26 + 0.08 * breathe

@@ -49,6 +49,18 @@ func toggle() -> void:
 	set_process(true)
 
 
+func force_closed() -> void:
+	# the stairs slam this shut behind a climber even if the leaf is still
+	# mid-swing — toggle() refuses while animating, and an open ground-floor
+	# doorway under a second story lets you walk out into the air
+	if not _open:
+		return
+	_open = false
+	Sfx.play_door(false)
+	_animating = true
+	set_process(true)
+
+
 func _process(delta: float) -> void:
 	_frame_timer += delta
 	if _frame_timer < FRAME_TIME:

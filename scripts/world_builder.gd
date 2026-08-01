@@ -113,6 +113,7 @@ var _map_trees: Array[Vector3i] = [] # (x, y, autumn) — every planted tree,
 var _lz_rect := Rect2i()             # the lift's clearing
 var _toll_gate: Node2D = null        # the warden's crossing
 var _toll_cell := Vector2i.ZERO
+var _toll_reserve: Dictionary = {}   # booth ground no ring dressing may keep
 var _freight_cell := Vector2i.ZERO   # where the night freight stands
 var _extracts: Array[Dictionary] = []  # ways out, handed to Extraction
 var _window_cells: Dictionary = {}   # (x, y, side_id) -> true where a wall
@@ -178,9 +179,13 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 	await _scatter_props()
 	await _place_foliage()
 	await _fill_dead_spots()
-	_collect_puddle_spots()
-	_collect_fog_spots()
+	await _collect_puddle_spots()
+	await _collect_fog_spots()
 	_build_border_collision(root)
+	# the map bake and vector plan walk every cell — they yield on the same
+	# budget as everything above, instead of stalling the deploy tail
+	var map_image: Image = await _bake_map_image()
+	var map_vec: Dictionary = await _map_vectors()
 
 	var spawn := _floor_layer.map_to_local(_spawn_cell)
 	var top_c := _floor_layer.map_to_local(Vector2i(0, 0)) + Vector2(0, -16)
@@ -209,8 +214,11 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 		"cars": _cars,
 		"zones": _zone_summary(),
 		"story_h": _story_h,
-		"map_image": _bake_map_image(),
-		"map_vec": _map_vectors(),
+		"map_image": map_image,
+		"map_vec": map_vec,
+		# the parsed manifest rides along so nothing downstream re-reads the
+		# 137 KB json mid-deploy (the freight used to)
+		"manifest": _manifest,
 		"poi": {
 			"court": [_court_rect.position.x, _court_rect.position.y,
 				_court_rect.size.x, _court_rect.size.y],
@@ -682,19 +690,17 @@ func _plan_safehouse() -> void:
 		for y in range(rect.position.y - 2, rect.end.y + 3):
 			for x in range(rect.position.x - 2, rect.end.x + 3):
 				var cell := Vector2i(x, y)
+				# only roads, rails and sidewalks exist this early — the
+				# courtyard, depot apron and POI corners are planned AFTER
+				# the safehouse, and each of those dodges _safehouse_rect
+				# on their side (checking them here always passed)
 				if _on_road(cell) or _rail_cells.has(cell) \
-						or _ballast.has(cell) or _sidewalk.has(cell) \
-						or _plaza.has(cell) or _apron.has(cell):
+						or _ballast.has(cell) or _sidewalk.has(cell):
 					blocked = true
 					break
 			if blocked:
 				break
 		if blocked:
-			continue
-		if _comms_rect.grow(2).intersects(rect) \
-				or _gallery_rect.grow(2).intersects(rect) \
-				or _depot_rect.grow(2).intersects(rect) \
-				or _court_rect.grow(2).intersects(rect):
 			continue
 		_claim_building_ground(rect.grow(2))
 		_safehouse_rect = rect
@@ -723,7 +729,8 @@ func _plan_safehouse() -> void:
 				for sy in range(rect.position.y - 2, rect.end.y + 3):
 					for sx in range(rect.position.x - 2, rect.end.x + 3):
 						var cell := Vector2i(sx, sy)
-						if _on_road(cell) or _rail_cells.has(cell) 								or _ballast.has(cell) or _sidewalk.has(cell) 								or _plaza.has(cell) or _apron.has(cell):
+						if _on_road(cell) or _rail_cells.has(cell) \
+								or _ballast.has(cell) or _sidewalk.has(cell):
 							blocked = true
 							break
 					if blocked:
@@ -828,6 +835,8 @@ func _plan_town_block(b: Vector2i, with_court: bool) -> void:
 		for y in range(_court_rect.position.y, _court_rect.end.y):
 			for x in range(_court_rect.position.x, _court_rect.end.x):
 				var cell := Vector2i(x, y)
+				if _safehouse_rect.grow(2).has_point(cell):
+					continue   # the spawn house predates the plaza
 				_plaza[cell] = true
 				_forest.erase(cell)
 	var placed := 0
@@ -1066,9 +1075,22 @@ func _plan_depot_block(b: Vector2i) -> void:
 	for y in range(_depot_rect.position.y, _depot_rect.end.y):
 		for x in range(_depot_rect.position.x, _depot_rect.end.x):
 			var cell := Vector2i(x, y)
+			# the spawn house was planned before any of this existed — the
+			# apron paints around it, never through it
+			if _safehouse_rect.grow(2).has_point(cell):
+				continue
 			if not _rail_cells.has(cell) and not _ballast.has(cell):
 				_apron[cell] = true
 				_forest.erase(cell)
+
+
+func _corner_pos(r: Rect2i, corner: int, w: int, h: int) -> Vector2i:
+	# a w×h rect tucked into one of a block's four corners
+	match corner:
+		1: return Vector2i(r.end.x - w - 1, r.position.y + 1)
+		2: return Vector2i(r.position.x + 1, r.end.y - h - 1)
+		3: return Vector2i(r.end.x - w - 1, r.end.y - h - 1)
+	return r.position + Vector2i(1, 1)
 
 
 func _plan_comms_corner(b: Vector2i) -> void:
@@ -1085,12 +1107,15 @@ func _plan_comms_corner(b: Vector2i) -> void:
 	var cw := mini(9, r.size.x - 3)
 	var ch := mini(9, r.size.y - 3)
 	var corner := _rng.randi_range(0, 3)
-	var pos := r.position + Vector2i(1, 1)
-	match corner:
-		1: pos = Vector2i(r.end.x - cw - 1, r.position.y + 1)
-		2: pos = Vector2i(r.position.x + 1, r.end.y - ch - 1)
-		3: pos = Vector2i(r.end.x - cw - 1, r.end.y - ch - 1)
-	_comms_rect = Rect2i(pos, Vector2i(cw, ch))
+	# the roll burns as it always did; if the picked corner sits on the
+	# already-planned spawn house, walk the other corners in fixed order
+	# (no extra rolls — the fixed district must not reshuffle)
+	for alt in 4:
+		if not Rect2i(_corner_pos(r, corner, cw, ch), Vector2i(cw, ch)) \
+				.grow(2).intersects(_safehouse_rect):
+			break
+		corner = (corner + 1) % 4
+	_comms_rect = Rect2i(_corner_pos(r, corner, cw, ch), Vector2i(cw, ch))
 	for y in range(_comms_rect.position.y, _comms_rect.end.y):
 		for x in range(_comms_rect.position.x, _comms_rect.end.x):
 			_forest.erase(Vector2i(x, y))
@@ -1102,12 +1127,13 @@ func _plan_gallery_corner(b: Vector2i) -> void:
 	var gw := mini(10, r.size.x - 3)
 	var gh := mini(8, r.size.y - 3)
 	var corner := _rng.randi_range(0, 3)
-	var gpos := r.position + Vector2i(1, 1)
-	match corner:
-		1: gpos = Vector2i(r.end.x - gw - 1, r.position.y + 1)
-		2: gpos = Vector2i(r.position.x + 1, r.end.y - gh - 1)
-		3: gpos = Vector2i(r.end.x - gw - 1, r.end.y - gh - 1)
-	_gallery_rect = Rect2i(gpos, Vector2i(gw, gh))
+	# same corner-walk as the comms relay: dodge the spawn house rng-free
+	for alt in 4:
+		if not Rect2i(_corner_pos(r, corner, gw, gh), Vector2i(gw, gh)) \
+				.grow(2).intersects(_safehouse_rect):
+			break
+		corner = (corner + 1) % 4
+	_gallery_rect = Rect2i(_corner_pos(r, corner, gw, gh), Vector2i(gw, gh))
 	for y in range(_gallery_rect.position.y, _gallery_rect.end.y):
 		for x in range(_gallery_rect.position.x, _gallery_rect.end.x):
 			_forest.erase(Vector2i(x, y))
@@ -2604,6 +2630,15 @@ func _place_barricades() -> void:
 	var lo := BARRIER_INSET
 	var hi_x := MAP_W - 1 - BARRIER_INSET
 	var hi_y := MAP_H - 1 - BARRIER_INSET
+	# the warden's booth ground is spoken for before anything dresses the
+	# ring. Every roll below still burns exactly as it always did — the fixed
+	# district must not reshuffle — but a piece that lands on these cells is
+	# dropped instead of kept (the booth used to spawn on top of one).
+	_toll_reserve.clear()
+	var booth := _toll_booth_cell()
+	for dx in range(-1, 2):
+		for dy in range(-1, 2):
+			_toll_reserve[booth + Vector2i(dx, dy)] = true
 	await _ring_side("x", lo, lo, hi_x)
 	await _ring_side("x", hi_y, lo, hi_x)
 	await _ring_side("y", lo, lo + 2, hi_y - 2)
@@ -2665,14 +2700,21 @@ func _dress_rail_line() -> void:
 		_place_pile(junk, junk_cell, _rng.randi_range(2, 3), 12.0)
 
 
+func _toll_booth_cell() -> Vector2i:
+	# where the warden's booth stands: beside the middle south-road breach,
+	# on the ring line. ONE definition — the barricade pass reserves these
+	# cells long before the booth itself is placed.
+	var road: Vector2i = _roads_v[_roads_v.size() / 2]
+	return Vector2i(road.x + 1 + 3, MAP_H - 1 - BARRIER_INSET)
+
+
 func _place_toll_gate() -> void:
 	# THE TOLL GATE: where a road breaches the wire on the south side, a
 	# booth, a boom, and a warden who is a business. Paying him opens this
 	# crossing and the extract sits out past the line.
-	var road: Vector2i = _roads_v[_roads_v.size() / 2]
-	var gate_x := road.x + 1
-	var gate_y := MAP_H - 1 - BARRIER_INSET       # the south ring line
-	var booth_cell := Vector2i(gate_x + 3, gate_y)
+	var booth_cell := _toll_booth_cell()
+	var gate_x := booth_cell.x - 3
+	var gate_y := booth_cell.y
 	var gate := TollGate.new()
 	gate.position = _floor_layer.map_to_local(booth_cell).round()
 	# the boom spans the ROAD, so it has to travel along the map's x axis
@@ -2735,7 +2777,9 @@ func _ring_side(axis: String, fixed: int, from: int, to: int) -> void:
 				piece = second
 			var pos := _floor_layer.map_to_local(cell) + Vector2(
 				_rng.randf_range(-7.0, 7.0), _rng.randf_range(-4.0, 4.0))
-			_add_prop(piece, pos)
+			var node := _add_prop(piece, pos)
+			if _toll_reserve.has(cell):
+				node.queue_free()
 			_occupied[cell] = true
 		i += _rng.randi_range(2, 4) if _rng.randf() < 0.8 else _rng.randi_range(5, 7)
 
@@ -2759,14 +2803,17 @@ func _dress_buffer() -> void:
 		if _occupied.has(cell) or _on_road(cell) or _cell_inset(cell) >= BARRIER_INSET:
 			continue
 		var roll := _rng.randf()
+		var junk_node: Node2D
 		if roll < 0.48:
-			_add_prop_at_cell(_pick_variant("rubble"), cell, Vector2(10, 5))
+			junk_node = _add_prop_at_cell(_pick_variant("rubble"), cell, Vector2(10, 5))
 		elif roll < 0.62:
-			_add_prop_at_cell("tree_%d" % _rng.randi_range(7, 8), cell, Vector2(10, 5))
+			junk_node = _add_prop_at_cell("tree_%d" % _rng.randi_range(7, 8), cell, Vector2(10, 5))
 		elif roll < 0.8:
-			_add_prop_at_cell(_pick_variant("stick"), cell, Vector2(12, 6))
+			junk_node = _add_prop_at_cell(_pick_variant("stick"), cell, Vector2(12, 6))
 		else:
-			_add_prop_at_cell(_pick_variant("trash"), cell, Vector2(12, 6))
+			junk_node = _add_prop_at_cell(_pick_variant("trash"), cell, Vector2(12, 6))
+		if _toll_reserve.has(cell):
+			junk_node.queue_free()
 		placed += 1
 
 
@@ -2788,7 +2835,9 @@ func _place_bodies() -> void:
 			3: cell = Vector2i(MAP_W - 1 - depth, along)
 		if _occupied.has(cell):
 			continue
-		_add_prop_at_cell(_pick_variant("body"), cell, Vector2(10, 5))
+		var body_node := _add_prop_at_cell(_pick_variant("body"), cell, Vector2(10, 5))
+		if _toll_reserve.has(cell):
+			body_node.queue_free()
 		placed += 1
 
 
@@ -3028,8 +3077,6 @@ func _scatter_props() -> void:
 					_occupied[cell] = true
 				break
 		placed += 1
-		if placed % 150 == 0:
-			await _scene_tree.process_frame
 
 
 func _scatter_warehouse_stock() -> void:
@@ -3054,6 +3101,7 @@ func _bake_map_image() -> Image:
 	# same plans the terrain painted from, plus building/POI marks
 	var img := Image.create(MAP_W, MAP_H, false, Image.FORMAT_RGBA8)
 	for y in MAP_H:
+		await _tick()
 		for x in MAP_W:
 			var cell := Vector2i(x, y)
 			var col := Color("202e37")
@@ -3080,6 +3128,7 @@ func _bake_map_image() -> Image:
 				col = Color("4d2b32")
 			img.set_pixel(x, y, col)
 	for plot in _plots:                          # buildings pop on the map
+		await _tick()
 		var rect: Rect2i = plot["rect"]
 		var fill := Color("884b2b") if plot["style"] == "brick_a" else Color("6a7f88")
 		if plot["kind"] != "house":
@@ -3090,6 +3139,7 @@ func _bake_map_image() -> Image:
 					or y == rect.position.y or y == rect.end.y - 1
 				img.set_pixel(x, y, fill.darkened(0.25) if edge else fill)
 	for t in _map_trees:                         # the woods, color-true
+		await _tick()
 		img.set_pixel(t.x, t.y, Color("602c2c") if t.z == 1 else Color("25562e"))
 	for plot in _plots:                          # home base pops bright
 		if plot.get("safehouse", false):
@@ -3134,11 +3184,13 @@ func _map_vectors() -> Dictionary:
 	# forest, where a per-tree pass would be thousands of draw calls
 	var green: Dictionary = {}
 	for cell in _forest:
+		await _tick()
 		var c := cell as Vector2i
 		var key := Vector2i(c.x / 3, c.y / 3)
 		green[key] = int(green.get(key, 0)) + 1
 	var groves: Array = []
 	for key in green:
+		await _tick()
 		var k := key as Vector2i
 		var autumn := _autumn_rect.has_point(Vector2i(k.x * 3, k.y * 3))
 		groves.append([k.x * 3, k.y * 3, int(green[key]), 1 if autumn else 0])
@@ -3166,23 +3218,27 @@ func _collect_fog_spots() -> void:
 	# roads — never anchored inside buildings (roofed cells are skipped by
 	# the environment at spawn time anyway)
 	for cell in _forest:
+		await _tick()
 		if _rng.randf() < 0.05 and _cell_inset(cell as Vector2i) >= BARRIER_INSET:
 			_fog_spots.append(_floor_layer.map_to_local(cell as Vector2i))
 	for r in _roads_v:
 		var y := BARRIER_INSET + 4
 		while y < MAP_H - BARRIER_INSET:
+			await _tick()
 			if _rng.randf() < 0.4:
 				_fog_spots.append(_floor_layer.map_to_local(Vector2i(r.x + 1, y)))
 			y += 9
 	for r in _roads_h:
 		var x := BARRIER_INSET + 4
 		while x < MAP_W - BARRIER_INSET:
+			await _tick()
 			if _rng.randf() < 0.4:
 				_fog_spots.append(_floor_layer.map_to_local(Vector2i(x, r.x + 1)))
 			x += 9
 	if _rail_row >= 0:   # mist hangs over the rails at dawn — of course it does
 		var rx := BARRIER_INSET + 4
 		while rx < MAP_W - BARRIER_INSET:
+			await _tick()
 			if _rng.randf() < 0.45:
 				_fog_spots.append(_floor_layer.map_to_local(Vector2i(rx, _rail_row)))
 			rx += 9
@@ -3192,6 +3248,7 @@ func _collect_puddle_spots() -> void:
 	var tries := 0
 	while _puddle_spots.size() < 70 and tries < 2000:
 		tries += 1
+		await _tick()
 		var cell := Vector2i(_rng.randi_range(EDGE_FOREST, MAP_W - EDGE_FOREST),
 			_rng.randi_range(EDGE_FOREST, MAP_H - EDGE_FOREST))
 		if not _on_road(cell) and _rng.randf() < 0.5:

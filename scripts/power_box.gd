@@ -8,6 +8,7 @@ var _spark: Sprite2D
 var _glow: PointLight2D
 var _timer := 0.0
 var _burst_left := 0.0
+var _flick := 0.0                       # holds each arc frame a few frames
 var _spark_tex: Array[Texture2D] = []   # cached; not re-fetched mid-burst
 
 
@@ -38,7 +39,12 @@ func setup(box_name: String) -> void:
 func _process(delta: float) -> void:
 	if _burst_left > 0.0:
 		_burst_left -= delta
-		_spark.texture = _spark_tex[randi() % 3]
+		# a real arc JUMPS between shapes — rerolling the texture every frame
+		# at 240 Hz read as shimmer, not electricity
+		_flick -= delta
+		if _flick <= 0.0:
+			_flick = randf_range(0.045, 0.08)
+			_spark.texture = _spark_tex[randi() % 3]
 		_spark.visible = fmod(_burst_left, 0.08) > 0.03
 		_glow.energy = 0.5 if _spark.visible else 0.15
 		if _burst_left <= 0.0:
