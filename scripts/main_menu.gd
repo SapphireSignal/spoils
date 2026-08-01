@@ -50,6 +50,19 @@ var _changelog: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.2", ["the map is 10x bigger - a whole district, and it never ends",
+		"edges fade into deep woods, no more visible void",
+		"road network across the map + dirt roads into the forests",
+		"forests full of pines and dead trees",
+		"12 randomized buildings to explore, houses and warehouses",
+		"street lights along the roads",
+		"real vehicles: cars and loaded pickups, parked and abandoned",
+		"doors on every building", "warehouse floors are gray concrete now",
+		"day turns to night and back", "rain comes and goes, with lightning",
+		"raindrops visibly hit the ground", "puddles form in rain, dry in sun",
+		"deploying screen when you enter a raid (no more frame dip)",
+		"house furniture fixed - bookshelf is back, no barrels indoors",
+		"less random junk, and it gathers around buildings now"]],
 	["v0.6.1", ["loading yard by the warehouse: stall lines, pickup trucks",
 		"boxes in the truck beds, stray stock around the yard",
 		"crouch: hold or toggle option next to its keybind",

@@ -45,6 +45,14 @@ func _ensure_game_scene() -> void:
 		get_tree().change_scene_to_file("res://scenes/main.tscn")
 		for i in 4:
 			await get_tree().process_frame
+	# the world builds asynchronously behind the deploy screen — wait for it
+	var waited := 0.0
+	while waited < 30.0:
+		current = get_tree().current_scene
+		if current != null and not (current.get("world_info") as Dictionary).is_empty():
+			break
+		await get_tree().create_timer(0.2).timeout
+		waited += 0.2
 
 
 func _smoke() -> void:
@@ -56,11 +64,14 @@ func _smoke() -> void:
 		_finish_smoke(["no current scene"])
 		return
 
+	var info: Dictionary = main.get("world_info")
+	var cells: Vector2i = info.get("cells", Vector2i.ZERO)
 	var floor_layer := main.get_node_or_null("Floor") as TileMapLayer
 	if floor_layer == null:
 		failures.append("Floor TileMapLayer missing")
-	elif floor_layer.get_used_cells().size() != 48 * 48:
-		failures.append("floor cell count %d != %d" % [floor_layer.get_used_cells().size(), 48 * 48])
+	elif floor_layer.get_used_cells().size() != cells.x * cells.y:
+		failures.append("floor cell count %d != %d" % [
+			floor_layer.get_used_cells().size(), cells.x * cells.y])
 
 	var world := main.get_node_or_null("World")
 	if world == null:
@@ -83,7 +94,10 @@ func _smoke() -> void:
 		var moved := player.position.x - start.x
 		if moved < 40.0:
 			failures.append("player barely moved (dx=%.1f after 0.8s)" % moved)
-		# crouch: slower and using the crouch sheet
+		# crouch: slower and using the crouch sheet (force hold mode for the
+		# test — simulated presses don't produce toggle edges)
+		var prev_toggle: bool = Settings.crouch_toggle
+		Settings.crouch_toggle = false
 		start = player.position
 		Input.action_press("crouch")
 		Input.action_press("move_right")
@@ -91,6 +105,7 @@ func _smoke() -> void:
 		Input.action_release("move_right")
 		Input.action_release("crouch")
 		var crouch_moved := player.position.x - start.x
+		Settings.crouch_toggle = prev_toggle
 		if crouch_moved >= moved * 0.85:
 			failures.append("crouch not slower (dx=%.1f vs %.1f)" % [crouch_moved, moved])
 		# keybinds registered
@@ -98,25 +113,27 @@ func _smoke() -> void:
 			if InputMap.action_get_events(action).is_empty():
 				failures.append("action '%s' has no bound key" % action)
 		if floor_layer != null:
-			# walk into the map border from just inside it: must be stopped
-			player.position = floor_layer.map_to_local(Vector2i(4, 4))
+			# walk into the map border from inside the deep woods: must stay in
+			player.position = floor_layer.map_to_local(Vector2i(10, 10))
 			Input.action_press("move_up")
 			await get_tree().create_timer(2.0).timeout
 			Input.action_release("move_up")
-			var bounds: Rect2 = (main.get("world_info") as Dictionary)["bounds"]
-			if not bounds.grow(8.0).has_point(player.position):
-				failures.append("player escaped world bounds at %s" % player.position)
+			var map_rect: Rect2 = info["map_rect"]
+			if not map_rect.grow(8.0).has_point(player.position):
+				failures.append("player escaped the map at %s" % player.position)
 			# roof interior-reveal: fades inside a building, returns outside
-			var roofs: Array = (main.get("world_info") as Dictionary)["roofs"]
+			var roofs: Array = info["roofs"]
 			if roofs.is_empty():
 				failures.append("no roofs built")
 			else:
 				var roof := roofs[0] as RoofReveal
-				player.position = floor_layer.map_to_local(Vector2i(12, 11))
+				var inside := roof.cells.get_center()
+				player.position = floor_layer.map_to_local(inside)
 				await get_tree().create_timer(0.6).timeout
 				if roof.modulate.a > 0.5:
 					failures.append("roof did not fade inside (a=%.2f)" % roof.modulate.a)
-				player.position = floor_layer.map_to_local(Vector2i(20, 20))
+				player.position = floor_layer.map_to_local(
+					roof.cells.position - Vector2i(5, 5))
 				await get_tree().create_timer(0.6).timeout
 				if roof.modulate.a < 0.9:
 					failures.append("roof did not return outside (a=%.2f)" % roof.modulate.a)
@@ -177,6 +194,14 @@ func _shot(shot_name: String) -> void:
 			face_player.set("_dir_index", dirs.find(_shot_face))
 	if "--crouch" in OS.get_cmdline_user_args():
 		Input.action_press("crouch")
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--weather=") or arg.begins_with("--tod="):
+			var environment := get_tree().get_first_node_in_group("environment")
+			if environment != null:
+				if arg == "--weather=rain":
+					environment.call("force_weather", true)
+				elif arg.begins_with("--tod="):
+					environment.call("force_time", float(arg.trim_prefix("--tod=")))
 	if _shot_menu != "":
 		var menu := get_tree().get_first_node_in_group("pause_menu") as PauseMenu
 		if menu != null:

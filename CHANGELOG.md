@@ -3,6 +3,37 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.2] — 2026-07-31
+
+The district update: the world got 10x bigger and came alive.
+
+### Added
+- **160x160 map** (was 48x48): a full district with a road network, dirt
+  roads wandering into forests, and ~12 randomized buildings (houses and
+  warehouses, random sizes/styles/damage/doors) with yards where they fit.
+- **The map never visibly ends**: the outer band is deep impassable forest and
+  the camera is limited well inside it — no void, no floating square.
+- **Forests** of generated pines and dead trees; forest-floor terrain.
+- **Street lights** along the roads.
+- **Vehicles that read as vehicles**: side-profile cars and pickups with real
+  silhouettes, windows, wheel arches and lights; pickups carry bed cargo.
+  Parked in yards and abandoned along roads.
+- **Doors**: every building has an open door leaf (wood for houses, metal for
+  warehouses) beside its doorway.
+- **Day/night cycle** (subtle palette tint, 8-minute day) and **weather**:
+  random rain spells with visible raindrop ground impacts, occasional subtle
+  lightning, and puddles that form while it rains and dry out afterwards.
+- **Deploying screen**: entering a raid shows a brief transition while the
+  district builds — replaces the frame dip on scene change.
+
+### Fixed
+- House furnishing: the bookshelf/cabinet could silently vanish when two
+  pieces rolled the same wall slot; both always place now. Industrial barrels
+  no longer spawn inside houses.
+
+### Changed
+- Warehouse floors are smooth gray concrete (the green screed looked wrong).
+- Ambient junk is rarer and clusters around buildings instead of everywhere.
 ## [0.6.1] — 2026-07-31
 
 > Versioning from here on: patch bumps (0.6.x) for polish and fix batches;
