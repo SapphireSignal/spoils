@@ -628,6 +628,21 @@ func _draw_markers() -> void:
 		true, -1.0, true)
 	_markers.draw_arc(p, ring_r, 0.0, TAU, 28,
 		Color(ME.r, ME.g, ME.b, 0.55), 1.5, true)
+	# WHICH WAY YOU'RE FACING (user: "a circle i cant really tell"). The
+	# player's sheet rows are E,SE,S,SW,W,NW,N,NE, so the facing index maps
+	# straight onto screen degrees — and on an iso map screen direction is
+	# exactly the direction you'd walk.
+	var facing := _player.facing_angle()
+	var aim := Vector2(cos(facing), sin(facing))
+	var side := aim.orthogonal()
+	var tip := p + aim * 17.0
+	_markers.draw_colored_polygon(PackedVector2Array([
+		tip, p + aim * 6.0 + side * 5.5, p + aim * 6.0 - side * 5.5]),
+		Color(ME.r, ME.g, ME.b, 0.92))
+	_markers.draw_line(p + aim * 6.0 + side * 5.5, tip,
+		Color(0.043, 0.055, 0.086, 0.6), 1.0, true)
+	_markers.draw_line(p + aim * 6.0 - side * 5.5, tip,
+		Color(0.043, 0.055, 0.086, 0.6), 1.0, true)
 	for i in 4:                                  # cross ticks
 		var dir := [Vector2.UP, Vector2.RIGHT, Vector2.DOWN, Vector2.LEFT][i] as Vector2
 		_markers.draw_line(p + dir * 5.0, p + dir * 8.5, ME, 1.5, true)

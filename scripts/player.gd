@@ -49,6 +49,16 @@ var riding: Node2D = null
 var ride_offset := Vector2.ZERO
 
 
+func facing_angle() -> float:
+	## Screen-space direction the raider is pointing, in radians. The map
+	## draws a cone off this so you can tell which way you're facing — a
+	## dot alone told you nothing (user report). Sheet rows run
+	## E,SE,S,SW,W,NW,N,NE, which is exactly 45 degrees per row from east.
+	if driving != null:
+		return (DriveableCar.DIRS[driving.heading] as Vector2).angle()
+	return float(_dir_index) * (PI / 4.0)
+
+
 func board_ride(what: Node2D, offset: Vector2) -> void:
 	riding = what
 	ride_offset = offset

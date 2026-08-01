@@ -66,6 +66,9 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.38", ["the map shows which way youre facing now - a cone off",
+		"your marker instead of just a dot, so you can tell",
+		"which way to walk. it follows the car when youre driving"]],
 	["v0.6.37", ["furniture stopped repeating. every house used to have",
 		"the identical table, chair, bookshelf and cabinet -",
 		"there are five of each now, worn and set their own way",

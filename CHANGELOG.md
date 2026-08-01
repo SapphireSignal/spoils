@@ -3,6 +3,17 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.38] — 2026-08-01
+
+### Added
+- **A facing cone on the map marker** (user: "a circle i cant really
+  tell"). The "me" marker now draws a cone pointing the way the raider
+  is looking, so the map tells you which direction to walk instead of
+  only where you stand. New `Player.facing_angle()` returns the screen
+  direction — the sprite sheet's rows run E,SE,S,SW,W,NW,N,NE, exactly
+  45° apart from east, and on an iso map screen direction *is* the
+  direction you'd walk. While driving it follows the car's heading.
+
 ## [0.6.37] — 2026-08-01
 
 ### Changed
