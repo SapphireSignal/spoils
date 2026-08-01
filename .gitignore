@@ -1,5 +1,2 @@
 .godot/
 art/gen/_zoom_*.png
-
-# transient verification captures — never commit
-shots/*.png
