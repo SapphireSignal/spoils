@@ -7,6 +7,48 @@ This file carries everything a fresh session needs that isn't in those two.
 
 ## Where we are
 
+- **Version v0.6.42 SHIPPED** (2026-08-01). v0.6.25→v0.6.42 all landed
+  in one long session; CHANGELOG.md has the detail. What a fresh session
+  most needs to know:
+  - **NEW AUTOLOADS.** `Ui` (scripts/ui_state.gd) = the window stack;
+    gameplay POLLS input, so windows can't just consume events — player
+    and car ask `Ui.blocks_gameplay()`. **It is an autoload, so it
+    OUTLIVES the scene: every scene root must call `Ui.clear()` in
+    `_ready`** or a leftover entry bricks the next raid (input dead, esc
+    and m dead, no way out — shipped that bug, fixed in v0.6.42).
+    `Raid` (scripts/raid.gd) = per-raid ledger: time, xp, kills with
+    minute + bone, and `money` (STUB, 120/raid, moves to the stash in M4).
+  - **EXTRACTION IS LIVE** — `scripts/extraction.gd` holds zones
+    (auto or armed), runs the green "extracting in N" counter and the
+    leaving sequence; `scripts/extract_screen.gd` is the debrief.
+    Three exits: **the lift** (green-smoke LZ, `lz_beacon.gd` +
+    `helicopter.gd`), **the toll gate** (`toll_gate.gd` +
+    `toll_dialog.gd`, warden portrait, endless banter, pay to open the
+    wire and stand the snipers down), **the night freight**
+    (`night_freight.gd`: arrives every 5 real min, waits 1, F to board,
+    departs 10..0, rides out). Harness: `--extract=<method>`, `--toll`,
+    `--freight`.
+  - **mara's radio** (`scripts/radio.gd`) — REUSABLE, the M2 walk-in is
+    entirely her voice. There is NO voice acting and bespoke lines can't
+    be sourced from a library; the mic SQUELCH either side of the words
+    (Sfx.play_radio) plus clipped dispatcher writing IS the performance.
+  - **THE MAP IS DRAWN, NOT SAMPLED** — map_view.gd strokes/fills from
+    `info["map_vec"]` (builder `_map_vectors()`). Two layers: the
+    district redraws only on pan/zoom, markers every frame. Facing cone
+    off `Player.facing_angle()`. No label boxes (user: "remove all of
+    the squares").
+  - **MAP SIZE**: BARRIER_INSET 78→**66** (~124 playable). `EDGE_FOREST`
+    is a DERIVED margin (**68**) — it was left stale at 85 and the whole
+    outer rim lost its lamps/trees/vehicles/puddles. If the ring moves,
+    move this too.
+  - **RAIL = ONE TILE, ALL THE WAY.** The user REVERTED worn/overgrown
+    rail variants: same ties, same steel, tile to tile, connected. The
+    trackside dressing (telegraph poles, signals, lineside junk) stays.
+  - Furniture (table/chair/bookshelf/cabinet/couch/tv_stand/bed) were
+    SINGLE sprites and are now families — call sites must use
+    `_pick_variant_varied()`, never the bare literal name.
+  - `preview.png` (dev contact sheet) writes to **docs/**, not art/gen —
+    it was a 512 KB file the deploy prewarmed every raid (233 ms stall).
 - **Version v0.6.24 SHIPPED** (28th release on 2026-08-01 — read
   CHANGELOG.md; all same-day). **v0.6.24 = 8-DIRECTION VEHICLES + the
   new car controls.** Sample was approved by the user first (process:
@@ -102,6 +144,60 @@ This file carries everything a fresh session needs that isn't in those two.
   smoker player-scale read, spray-can spread, power-box sparks,
   prone/standing size, den board text, splash SHATTER pacing, all sound
   levels, day length (8-min offer stands), night darkness.
+
+## THE QUEUE (as of v0.6.42 — work straight down it)
+
+1. **SWEEP PART TWO.** Three audits read every script; the severe finds
+   shipped in v0.6.42, ~15 more are written up with reproduction steps
+   in the session task list. Highlights: `edge_guard.stood_down` never
+   RESETS (pay the toll, walk back in, the whole ring stays blind);
+   `_heli` leaks + `_leaving` sticks if you die mid-lift;
+   `set_physics_process(false)` in extraction is a NO-OP (movement is in
+   `_process`); dying at the wheel leaves headlights burning;
+   night_freight re-parses the 137 KB manifest in the deploy tail;
+   `_bake_map_image`/`_map_vectors`/`_collect_*` run 65k-cell loops with
+   NO `await _tick()`; `_place_toll_gate` has no occupancy guard;
+   `_plan_safehouse` runs BEFORE the POI rects it tests against exist.
+   Plus a verified-safe DEAD list: `_scatter_around`, `zone_position`,
+   `in_range_of`, Door/Stairs `INTERACT_RANGE`, `TollDialog.closed`,
+   `ExtractScreen.dismissed`, `Ui.owns/top/changed`, map_view `INK`,
+   gen_art `_dither_fill/_vgrad/_paste/_skyline_row/diamond_bottom_y`,
+   families `bus_ne/bus_sw/boxcar_y/graffiti_y` and tiles
+   `rail_y/rail_cross_y` (rail only ever runs on x).
+2. **Yellow centreline still one lane off** — the user photographed it
+   with RED LINES showing the correct position. Fixed twice already by
+   reasoning; verify EMPIRICALLY against that shot this time.
+3. **Roads shouldn't be a symmetrical grid** — some areas with no roads,
+   and broken road ends with rubble where they cut off.
+4. **Bus shelters land on sidewalk CORNERS**, half in the road.
+5. **Interior lights at night**, some flickering, cable visibly pathed
+   to the power box (see the standing cable rule below).
+6. **Pines shed nothing** — by design (v0.6.31 excluded conifers so they
+   wouldn't drop broadleaf leaves), but a pine that drops nothing reads
+   as dead. Give conifers NEEDLES; dead snags stay bare.
+7. **Flip vehicles so the FRONT faces left** — and swap headlight/brake
+   colours + the manifest light coords across all 8 facings, the _door
+   frames, and EXIT_OFFSET, or the alarm flashers light the wrong end.
+8. **Pickup bed** — shade the interior so it reads as a container, put a
+   box in it, sample sheet across all angles.
+9. **Catalogue variety** — 2-variant families left (bench, dumpster,
+   shelter, vending, newsbox, forklift, planter, swing) + singleton
+   crane/sandbox. Deeper fix: parameterise builders so SHAPES differ,
+   not just wear.
+10. **Changelog panel fps dip** — still unmeasured (the transit-load one
+    was the 233 ms preview.png stall, fixed in v0.6.41).
+
+## PROCESS (learned the hard way this session)
+
+- **NEVER chain the smoke test and the push.** `smoke; git push` pushed a
+  RED build (v0.6.34). Run smoke, READ the verdict, then push.
+- **Write commit messages to a FILE and use `git commit -F`.** A
+  multi-line `-m` here-string silently failed and left the tag on the
+  wrong commit; recovery is `git tag -f` + force-push the tag.
+- **Sample → user sign-off → fleet** for any art change touching
+  everything (the 8-direction vehicles went this way and it worked).
+- **Ship in small verified versions**, don't batch a long request list —
+  the user asked for this explicitly.
 
 ## IN FLIGHT: EXTRACTION (user picked + designed 2026-08-01)
 
@@ -516,6 +612,12 @@ then `godot_console --headless --path . --import`.
 
 ## Additional never-regress rules (learned 2026-08-01, the hard way)
 
+- **NO VISUAL REPETITION, ANYWHERE** (user call 2026-08-01, standing rule,
+  "its really important"): no two instances of a thing may look alike,
+  and everything should carry the "real" aesthetic they praised — lit
+  and shaded faces, per-instance wear, its own slight lean. Audit variant
+  counts per family before assuming it's fine; SINGLE-sprite families are
+  the worst offenders and are invisible until they're side by side.
 - **VISIBLE POWER CABLES** (user call 2026-08-01, standing rule): anything
   in the world that needs electricity must SHOW where it gets it — a
   cable pathed from the fixture to the building's exterior power box.
