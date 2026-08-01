@@ -1,11 +1,9 @@
 class_name WorldBuilder
 extends RefCounted
 ## Builds the M1 map: a ruined industrial block, ~48x48 iso tiles.
-## Deterministic (fixed RNG seed). Consumes art/gen/manifest.json so sprite
-## sizes/origins always match whatever tools/gen_art.py produced.
-##
-## Buildings are brick: wall pieces are chosen by neighbor mask (see
-## tools/gen_art.py) so straight runs render as continuous walls, not cubes.
+## Deterministic (fixed RNG seed). Consumes art/gen/manifest.json — sprite
+## sizes, origins, collider shapes and prop families all come from the art
+## pipeline, so the game never hardcodes what the generator produced.
 
 const MAP_W := 48
 const MAP_H := 48
@@ -16,22 +14,14 @@ const BUILDING_A := Rect2i(8, 8, 9, 7)
 const BUILDING_B := Rect2i(30, 33, 8, 7)
 const SPAWN_CELL := Vector2i(18, 13)
 
-# collider shape per prop; anything absent gets no collision (rubble, pallet)
-const PROP_COLLIDERS := {
-	"crate_wood": ["diamond", 15.0, 8.0],
-	"crate_ammo": ["diamond", 17.0, 9.0],
-	"dumpster": ["diamond", 19.0, 10.0],
-	"barrel_rust": ["circle", 7.0],
-	"gas_cylinder": ["circle", 5.0],
-	"tire_stack": ["circle", 8.0],
-	"pillar": ["circle", 6.0],
-}
-
 var _rng := RandomNumberGenerator.new()
 var _manifest: Dictionary = {}
 var _floor_coords: Dictionary = {}
+var _families: Dictionary = {}
+var _wall_h := 40
 var _floor_layer: TileMapLayer
 var _ysort: Node2D
+var _roofs: Array[RoofReveal] = []
 var _occupied: Dictionary = {}  # Vector2i -> true, cells that block scatter
 
 
@@ -69,6 +59,7 @@ func build(root: Node2D) -> Dictionary:
 		"floor": _floor_layer,
 		"spawn": spawn,
 		"bounds": _world_bounds(),
+		"roofs": _roofs,
 	}
 
 
@@ -77,6 +68,8 @@ func _load_manifest() -> Dictionary:
 	assert(file != null, "art/gen/manifest.json missing — run tools/gen_art.py")
 	var data: Dictionary = JSON.parse_string(file.get_as_text())
 	_floor_coords = data["floors"]
+	_families = data["families"]
+	_wall_h = int(data["wall_h"])
 	return data
 
 
@@ -105,7 +98,6 @@ func _layout_terrain() -> Array:
 			row.append("concrete_%d" % _rng.randi_range(0, 5))
 		terrain.append(row)
 
-	# rare one-off detail tiles (kept sparse so nothing reads as a pattern)
 	for y in MAP_H:
 		for x in MAP_W:
 			var roll := _rng.randf()
@@ -116,7 +108,6 @@ func _layout_terrain() -> Array:
 			elif roll < 0.068:
 				terrain[y][x] = "moss_0"
 
-	# dirt patches, with blended edges so they don't cut hard diamond borders
 	var dirt: Dictionary = {}
 	for i in 7:
 		var cx := _rng.randi_range(4, MAP_W - 5)
@@ -139,7 +130,6 @@ func _layout_terrain() -> Array:
 					terrain[y][x] = "dirt_blend_%d" % _rng.randi_range(0, 1)
 					break
 
-	# roads over everything so far
 	for y in MAP_H:
 		for x in MAP_W:
 			var on_a: bool = x >= ROAD_A_X.x and x <= ROAD_A_X.y
@@ -154,7 +144,6 @@ func _layout_terrain() -> Array:
 			elif on_b:
 				terrain[y][x] = "asphalt_%d" % _rng.randi_range(0, 1)
 
-	# building interiors: cleaner slab
 	for rect in [BUILDING_A, BUILDING_B]:
 		var inner: Rect2i = rect.grow(-1)
 		for y in range(inner.position.y, inner.end.y):
@@ -175,22 +164,20 @@ func _prop_sprite(prop_name: String) -> Sprite2D:
 	return sprite
 
 
-func _add_prop(prop_name: String, pos: Vector2, kind: String) -> void:
-	var spec: Array = []
-	if kind == "wall":
-		spec = ["diamond", 32.0, 16.0]
-	elif kind == "auto" and PROP_COLLIDERS.has(prop_name):
-		spec = PROP_COLLIDERS[prop_name]
+func _add_prop(prop_name: String, pos: Vector2) -> void:
+	var info: Dictionary = _manifest["props"][prop_name]
+	var collider: Variant = info["collider"]
 
 	var node: Node2D
-	if spec.is_empty():
+	if collider == null:
 		node = Node2D.new()
 	else:
 		var body := StaticBody2D.new()
+		var spec: Array = collider
 		var shape_kind: String = spec[0]
 		if shape_kind == "diamond":
-			var half_w: float = spec[1]
-			var half_h: float = spec[2]
+			var half_w: float = float(spec[1])
+			var half_h: float = float(spec[2])
 			var poly := CollisionPolygon2D.new()
 			poly.polygon = PackedVector2Array([
 				Vector2(0, -half_h), Vector2(half_w, 0),
@@ -199,7 +186,7 @@ func _add_prop(prop_name: String, pos: Vector2, kind: String) -> void:
 		else:
 			var cs := CollisionShape2D.new()
 			var circle := CircleShape2D.new()
-			circle.radius = spec[1]
+			circle.radius = float(spec[1])
 			cs.shape = circle
 			body.add_child(cs)
 		node = body
@@ -208,13 +195,18 @@ func _add_prop(prop_name: String, pos: Vector2, kind: String) -> void:
 	_ysort.add_child(node)
 
 
-func _add_prop_at_cell(prop_name: String, cell: Vector2i, kind: String = "auto",
+func _add_prop_at_cell(prop_name: String, cell: Vector2i,
 		jitter: Vector2 = Vector2.ZERO) -> void:
 	var pos := _floor_layer.map_to_local(cell)
 	if jitter != Vector2.ZERO:
 		pos += Vector2(_rng.randf_range(-jitter.x, jitter.x), _rng.randf_range(-jitter.y, jitter.y))
-	_add_prop(prop_name, pos, kind)
+	_add_prop(prop_name, pos)
 	_occupied[cell] = true
+
+
+func _pick_variant(family: String) -> String:
+	var names: Array = _families[family]
+	return names[_rng.randi_range(0, names.size() - 1)]
 
 
 # mask bit order must match tools/gen_art.py: xn, xp, yn, yp
@@ -239,7 +231,7 @@ func _build_shell(rect: Rect2i, style: String, doors: Array, ruined: bool) -> vo
 			var edge: bool = (x == rect.position.x or x == rect.end.x - 1
 				or y == rect.position.y or y == rect.end.y - 1)
 			if not edge:
-				_occupied[cell] = true  # keep random scatter out of interiors
+				_occupied[cell] = true
 				continue
 			if cell in doors:
 				_occupied[cell] = true
@@ -257,55 +249,78 @@ func _build_shell(rect: Rect2i, style: String, doors: Array, ruined: bool) -> vo
 		for off in _MASK_OFFSETS:
 			bits += "1" if full.has(cell + off) else "0"
 		var piece := "wall_%s_m%s" % [style, bits]
-		if bits == "1100" and _rng.randf() < 0.25:
-			piece = "wall_%s_win_x" % style
-		elif bits == "0011" and _rng.randf() < 0.25:
-			piece = "wall_%s_win_y" % style
-		_add_prop_at_cell(piece, cell, "wall")
+		if bits == "1100" and _rng.randf() < 0.3:
+			piece = "wall_%s_win_x_%d" % [style, _rng.randi_range(0, 2)]
+		elif bits == "0011" and _rng.randf() < 0.3:
+			piece = "wall_%s_win_y_%d" % [style, _rng.randi_range(0, 2)]
+		_add_prop_at_cell(piece, cell)
 	for cell in broken:
 		var suffix := "a" if _rng.randf() < 0.5 else "b"
-		_add_prop_at_cell("wall_%s_broken_%s" % [style, suffix], cell, "wall")
+		_add_prop_at_cell("wall_%s_broken_%s" % [style, suffix], cell)
 	for cell in collapsed:
-		_add_prop_at_cell("rubble_a" if _rng.randf() < 0.5 else "rubble_b", cell)
+		_add_prop_at_cell(_pick_variant("rubble"), cell)
+
+	_build_roof(rect)
+
+
+func _build_roof(rect: Rect2i) -> void:
+	# roof sits just below the parapet coping; a RoofReveal group fades it
+	# when the player is inside (mechanic: interior reveal)
+	var south_corner := rect.end - Vector2i(1, 1)
+	var roof := RoofReveal.new()
+	roof.cells = rect
+	roof.position = _floor_layer.map_to_local(south_corner) + Vector2(0, -8)
+	var lift := Vector2(0, -(float(_wall_h) - 6.0))
+	for y in range(rect.position.y, rect.end.y):
+		for x in range(rect.position.x, rect.end.x):
+			var sprite := _prop_sprite("roof_tile_%d" % _rng.randi_range(0, 1))
+			sprite.position = _floor_layer.map_to_local(Vector2i(x, y)) - roof.position + lift
+			roof.add_child(sprite)
+	var inner := rect.grow(-1)
+	for i in 2:
+		var cell := Vector2i(_rng.randi_range(inner.position.x, inner.end.x - 1),
+			_rng.randi_range(inner.position.y, inner.end.y - 1))
+		var deco := _prop_sprite("roof_vent" if i == 0 else "roof_hatch")
+		deco.position = _floor_layer.map_to_local(cell) - roof.position + lift
+		roof.add_child(deco)
+	_ysort.add_child(roof)
+	_roofs.append(roof)
 
 
 func _place_perimeter() -> void:
-	# collapsed-city edge dressing just inside the void
 	for i in MAP_W:
 		for cell in [Vector2i(i, 0), Vector2i(i, MAP_H - 1), Vector2i(0, i), Vector2i(MAP_H - 1, i)]:
 			if _occupied.has(cell):
 				continue
 			var roll := _rng.randf()
 			if roll < 0.30:
-				_add_prop_at_cell("rubble_a" if _rng.randf() < 0.5 else "rubble_b", cell)
+				_add_prop_at_cell(_pick_variant("rubble"), cell)
 			elif roll < 0.42:
 				var style := "brick_a" if _rng.randf() < 0.5 else "brick_b"
 				var suffix := "a" if _rng.randf() < 0.5 else "b"
-				_add_prop_at_cell("wall_%s_broken_%s" % [style, suffix], cell, "wall")
+				_add_prop_at_cell("wall_%s_broken_%s" % [style, suffix], cell)
 
 
 func _place_fixed_props() -> void:
 	# hand-placed set dressing near spawn so the first screen composes well
-	_add_prop_at_cell("barrel_rust", Vector2i(16, 15))
-	_add_prop_at_cell("crate_wood", Vector2i(17, 16))
-	_add_prop_at_cell("tire_stack", Vector2i(20, 11))
-	_add_prop_at_cell("rubble_a", Vector2i(21, 16))
-	_add_prop_at_cell("gas_cylinder", Vector2i(15, 12))
+	_add_prop_at_cell("barrel_0", Vector2i(16, 15))
+	_add_prop_at_cell("crate_0", Vector2i(17, 16))
+	_add_prop_at_cell("tires_0", Vector2i(20, 11))
+	_add_prop_at_cell("rubble_1", Vector2i(21, 16))
+	_add_prop_at_cell("cylinder_0", Vector2i(15, 12))
 	# building interiors
-	_add_prop_at_cell("crate_wood", Vector2i(10, 10))
-	_add_prop_at_cell("crate_ammo", Vector2i(14, 12))
-	_add_prop_at_cell("barrel_rust", Vector2i(12, 13))
-	_add_prop_at_cell("crate_ammo", Vector2i(32, 35))
-	_add_prop_at_cell("crate_wood", Vector2i(35, 37))
-	_add_prop_at_cell("pallet", Vector2i(33, 36))
+	_add_prop_at_cell("crate_1", Vector2i(10, 10))
+	_add_prop_at_cell("crate_3", Vector2i(14, 12))
+	_add_prop_at_cell("barrel_2", Vector2i(12, 13))
+	_add_prop_at_cell("crate_2", Vector2i(32, 35))
+	_add_prop_at_cell("crate_0", Vector2i(35, 37))
+	_add_prop_at_cell("pallet_0", Vector2i(33, 36))
 
 
 func _scatter_props() -> void:
 	var mix := [
-		["barrel_rust", 0.16], ["gas_cylinder", 0.10],
-		["crate_wood", 0.13], ["crate_ammo", 0.12],
-		["tire_stack", 0.12], ["pallet", 0.10], ["dumpster", 0.07],
-		["rubble_a", 0.09], ["rubble_b", 0.06], ["pillar", 0.05],
+		["barrel", 0.16], ["cylinder", 0.10], ["crate", 0.14], ["tires", 0.12],
+		["pallet", 0.10], ["dumpster", 0.06], ["rubble", 0.14], ["pillar", 0.06],
 	]
 	var total := 0.0
 	for opt in mix:
@@ -318,7 +333,7 @@ func _scatter_props() -> void:
 		if _occupied.has(cell):
 			continue
 		if cell.x >= ROAD_A_X.x and cell.x <= ROAD_A_X.y and _rng.randf() < 0.85:
-			continue  # keep roads mostly clear
+			continue
 		if cell.y >= ROAD_B_Y.x and cell.y <= ROAD_B_Y.y and _rng.randf() < 0.85:
 			continue
 		if BUILDING_A.grow(1).has_point(cell) or BUILDING_B.grow(1).has_point(cell):
@@ -329,7 +344,7 @@ func _scatter_props() -> void:
 		for opt in mix:
 			roll -= opt[1]
 			if roll <= 0.0:
-				_add_prop_at_cell(opt[0], cell, "auto", Vector2(10, 5))
+				_add_prop_at_cell(_pick_variant(opt[0]), cell, Vector2(10, 5))
 				break
 		placed += 1
 

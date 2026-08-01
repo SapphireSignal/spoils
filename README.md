@@ -31,9 +31,13 @@ gun-feel goals from *Destiny* — punchy weapons and color-coded loot, at
 
 ## Screenshots
 
-| The ruined block | Settings |
+| Main menu | The ruined block |
 | :---: | :---: |
-| ![Gameplay](shots/m1_feedback_pass.png) | ![Settings menu](shots/menu_settings.png) |
+| ![Main menu](shots/menu_main.png) | ![Gameplay](shots/v040_world.png) |
+
+| Interior reveal | Settings |
+| :---: | :---: |
+| ![Roof fades when inside](shots/v040_inside.png) | ![Settings](shots/v040_settings.png) |
 
 ## How to play
 

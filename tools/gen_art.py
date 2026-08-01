@@ -4,20 +4,23 @@ palette. Deterministic: same script -> same pixels. If an asset looks bad, fix
 this file and rerun; never hand-edit outputs.
 
 Outputs:
-  art/gen/floors.png    - 64x32 iso floor tiles, 4x5 atlas grid
-  art/gen/wall_*.png    - neighbor-masked brick wall pieces (see below)
-  art/gen/<prop>.png    - individual prop sprites
-  art/gen/char.png      - player sheet, 8 dirs x 7 frames (idle + 6 walk), 32x40
-  art/gen/shadow.png    - blob shadow (palette color + alpha)
-  art/gen/manifest.json - sizes/origins/atlas coords consumed by the game
-  art/gen/preview.png   - 3x contact sheet for visual review (not used in-game)
+  art/gen/floors.png     - 64x32 iso floor tiles, 4x5 atlas grid
+  art/gen/wall_*.png     - neighbor-masked brick wall pieces
+  art/gen/roof_*.png     - roof tiles/vent/hatch (interior-reveal system)
+  art/gen/<family>_<n>   - prop variants (procedurally varied per instance)
+  art/gen/char.png       - player sheet, 8 dirs x 7 frames (idle + 6 walk), 32x40
+  art/gen/title.png      - main-menu wordmark
+  art/gen/vignette.png   - menu vignette (soft alpha, intentionally not palette)
+  art/gen/dust.png       - particle speck (white, tinted at runtime)
+  art/gen/shadow.png     - blob shadow (palette color + alpha)
+  art/gen/manifest.json  - sizes/origins/colliders/families consumed by the game
 
-Wall system: buildings are rings of 64x32-footprint brick blocks. To avoid the
-"row of cubes" look, each piece is generated per neighbor mask (which of the
-four tile-axis neighbors also hold a wall): faces that a neighbor covers are
-skipped and outlines along shared edges are erased, so runs read as one
-continuous wall. Piece names: wall_<style>_m<xn><xp><yn><yp> (bits), plus
-wall_<style>_win_x / _win_y (windowed straight runs) and wall_<style>_broken_a/b.
+Prop variation: each family (barrel, crate, cylinder, tires, pallet, dumpster,
+rubble, pillar) is one parameterized draw function; variants roll proportions,
+details, damage, accessories and pose (incl. fallen/toppled) from a seeded rng.
+Colliders are computed per variant and shipped in the manifest, so the game
+never hardcodes shapes. Runtime scaling/rotation is deliberately NOT used —
+it breaks the pixel grid; variation is baked at generation time instead.
 """
 import json
 import random
@@ -79,8 +82,6 @@ class Canvas:
         self.rect(x, y0, x, y1, c)
 
     def outline_auto(self, c=OUTLINE) -> set:
-        """1px outline: paint transparent pixels that touch an opaque one.
-        Returns the set of painted outline pixels."""
         opaque = {(x, y) for y in range(self.h) for x in range(self.w)
                   if self.px[x, y][3] > 0}
         painted: set = set()
@@ -100,9 +101,6 @@ class Canvas:
         return m
 
 # ------------------------------------------------------------ iso diamond ----
-# 64x32 diamond that tessellates exactly under the iso tile lattice
-# a*(32,16) + b*(32,-16). Top rows y=0..15 span [30-2y, 33+2y]; bottom rows
-# mirror rows 14..0, i.e. y=16..31 span [2+2j, 61-2j] (empty at j=15).
 
 def diamond_span(y: int) -> tuple[int, int] | None:
     if 0 <= y <= 15:
@@ -134,7 +132,6 @@ def check_tessellation() -> None:
     assert all(v == 1 for v in counts.values()) and len(counts) == 64 * 32, \
         "iso diamond does not tessellate"
 
-# Per-column bottommost diamond row (for extruding side faces / shearing).
 def diamond_bottom_y(x: int) -> int:
     best = -1
     for y in range(32):
@@ -142,12 +139,7 @@ def diamond_bottom_y(x: int) -> int:
             best = y
     return best
 
-DIAMOND_REGION = None  # filled in main() after tessellation check
-
 # --------------------------------------------------------------- floors ------
-# Goal (user feedback): the ground must read as one continuous surface, not a
-# grid of diamonds. So: NO per-tile edge lines, low-contrast noise only, and
-# repetition hidden by many plain variants + rare one-off detail tiles.
 
 CONC_D2, CONC_D1, CONC_BASE, CONC_L1, CONC_L2 = (
     C("151d28"), C("202e37"), C("394a50"), C("577277"), C("819796"))
@@ -190,7 +182,6 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
 
     if kind == "concrete":
         _floor_base(c, rng, CONC_BASE, CONC_D1, CONC_L1, 0.05, 0.025)
-
     elif kind == "crack":
         region = _floor_base(c, rng, CONC_BASE, CONC_D1, CONC_L1, 0.05, 0.025)
         x, y = 20 + rng.randrange(24), 8 + rng.randrange(16)
@@ -202,18 +193,16 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
                     c.set(x + 1, y, CONC_D1)
             x += dx if rng.random() < 0.75 else -dx
             y += rng.choice((0, 1, 1, -1))
-
     elif kind == "stain":
         region = _floor_base(c, rng, CONC_BASE, CONC_D1, CONC_L1, 0.05, 0.025)
         core = blob(rng, 32 + rng.randint(-10, 10), 16 + rng.randint(-4, 4),
                     rng.randint(25, 50), region)
         for (x, y) in core:
             c.set(x, y, CONC_D1)
-        for (x, y) in list(core):  # dithered soft rim
+        for (x, y) in list(core):
             for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
                 if (nx, ny) in region and (nx, ny) not in core and (nx + ny) % 2 == 0:
                     c.set(nx, ny, CONC_D1)
-
     elif kind == "moss":
         region = _floor_base(c, rng, CONC_BASE, CONC_D1, CONC_L1, 0.05, 0.025)
         m = blob(rng, 32 + rng.randint(-12, 12), 16 + rng.randint(-5, 5),
@@ -223,17 +212,13 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
                 c.set(x, y, C("19332d"))
             elif rng.random() < 0.3:
                 c.set(x, y, C("25562e"))
-
     elif kind == "dirt":
         _floor_base(c, rng, C("341c27"), C("241527"), C("4d2b32"), 0.06, 0.10)
-
-    elif kind == "dirt_blend":  # concrete with dirt worked into it (patch edges)
+    elif kind == "dirt_blend":
         region = _floor_base(c, rng, CONC_BASE, CONC_D1, CONC_L1, 0.05, 0.02)
         speckle(c, rng, region, [C("341c27"), C("4d2b32")], [0.13, 0.09])
-
     elif kind == "asphalt":
         _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.06, 0.03)
-
     elif kind == "asphalt_line":
         region = _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.06, 0.03)
         for (x, y) in region:
@@ -243,7 +228,7 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
         raise ValueError(kind)
     return c
 
-FLOOR_TILES = [  # name -> painter args; atlas laid out in listed order, 4 cols
+FLOOR_TILES = [
     ("concrete_0", ("concrete", 0)), ("concrete_1", ("concrete", 1)),
     ("concrete_2", ("concrete", 2)), ("concrete_3", ("concrete", 3)),
     ("concrete_4", ("concrete", 4)), ("concrete_5", ("concrete", 5)),
@@ -268,9 +253,10 @@ def make_floors_atlas() -> tuple[Image.Image, dict[str, list[int]]]:
     return atlas, coords
 
 # ---------------------------------------------------------------- walls ------
-# Brick block, 64x32 footprint, extruded H px. Canvas 66x74 (1px outline
-# margin), diamond at ox,oy = 1,1. Overcast light: SW (left) face lit brick,
-# SE (right) face shadowed brick, concrete coping on top.
+# Brick block, 64x32 footprint, extruded H px, neighbor-masked (see 0.2.0).
+# 0.4.0 texture pass: mortar courses are dithered one-shade lines, vertical
+# joints are sparse (16px staggered, 50% dither) — brick reads as texture,
+# not as a grid. Windows come in three shapes incl. boarded-up.
 
 WALL_H = 40
 WALL_OX, WALL_OY = 1, 1
@@ -282,8 +268,14 @@ BRICK_STYLES = {
     "brick_b": {"sw": ("7a4841", "4d2b32"), "se": ("4d2b32", "341c27")},
 }
 
+# window variants: (face columns offset, top row in face coords, w, h, boarded)
+WINDOW_VARIANTS = [
+    (9, 7, 12, 14, False),   # tall
+    (5, 11, 18, 9, False),   # wide + low
+    (11, 9, 10, 10, True),   # small, boarded up
+]
+
 def _bx(x_local: int) -> int:
-    """Absolute canvas row where the top-face diamond ends for local column x."""
     return WALL_OY + diamond_bottom_y(x_local)
 
 def _paint_brick_face(c: Canvas, rng: random.Random, x_range, base, mortar,
@@ -293,14 +285,17 @@ def _paint_brick_face(c: Canvas, rng: random.Random, x_range, base, mortar,
         h = WALL_H if height_of is None else height_of(lx)
         top = _bx(lx) + 1 + (WALL_H - h)
         for y in range(top, _bx(lx) + WALL_H + 1):
-            fy = y - (_bx(lx) + 1)  # face-local row: courses follow the shear
+            fy = y - (_bx(lx) + 1)
             course = fy // 4
-            if fy % 4 == 3 or (x + course * 4) % 8 == 0:
-                col = mortar
-            elif rng.random() < 0.05:
-                col = mortar
-            else:
-                col = base
+            col = base
+            if fy % 4 == 3:
+                # horizontal mortar course, dithered so it stays soft
+                if (x + fy) % 2 == 0:
+                    col = mortar
+            elif (x + (8 if course % 2 else 0)) % 16 == 0 and rng.random() < 0.55:
+                col = mortar  # sparse staggered head joints
+            elif rng.random() < 0.04:
+                col = mortar  # worn brick
             c.set(x, y, col)
 
 def _paint_coping(c: Canvas, rng: random.Random) -> None:
@@ -316,38 +311,47 @@ def _paint_coping(c: Canvas, rng: random.Random) -> None:
                     col = CONC_L2
                 c.set(WALL_OX + x, WALL_OY + y, col)
 
-def _paint_window(c: Canvas, side: str) -> None:
-    cols = range(8, 22) if side == "sw" else range(42, 56)
+def _paint_window(c: Canvas, rng: random.Random, side: str, variant: int) -> None:
+    off, top, w, h, boarded = WINDOW_VARIANTS[variant]
+    base_col = 0 if side == "sw" else 32
+    cols = range(base_col + off, base_col + off + w)
     for lx in cols:
         x = WALL_OX + lx
         ft = _bx(lx) + 1
-        for fy in range(8, 23):
+        for fy in range(top, top + h):
             c.set(x, ft + fy, C("090a14"))
-        c.set(x, ft + 7, C("341c27"))   # lintel
-        c.set(x, ft + 23, C("819796"))  # sill
-    for lx in (min(cols) - 1, max(cols) + 1):  # jambs
+        c.set(x, ft + top - 1, C("341c27"))       # lintel
+        c.set(x, ft + top + h, C("819796"))       # sill
+    for lx in (min(cols) - 1, max(cols) + 1):     # jambs, soft tone
         x = WALL_OX + lx
         ft = _bx(lx) + 1
-        for fy in range(7, 24):
+        for fy in range(top - 1, top + h + 1):
             c.set(x, ft + fy, C("341c27"))
+    if boarded:
+        for i, plank_fy in enumerate(range(top + 1, top + h, 3)):
+            for lx in cols:
+                x = WALL_OX + lx
+                ft = _bx(lx) + 1
+                wobble = (lx + i) % 3 == 0
+                c.set(x, ft + plank_fy + (1 if wobble else 0),
+                      C("884b2b") if (lx + i) % 2 else C("602c2c"))
 
-def make_wall_piece(style: str, mask: frozenset, window_side: str | None = None) -> Canvas:
-    rng = random.Random(f"{SEED}:wall:{style}:{sorted(mask)}:{window_side}")
+def make_wall_piece(style: str, mask: frozenset, window_side: str | None = None,
+                    window_variant: int = 0) -> Canvas:
+    rng = random.Random(f"{SEED}:wall:{style}:{sorted(mask)}:{window_side}:{window_variant}")
     colors = BRICK_STYLES[style]
     c = Canvas(*WALL_CANVAS)
 
     _paint_coping(c, rng)
-    if "yp" not in mask:  # SW face exposed (else the +y neighbor covers it)
+    if "yp" not in mask:
         _paint_brick_face(c, rng, range(0, 32), C(colors["sw"][0]), C(colors["sw"][1]))
         if window_side == "sw":
-            _paint_window(c, "sw")
-    if "xp" not in mask:  # SE face exposed
+            _paint_window(c, rng, "sw", window_variant)
+    if "xp" not in mask:
         _paint_brick_face(c, rng, range(32, 64), C(colors["se"][0]), C(colors["se"][1]))
         if window_side == "se":
-            _paint_window(c, "se")
+            _paint_window(c, rng, "se", window_variant)
 
-    # light crease where coping meets an exposed face (skip covered sides so
-    # coping runs read continuous)
     for lx in range(0, 32):
         if "yp" not in mask and lx % 2 == 0:
             c.set(WALL_OX + lx, _bx(lx) + 1, CONC_L2)
@@ -355,14 +359,12 @@ def make_wall_piece(style: str, mask: frozenset, window_side: str | None = None)
         if "xp" not in mask and lx % 2 == 0:
             c.set(WALL_OX + lx, _bx(lx) + 1, CONC_L2)
 
-    # vertical corner edge only at true convex corners
+    # soft vertical crease only at true convex corners
     if "xp" not in mask and "yp" not in mask:
-        for x in (WALL_OX + 31, WALL_OX + 32):
-            for y in range(_bx(31) + 2, _bx(31) + WALL_H + 1):
-                c.set(x, y, C("151d28"))
+        for y in range(_bx(31) + 2, _bx(31) + WALL_H + 1):
+            c.set(WALL_OX + 32, y, C(colors["se"][1]))
 
     painted = c.outline_auto()
-    # erase outline along edges shared with neighboring wall blocks
     cx_split = WALL_OX + 32
     cy_split = WALL_OY + 16
     for (x, y) in painted:
@@ -392,7 +394,6 @@ def make_wall_broken(style: str, variant: int) -> Canvas:
                       height_of=lambda lx: heights[lx])
     _paint_brick_face(c, rng, range(32, 64), C(colors["se"][0]), C(colors["se"][1]),
                       height_of=lambda lx: heights[lx])
-    # jagged cap: broken brick lip
     for lx in range(64):
         top = _bx(lx) + 1 + (WALL_H - heights[lx])
         cap = C("819796") if rng.random() < 0.4 else (
@@ -411,19 +412,54 @@ def wall_piece_inventory() -> dict[str, Canvas]:
                              if bits & (1 << i))
             tag = "".join("1" if d in mask else "0" for d in ("xn", "xp", "yn", "yp"))
             pieces[f"wall_{style}_m{tag}"] = make_wall_piece(style, mask)
-        pieces[f"wall_{style}_win_x"] = make_wall_piece(
-            style, frozenset(("xn", "xp")), window_side="sw")
-        pieces[f"wall_{style}_win_y"] = make_wall_piece(
-            style, frozenset(("yn", "yp")), window_side="se")
+        for v in range(len(WINDOW_VARIANTS)):
+            pieces[f"wall_{style}_win_x_{v}"] = make_wall_piece(
+                style, frozenset(("xn", "xp")), "sw", v)
+            pieces[f"wall_{style}_win_y_{v}"] = make_wall_piece(
+                style, frozenset(("yn", "yp")), "se", v)
         pieces[f"wall_{style}_broken_a"] = make_wall_broken(style, 0)
         pieces[f"wall_{style}_broken_b"] = make_wall_broken(style, 1)
     return pieces
 
+# ----------------------------------------------------------------- roofs -----
+# Tar roof tiles sit WALL_H-6 above the floor inside the parapet; the game
+# fades the whole roof group when the player is inside (interior reveal).
+
+def make_roof_tile(variant: int) -> Canvas:
+    rng = random.Random(f"{SEED}:roof:{variant}")
+    c = Canvas(64, 32)
+    region = {(x, y) for y in range(32) for x in range(64) if in_diamond(x, y)}
+    for (x, y) in region:
+        c.set(x, y, CONC_D1)
+    speckle(c, rng, region, [C("151d28"), CONC_BASE], [0.09, 0.05])
+    if variant == 1:  # tar patch streaks
+        patch = blob(rng, 32 + rng.randint(-10, 10), 16 + rng.randint(-4, 4),
+                     rng.randint(20, 40), region)
+        for (x, y) in patch:
+            c.set(x, y, C("151d28"))
+    return c
+
+def make_roof_vent() -> Canvas:
+    c = Canvas(24, 22)
+    bottoms = iso_prism(c, 2, 1, 20, 10, 7, CONC_BASE, CONC_D1, CONC_D2)
+    for x in range(3, 17):  # louver slits on the lit face
+        if x % 3 != 0:
+            c.set(2 + x, bottoms[x] + 3, INK)
+            c.set(2 + x, bottoms[x] + 5, INK)
+    c.outline_auto()
+    return c
+
+def make_roof_hatch() -> Canvas:
+    c = Canvas(20, 14)
+    bottoms = iso_prism(c, 2, 1, 16, 8, 2, CONC_D1, CONC_D2, INK)
+    for x in range(4, 12):
+        c.set(2 + x, bottoms[x] - 1, CONC_BASE)
+    c.outline_auto()
+    return c
+
 # ---------------------------------------------------------------- props ------
-# Distinct silhouettes on purpose (user feedback: no recolored clones).
 
 def small_diamond_rows(w: int, d: int) -> list[tuple[int, int]]:
-    """Row spans (x0,x1) of a w x d iso diamond (d even, w = 2*d)."""
     assert d % 2 == 0 and w == 2 * d, "iso diamond needs w == 2*d, d even"
     rows: list[tuple[int, int]] = []
     for i in range(d):
@@ -434,8 +470,6 @@ def small_diamond_rows(w: int, d: int) -> list[tuple[int, int]]:
 
 def iso_prism(c: Canvas, ox: int, oy: int, w: int, d: int, h: int,
               top, left, right) -> list[int]:
-    """Iso box at (ox,oy) = top-left of top-face diamond. Returns per-column
-    absolute bottom row of the top face."""
     rows = small_diamond_rows(w, d)
     bottoms = [0] * w
     for i, (x0, x1) in enumerate(rows):
@@ -448,130 +482,167 @@ def iso_prism(c: Canvas, ox: int, oy: int, w: int, d: int, h: int,
             c.set(ox + x, y, left if x < w // 2 else right)
     return [oy + b for b in bottoms]
 
-def make_crate_wood() -> Canvas:
-    W, D, H = 28, 14, 12
-    c = Canvas(32, 30)
-    top, left, right, line = C("be772b"), C("884b2b"), C("602c2c"), C("341c27")
+WOOD_TONES = [("be772b", "884b2b", "602c2c", "341c27"),
+              ("ad7757", "7a4841", "4d2b32", "341c27")]
+
+def draw_crate(rng: random.Random, w: int, h: int, tone: int,
+               damaged: bool, stencil: bool) -> tuple[Canvas, tuple, list]:
+    d = w // 2
+    c = Canvas(w + 4, d + h + 4)
+    top, left, right, line = (C(n) for n in WOOD_TONES[tone])
     ox, oy = 2, 1
-    bottoms = iso_prism(c, ox, oy, W, D, H, top, left, right)
-    for x in range(W):
+    bottoms = iso_prism(c, ox, oy, w, d, h, top, left, right)
+    for x in range(w):
         y = bottoms[x] - (0 if x % 2 else 1)
         if c.get(ox + x, y)[3] > 0:
-            c.set(ox + x, y, C("de9e41"))
-    for x in range(W):
-        c.set(ox + x, bottoms[x] + 4, line)
-        c.set(ox + x, bottoms[x] + 8, line)
-    for y in range(bottoms[W // 2] + 1, bottoms[W // 2] + H + 1):
-        c.set(ox + W // 2 - 1, y, line)
-        c.set(ox + W // 2, y, line)
-    for dx in (-10, -4, 5, 10):
-        c.set(ox + W // 2 + dx, bottoms[W // 2 + dx] + 2, C("de9e41"))
+            c.set(ox + x, y, C("de9e41") if tone == 0 else C("c09473"))
+    for seam_off in range(4, h, 4):
+        for x in range(w):
+            c.set(ox + x, bottoms[x] + seam_off, line)
+    for y in range(bottoms[w // 2] + 1, bottoms[w // 2] + h + 1):
+        c.set(ox + w // 2 - 1, y, line)
+        c.set(ox + w // 2, y, line)
+    if damaged:  # a missing board on the lit face
+        gx = rng.randrange(4, w // 2 - 4)
+        for x in range(gx, gx + rng.randint(3, 5)):
+            for y in range(bottoms[x] + 1, bottoms[x] + min(h, 5)):
+                c.set(ox + x, y, OUTLINE)
+    if stencil:
+        for dx in range(-w // 4, -w // 4 + 6, 2):
+            c.set(ox + w // 2 + dx, bottoms[w // 2 + dx] + 2, C("de9e41"))
     c.outline_auto()
-    return c
+    origin = (2 + w // 2, oy + h + d // 2)
+    collider = ["diamond", w // 2 + 1.0, d // 2 + 1.0]
+    return c, origin, collider
 
-def make_crate_ammo() -> Canvas:
-    """Low, wide olive ammo crate — deliberately flatter than the wood crate."""
-    W, D, H = 32, 16, 9
-    c = Canvas(36, 30)
-    ox, oy = 2, 1
-    bottoms = iso_prism(c, ox, oy, W, D, H, C("468232"), C("25562e"), C("19332d"))
-    for x in range(W):  # lid rim
-        y = bottoms[x]
-        c.set(ox + x, y, C("75a743") if x % 2 else C("468232"))
-    # lid clasps + stencil dashes on the lit face
-    for dx in (-12, 0, 11):
-        c.set(ox + W // 2 + dx, bottoms[W // 2 + dx] + 2, C("10141f"))
-        c.set(ox + W // 2 + dx, bottoms[W // 2 + dx] + 3, C("10141f"))
-    for dx in range(-9, -2, 3):
-        c.set(ox + W // 2 + dx, bottoms[W // 2 + dx] + 5, C("75a743"))
-        c.set(ox + W // 2 + dx + 1, bottoms[W // 2 + dx] + 5, C("75a743"))
-    # rope handles at the tips
-    for lx in (0, W - 1):
-        c.set(ox + lx, bottoms[lx] + 2, C("341c27"))
-        c.set(ox + lx, bottoms[lx] + 3, C("341c27"))
+def draw_barrel(rng: random.Random, style: str, h: int, r: int,
+                fallen: bool) -> tuple[Canvas, tuple, list]:
+    styles = {
+        "rust": (C("602c2c"), C("884b2b"), C("341c27"), C("394a50"), C("cf573c")),
+        "olive": (C("25562e"), C("468232"), C("19332d"), C("394a50"), C("577277")),
+        "steel": (C("3c5e8b"), C("4f8fba"), C("253a5e"), C("577277"), C("73bed3")),
+    }
+    body, lite, dark, lid, fleck = styles[style]
+    if not fallen:
+        c = Canvas(2 * r + 4, h + 6)
+        cx = r + 2
+        top_y, bot_y = 5, h + 3
+        for y in range(top_y, bot_y):
+            half = r if top_y + 2 <= y <= bot_y - 3 else r - 1
+            for x in range(cx - half, cx + half):
+                t = (x - (cx - half)) / (2 * half)
+                c.set(x, y, lite if t < 0.35 else (body if t < 0.8 else dark))
+        for y in range(2, 7):
+            half = max(3, r - abs(y - 4) * 2 - 0)
+            half = min(r, half + 3)
+            for x in range(cx - half, cx + half):
+                c.set(x, y, C("819796") if y <= 3 else lid)
+        hoop_ys = [top_y + (h - 4) // 3, top_y + 2 * (h - 4) // 3]
+        if rng.random() < 0.5:
+            hoop_ys.append(top_y + 3)
+        for hy in hoop_ys:
+            for x in range(cx - r, cx + r):
+                c.set(x, hy, dark)
+                c.set(x, hy - 1, C("ad7757") if style == "rust" else C("819796"))
+        if rng.random() < 0.5:  # dent
+            dy = rng.randrange(top_y + 3, bot_y - 3)
+            for x in range(cx - r, cx - r + 3):
+                c.set(x, dy, dark)
+                c.set(x, dy + 1, dark)
+        for _ in range(rng.randint(6, 12)):
+            c.set(rng.randrange(cx - r + 1, cx + r - 1), rng.randrange(7, bot_y - 1), fleck)
+        c.outline_auto()
+        return c, (cx, h + 2), ["circle", float(r - 1)]
+    # fallen barrel: cylinder on its side, seen at iso angle
+    length = h
+    c = Canvas(length + 10, 2 * r + 8)
+    cy = r + 4
+    for i in range(length):
+        x = 4 + i
+        sh = int(2 * (i / max(1, length - 1)))  # slight iso drop along the length
+        for y in range(cy - r + sh, cy + r - 2 + sh):
+            t = (y - (cy - r + sh)) / (2 * r - 2)
+            c.set(x, y, lite if t < 0.3 else (body if t < 0.75 else dark))
+    for y in range(cy - r, cy + r - 2):  # end cap facing camera
+        half_ok = abs(y - (cy - 1)) < r - 1
+        if half_ok:
+            c.set(3, y, lid)
+            c.set(2, y, dark)
+    for hx in (4 + length // 3, 4 + 2 * length // 3):
+        for y in range(cy - r + 1, cy + r - 1):
+            c.set(hx, y + 1, dark)
+    for _ in range(rng.randint(5, 9)):
+        c.set(rng.randrange(6, length + 2), rng.randrange(cy - r + 2, cy + r), fleck)
     c.outline_auto()
-    return c
+    return c, (length // 2 + 4, 2 * r + 2), ["diamond", length / 2 + 2.0, float(r - 2)]
 
-def make_dumpster() -> Canvas:
-    rng = random.Random(f"{SEED}:dumpster")
-    W, D, H = 36, 18, 16
-    c = Canvas(40, 38)
-    ox, oy = 2, 1
-    bottoms = iso_prism(c, ox, oy, W, D, H, C("394a50"), C("25562e"), C("19332d"))
-    # lid: gray steel with a highlight seam + handle
-    for x in range(W):
-        y = bottoms[x] - (0 if x % 2 else 1)
-        if c.get(ox + x, y)[3] > 0:
-            c.set(ox + x, y, C("577277"))
-    for dx in range(-5, 5):
-        c.set(ox + W // 2 + dx, oy + D // 2 + (1 if dx % 2 else 0), C("819796"))
-    # body ribs + rust
-    for x in range(W):
-        if x % 6 == 2:
-            for y in range(bottoms[x] + 2, bottoms[x] + H):
-                c.set(ox + x, y, C("19332d") if x < W // 2 else C("10141f"))
-    for _ in range(9):
-        x = rng.randrange(2, W - 2)
-        c.set(ox + x, bottoms[x] + rng.randint(3, H - 1), C("602c2c"))
-    c.outline_auto()
-    return c
-
-def make_barrel_rust() -> Canvas:
-    rng = random.Random(f"{SEED}:barrel:rust")
-    c = Canvas(22, 32)
-    body, lite, dark, lid = C("602c2c"), C("884b2b"), C("341c27"), C("394a50")
-    cx = 11
-    for y in range(6, 30):
-        half = 9 if 8 <= y <= 27 else 8
-        for x in range(cx - half, cx + half):
-            t = (x - (cx - half)) / (2 * half)
-            col = lite if t < 0.35 else (body if t < 0.8 else dark)
-            c.set(x, y, col)
-    lid_half = {3: 5, 4: 8, 5: 9, 6: 9, 7: 8, 8: 6}
-    for y, half in lid_half.items():
-        for x in range(cx - half, cx + half):
-            c.set(x, y, C("577277") if y <= 4 else lid)
-    for hy in (12, 21):
-        for x in range(cx - 9, cx + 9):
-            c.set(x, hy, dark)
-            c.set(x, hy - 1, C("ad7757"))
-    for _ in range(10):
-        c.set(rng.randrange(cx - 8, cx + 8), rng.randrange(9, 29), C("cf573c"))
-    c.outline_auto()
-    return c
-
-def make_gas_cylinder() -> Canvas:
-    """Tall thin steel-blue cylinder — the cool accent among warm props."""
-    rng = random.Random(f"{SEED}:gascyl")
-    c = Canvas(14, 38)
-    cx = 7
-    lite, base, dark = C("4f8fba"), C("3c5e8b"), C("253a5e")
-    dome = {4: 2, 5: 3, 6: 4, 7: 4}
-    for y, half in dome.items():
-        for x in range(cx - half, cx + half):
-            c.set(x, y, lite if x < cx else base)
-    for y in range(8, 33):
+def draw_cylinder(rng: random.Random, color: str, h: int,
+                  toppled: bool) -> tuple[Canvas, tuple, list]:
+    tones = {
+        "steel": (C("4f8fba"), C("3c5e8b"), C("253a5e"), C("73bed3")),
+        "red": (C("a53030"), C("752438"), C("411d31"), C("cf573c")),
+        "gray": (C("819796"), C("577277"), C("394a50"), C("a8b5b2")),
+    }
+    lite, base, dark, glint = tones[color]
+    if not toppled:
+        c = Canvas(14, h + 6)
+        cx = 7
+        top = 4
+        dome = {top: 2, top + 1: 3, top + 2: 4, top + 3: 4}
+        for y, half in dome.items():
+            for x in range(cx - half, cx + half):
+                c.set(x, y, lite if x < cx else base)
+        for y in range(top + 4, h + 1):
+            for x in range(cx - 4, cx + 4):
+                t = (x - (cx - 4)) / 8.0
+                c.set(x, y, lite if t < 0.3 else (base if t < 0.75 else dark))
+        band_y = top + 4 + (h - top - 4) // 2
         for x in range(cx - 4, cx + 4):
-            t = (x - (cx - 4)) / 8.0
+            c.set(x, band_y, dark)
+            c.set(x, band_y - 1, glint if x % 2 else base)
+            c.set(x, h + 1, C("202e37"))
+        c.rect(cx - 1, 1, cx, 3, C("577277"))
+        for _ in range(rng.randint(2, 5)):
+            c.set(rng.randrange(cx - 3, cx + 3), rng.randrange(top + 6, h), C("602c2c"))
+        c.outline_auto()
+        return c, (7, h + 1), ["circle", 4.0]
+    c = Canvas(h + 8, 16)
+    for i in range(h - 4):
+        x = 5 + i
+        sh = int(1.5 * (i / max(1, h - 5)))
+        for y in range(4 + sh, 11 + sh):
+            t = (y - 4 - sh) / 7.0
             c.set(x, y, lite if t < 0.3 else (base if t < 0.75 else dark))
-    for x in range(cx - 4, cx + 4):  # weld band + base ring
-        c.set(x, 19, dark)
-        c.set(x, 18, C("73bed3") if x % 2 else base)
-        c.set(x, 33, C("202e37"))
-    c.rect(cx - 1, 1, cx, 3, C("577277"))  # valve
-    for _ in range(4):
-        c.set(rng.randrange(cx - 3, cx + 3), rng.randrange(20, 32), C("602c2c"))
+    for y in range(5, 10):  # dome end
+        c.set(4, y, base)
+        c.set(3, y, dark)
+    c.rect(h + 1, 6, h + 3, 8, C("577277"))  # valve
     c.outline_auto()
-    return c
+    return c, ((h + 4) // 2, 12), ["diamond", h / 2.0, 4.0]
 
-def make_tire_stack() -> Canvas:
-    rng = random.Random(f"{SEED}:tires")
-    c = Canvas(30, 28)
+def draw_tires(rng: random.Random, count: int, single: bool) -> tuple[Canvas, tuple, list]:
+    if single:  # one tire leaning upright
+        c = Canvas(22, 24)
+        cx, cy = 11, 11
+        for y in range(22):
+            for x in range(22):
+                dx, dy = (x - cx) / 9.5, (y - cy) / 9.5
+                d = dx * dx + dy * dy
+                if 0.35 < d < 1.0:
+                    c.set(x, y + 1, C("151d28") if d < 0.8 else C("10141f"))
+                elif d <= 0.35:
+                    c.set(x, y + 1, C("090a14"))
+        for a in range(-3, 4):  # tread highlight arc
+            c.set(cx + a, 3 if abs(a) < 2 else 4, C("202e37"))
+        c.outline_auto()
+        return c, (11, 22), ["circle", 6.0]
+    c = Canvas(30, 10 + 6 * count)
     cx = 15
     halves = [8, 11, 12, 12, 11, 9]
-    offsets = [(0, 18), (1, 12), (-1, 6)]  # bottom -> top, slight skew
-    for i, (dx, base_y) in enumerate(offsets):
-        top = i == len(offsets) - 1
+    for i in range(count):
+        dx = rng.randint(-1, 1)
+        base_y = 6 * (count - 1 - i) + 4
+        top = i == count - 1
         for row, half in enumerate(halves):
             y = base_y + row
             for x in range(cx + dx - half, cx + dx + half):
@@ -580,68 +651,121 @@ def make_tire_stack() -> Canvas:
                 if row >= 4:
                     col = C("10141f")
                 c.set(x, y, col)
-        if top:  # dark hole in the top tire
+        if top:
             for row, half in ((0, 5), (1, 6), (2, 5)):
                 for x in range(cx + dx - half, cx + dx + half):
                     c.set(x, base_y + row + 1, C("090a14"))
     c.outline_auto()
-    return c
+    return c, (15, 6 * count + 4), ["circle", 7.0 if count > 1 else 6.0]
 
-def make_pallet() -> Canvas:
-    """Flat wooden pallet — low, walk-over dressing."""
-    c = Canvas(38, 24)
-    ox, oy = 3, 2
-    rows = small_diamond_rows(32, 16)
-    for i, (x0, x1) in enumerate(rows):
-        for x in range(x0, x1 + 1):
-            band = ((x + 2 * i) // 5) % 3
-            col = C("884b2b") if band == 0 else (C("7a4841") if band == 1 else C("341c27"))
-            c.set(ox + x, oy + i, col)
-    bottoms = [0] * 32
-    for i, (x0, x1) in enumerate(rows):
-        for x in range(x0, x1 + 1):
-            bottoms[x] = i
-    for x in range(32):
-        for y in range(oy + bottoms[x] + 1, oy + bottoms[x] + 4):
-            c.set(ox + x, y, C("602c2c") if x < 16 else C("341c27"))
+def draw_pallet(rng: random.Random, broken: bool, stacked: bool) -> tuple[Canvas, tuple, list]:
+    c = Canvas(38, 28)
+    layers = 2 if stacked else 1
+    for layer in range(layers):
+        ox, oy = 3 + (1 if layer else 0), 6 - layer * 4
+        rows = small_diamond_rows(32, 16)
+        for i, (x0, x1) in enumerate(rows):
+            for x in range(x0, x1 + 1):
+                band = ((x + 2 * i) // 5) % 3
+                if broken and layer == 0 and band == 1 and i > 8 and (x // 4) % 3 == 0:
+                    continue  # missing slat chunks
+                col = C("884b2b") if band == 0 else (C("7a4841") if band == 1 else C("341c27"))
+                c.set(ox + x, oy + i, col)
+        bottoms = [0] * 32
+        for i, (x0, x1) in enumerate(rows):
+            for x in range(x0, x1 + 1):
+                bottoms[x] = i
+        for x in range(32):
+            for y in range(oy + bottoms[x] + 1, oy + bottoms[x] + 4):
+                c.set(ox + x, y, C("602c2c") if x < 16 else C("341c27"))
     c.outline_auto()
-    return c
+    return c, (19, 17), None
 
-def make_rubble(variant: int) -> Canvas:
-    rng = random.Random(f"{SEED}:rubble:{variant}")
-    c = Canvas(48, 26)
+def draw_dumpster(rng: random.Random, lid_open: bool) -> tuple[Canvas, tuple, list]:
+    W, D, H = 36, 18, 16
+    c = Canvas(44, 44)
+    ox, oy = 3, 9
+    bottoms = iso_prism(c, ox, oy, W, D, H, C("394a50"), C("25562e"), C("19332d"))
+    if lid_open:
+        for i, (x0, x1) in enumerate(small_diamond_rows(W, D)):
+            for x in range(x0, x1 + 1):
+                c.set(ox + x, oy + i, C("090a14"))  # open: dark interior
+        for i in range(D):  # lid leaning up behind the far edge
+            y = oy - 7 + i
+            x0, x1 = small_diamond_rows(W, D)[i]
+            for x in range(x0 + 6, x1 - 6):
+                c.set(ox + x, y, C("577277") if i % 3 else C("394a50"))
+    else:
+        for x in range(W):
+            y = bottoms[x] - (0 if x % 2 else 1)
+            if c.get(ox + x, y)[3] > 0:
+                c.set(ox + x, y, C("577277"))
+        for dx in range(-5, 5):
+            c.set(ox + W // 2 + dx, oy + D // 2 + (1 if dx % 2 else 0), C("819796"))
+    for x in range(W):
+        if x % 6 == 2:
+            for y in range(bottoms[x] + 2, bottoms[x] + H):
+                c.set(ox + x, y, C("19332d") if x < W // 2 else C("10141f"))
+    for _ in range(9):
+        x = rng.randrange(2, W - 2)
+        c.set(ox + x, bottoms[x] + rng.randint(3, H - 1), C("602c2c"))
+    c.outline_auto()
+    return c, (3 + W // 2, oy + H + D // 2), ["diamond", 19.0, 10.0]
+
+def draw_rubble(rng: random.Random, size: int) -> tuple[Canvas, tuple, list]:
+    w = (34, 48, 60)[size]
+    hmax = (6, 9, 13)[size]
+    c = Canvas(w + 4, hmax + 14)
     grays = [C("202e37"), C("394a50"), C("577277"), C("819796")]
-    for x in range(4, 44):
-        h = int(9 * (1 - ((x - 24) / 22) ** 2)) + rng.randint(-1, 1)
+    cx = w // 2 + 2
+    for x in range(4, w):
+        h = int(hmax * (1 - ((x - cx) / (w / 2 - 1)) ** 2)) + rng.randint(-1, 1)
         for y in range(c.h - 3 - max(0, h), c.h - 2):
             t = rng.random()
             c.set(x, y, grays[1] if t < 0.5 else (grays[0] if t < 0.8 else grays[2]))
-    for _ in range(rng.randint(8, 12)):
-        x, y = rng.randrange(8, 40), rng.randrange(c.h - 11, c.h - 3)
+    for _ in range(rng.randint(6, 8 + 3 * size)):
+        x, y = rng.randrange(6, w - 4), rng.randrange(c.h - 5 - hmax, c.h - 3)
         c.set(x, y, grays[3])
         c.set(x + 1, y, grays[2])
         c.set(x, y + 1, grays[1])
-    # the odd brick chunk so piles tie into the buildings
-    for _ in range(3 if variant == 0 else 2):
-        x, y = rng.randrange(8, 38), rng.randrange(c.h - 9, c.h - 3)
+    for _ in range(2 + size):
+        x, y = rng.randrange(6, w - 6), rng.randrange(c.h - 4 - hmax, c.h - 3)
         c.set(x, y, C("884b2b"))
         c.set(x + 1, y, C("602c2c"))
-    for _ in range(2 if variant == 0 else 3):
-        x = rng.randrange(10, 38)
-        y = c.h - 4 - rng.randrange(5, 9)
+    for _ in range(1 + size):
+        x = rng.randrange(8, w - 8)
+        y = c.h - 4 - rng.randrange(2, max(3, hmax))
         for i in range(rng.randint(4, 7)):
             c.set(x + i, y - i // 2, C("602c2c"))
     c.outline_auto()
-    return c
+    return c, (cx, c.h - 4), None
 
-def make_pillar() -> Canvas:
-    rng = random.Random(f"{SEED}:pillar")
-    c = Canvas(18, 54)
-    for y in range(6, 50):
+def draw_pillar(rng: random.Random, kind: str) -> tuple[Canvas, tuple, list]:
+    if kind == "fallen":
+        c = Canvas(52, 20)
+        for i in range(44):
+            x = 4 + i
+            sh = i // 16
+            for y in range(6 + sh, 14 + sh):
+                t = (y - 6 - sh) / 8.0
+                col = CONC_L1 if t < 0.3 else (CONC_BASE if t < 0.8 else CONC_D1)
+                if rng.random() < 0.06:
+                    col = CONC_D1
+                c.set(x, y, col)
+        for y in range(7, 13):  # broken end
+            c.set(3, y, CONC_D1)
+            c.set(2, y, CONC_D2)
+        for i in range(3):
+            c.set(48 + i, 9 + i % 2, C("602c2c"))
+        c.outline_auto()
+        return c, (26, 16), ["diamond", 22.0, 5.0]
+    h = 44 if kind == "tall" else 26
+    c = Canvas(18, h + 10)
+    for y in range(6, h + 4):
         for x in range(4, 14):
-            col = C("577277") if x < 8 else (C("394a50") if x < 12 else C("202e37"))
+            col = CONC_L1 if x < 8 else (CONC_BASE if x < 12 else CONC_D1)
             if rng.random() < 0.08:
-                col = C("202e37")
+                col = CONC_D1
             c.set(x, y, col)
     cuts = {}
     for x in range(4, 14):
@@ -654,11 +778,52 @@ def make_pillar() -> Canvas:
         top = 6 + cuts.get(rx, 0)
         for y in range(top - 3, top + 1):
             c.set(rx, y, C("602c2c"))
-    for y in range(48, 52):
+    for y in range(h + 2, h + 6):
         for x in range(2, 16):
-            c.set(x, y, C("394a50") if x < 9 else C("202e37"))
+            c.set(x, y, CONC_BASE if x < 9 else CONC_D1)
     c.outline_auto()
-    return c
+    return c, (9, h + 4), ["circle", 6.0]
+
+def prop_inventory() -> tuple[dict, dict]:
+    """Returns ({name: (canvas, origin, collider)}, {family: [names]})."""
+    props: dict = {}
+    families: dict[str, list[str]] = {}
+
+    def fam(family: str, idx: int, made) -> None:
+        name = f"{family}_{idx}"
+        props[name] = made
+        families.setdefault(family, []).append(name)
+
+    for i in range(6):
+        rng = random.Random(f"{SEED}:barrel:{i}")
+        style = ("rust", "rust", "olive", "steel", "rust", "olive")[i]
+        fallen = i >= 4
+        fam("barrel", i, draw_barrel(rng, style, rng.randint(24, 30),
+                                     rng.randint(8, 10), fallen))
+    for i in range(6):
+        rng = random.Random(f"{SEED}:crate:{i}")
+        fam("crate", i, draw_crate(rng, rng.choice((24, 28, 32)), rng.randint(10, 15),
+                                   i % 2, damaged=(i in (2, 5)), stencil=(i in (0, 3))))
+    for i in range(4):
+        rng = random.Random(f"{SEED}:cyl:{i}")
+        color = ("steel", "red", "gray", "steel")[i]
+        fam("cylinder", i, draw_cylinder(rng, color, rng.randint(30, 36), toppled=(i == 3)))
+    for i in range(4):
+        rng = random.Random(f"{SEED}:tires:{i}")
+        fam("tires", i, draw_tires(rng, (3, 2, 1, 1)[i], single=(i == 3)))
+    for i in range(3):
+        rng = random.Random(f"{SEED}:pallet:{i}")
+        fam("pallet", i, draw_pallet(rng, broken=(i == 1), stacked=(i == 2)))
+    for i in range(2):
+        rng = random.Random(f"{SEED}:dumpster:{i}")
+        fam("dumpster", i, draw_dumpster(rng, lid_open=(i == 1)))
+    for i in range(4):
+        rng = random.Random(f"{SEED}:rubble:{i}")
+        fam("rubble", i, draw_rubble(rng, min(i, 2)))
+    for i, kind in enumerate(("tall", "snapped", "fallen")):
+        rng = random.Random(f"{SEED}:pillar:{i}")
+        fam("pillar", i, draw_pillar(rng, kind))
+    return props, families
 
 def make_shadow() -> Canvas:
     c = Canvas(24, 12)
@@ -673,10 +838,6 @@ def make_shadow() -> Canvas:
     return c
 
 # ------------------------------------------------------------- character -----
-# 32x40 frames, feet baseline y=37, center x=16. Rows in dir order
-# E, SE, S, SW, W, NW, N, NE (index = round(atan2(vy,vx)/45deg) mod 8,
-# +y = screen down). W/SW/NW are mirrors of E/SE/NE.
-# Columns: 0 = idle, 1..6 = walk cycle (contact/recoil/passing x2).
 
 SKIN, SKIN_SH = C("d7b594"), C("c09473")
 JKT_L, JKT, JKT_D = C("468232"), C("25562e"), C("19332d")
@@ -689,28 +850,24 @@ STRAP = C("341c27")
 CX, FEET = 16, 37
 WALK_FRAMES = 6
 
-# per-frame body bob (applies to head/torso/arms/pack)
 BOB = {0: 0, 1: 0, 2: -1, 3: -1, 4: 0, 5: -1, 6: -1}
-# side-view stride: (front_dx, back_dx, front_lift, back_lift)
 SIDE_STRIDE = {
     0: (0, 0, 0, 0),
     1: (3, -3, 0, 0), 2: (2, -2, 0, 1), 3: (0, 0, 0, 2),
     4: (-3, 3, 0, 0), 5: (-2, 2, 1, 0), 6: (0, 0, 2, 0),
 }
-# front/back-view step lifts: (left_lift, right_lift)
 STEP_LIFT = {
     0: (0, 0),
     1: (0, 2), 2: (0, 1), 3: (0, 0),
     4: (2, 0), 5: (1, 0), 6: (0, 0),
 }
-# arm swing along facing
 SIDE_SWING = {0: 0, 1: -2, 2: -1, 3: 0, 4: 2, 5: 1, 6: 0}
 FRONT_SWING = {0: 0, 1: 1, 2: 1, 3: 0, 4: -1, 5: -1, 6: 0}
 
 
 def draw_head(c: Canvas, view: str, bob: int) -> None:
     y0 = 10 + bob
-    if view == "front":       # S
+    if view == "front":
         c.rect(CX - 4, y0, CX + 3, y0 + 3, BEANIE)
         c.hline(CX - 4, CX + 3, y0 + 3, BEANIE_D)
         c.rect(CX - 4, y0 + 4, CX + 3, y0 + 7, SKIN)
@@ -718,7 +875,7 @@ def draw_head(c: Canvas, view: str, bob: int) -> None:
         c.hline(CX - 4, CX + 3, y0 + 7, SKIN_SH)
         c.set(CX - 2, y0 + 5, OUTLINE)
         c.set(CX + 1, y0 + 5, OUTLINE)
-    elif view == "front34":   # SE
+    elif view == "front34":
         c.rect(CX - 3, y0, CX + 4, y0 + 3, BEANIE)
         c.hline(CX - 3, CX + 4, y0 + 3, BEANIE_D)
         c.rect(CX - 3, y0 + 4, CX + 4, y0 + 7, SKIN)
@@ -726,7 +883,7 @@ def draw_head(c: Canvas, view: str, bob: int) -> None:
         c.hline(CX - 3, CX + 4, y0 + 7, SKIN_SH)
         c.set(CX, y0 + 5, OUTLINE)
         c.set(CX + 3, y0 + 5, OUTLINE)
-    elif view == "side":      # E
+    elif view == "side":
         c.rect(CX - 3, y0, CX + 3, y0 + 3, BEANIE)
         c.hline(CX - 3, CX + 3, y0 + 3, BEANIE_D)
         c.rect(CX - 3, y0 + 4, CX - 1, y0 + 7, SKIN_SH)
@@ -735,12 +892,12 @@ def draw_head(c: Canvas, view: str, bob: int) -> None:
         c.set(CX + 4, y0 + 6, SKIN_SH)
         c.set(CX + 2, y0 + 5, OUTLINE)
         c.hline(CX - 3, CX + 3, y0 + 7, SKIN_SH)
-    elif view == "back34":    # NE
+    elif view == "back34":
         c.rect(CX - 3, y0, CX + 4, y0 + 4, BEANIE)
         c.hline(CX - 3, CX + 4, y0 + 4, BEANIE_D)
         c.rect(CX - 3, y0 + 5, CX + 4, y0 + 7, BEANIE_D)
         c.set(CX + 4, y0 + 6, SKIN_SH)
-    elif view == "back":      # N
+    elif view == "back":
         c.rect(CX - 4, y0, CX + 3, y0 + 4, BEANIE)
         c.hline(CX - 4, CX + 3, y0 + 4, BEANIE_D)
         c.rect(CX - 4, y0 + 5, CX + 3, y0 + 7, BEANIE_D)
@@ -784,23 +941,25 @@ def draw_pack(c: Canvas, view: str, bob: int) -> None:
 
 
 def draw_arms(c: Canvas, view: str, bob: int, frame: int) -> None:
+    # both arms the same jacket tone: asymmetric arm shading reads as a bug
+    # at this size, and mirrored direction rows make it jump sides
     y0 = 19 + bob
     if view in ("front", "back"):
         swing = FRONT_SWING[frame]
         for side, sw in ((-1, swing), (1, -swing)):
             x = CX + (side * 6) - (1 if side < 0 else 0)
             yy = y0 + (1 if sw > 0 else 0)
-            c.rect(x, yy, x + 1, yy + 8, JKT if side < 0 else JKT_D)
+            c.rect(x, yy, x + 1, yy + 8, JKT)
             c.rect(x, yy + 9, x + 1, yy + 10, SKIN if view == "front" else SKIN_SH)
     elif view in ("front34", "back34"):
         swing = FRONT_SWING[frame]
         for side, sw in ((-1, swing), (1, -swing)):
             x = CX + (5 * side) + (0 if side < 0 else -1) + sw
-            c.rect(x, y0, x + 1, y0 + 8, JKT if side < 0 else JKT_D)
+            c.rect(x, y0, x + 1, y0 + 8, JKT)
             c.rect(x, y0 + 9, x + 1, y0 + 10, SKIN)
-    else:  # side: near arm swings along facing
+    else:
         x = CX + 1 + SIDE_SWING[frame]
-        c.rect(x, y0, x + 1, y0 + 8, JKT_D)
+        c.rect(x, y0, x + 1, y0 + 8, JKT)
         c.rect(x, y0 + 9, x + 1, y0 + 10, SKIN)
 
 
@@ -812,7 +971,7 @@ def draw_legs(c: Canvas, view: str, frame: int) -> None:
             c.rect(x0, 28, x0 + 2, 33 + dy, pcol)
             c.rect(x0, 34 + dy, x0 + 2, 36 + dy, BOOT)
             c.hline(x0, x0 + 2, FEET + dy, BOOT_D)
-    else:  # side view: scissor stride toward +x
+    else:
         front_dx, back_dx, front_lift, back_lift = SIDE_STRIDE[frame]
         for dx, lift, pcol, bcol in ((back_dx, back_lift, PANT_D, BOOT),
                                      (front_dx, front_lift, PANT, BOOT)):
@@ -863,6 +1022,71 @@ def make_char_sheet() -> Image.Image:
             sheet.paste(fc.img, (frame * 32, row * 40))
     return sheet
 
+# ------------------------------------------------------------ menu assets ----
+
+def make_title() -> Image.Image:
+    """Big SPOILS wordmark for the main menu, two-tone + shadow."""
+    font5x7 = {
+        "S": [" ####", "#    ", "#    ", " ### ", "    #", "    #", "#### "],
+        "P": ["#### ", "#   #", "#   #", "#### ", "#    ", "#    ", "#    "],
+        "O": [" ### ", "#   #", "#   #", "#   #", "#   #", "#   #", " ### "],
+        "I": ["#####", "  #  ", "  #  ", "  #  ", "  #  ", "  #  ", "#####"],
+        "L": ["#    ", "#    ", "#    ", "#    ", "#    ", "#    ", "#####"],
+    }
+    word = "SPOILS"
+    scale = 6
+    w1, h1 = len(word) * 6 - 1, 7
+    text = Image.new("RGBA", (w1 + 2, h1 + 2), (0, 0, 0, 0))
+    for i, ch in enumerate(word):
+        for y, row in enumerate(font5x7[ch]):
+            for x, cell in enumerate(row):
+                if cell == "#":
+                    col = C("ebede9") if y < 4 else C("819796")
+                    text.putpixel((i * 6 + x + 1, y + 1), col)
+    px = text.load()
+    for y in range(text.height):  # outline
+        for x in range(text.width):
+            if px[x, y][3] == 0:
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    nx, ny = x + dx, y + dy
+                    if 0 <= nx < text.width and 0 <= ny < text.height and \
+                            px[nx, ny][3] > 0 and px[nx, ny][:3] != OUTLINE[:3]:
+                        px[x, y] = OUTLINE
+                        break
+    big = text.resize((text.width * scale, text.height * scale), Image.NEAREST)
+    title = Image.new("RGBA", (big.width + 4, big.height + 10), (0, 0, 0, 0))
+    shadow = Image.new("RGBA", big.size, (0, 0, 0, 0))
+    spx, bpx = shadow.load(), big.load()
+    for y in range(big.height):
+        for x in range(big.width):
+            if bpx[x, y][3] > 0:
+                spx[x, y] = (9, 10, 20, 140)
+    title.paste(shadow, (4, 8), shadow)
+    title.paste(big, (0, 0), big)
+    return title
+
+def make_vignette() -> Image.Image:
+    """Soft radial darkening for menus. Smooth alpha by design (not palette)."""
+    w, h = 960, 544
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    px = img.load()
+    for y in range(h):
+        for x in range(w):
+            dx = (x - w / 2) / (w * 0.62)
+            dy = (y - h / 2) / (h * 0.62)
+            d = dx * dx + dy * dy
+            a = int(max(0.0, min(1.0, (d - 0.25) * 1.6)) * 205)
+            if a > 0:
+                px[x, y] = (9, 10, 20, a)
+    return img
+
+def make_dust() -> Image.Image:
+    img = Image.new("RGBA", (3, 3), (0, 0, 0, 0))
+    img.putpixel((1, 1), (255, 255, 255, 255))
+    for p in ((0, 1), (2, 1), (1, 0), (1, 2)):
+        img.putpixel(p, (255, 255, 255, 90))
+    return img
+
 # ---------------------------------------------------------------- output -----
 
 def assert_palette(img: Image.Image, name: str) -> None:
@@ -879,34 +1103,39 @@ def main() -> None:
     for stale in OUT.glob("*.png"):
         stale.unlink()
 
-    manifest: dict = {"tile": [64, 32], "floors": {}, "props": {}, "char": {}}
+    manifest: dict = {"tile": [64, 32], "wall_h": WALL_H,
+                      "floors": {}, "props": {}, "families": {}, "char": {}}
 
     floors, coords = make_floors_atlas()
     assert_palette(floors, "floors")
     floors.save(OUT / "floors.png")
     manifest["floors"] = coords
 
-    props: dict[str, tuple[Canvas, tuple[int, int]]] = {
-        "crate_wood": (make_crate_wood(), (16, 20)),
-        "crate_ammo": (make_crate_ammo(), (18, 18)),
-        "dumpster": (make_dumpster(), (20, 26)),
-        "barrel_rust": (make_barrel_rust(), (11, 27)),
-        "gas_cylinder": (make_gas_cylinder(), (7, 33)),
-        "tire_stack": (make_tire_stack(), (15, 24)),
-        "pallet": (make_pallet(), (19, 13)),
-        "rubble_a": (make_rubble(0), (24, 20)),
-        "rubble_b": (make_rubble(1), (24, 20)),
-        "pillar": (make_pillar(), (9, 50)),
-        "shadow": (make_shadow(), (12, 6)),
-    }
-    for piece_name, canvas in wall_piece_inventory().items():
-        props[piece_name] = (canvas, WALL_ORIGIN)
+    entries: dict = {}
+    props, families = prop_inventory()
+    for name, (canvas, origin, collider) in props.items():
+        entries[name] = (canvas, origin, collider)
+    for name, canvas in wall_piece_inventory().items():
+        entries[name] = (canvas, WALL_ORIGIN, ["diamond", 32.0, 16.0])
+    entries["roof_tile_0"] = (make_roof_tile(0), (32, 16), None)
+    entries["roof_tile_1"] = (make_roof_tile(1), (32, 16), None)
+    entries["roof_vent"] = (make_roof_vent(), (12, 15), None)
+    entries["roof_hatch"] = (make_roof_hatch(), (10, 8), None)
+    entries["shadow"] = (make_shadow(), (12, 6), None)
 
-    for name, (canvas, origin) in props.items():
+    grabber = Canvas(8, 12)  # HSlider knob for the UI theme
+    grabber.rect(0, 0, 7, 11, C("090a14"))
+    grabber.rect(1, 1, 6, 10, C("c7cfcc"))
+    grabber.rect(1, 9, 6, 10, C("819796"))
+    entries["ui_grabber"] = (grabber, (4, 6), None)
+
+    for name, (canvas, origin, collider) in entries.items():
         if name != "shadow":
             assert_palette(canvas.img, name)
         canvas.img.save(OUT / f"{name}.png")
-        manifest["props"][name] = {"size": [canvas.w, canvas.h], "origin": list(origin)}
+        manifest["props"][name] = {
+            "size": [canvas.w, canvas.h], "origin": list(origin), "collider": collider}
+    manifest["families"] = families
 
     sheet = make_char_sheet()
     assert_palette(sheet, "char")
@@ -916,25 +1145,31 @@ def main() -> None:
         "dirs": [d for d, _, _ in DIR_VIEWS],
     }
 
+    make_title().save(OUT / "title.png")          # white/palette mix, UI-tinted
+    make_vignette().save(OUT / "vignette.png")    # soft alpha by design
+    make_dust().save(OUT / "dust.png")            # white, tinted at runtime
+
     (OUT / "manifest.json").write_text(json.dumps(manifest, indent=2))
 
-    # ---- 3x contact sheet for review ----
+    import gen_font  # regenerate the UI font too (the purge above removed it)
+    gen_font.main()
+
+    # ---- contact sheet ----
     def x3(img: Image.Image) -> Image.Image:
         return img.resize((img.width * 3, img.height * 3), Image.NEAREST)
 
     pad = 12
-    show_props = ["crate_wood", "crate_ammo", "dumpster", "barrel_rust",
-                  "gas_cylinder", "tire_stack", "pallet", "rubble_a", "rubble_b",
-                  "pillar"]
-    show_walls = ["wall_brick_a_m0000", "wall_brick_a_m1100", "wall_brick_a_m0011",
-                  "wall_brick_a_m1001", "wall_brick_a_win_x", "wall_brick_a_win_y",
-                  "wall_brick_a_broken_a", "wall_brick_b_m0000", "wall_brick_b_win_x",
-                  "wall_brick_b_broken_b"]
-    rows_imgs: list[list[Image.Image]] = [
+    show_walls = ["wall_brick_a_m0000", "wall_brick_a_m1100", "wall_brick_a_win_x_0",
+                  "wall_brick_a_win_x_1", "wall_brick_a_win_x_2", "wall_brick_a_win_y_0",
+                  "wall_brick_a_broken_a", "wall_brick_b_m0000", "wall_brick_b_win_y_1",
+                  "roof_vent", "roof_hatch", "roof_tile_0"]
+    fam_show = [n for fam in families.values() for n in fam]
+    rows_imgs = [
         [x3(floors)],
-        [x3(props[n][0].img) for n in show_walls],
-        [x3(props[n][0].img) for n in show_props],
-        [x3(sheet)],
+        [x3(entries[n][0].img) for n in show_walls],
+        [x3(entries[n][0].img) for n in fam_show[:16]],
+        [x3(entries[n][0].img) for n in fam_show[16:]],
+        [x3(sheet), make_title()],
     ]
     W = max(sum(i.width + pad for i in row) for row in rows_imgs) + pad
     Hh = sum(max(i.height for i in row) + pad for row in rows_imgs) + pad
@@ -949,7 +1184,7 @@ def main() -> None:
         ycur += rh + pad
     prev.save(OUT / "preview.png")
 
-    print(f"OK: wrote {len(props) + 3} files to {OUT}")
+    print(f"OK: wrote {len(entries) + 6} files to {OUT}")
 
 if __name__ == "__main__":
     main()

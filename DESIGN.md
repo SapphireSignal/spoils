@@ -126,12 +126,19 @@ than being scattered through UI/input code — so a server can own them later. N
 - **Godot 4.7.1 Windows export templates already installed** (`%APPDATA%\Godot\export_templates\4.7.1.stable\`)
   — shipping a standalone .exe needs no downloads.
 - **Deliberately absent:** Aseprite, Tiled, Audacity (removed at user request — do not reinstall).
-- Current project state: **Milestone 1 built and user-playtested** (git repo, Play.bat,
-  smoke + shot harnesses all working). After playtest feedback: ground tiles are
-  edge-less/low-contrast (no visible grid), buildings are brick with neighbor-masked
-  wall pieces (continuous runs, not cubes), props have distinct silhouettes, walk cycle
-  is 6 frames @ 10fps, and the camera is manually smoothed then pixel-snapped
-  (fractional camera scroll = whole-screen shimmer at 640x360 — never regress this).
+- Current project state: **v0.4.0** — Milestone 1 plus two user-feedback passes.
+  GitHub repo (private): https://github.com/SapphireSignal/spoils. Established
+  conventions that must not regress:
+  - Camera locked to whole pixels; ALL motion updates in `_process` (see Display note).
+  - UI text uses the generated bitmap font (`tools/gen_font.py`) via `UITheme` —
+    never Godot's default vector font (blurry at 1x).
+  - Prop sprites, origins, collision shapes and variant families come from
+    `art/gen/manifest.json`; the game hardcodes none of it. Props vary per
+    instance (parameterized generators, incl. fallen/toppled poses).
+  - Buildings: neighbor-masked brick wall pieces, varied windows, tar roofs with
+    a RoofReveal group that fades when the player's tile is inside the footprint.
+  - Boot scene is the main menu (`scenes/menu.tscn`) — live world background.
+    Harness auto-switches to the game scene for smoke/shots (`--scene=menu` to stay).
 
 ## 7. Self-verification requirements (non-negotiable)
 

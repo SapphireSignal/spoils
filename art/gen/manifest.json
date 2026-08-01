@@ -3,6 +3,7 @@
     64,
     32
   ],
+  "wall_h": 40,
   "floors": {
     "concrete_0": [
       0,
@@ -86,7 +87,138 @@
     ]
   },
   "props": {
-    "crate_wood": {
+    "barrel_0": {
+      "size": [
+        24,
+        36
+      ],
+      "origin": [
+        12,
+        32
+      ],
+      "collider": [
+        "circle",
+        9.0
+      ]
+    },
+    "barrel_1": {
+      "size": [
+        22,
+        32
+      ],
+      "origin": [
+        11,
+        28
+      ],
+      "collider": [
+        "circle",
+        8.0
+      ]
+    },
+    "barrel_2": {
+      "size": [
+        24,
+        36
+      ],
+      "origin": [
+        12,
+        32
+      ],
+      "collider": [
+        "circle",
+        9.0
+      ]
+    },
+    "barrel_3": {
+      "size": [
+        20,
+        35
+      ],
+      "origin": [
+        10,
+        31
+      ],
+      "collider": [
+        "circle",
+        7.0
+      ]
+    },
+    "barrel_4": {
+      "size": [
+        35,
+        24
+      ],
+      "origin": [
+        16,
+        18
+      ],
+      "collider": [
+        "diamond",
+        14.5,
+        6.0
+      ]
+    },
+    "barrel_5": {
+      "size": [
+        38,
+        26
+      ],
+      "origin": [
+        18,
+        20
+      ],
+      "collider": [
+        "diamond",
+        16.0,
+        7.0
+      ]
+    },
+    "crate_0": {
+      "size": [
+        36,
+        33
+      ],
+      "origin": [
+        18,
+        22
+      ],
+      "collider": [
+        "diamond",
+        17.0,
+        9.0
+      ]
+    },
+    "crate_1": {
+      "size": [
+        36,
+        32
+      ],
+      "origin": [
+        18,
+        21
+      ],
+      "collider": [
+        "diamond",
+        17.0,
+        9.0
+      ]
+    },
+    "crate_2": {
+      "size": [
+        36,
+        32
+      ],
+      "origin": [
+        18,
+        21
+      ],
+      "collider": [
+        "diamond",
+        17.0,
+        9.0
+      ]
+    },
+    "crate_3": {
       "size": [
         32,
         30
@@ -94,106 +226,304 @@
       "origin": [
         16,
         20
+      ],
+      "collider": [
+        "diamond",
+        15.0,
+        8.0
       ]
     },
-    "crate_ammo": {
+    "crate_4": {
+      "size": [
+        32,
+        29
+      ],
+      "origin": [
+        16,
+        19
+      ],
+      "collider": [
+        "diamond",
+        15.0,
+        8.0
+      ]
+    },
+    "crate_5": {
       "size": [
         36,
-        30
+        31
       ],
       "origin": [
         18,
-        18
-      ]
-    },
-    "dumpster": {
-      "size": [
-        40,
-        38
+        20
       ],
-      "origin": [
-        20,
-        26
+      "collider": [
+        "diamond",
+        17.0,
+        9.0
       ]
     },
-    "barrel_rust": {
-      "size": [
-        22,
-        32
-      ],
-      "origin": [
-        11,
-        27
-      ]
-    },
-    "gas_cylinder": {
+    "cylinder_0": {
       "size": [
         14,
-        38
+        36
       ],
       "origin": [
         7,
-        33
+        31
+      ],
+      "collider": [
+        "circle",
+        4.0
       ]
     },
-    "tire_stack": {
+    "cylinder_1": {
+      "size": [
+        14,
+        36
+      ],
+      "origin": [
+        7,
+        31
+      ],
+      "collider": [
+        "circle",
+        4.0
+      ]
+    },
+    "cylinder_2": {
+      "size": [
+        14,
+        37
+      ],
+      "origin": [
+        7,
+        32
+      ],
+      "collider": [
+        "circle",
+        4.0
+      ]
+    },
+    "cylinder_3": {
+      "size": [
+        44,
+        16
+      ],
+      "origin": [
+        20,
+        12
+      ],
+      "collider": [
+        "diamond",
+        18.0,
+        4.0
+      ]
+    },
+    "tires_0": {
       "size": [
         30,
         28
       ],
       "origin": [
         15,
-        24
+        22
+      ],
+      "collider": [
+        "circle",
+        7.0
       ]
     },
-    "pallet": {
+    "tires_1": {
+      "size": [
+        30,
+        22
+      ],
+      "origin": [
+        15,
+        16
+      ],
+      "collider": [
+        "circle",
+        7.0
+      ]
+    },
+    "tires_2": {
+      "size": [
+        30,
+        16
+      ],
+      "origin": [
+        15,
+        10
+      ],
+      "collider": [
+        "circle",
+        6.0
+      ]
+    },
+    "tires_3": {
+      "size": [
+        22,
+        24
+      ],
+      "origin": [
+        11,
+        22
+      ],
+      "collider": [
+        "circle",
+        6.0
+      ]
+    },
+    "pallet_0": {
       "size": [
         38,
-        24
+        28
       ],
       "origin": [
         19,
-        13
-      ]
+        17
+      ],
+      "collider": null
     },
-    "rubble_a": {
+    "pallet_1": {
       "size": [
-        48,
-        26
+        38,
+        28
       ],
       "origin": [
-        24,
-        20
-      ]
+        19,
+        17
+      ],
+      "collider": null
     },
-    "rubble_b": {
+    "pallet_2": {
       "size": [
-        48,
-        26
+        38,
+        28
       ],
       "origin": [
-        24,
-        20
+        19,
+        17
+      ],
+      "collider": null
+    },
+    "dumpster_0": {
+      "size": [
+        44,
+        44
+      ],
+      "origin": [
+        21,
+        34
+      ],
+      "collider": [
+        "diamond",
+        19.0,
+        10.0
       ]
     },
-    "pillar": {
+    "dumpster_1": {
+      "size": [
+        44,
+        44
+      ],
+      "origin": [
+        21,
+        34
+      ],
+      "collider": [
+        "diamond",
+        19.0,
+        10.0
+      ]
+    },
+    "rubble_0": {
+      "size": [
+        38,
+        20
+      ],
+      "origin": [
+        19,
+        16
+      ],
+      "collider": null
+    },
+    "rubble_1": {
+      "size": [
+        52,
+        23
+      ],
+      "origin": [
+        26,
+        19
+      ],
+      "collider": null
+    },
+    "rubble_2": {
+      "size": [
+        64,
+        27
+      ],
+      "origin": [
+        32,
+        23
+      ],
+      "collider": null
+    },
+    "rubble_3": {
+      "size": [
+        64,
+        27
+      ],
+      "origin": [
+        32,
+        23
+      ],
+      "collider": null
+    },
+    "pillar_0": {
       "size": [
         18,
         54
       ],
       "origin": [
         9,
-        50
+        48
+      ],
+      "collider": [
+        "circle",
+        6.0
       ]
     },
-    "shadow": {
+    "pillar_1": {
       "size": [
-        24,
-        12
+        18,
+        36
       ],
       "origin": [
-        12,
-        6
+        9,
+        30
+      ],
+      "collider": [
+        "circle",
+        6.0
+      ]
+    },
+    "pillar_2": {
+      "size": [
+        52,
+        20
+      ],
+      "origin": [
+        26,
+        16
+      ],
+      "collider": [
+        "diamond",
+        22.0,
+        5.0
       ]
     },
     "wall_brick_a_m0000": {
@@ -204,6 +534,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_a_m1000": {
@@ -214,6 +549,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_a_m0100": {
@@ -224,6 +564,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_a_m1100": {
@@ -234,6 +579,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_a_m0010": {
@@ -244,6 +594,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_a_m1010": {
@@ -254,6 +609,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_a_m0110": {
@@ -264,6 +624,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_a_m1110": {
@@ -274,6 +639,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_a_m0001": {
@@ -284,6 +654,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_a_m1001": {
@@ -294,6 +669,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_a_m0101": {
@@ -304,6 +684,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_a_m1101": {
@@ -314,6 +699,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_a_m0011": {
@@ -324,6 +714,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_a_m1011": {
@@ -334,6 +729,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_a_m0111": {
@@ -344,6 +744,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_a_m1111": {
@@ -354,9 +759,14 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
-    "wall_brick_a_win_x": {
+    "wall_brick_a_win_x_0": {
       "size": [
         66,
         74
@@ -364,9 +774,14 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
-    "wall_brick_a_win_y": {
+    "wall_brick_a_win_y_0": {
       "size": [
         66,
         74
@@ -374,6 +789,71 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
+      ]
+    },
+    "wall_brick_a_win_x_1": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
+      ]
+    },
+    "wall_brick_a_win_y_1": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
+      ]
+    },
+    "wall_brick_a_win_x_2": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
+      ]
+    },
+    "wall_brick_a_win_y_2": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_a_broken_a": {
@@ -384,6 +864,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_a_broken_b": {
@@ -394,6 +879,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_b_m0000": {
@@ -404,6 +894,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_b_m1000": {
@@ -414,6 +909,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_b_m0100": {
@@ -424,6 +924,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_b_m1100": {
@@ -434,6 +939,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_b_m0010": {
@@ -444,6 +954,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_b_m1010": {
@@ -454,6 +969,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_b_m0110": {
@@ -464,6 +984,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_b_m1110": {
@@ -474,6 +999,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_b_m0001": {
@@ -484,6 +1014,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_b_m1001": {
@@ -494,6 +1029,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_b_m0101": {
@@ -504,6 +1044,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_b_m1101": {
@@ -514,6 +1059,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_b_m0011": {
@@ -524,6 +1074,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_b_m1011": {
@@ -534,6 +1089,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_b_m0111": {
@@ -544,6 +1104,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_b_m1111": {
@@ -554,9 +1119,14 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
-    "wall_brick_b_win_x": {
+    "wall_brick_b_win_x_0": {
       "size": [
         66,
         74
@@ -564,9 +1134,14 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
-    "wall_brick_b_win_y": {
+    "wall_brick_b_win_y_0": {
       "size": [
         66,
         74
@@ -574,6 +1149,71 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
+      ]
+    },
+    "wall_brick_b_win_x_1": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
+      ]
+    },
+    "wall_brick_b_win_y_1": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
+      ]
+    },
+    "wall_brick_b_win_x_2": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
+      ]
+    },
+    "wall_brick_b_win_y_2": {
+      "size": [
+        66,
+        74
+      ],
+      "origin": [
+        33,
+        57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_b_broken_a": {
@@ -584,6 +1224,11 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
     },
     "wall_brick_b_broken_b": {
@@ -594,8 +1239,129 @@
       "origin": [
         33,
         57
+      ],
+      "collider": [
+        "diamond",
+        32.0,
+        16.0
       ]
+    },
+    "roof_tile_0": {
+      "size": [
+        64,
+        32
+      ],
+      "origin": [
+        32,
+        16
+      ],
+      "collider": null
+    },
+    "roof_tile_1": {
+      "size": [
+        64,
+        32
+      ],
+      "origin": [
+        32,
+        16
+      ],
+      "collider": null
+    },
+    "roof_vent": {
+      "size": [
+        24,
+        22
+      ],
+      "origin": [
+        12,
+        15
+      ],
+      "collider": null
+    },
+    "roof_hatch": {
+      "size": [
+        20,
+        14
+      ],
+      "origin": [
+        10,
+        8
+      ],
+      "collider": null
+    },
+    "shadow": {
+      "size": [
+        24,
+        12
+      ],
+      "origin": [
+        12,
+        6
+      ],
+      "collider": null
+    },
+    "ui_grabber": {
+      "size": [
+        8,
+        12
+      ],
+      "origin": [
+        4,
+        6
+      ],
+      "collider": null
     }
+  },
+  "families": {
+    "barrel": [
+      "barrel_0",
+      "barrel_1",
+      "barrel_2",
+      "barrel_3",
+      "barrel_4",
+      "barrel_5"
+    ],
+    "crate": [
+      "crate_0",
+      "crate_1",
+      "crate_2",
+      "crate_3",
+      "crate_4",
+      "crate_5"
+    ],
+    "cylinder": [
+      "cylinder_0",
+      "cylinder_1",
+      "cylinder_2",
+      "cylinder_3"
+    ],
+    "tires": [
+      "tires_0",
+      "tires_1",
+      "tires_2",
+      "tires_3"
+    ],
+    "pallet": [
+      "pallet_0",
+      "pallet_1",
+      "pallet_2"
+    ],
+    "dumpster": [
+      "dumpster_0",
+      "dumpster_1"
+    ],
+    "rubble": [
+      "rubble_0",
+      "rubble_1",
+      "rubble_2",
+      "rubble_3"
+    ],
+    "pillar": [
+      "pillar_0",
+      "pillar_1",
+      "pillar_2"
+    ]
   },
   "char": {
     "frame": [
