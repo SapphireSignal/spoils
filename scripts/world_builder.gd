@@ -1436,23 +1436,6 @@ func _clutter_spot_free(at: Vector2) -> bool:
 		or _plaza.has(cell) or _apron.has(cell) or _sidewalk.has(cell))
 
 
-func _scatter_around(families: Array, cell: Vector2i, count: int,
-		spread: float = 22.0) -> void:
-	## Loose debris around a landmark: mixed families, uneven spacing, and
-	## a bias toward one side so it never reads as a halo.
-	var base := _floor_layer.map_to_local(cell)
-	var bias := Vector2(_rng.randf_range(-1.0, 1.0), _rng.randf_range(-1.0, 1.0))
-	for i in count:
-		var family: String = families[_rng.randi_range(0, families.size() - 1)]
-		if not _families.has(family):
-			continue
-		var at := base + bias * _rng.randf_range(0.0, spread) \
-			+ _clutter_offset(spread * 0.7)
-		if not _clutter_spot_free(at):
-			continue
-		_add_prop(_pick_variant_varied(family), at)
-
-
 func _take_random_cell(cells: Array[Vector2i]) -> Vector2i:
 	var index := _rng.randi_range(0, cells.size() - 1)
 	var cell: Vector2i = cells[index]
@@ -3121,7 +3104,7 @@ func _bake_map_image() -> Image:
 			elif _plaza.has(cell):
 				col = Color("819796")
 			elif _apron.has(cell):
-				col = Color("2a3540") if false else Color("151d28")
+				col = Color("151d28")
 			elif _forest.has(cell):
 				col = Color("19332d")
 			elif _dirt_path.has(cell):

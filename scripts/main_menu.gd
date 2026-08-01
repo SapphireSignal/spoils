@@ -66,6 +66,11 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.44", ["housekeeping: the audits verified a pile of code that",
+		"nothing calls anymore - unused helpers, signals nobody",
+		"listens to, art nothing ever places - all deleted",
+		"the game draws and plays exactly the same, theres just",
+		"less of it left to go wrong"]],
 	["v0.6.43", ["the sweep, part two - fifteen more, none silent:",
 		"dying on the rope used to strand the helicopter in the",
 		"sky and quietly kill every later way out of the raid",

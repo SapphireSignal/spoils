@@ -133,13 +133,6 @@ def check_tessellation() -> None:
     assert all(v == 1 for v in counts.values()) and len(counts) == 64 * 32, \
         "iso diamond does not tessellate"
 
-def diamond_bottom_y(x: int) -> int:
-    best = -1
-    for y in range(32):
-        if in_diamond(x, y):
-            best = y
-    return best
-
 # --------------------------------------------------------------- floors ------
 
 CONC_D2, CONC_D1, CONC_BASE, CONC_L1, CONC_L2 = (
@@ -567,8 +560,11 @@ FLOOR_TILES = [
     ("manhole_0", ("manhole", 0)),
     ("ballast_0", ("ballast", 0)), ("ballast_1", ("ballast", 1)),
     ("ballast_2", ("ballast", 2)),
-    ("rail_x", ("rail_x", 0)), ("rail_y", ("rail_y", 0)),
-    ("rail_cross_x", ("rail_cross_x", 0)), ("rail_cross_y", ("rail_cross_y", 0)),
+    # the y-axis rail tiles are gone from the registry, not the maker: the
+    # district only ever runs rail on x, and the maker stays parameterized
+    # for a future map that doesn't
+    ("rail_x", ("rail_x", 0)),
+    ("rail_cross_x", ("rail_cross_x", 0)),
     ("plaza_0", ("plaza", 0)), ("plaza_1", ("plaza", 1)), ("plaza_2", ("plaza", 2)),
 ]
 
@@ -4565,13 +4561,9 @@ def prop_inventory() -> tuple[dict, dict]:
         bus_se = make_vehicle("bus", scheme, rev=True, broken=broken)
         fam("bus_nw", i, bus_nw)
         fam("bus_se", i, bus_se)
-        fam("bus_ne", i, mirror_prop(bus_nw))
-        fam("bus_sw", i, mirror_prop(bus_se))
     # trainyard rolling stock
     for i, (scheme, broken) in enumerate([(0, False), (1, False), (2, False), (0, True)]):
-        art = make_boxcar(scheme, broken)
-        fam("boxcar_x", i, art)
-        fam("boxcar_y", i, mirror_prop(art))
+        fam("boxcar_x", i, make_boxcar(scheme, broken))
     buffer_art = make_buffer_stop()
     fam("buffer_stop", 0, buffer_art)
     fam("buffer_stop", 1, mirror_prop(buffer_art))
@@ -4607,9 +4599,7 @@ def prop_inventory() -> tuple[dict, dict]:
         fam("newsbox", i, make_newsbox(i))
     # the gallery
     for i in range(3):
-        art = make_graffiti_wall(i)
-        fam("graffiti_x", i, art)
-        fam("graffiti_y", i, mirror_prop(art))
+        fam("graffiti_x", i, make_graffiti_wall(i))
     for i in range(4):
         fam("spray_cans", i, make_spray_cans(i))
     props["smoker"] = make_smoker_sheet()
@@ -5368,90 +5358,6 @@ def make_title() -> tuple[Image.Image, Image.Image, Image.Image]:
 
 SCENE_W, SCENE_H = 960, 544
 
-def _dither_fill(c: Canvas, x0: int, y0: int, x1: int, y1: int, col, density: float,
-                 rng: random.Random) -> None:
-    for y in range(y0, y1 + 1):
-        for x in range(x0, x1 + 1):
-            if rng.random() < density:
-                c.set(x, y, col)
-
-def _vgrad(c: Canvas, bands: list[tuple], rng: random.Random | None = None,
-           seam: int = 26) -> None:
-    """bands: [(until_y, color)] — vertical bands. Seams blend over a WIDE
-    noisy zone (probability ramp) so the sky reads as a gradient, not
-    stripes — the old 6px ordered dither still striped at menu scale."""
-    prev_y = 0
-    for bi, (until_y, col) in enumerate(bands):
-        for y in range(prev_y, until_y):
-            for x in range(SCENE_W):
-                c.set(x, y, col)
-        prev_y = until_y
-    if rng is None:
-        rng = random.Random(f"{SEED}:vgrad")
-    # WAVY solid seams, no dot-dither (user call: no little dots anywhere):
-    # each band boundary is a slow organic curve instead of a straight line
-    for bi in range(len(bands) - 1):
-        until_y, col = bands[bi]
-        nxt = bands[bi + 1][1]
-        t1 = rng.uniform(70.0, 150.0)
-        t2 = rng.uniform(23.0, 47.0)
-        p1 = rng.uniform(0.0, math.tau)
-        p2 = rng.uniform(0.0, math.tau)
-        for x in range(SCENE_W):
-            edge = until_y + int(seam * 0.7 * math.sin(x / t1 + p1)
-                                 + seam * 0.3 * math.sin(x / t2 + p2))
-            for y in range(min(edge, until_y), max(edge, until_y)):
-                c.set(x, y, nxt if edge < until_y else col)
-
-def _paste(c: Canvas, img: Image.Image, x: int, y: int) -> None:
-    c.img.alpha_composite(img, (x, y))
-    c.px = c.img.load()
-
-def _skyline_row(c: Canvas, rng: random.Random, y_base: int, h_lo: int, h_hi: int,
-                 col, w_lo: int = 18, w_hi: int = 44, gap_lo: int = 2,
-                 gap_hi: int = 10) -> list[tuple[int, int, int]]:
-    """One receding row of building silhouettes; returns (x0, x1, top) blocks.
-    Every roofline is ROLLED (flat / notched / slanted / stepped, antennas,
-    water tanks, sagging corners) — the old uniform crenellation read as one
-    repeating castle wall."""
-    blocks: list[tuple[int, int, int]] = []
-    x = -rng.randint(0, 20)
-    while x < SCENE_W:
-        w = rng.randint(w_lo, w_hi)
-        h = rng.randint(h_lo, h_hi)
-        top = y_base - h
-        style = rng.randrange(5)
-        notch_p = rng.choice((5, 7, 9))
-        slant = rng.uniform(-0.25, 0.25)
-        sag = rng.randint(2, 5) if rng.random() < 0.25 else 0
-        for xx in range(max(0, x), min(SCENE_W, x + w)):
-            i = xx - x
-            step = 0
-            if style == 1 and (i // notch_p) % 2:
-                step = 3
-            elif style == 2:
-                step = int(i * slant) if slant > 0 else int((w - i) * -slant)
-            elif style == 3 and i > w * 0.6:
-                step = 4
-            if sag and (i < 3 or i > w - 4):
-                step += sag
-            for y in range(top + step, y_base + 2):
-                c.set(xx, y, col)
-        if rng.random() < 0.30:  # antenna mast
-            ax = x + rng.randint(2, max(3, w - 3))
-            if 0 <= ax < SCENE_W:
-                for y in range(top - rng.randint(5, 14), top):
-                    c.set(ax, y, col)
-        if rng.random() < 0.18 and w > 24:  # rooftop water tank
-            tx = x + rng.randint(3, w - 12)
-            c.rect(tx, top - 6, tx + 8, top - 1, col)
-            c.set(tx + 1, top, col)
-            c.set(tx + 7, top, col)
-        blocks.append((max(0, x), min(SCENE_W, x + w), top))
-        x += w + rng.randint(gap_lo, gap_hi)
-    return blocks
-
-
 def make_scene_drain() -> tuple[Canvas, Image.Image, Canvas]:
     """Menu 1 — THE DRAIN, side-on like a stage (the one-point perspective
     version never stopped reading as floating rings and a black pyramid):
@@ -5999,7 +5905,7 @@ def make_scene_den() -> tuple[Canvas, Image.Image, Canvas]:
     c.set(vx + 5, vy + 23, C("a53030"))
     c.set(vx + 7, vy + 23, C("a53030"))
     c.vline(vx + 17, vy + 14, vy + 46, C("253a5e"))     # cool rim
-    c.vline(vx - 4, vy + 14, vy + 46, C("2a2e37") if False else C("341c27"))
+    c.vline(vx - 4, vy + 14, vy + 46, C("341c27"))
     c.rect(vx - 9, vy + 24, vx - 3, vy + 29, C("394a50"))   # arm up to shelf
     c.rect(vx - 12, vy + 20, vx - 6, vy + 25, C("d7b594"))  # hand at a bottle
     c.rect(vx - 2, vy + 48, vx + 6, vy + 78, C("202e37"))   # legs
@@ -6083,7 +5989,7 @@ def make_scene_den() -> tuple[Canvas, Image.Image, Canvas]:
     c.rect(mx + 16, my + 14, mx + 18, my + 42, C("411d31"))
     c.vline(mx - 6, my + 14, my + 42, C("411d31"))       # shaded back
     c.rect(mx + 12, my + 20, mx + 30, my + 26, C("752438"))  # arm to the dial
-    c.hline(mx + 12, mx + 30, my + 20, C("df84a5") if False else C("a53030"))
+    c.hline(mx + 12, mx + 30, my + 20, C("a53030"))
     c.rect(mx + 28, my + 24, mx + 34, my + 29, C("d7b594"))  # hand on the knob
     c.rect(mx - 8, my + 44, mx + 16, my + 66, C("202e37"))   # legs, seated
     c.rect(mx - 10, my + 66, mx - 2, my + 72, C("10141f"))   # boot

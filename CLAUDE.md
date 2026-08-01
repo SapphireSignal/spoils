@@ -7,6 +7,18 @@ This file carries everything a fresh session needs that isn't in those two.
 
 ## Where we are
 
+- **Version v0.6.44 SHIPPED** (2026-08-01). **The sweep is COMPLETE**:
+  v0.6.42 = severe finds, v0.6.43 = the remaining fifteen, v0.6.44 =
+  the verified dead-code deletion. All three verified layout-identical
+  on transit-01 (probe diff + pixel diff; the one visible change was
+  the askew barricade that really was clipping the toll booth — gone).
+  Full art regen + reimport measured: ~5 s total (gen 2.5 s, import
+  2.2 s — regenerating everything every time is CHEAP, keep doing it).
+  NOTE: extraction now freezes the player via `player.extracting`
+  (movement is _process-driven; set_physics_process was a no-op), the
+  toll stand-down re-arms when you come back inside the wire or die,
+  and `Ui` lost its unused owns/top/changed API — only
+  open/close/any_open/blocks_gameplay/clear exist.
 - **Version v0.6.42 SHIPPED** (2026-08-01). v0.6.25→v0.6.42 all landed
   in one long session; CHANGELOG.md has the detail. What a fresh session
   most needs to know:
@@ -145,47 +157,30 @@ This file carries everything a fresh session needs that isn't in those two.
   prone/standing size, den board text, splash SHATTER pacing, all sound
   levels, day length (8-min offer stands), night darkness.
 
-## THE QUEUE (as of v0.6.42 — work straight down it)
+## THE QUEUE (as of v0.6.44 — work straight down it)
 
-1. **SWEEP PART TWO.** Three audits read every script; the severe finds
-   shipped in v0.6.42, ~15 more are written up with reproduction steps
-   in the session task list. Highlights: `edge_guard.stood_down` never
-   RESETS (pay the toll, walk back in, the whole ring stays blind);
-   `_heli` leaks + `_leaving` sticks if you die mid-lift;
-   `set_physics_process(false)` in extraction is a NO-OP (movement is in
-   `_process`); dying at the wheel leaves headlights burning;
-   night_freight re-parses the 137 KB manifest in the deploy tail;
-   `_bake_map_image`/`_map_vectors`/`_collect_*` run 65k-cell loops with
-   NO `await _tick()`; `_place_toll_gate` has no occupancy guard;
-   `_plan_safehouse` runs BEFORE the POI rects it tests against exist.
-   Plus a verified-safe DEAD list: `_scatter_around`, `zone_position`,
-   `in_range_of`, Door/Stairs `INTERACT_RANGE`, `TollDialog.closed`,
-   `ExtractScreen.dismissed`, `Ui.owns/top/changed`, map_view `INK`,
-   gen_art `_dither_fill/_vgrad/_paste/_skyline_row/diamond_bottom_y`,
-   families `bus_ne/bus_sw/boxcar_y/graffiti_y` and tiles
-   `rail_y/rail_cross_y` (rail only ever runs on x).
-2. **Yellow centreline still one lane off** — the user photographed it
+1. **Yellow centreline still one lane off** — the user photographed it
    with RED LINES showing the correct position. Fixed twice already by
    reasoning; verify EMPIRICALLY against that shot this time.
-3. **Roads shouldn't be a symmetrical grid** — some areas with no roads,
+2. **Roads shouldn't be a symmetrical grid** — some areas with no roads,
    and broken road ends with rubble where they cut off.
-4. **Bus shelters land on sidewalk CORNERS**, half in the road.
-5. **Interior lights at night**, some flickering, cable visibly pathed
+3. **Bus shelters land on sidewalk CORNERS**, half in the road.
+4. **Interior lights at night**, some flickering, cable visibly pathed
    to the power box (see the standing cable rule below).
-6. **Pines shed nothing** — by design (v0.6.31 excluded conifers so they
+5. **Pines shed nothing** — by design (v0.6.31 excluded conifers so they
    wouldn't drop broadleaf leaves), but a pine that drops nothing reads
    as dead. Give conifers NEEDLES; dead snags stay bare.
-7. **Flip vehicles so the FRONT faces left** — and swap headlight/brake
+6. **Flip vehicles so the FRONT faces left** — and swap headlight/brake
    colours + the manifest light coords across all 8 facings, the _door
    frames, and EXIT_OFFSET, or the alarm flashers light the wrong end.
-8. **Pickup bed** — shade the interior so it reads as a container, put a
+7. **Pickup bed** — shade the interior so it reads as a container, put a
    box in it, sample sheet across all angles.
-9. **Catalogue variety** — 2-variant families left (bench, dumpster,
+8. **Catalogue variety** — 2-variant families left (bench, dumpster,
    shelter, vending, newsbox, forklift, planter, swing) + singleton
    crane/sandbox. Deeper fix: parameterise builders so SHAPES differ,
    not just wear.
-10. **Changelog panel fps dip** — still unmeasured (the transit-load one
-    was the 233 ms preview.png stall, fixed in v0.6.41).
+9. **Changelog panel fps dip** — still unmeasured (the transit-load one
+   was the 233 ms preview.png stall, fixed in v0.6.41).
 
 ## PROCESS (learned the hard way this session)
 
@@ -630,9 +625,11 @@ then `godot_console --headless --path . --import`.
   `bake_wear()` (small solid patches, never dot noise) and
   `clutter_variants()` (per-copy seed + lean + wear; pads the canvas
   first or the second outline_auto clips). GDScript `_place_pile()`
-  (anchor + thinning satellites along a lean), `_scatter_around()`,
-  `_clutter_offset()` (WHOLE world px only) and `_pick_variant_varied()`
-  (never the same variant twice running).
+  (anchor + thinning satellites along a lean), `_clutter_offset()`
+  (WHOLE world px only) and `_pick_variant_varied()` (never the same
+  variant twice running). (`_scatter_around` was verified unused and
+  deleted in v0.6.44 — resurrect from git history if a real caller
+  ever appears.)
 - **THE MAP IS FIXED** (user call 2026-08-01, retroactive to day one):
   one canonical district per map, no procedural rerolls — quests point at
   real addresses, players learn streets. Layout changes ONLY as

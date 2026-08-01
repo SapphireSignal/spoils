@@ -5,7 +5,6 @@ extends CanvasLayer
 ## and the bone that ended it (user spec). The haul column is stubbed
 ## until the stash and the grid inventory land in M4.
 
-signal dismissed
 
 var _root: Control
 var _method_label: Label
@@ -121,5 +120,4 @@ func _leave() -> void:
 	visible = false
 	Ui.close(&"extract")
 	get_tree().paused = false
-	dismissed.emit()
 	get_tree().change_scene_to_file("res://scenes/menu.tscn")

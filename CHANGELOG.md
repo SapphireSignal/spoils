@@ -3,6 +3,36 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.44] — 2026-08-01 — taking out the dead code
+
+The audits' verified-safe dead list, deleted. No behavior change — the
+point is less surface for the next bug to hide in.
+
+### Removed — scripts
+- `world_builder._scatter_around` (the live scatter paths use
+  `_place_pile` / `_pick_variant_varied` directly), `extraction.
+  zone_position`, `night_freight.in_range_of` and its duplicated
+  `state = AWAY`, `Door.INTERACT_RANGE` and `Stairs.INTERACT_RANGE`
+  (the toll gate's stays — the prompt and the car both read it),
+  `TollDialog.closed` and `ExtractScreen.dismissed` (signals nothing
+  connects to), `Ui.owns`/`Ui.top`/`Ui.changed`, map_view's `INK`, and
+  the world-builder's `if false` ternary.
+
+### Removed — generator
+- The orphaned menu-scene painters `_dither_fill` / `_vgrad` / `_paste`
+  / `_skyline_row` (stranded when the storm backdrop was retired) and
+  `diamond_bottom_y`; the never-placed families `bus_ne` / `bus_sw` /
+  `boxcar_y` / `graffiti_y` (15 PNGs); the unreachable `rail_y` /
+  `rail_cross_y` tiles — the district only ever runs rail on x, and the
+  maker stays parameterized for a future map that doesn't; and two
+  `if False` ternaries (one hid a non-palette colour that would have
+  crashed the palette check if ever flipped).
+
+Verified: regeneration proved every surviving sprite byte-identical
+(only `floors.png` repacks, and a courtyard shot renders 0 pixels
+different against the old atlas); probe bit-identical; SMOKE PASS.
+Full art regen + reimport measured at ~5 s total.
+
 ## [0.6.43] — 2026-08-01 — the sweep, part two
 
 The remaining fifteen findings from the v0.6.42 audits, fixed. The two

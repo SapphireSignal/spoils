@@ -7,7 +7,6 @@ extends StaticBody2D
 
 const FRAMES := 4
 const FRAME_TIME := 0.06
-const INTERACT_RANGE := 40.0
 
 var _sprite: Sprite2D
 var _poly: CollisionPolygon2D

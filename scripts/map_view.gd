@@ -13,7 +13,6 @@ extends CanvasLayer
 
 const TOOLTIP_DELAY := 0.5
 # the map's own palette — a drawn chart, not a screenshot of the ground
-const INK := Color(0.043, 0.055, 0.086)          # deep paper
 const LAND := Color(0.118, 0.153, 0.196)         # the district's ground
 const BLOCK := Color(0.129, 0.165, 0.208)        # barely off the ground:
                                                  # blocks are where roads

@@ -8,8 +8,6 @@ extends Node
 ## player and the car ask `blocks_gameplay()` and simply stop reading
 ## input while any window is up.
 
-signal changed
-
 var _stack: Array[StringName] = []
 
 
@@ -17,22 +15,10 @@ func open(window: StringName) -> void:
 	if window in _stack:
 		return
 	_stack.append(window)
-	changed.emit()
 
 
 func close(window: StringName) -> void:
-	if _stack.has(window):
-		_stack.erase(window)
-		changed.emit()
-
-
-func top() -> StringName:
-	return _stack[-1] if not _stack.is_empty() else &""
-
-
-func owns(window: StringName) -> bool:
-	## true when this window is the one on top and may act on input
-	return top() == window
+	_stack.erase(window)
 
 
 func any_open() -> bool:
@@ -47,7 +33,4 @@ func blocks_gameplay() -> bool:
 
 func clear() -> void:
 	## scene swaps (death, quit to menu) drop every window
-	if _stack.is_empty():
-		return
 	_stack.clear()
-	changed.emit()

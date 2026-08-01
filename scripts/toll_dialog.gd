@@ -10,7 +10,6 @@ extends CanvasLayer
 ## you what everything costs.
 
 signal paid
-signal closed
 
 const FEE := 30
 
@@ -160,7 +159,6 @@ func close() -> void:
 	visible = false
 	Ui.close(&"toll")
 	get_tree().paused = false
-	closed.emit()
 
 
 func _next_reply() -> void:

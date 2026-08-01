@@ -144,10 +144,6 @@ func can_board() -> bool:
 	return state == WAITING and not boarded
 
 
-func in_range_of(at: Vector2) -> bool:
-	return global_position.distance_to(at) < BOARD_RANGE
-
-
 func board() -> void:
 	if not can_board():
 		return
@@ -223,7 +219,6 @@ func _process(delta: float) -> void:
 					extracted.emit("the night freight")
 				else:
 					_clock = 0.0
-					state = AWAY
 					_speed = 0.0
 					position = _stop_pos - RAIL_DIR * 2600.0
 					state = AWAY

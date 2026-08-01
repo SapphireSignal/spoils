@@ -6,8 +6,6 @@ extends StaticBody2D
 
 signal used
 
-const INTERACT_RANGE := 44.0
-
 var upper_index := -1
 
 

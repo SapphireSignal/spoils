@@ -63,13 +63,6 @@ func arm(kind: String) -> void:
 			zone["armed"] = true
 
 
-func zone_position(kind: String) -> Vector2:
-	for zone in _zones:
-		if zone["kind"] == kind:
-			return zone["pos"]
-	return Vector2.ZERO
-
-
 func _process(delta: float) -> void:
 	if _player != null and _player.dead and _label.visible:
 		_label.visible = false          # no green counter over the death fade
