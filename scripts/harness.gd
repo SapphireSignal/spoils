@@ -204,6 +204,28 @@ func _smoke() -> void:
 		await get_tree().create_timer(0.5).timeout
 		if door.is_open():
 			failures.append("door did not close on second toggle")
+		# THE PROMPT IS THE PERMISSION (user call): F must work standing at
+		# the door and do NOTHING from across the street. Toggling the door
+		# object directly can never catch a break in that rule.
+		if player != null:
+			player.global_position = door.global_position + Vector2(0.0, 20.0)
+			await get_tree().process_frame
+			await get_tree().process_frame
+			player.call("_interact")
+			await get_tree().create_timer(0.45).timeout
+			if not door.is_open():
+				failures.append("f did not open the door while prompted")
+			else:
+				player.call("_interact")
+				await get_tree().create_timer(0.45).timeout
+			player.global_position = door.global_position + Vector2(0.0, 300.0)
+			await get_tree().process_frame
+			await get_tree().process_frame
+			var was_open := door.is_open()
+			player.call("_interact")
+			await get_tree().create_timer(0.45).timeout
+			if door.is_open() != was_open:
+				failures.append("f reached a door with no prompt on screen")
 
 	# second stories: use the nearest stairs — the upper room appears, the
 	# player lifts, using them again comes back down

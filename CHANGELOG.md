@@ -3,6 +3,23 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.28] — 2026-08-01
+
+### Fixed
+- **The prompt is the permission** (user report: "im a bit further back
+  and can still interact"). Interaction ranges lived in two places and
+  disagreed — the player reached doors at 44 px and cars at 46 px while
+  the prompt only appeared at 30 px and 42 px, so F answered things the
+  game never offered. There is now ONE source of truth: main.gd's prompt
+  logic picks the target each frame into `player.prompt_target`, and F
+  acts on that and nothing else. **Every future interactable inherits
+  the rule for free** by going through the prompt — which is the point,
+  since the toll warden, the freight and the tunnel ladders are all
+  coming.
+- Smoke now proves it end to end instead of calling `toggle()` behind
+  the game's back: F must open the door while standing at it, and must
+  do nothing at all from across the street.
+
 ## [0.6.27] — 2026-08-01
 
 ### Added

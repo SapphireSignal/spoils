@@ -66,6 +66,10 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.28", ["you can only interact with what the prompt is",
+		"offering - doors and cars used to answer from further",
+		"back than the game ever told you they would",
+		"every prompt works this way now, and every new one will"]],
 	["v0.6.27", ["you can get out now. the first way out is the lift:",
 		"a clearing off a dirt track with green smoke coming",
 		"out of it - stand in it and it counts you down",

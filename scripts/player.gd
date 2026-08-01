@@ -37,6 +37,12 @@ var upstairs := false           # gates ground-floor doors while up there
 var driving: DriveableCar = null
 var hidden_in_bush := false     # Foliage sets it; the sprite fades so the
                                 # player can READ their own concealment
+# THE INTERACTION RULE (user call 2026-08-01): you can only interact with
+# the thing the on-screen prompt is offering. main.gd's prompt logic picks
+# this target every frame and it is the ONLY thing F can act on — no more
+# opening doors from further away than the prompt appears. Every future
+# interactable inherits the rule for free by going through the prompt.
+var prompt_target: Node2D = null
 
 var _sprite: Sprite2D
 var _shadow: Sprite2D
@@ -294,28 +300,12 @@ func _camera_target(from: Vector2, s: float) -> Vector2:
 
 
 func _interact() -> void:
-	# nearest interactable wins: doors, stairs, or a car worth taking
-	var best: Node2D = null
-	var best_d := Door.INTERACT_RANGE * Door.INTERACT_RANGE
-	if not upstairs:   # the ground door doesn't exist on the second floor
-		for node in get_tree().get_nodes_in_group("doors"):
-			var d := (node as Node2D).global_position.distance_squared_to(global_position)
-			if d < best_d:
-				best_d = d
-				best = node
-	for node in get_tree().get_nodes_in_group("stairs"):
-		var d := (node as Node2D).global_position.distance_squared_to(global_position)
-		if d < best_d and d < Stairs.INTERACT_RANGE * Stairs.INTERACT_RANGE:
-			best_d = d
-			best = node
-	for node in get_tree().get_nodes_in_group("cars"):
-		var car := node as DriveableCar
-		if car == null or not car.can_enter():
-			continue
-		var d := car.global_position.distance_squared_to(global_position)
-		if d < 46.0 * 46.0 and d < best_d:
-			best_d = d
-			best = car
+	# ONLY what the prompt is offering (see prompt_target): the reach used
+	# to be wider than the prompt, so doors and cars answered from
+	# further away than the game ever said they would (user report)
+	var best: Node2D = prompt_target
+	if best == null or not is_instance_valid(best):
+		return
 	if best is Door:
 		(best as Door).toggle()
 	elif best is Stairs:

@@ -282,6 +282,7 @@ func _update_prompt() -> void:
 	if _player.driving != null:
 		_prompt.visible = false
 		_prompt_target = null
+		_player.prompt_target = null
 		return
 	var best: Node2D = null
 	var best_d := 30.0 * 30.0
@@ -309,7 +310,10 @@ func _update_prompt() -> void:
 	if best == null:
 		_prompt.visible = false
 		_prompt_target = null
+		_player.prompt_target = null
 		return
+	# the prompt IS the permission: nothing else can be interacted with
+	_player.prompt_target = best
 	# rebuild the text only when the target or its state changes — bind_label
 	# asks the display server and must not run per frame
 	var open_now := best is Door and (best as Door).is_open()
