@@ -188,6 +188,20 @@ This file carries everything a fresh session needs that isn't in those two.
 
 ## THE QUEUE (as of v0.6.44 — work straight down it)
 
+**DOORS — ASKED THREE TIMES, STILL NOT RIGHT (user, 2026-08-01):** they
+want the door solid ALWAYS. v0.6.67 added a swung-leaf collider and
+they can still walk through an open door. MEASURED, do not re-derive:
+the door sprite's 4 frames barely move sideways (centroid cx 23.5 →
+23.8) and only rise (cy 33.3 → 27.9) — the leaf opens IN PLACE, it
+does NOT swing aside. So v0.6.67's collider, offset a full cell along
+the perpendicular axis, sits where there is no art. Two options, the
+USER MUST PICK: (A) keep the closed collider on at all times — exactly
+what they asked, but then no doorway is ever passable and buildings
+cannot be entered; (B) redraw the open frames so the leaf visibly
+swings clear, then match the collider to it, leaving the other half of
+the cell as the gap. RECOMMEND B. Rewrite or delete
+`Door._swung_points` to match whatever the art ends up doing.
+
 **FLAT PROPS DRAW OVER THE PLAYER (user, 2026-08-01, screenshot):** a
 small flat ground thing (orange-brown diamond) renders ON TOP of the
 raider standing on it, so walking over it looks like walking THROUGH
