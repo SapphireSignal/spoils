@@ -458,8 +458,11 @@ func _plan_zones() -> void:
 		if b != town_a and b != town_b:
 			rest.append(b)
 	# forest went 2 blocks -> 1 (denser instead) to make room for the
-	# SCRAPYARD (user request); the open block hosts the comms relay in one
-	# corner and the little graffiti gallery in another
+	# SCRAPYARD (user request). The COMMS RELAY sits in a clearing carved
+	# from a corner of the FOREST block (_plan_comms_corner); the open
+	# block hosts only the little graffiti gallery. (This line put the
+	# relay in the open block — it moved to the woods, see the dispatch
+	# in _plan_blocks and LORE.md's "the comms relay in the trees".)
 	var deals := ["forest", "warehouse", "school", "trainyard",
 		"depot", "scrapyard", "open"]
 	for i in rest.size():
@@ -2583,9 +2586,11 @@ func _place_power_boxes() -> void:
 			_map_marks.append([box_cell, "spark"])
 		else:
 			_add_prop(box_name, pos)
-		# the room this box feeds: a light in the middle of the floor and
-		# the flex running back to the wall the box is bolted to (standing
-		# rule — a powered thing must SHOW where its power comes from)
+		# the room this box feeds: one light hung mid-floor and NO cable —
+		# the interior flex was cut on a user call, so this box on the
+		# outside wall is the whole of "a powered thing must SHOW where
+		# its power comes from". (This line promised "the flex running
+		# back to the wall"; see _place_room_light — none is drawn.)
 		_place_room_light(interior, box_cell, broken)
 
 
@@ -2764,10 +2769,12 @@ func _place_room_light(interior: Rect2i, box_cell: Vector2i,
 	if interior.size.x <= 0 or interior.size.y <= 0:
 		return
 	var lamp_cell := interior.get_center()
-	# push the fixture AWAY from its own box until the flex has room to
-	# cross the floor. Hung at the room's centre it often landed a cell or
-	# two from the box, and those cells sit behind the wall sprite — the
-	# cable was there and rendered, and you could not see a pixel of it.
+	# push the fixture AWAY from its own box. Hung at the room's centre it
+	# often landed a cell or two from the box, and those cells sit behind
+	# the wall sprite — the fixture was there and rendered, and you could
+	# not see a pixel of it. (The original reason was giving the flex room
+	# to cross the floor; the flex is gone, keeping the fixture visible is
+	# why the loop still runs.)
 	var away := Vector2i(signi(lamp_cell.x - box_cell.x),
 		signi(lamp_cell.y - box_cell.y))
 	if away == Vector2i.ZERO:

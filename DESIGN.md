@@ -110,9 +110,11 @@ threat is human; see LORE.md hard rule 1.)
 - Crossing the line: centered warning ("turn back or you will get sniped"),
   3 s grace, then off-screen rounds. Three hits kill; **death ends the raid
   into the debrief screen** (`death_screen.gd` → `Raid.end()`; see §7, which
-  always said this — this line contradicted it). The old respawn at the
-  spawn crossroads survives only as a fallback for a raid whose debrief
-  never got built. M4 adds the stash and real gear loss behind that screen.
+  always said this — this line contradicted it). The old respawn survives
+  only as a fallback for a raid whose debrief never got built, and it puts
+  you back at the normal spawn — dead centre INSIDE the safehouse, not at
+  any crossroads (that wording predates the safehouse and was never true
+  of the current map). M4 adds the stash and real gear loss behind that screen.
 - Building doors are **closed and interactive** (F opens/closes, swing animation,
   collision while shut, "press f to open/close" prompt at close range).
   Entrances — inside pocket and outside approach — always spawn clear of props.
@@ -312,8 +314,13 @@ backslashes, the Bash tool wants forward slashes; both are pre-approved in
 4. **The loop (v0.9):** Tarkov-style loot — grid inventory with item footprints,
    searchable containers, character doll gear slots (helmet/armor/rig/backpack/
    weapons) — raid timer, death = loss, stash persistence. First real "raid".
-   **EXTRACTION ships early, in the 0.6.x line** (user request 2026-08-01) —
-   three exits, each its own version, all ending on one summary screen:
+   **EXTRACTION SHIPPED EARLY and is DONE** (user request 2026-08-01) —
+   three exits, each its own version, all ending on one summary screen.
+   They landed in **v0.3.10 (the lift + the debrief), v0.3.13 (the toll
+   gate) and v0.4.0 (the night freight)**. (This line said "ships early, in
+   the 0.6.x line" — a PRE-RENUMBER number the 2026-08-02 remap missed.
+   Under today's scheme 0.6.x is the CURRENT patch line, so it read as
+   upcoming work for something already shipped.) The three:
    - **toll gate** — a warden in a booth on the district edge. Interact (from
      foot or a car) opens a portrait dialogue: an endless "reply" button that
      keeps him talking lore, a "pay the fee to extract" button, and a way back.

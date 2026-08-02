@@ -922,6 +922,30 @@ func _check_docs() -> Array[String]:
 				fails.append("%s uses the godot_console shorthand but no " % doc
 					+ "longer names a real exe path defining it — that "
 					+ "shorthand resolves to NOTHING on this machine")
+
+	# --- 5. HANDOFF.md must NAME the current release ----------------------
+	# The chain is this project's memory, and CLAUDE.md's loudest process rule
+	# is to write an entry BEFORE you push. That rule was broken the same day
+	# it was written: v0.6.26 and v0.6.27 both shipped while the newest entry
+	# still read "still v0.6.25 … tree clean at v0.6.25", and NOTHING noticed.
+	# HANDOFF.md is read by parts 0 and 3, but neither reads it for a VERSION,
+	# so a two-release gap sat behind a green gate for the next session to
+	# inherit as current fact.
+	#
+	# HONEST LIMIT — do not oversell this: it proves the current version is
+	# MENTIONED in the file, not that the entry is true, complete, or even
+	# about that release. A session could satisfy it by typing the number.
+	# It closes the gap that actually happened — shipping releases and never
+	# touching the file at all — and nothing more. Prose stays unverifiable.
+	var current := newest_tag
+	if current == "" and not gone.has("CHANGELOG.md"):
+		current = _first_match(str(text["CHANGELOG.md"]),
+			"(?m)^## \\[(\\d+\\.\\d+\\.\\d+)\\]")
+	if current != "" and not gone.has("HANDOFF.md"):
+		if not str(text["HANDOFF.md"]).contains("v" + current):
+			fails.append("HANDOFF.md never mentions v%s, the current " % current
+				+ "release — the chain is the memory, and the entry is due "
+				+ "BEFORE the push, not after it")
 	return fails
 
 

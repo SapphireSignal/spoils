@@ -35,7 +35,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
      form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.27 shipped, 2026-08-02.** Milestone 1 (a walkable world) is DONE.
+**v0.6.28 shipped, 2026-08-02.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 
@@ -457,7 +457,11 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   welded to the character, snapped to SCREEN pixels (see rule 1).
 - `scripts/main.gd` — deploy screen ("deploying to transit", animated
   dots) → texture prewarm → awaited async world build → environment → edge
-  guard → pause menu; death fade → respawn. `scripts/main_menu.gd` — 2
+  guard → pause menu; death fade → **debrief — DYING ENDS THE RAID** (user
+  call). `respawn()` is only the fallback for a raid whose debrief never got
+  built, and in ordinary play never fires; this line said "death fade →
+  respawn", which DESIGN.md had already corrected in its own copy.
+  `scripts/main_menu.gd` — 2
   rotating LIVING backdrops (0=den w/ the traders + job board, 1=drain;
   the storm scene was RETIRED 2026-08-01, user call; painting coords via
   the PC offset const; per-scene ticks drive candle/needles/LEDs/smoke and
@@ -473,9 +477,13 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   (HYBRID since v0.2.11: synth for UI blips, door thunks, sniper crack,
   flashlight click, splash ping, rain bed (set_rain), car alarm; LICENSED
   RECORDINGS under assets/audio/ for per-surface footsteps
-  (play_step(kind, quiet), -22/-27dB) and thunder — licenses in
-  assets/audio/LICENSES.md, DESIGN.md §5 amended; rain+alarm still render
-  on a Thread), `scripts/music.gd` (menu theme = licensed guitar loop at
+  (play_step(kind, quiet), -22/-27dB), thunder, **and the car doors +
+  engine** (ggbotnet, cc0 — the one MECHANICAL family that is a recording,
+  not synth, so it carries an attribution obligation; the ALARM is still
+  synth. This line used to omit them, which read as "all car audio is
+  synth" and sent people hunting a synth function that does not exist) —
+  licenses in assets/audio/LICENSES.md, DESIGN.md §5 amended; rain+alarm
+  still render on a Thread), `scripts/music.gd` (menu theme = licensed guitar loop at
   -18dB; RAID mode since v0.2.13: play_raid()/stop_raid() — the user's
   three auditioned picks (guitar 02 / harp 01 / piano 01, shipped as
   `raid_0..2.ogg`) at -26dB, one at a time, **24-38 s** silences between
@@ -565,7 +573,7 @@ it further than it earns** (all three verified 2026-08-02):
    without `.git` is unguarded while still printing green.
 
 `godot_console --headless --path . -- --checkdocs` → must print `DOCS PASS`.
-It proves the handoff still matches the repo, in five parts:
+It proves the handoff still matches the repo, in six parts:
 
 0. **the docs it reads exist and are non-empty.** `_read_doc` returns `""`
    for a missing file and `""` matches no pattern — so before this, deleting
@@ -588,6 +596,14 @@ It proves the handoff still matches the repo, in five parts:
    `godot_console` COMMAND is never left in a doc that no longer spells out
    the real path. This part exists because the two commands at the TOP of
    this file were unrunnable for a long time while both gates printed PASS.
+5. **`HANDOFF.md` NAMES the current release.** The chain is the memory, and
+   the rule is to write an entry BEFORE pushing — but v0.6.26 and v0.6.27
+   both shipped while the newest entry still read "still v0.6.25", and no
+   gate could see it, because parts 0 and 3 read that file without ever
+   reading a VERSION out of it. **Its limit is real: it proves the number is
+   MENTIONED, never that the entry is true or even about that release.** It
+   closes the gap that actually happened — shipping and never touching the
+   file — and nothing more.
 
 **ITS HONEST LIMITS — do not oversell them, to the user or to yourself:**
 it sees only BACKTICKED paths in two shapes (a `scripts/ tools/ docs/ art/
@@ -605,8 +621,9 @@ to DELETE — write it so it does not match: unbackticked, or without the
 prefix. Several correct lines already do this on purpose; do not "fix" them
 into matching.
 
-**All five parts were verified to actually FIRE** by planting a real
-violation of each. Do the same for anything added later — writing a check and
+**All six parts were verified to actually FIRE** by planting a real
+violation of each (part 5 went one better — it fired on a REAL violation
+that was already sitting in the repo, before the entry that fixed it). Do the same for anything added later — writing a check and
 seeing green proves nothing. It runs inside `--smoke` too, first and
 before the world builds, so a stale handoff is a red build rather than
 something the next session discovers hours in. **If it fails, fix the docs
@@ -739,11 +756,19 @@ then `godot_console --headless --path . --import`.
   behind the pause menu). `Ui.open/close/clear` calls the group.
   Non-pausing windows (the map) additionally need a
   `Ui.blocks_gameplay()` check in the per-frame path.
-- **VISIBLE POWER CABLES** (user call 2026-08-01, standing rule): anything
-  in the world that needs electricity must SHOW where it gets it — a
-  cable pathed from the fixture to the building's exterior power box.
-  Interior lights first; every future powered appliance the same.
-  Never a device that is simply on with no wire.
+- **A POWERED THING MUST SHOW ITS SUPPLY** (user call 2026-08-01, standing
+  rule): nothing in the world runs on magic — if it needs electricity, the
+  source has to be visible. **Outside, not inside.** What satisfies this
+  today is the **exterior power box** bolted to each house wall
+  (`_place_power_boxes`, world_builder.gd:2548), never under a window, with
+  exactly one hanging open and arcing (that house gets no working light —
+  it is the B5 repair job). **The INTERIOR cable is CUT and must not come
+  back**: the flex from fixture to box shipped, and the user had it deleted
+  — "the cables inside houses are gone" — because it read as floor clutter
+  rather than wiring. `_add_cable` still exists with **zero call sites**;
+  leave it that way. (This rule used to command "a cable pathed from the
+  fixture to the building's exterior power box. Interior lights first",
+  which would have re-introduced exactly what the user asked to be removed.)
 - **CLUTTER VARIATION vs PROCEDURAL GENERATION** (user call 2026-08-01):
   breaking visual repetition is REQUIRED; generating layout is BANNED.
   Use the helpers, don't hand-roll: python `bake_lean()` (baked shear —

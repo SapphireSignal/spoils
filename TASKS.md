@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.27.** The release history was renumbered evenly on
+**Current version: v0.6.28.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -367,9 +367,19 @@ approach won. What it settled, and the two traps it caught:
   and drifts home, a whole-screen-pixel camera kick, and a tracer with real
   flight time so the impact lands after the report.
 
-Art already generated and waiting, unwired: directional muzzle flashes
-(one sprite per facing, since rotation is banned), a warm tracer head
-distinct from the sniper's, and impact grit.
+The GENERATOR CODE is written and waiting — but **no sprite has ever been
+produced**, so M2's art step is three moves, not zero. `make_muzzle_flash`
+(gen_art.py:3091, 2 frames x the 8 facings in `GUN_DIRS`, since rotation is
+banned), `make_tracer` (:3142, a warm head distinct from the sniper's) and
+`make_impact_frames` (:3158, impact grit) all have **zero call sites**, and
+the save block never emits them — it writes the sniper's round at :7089 and
+nothing for these three. So `art/gen/` holds no muzzle/tracer/grit file and
+`manifest.json` has no such key. **Add the `.save()` calls to the emit
+block, re-run `python tools\gen_art.py` (plus the orphan-import cleanup and
+`--import`), and only then wire it in GDScript** — the manifest is where the
+muzzle origin has to come from, per the trap named above. (This line said
+"art already generated and waiting", which would send an M2 session hunting
+a manifest key that has never existed.)
 
 ---
 

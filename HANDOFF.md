@@ -41,6 +41,73 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-02 — the chain skipped two releases, and nothing could see it
+
+**Shipped:** **v0.6.28**, plus the record of **v0.6.26 and v0.6.27 that this
+file never had**. A third migration audit (6 lenses, 19 candidates, **13
+confirmed / 6 refuted** by adversarial verifiers) fixed 13 defects across
+CLAUDE.md, TASKS.md, DESIGN.md, CHANGELOG.md and five .gd files. New
+**`--checkdocs` part 5**. One real code fix.
+
+**The user's words:** *"im here for the migration"*, then — on being told the
+chain had a hole — *"Why does the handoff have a gap? I just had the last
+session spend like 2 hours fixing and making sure the migration would all be
+clean and working"*. Fair, and the answer was not negligence; see below.
+
+**Learned:**
+- **THE GAP, precisely: the last session DID write its entry, on time, at
+  `fa00e67` — then worked another ~75 minutes and shipped v0.6.26, v0.6.27
+  and three doc commits without ever touching it again.** So the file said
+  "still v0.6.25 … tree clean at v0.6.25" while the repo was two releases
+  ahead. **An entry written mid-session goes stale the instant the session
+  continues.** The entry directly below this one warned about exactly that
+  ("a handoff entry written in stages rots exactly like any other doc") and
+  it then happened to that very session. Writing early is right; the missing
+  half of the rule is **come back and amend before the last push**.
+- **No gate could see it, and now one can.** `--checkdocs` read HANDOFF.md
+  for dead paths but never for a VERSION. New part 5: the current release
+  must be NAMED in HANDOFF.md. **Fire-tested on the real violation** — it
+  failed with "HANDOFF.md never mentions v0.6.27" before this entry existed,
+  which is a better proof than a planted one. Its honest limit is in the
+  code comment: it proves the number is mentioned, never that the entry is
+  true.
+- **Third audit, third time BOTH GATES WERE GREEN THROUGHOUT.** Stop
+  expecting that to change.
+- **v0.6.27's changelog OVERCLAIMED ITS OWN BUG, and the overclaim hid a
+  real one.** It said dying at the wheel left the car "wedged for the rest
+  of the raid" — false: `abandon()` clears `driven`/`_busy` itself two lines
+  after nulling `_player`, so the car stayed enterable and the only residue
+  was a cosmetic open-door sprite. It also called the two guards "identical"
+  and said `enter()` had carried its one "all along" — not identical
+  (`enter()` must also test `.dead`), and it arrived in v0.6.43. **Chasing
+  that down found the bug the entry had papered over:** `exit_car()` guarded
+  only `null`, so F pressed in the ~1.2 s between death and `abandon()`
+  stood the corpse up on the pavement. Fixed in v0.6.28.
+- **A doc can invent work that was never done.** TASKS.md told every future
+  M2 session the gun art was "already generated and waiting" —
+  `make_muzzle_flash`, `make_tracer` and `make_impact_frames` have **zero
+  call sites**, the save block never emits them, and no such sprite has ever
+  existed. It would have sent M2 hunting a manifest key that isn't there.
+- **CLAUDE.md commanded work the user had deleted.** Its "VISIBLE POWER
+  CABLES" standing rule demanded an interior flex from fixture to power box
+  — the exact floor clutter the user had cut ("the cables inside houses are
+  gone"). `world_builder.gd` said the same thing directly above the call to
+  a function whose own docstring says no cable is drawn.
+- **Two more "fix one copy, leave the twin":** CLAUDE.md still said "death
+  fade → respawn" (dying ends the raid into the debrief; DESIGN.md had
+  already been corrected), and still listed the licensed audio as footsteps
+  + thunder only — **the car doors and engine are recordings too**
+  (ggbotnet, cc0), with an attribution obligation, stated correctly in four
+  other places.
+
+**Picked up at:** **The smoker on the bench (TASKS.md B4)** — still
+untouched, still nothing blocked, unchanged from the last three entries.
+Rebuild him from the PLAYER's character sheet so his shading matches, black
+hat, bigger smoke, seat him on the bench BELOW facing away from the
+backrest, move the ground item off his head. Then the LZ green smoke (B4b).
+
+---
+
 ## 2026-08-02 — the migration works; the docs still lied in ~50 places
 
 **Shipped:** No game changes, no version bump — still v0.6.25, all five
@@ -252,89 +319,20 @@ last paragraph.
 
 ## 2026-08-02 — migration hardening
 
-**Shipped:** No game changes. A docs-and-memory session. Built this file.
-Added `--checkdocs` to the harness and wired it into `--smoke` so a stale
-handoff is a red build instead of something the next session discovers
-hours in. Fixed three stale claims in `CLAUDE.md`: a GitHub tag range frozen
-at "v0.1.0…v0.2.0" for twenty-odd releases, a perf baseline claiming ~34k
-nodes against the real ~7.9k, and a missing mention of `scripts/ui_state.gd`
-(the `Ui` autoload). Also added a **SAFETY & TRUST** section to `CLAUDE.md`
-at the user's request — prompt injection, reversibility, and why the
-permission classifier is kept. Then, when they asked for actual protection
-rather than documentation, `--checksec`: six enforced invariants (remote
-unchanged, zero network calls, vetted python imports only, shelling out
-confined to `harness.gd` and only to git, no tracked secrets, exactly the
-eight known autoloads). It runs inside `--smoke`.
+*(Compressed per entry rule 6.)* No game changes. Built this file, added
+`--checkdocs`, then `--checksec` (six enforced invariants, **every one
+fire-tested by planting a real violation**), and the SAFETY & TRUST section
+in `CLAUDE.md` — all at the user's request: *"i want my game to be secure,
+and the migrations to work"*, and they asked for *"a chain of migrations
+that we will never forget"*. On permissions they declined full bypass:
+*"auto is fine, i can run a couple commands whenever you need me to."*
 
-**The user's words:** *"im scared something might get lost or break because
-we just did a whole renumbering thing"* — and they asked for migration to be
-*"a chain of migrations that we will never forget"*. That fear was
-well-placed; see below. Also confirmed they want the smoke-test version
-check: *"yes i do want to add a check to the smoke test that compares the
-version CLAUDE.md claims against the actual newest git tag"*.
-
-They then asked, carefully and in sequence, whether the commands they were
-being handed were *"arbitrary, risky and can result in data loss, system
-corruption, or data exfiltration"*, then *"can someone do that to me?"*, then
-*"couldnt you tell if something like that was going on before anything
-becomes bad?"* — and finished with *"add this to .md make sure every chat
-will always know that"*. They are security-aware and they audit what they
-run. **Hand them short, legible commands and explain the undo.** On
-permissions they declined full bypass: *"auto is fine, i can run a couple
-commands whenever you need me to."*
-
-**Learned:**
-- **The renumbering left one tag on the wrong commit — now FIXED.**
-  `v0.6.14` had been left on `f8e83ae` ("renumber the whole release history,
-  evenly", the bookkeeping commit) instead of `9c79c9b`, the release it
-  marks — almost certainly the renumbering script tagging its last entry
-  against HEAD rather than the recorded sha. 89 of the 90 were correct. The
-  user ran `git tag -f` + a tag force-push; local and remote both point at
-  `9c79c9b` now and `--checkdocs` is green.
-- **Permissions.** The user's global settings run `permissions.defaultMode:
-  "auto"`, so a classifier judges each command and blocks force operations —
-  that is why the tag fix needed their hand. They asked to widen it, so
-  `.claude/settings.json` now carries an allowlist for git, python, godot and
-  skills. **Untested:** it was written mid-session and project settings load
-  at startup, so a force op was still blocked afterwards. First session after
-  this: try `git tag -f` on a throwaway tag. If it is still blocked, the auto
-  classifier overrides allow-rules and only
-  `defaultMode: "bypassPermissions"` will change it — the user's call, they
-  deliberately picked the narrower option over full bypass.
-- **A check that only ever passes is decoration.** Every one of the six
-  `--checksec` invariants was verified to actually FIRE by planting a real
-  violation of it — a `HTTPRequest` in a .gd, an `import boto3`, an
-  `OS.execute` outside the harness, a fake AWS key, a bogus autoload in
-  `project.godot`, a second git remote. All six were caught, then removed.
-  **Do this for any check added later.** Writing it and seeing green proves
-  nothing.
-- **`--checksec` scans uncommitted files too** (`ls-files --cached --others
-  --exclude-standard`). Tracked-only would make a freshly written backdoor
-  invisible until it was already committed.
-- **The parse-error-looks-like-a-hang trap bit again, exactly as CLAUDE.md
-  warns.** `_sec_tracked_files` returned untyped `Array`, so every downstream
-  `var x := rel.to_lower()` failed to infer — a parse error, the autoload
-  failed to load, and the run sat on the menu for three minutes looking slow.
-  A `grep` on the output hid the cause, because the error is at the HEAD and
-  the verdict only ever prints at the END. **Return typed arrays, and read
-  the head of the raw log.**
-- **Rejected on purpose: scanning repo files for injection-shaped phrases.**
-  The realistic injection surface is content from OUTSIDE the repo, which a
-  repo scan cannot see, and the phrases false-positive against LORE.md. It
-  would have looked like protection while providing none.
-- **Commit messages still carry pre-renumber version numbers.** Only tags
-  moved. `git log` shows "v0.6.76: menu housekeeping" on a commit whose tag
-  is `v0.6.13`+. **Never read a version out of a commit subject** for
-  anything before `f8e83ae` — use `git tag --points-at`.
-- `--checkdocs` now verifies all 90 renumbered tags against
-  `docs/version_renumber_2026-08-02/tag_commits.json`, so this class of
-  damage can never go unnoticed again.
-
-**Picked up at (previous session):** The smoker on the bench (TASKS.md B4),
-then the LZ green smoke (B4b) — both unchanged from that session's plan. Nothing is
-blocked; `--checkdocs` and `--smoke` are green.
-
----
+Still load-bearing: **the renumbering left `v0.6.14` on the wrong commit**
+(`f8e83ae` instead of `9c79c9b`) — found, fixed, and now guarded by
+`--checkdocs` part 2. **Commit messages still carry PRE-renumber version
+numbers**, so never read a version out of a commit subject before
+`f8e83ae` — use `git tag --points-at`. And the parse-error-looks-like-a-hang
+trap bit again: return TYPED arrays, and read the HEAD of the log.
 
 ## 2026-08-02 — overcast, and the docs rebuilt
 

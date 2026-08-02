@@ -196,8 +196,8 @@ func _runs_on(night: int) -> bool:
 
 
 func force_waiting() -> void:
-	## harness hook: put it in the yard now instead of waiting out the
-	## real-time cycle
+	## harness hook: put it in the yard now instead of waiting for the
+	## in-game clock to come round to midnight on a night she runs
 	visible = true
 	position = _stop_pos
 	state = WAITING

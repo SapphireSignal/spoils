@@ -89,9 +89,14 @@ func _build_world() -> void:
 	# let the deploy screen actually render before the heavy lifting
 	await get_tree().process_frame
 	await get_tree().process_frame
-	# aim a temporary camera at (roughly) the spawn crossroads during the
-	# build, so tile chunks and sprites around it render — and warm up —
-	# behind the deploy screen, not on the first visible frame
+	# aim a temporary camera at the MAP CENTRE during the build, so tile
+	# chunks and sprites render — and warm up — behind the deploy screen
+	# rather than on the first visible frame. It has to be a fixed point:
+	# this runs before builder.build() is awaited, so _spawn_cell does not
+	# exist yet. NOTE it is therefore NOT what the player first sees — the
+	# spawn is inside the safehouse in the north-east corner, ~3200 px
+	# east of here. (This said "the spawn crossroads": there is no
+	# crossroads spawn any more, and this was never aimed at the spawn.)
 	var warm_cam := Camera2D.new()
 	add_child(warm_cam)
 	warm_cam.global_position = Vector2(0.0, WorldBuilder.MAP_H * 16.0)
@@ -243,7 +248,11 @@ func _build_world() -> void:
 	var radio := Radio.new()
 	radio.name = "Radio"
 	add_child(radio)
-	# the night freight: five minutes away, one minute in the yard
+	# the night freight: arrives at in-game MIDNIGHT, 3 nights in 7, one
+	# real minute in the yard. (This said "five minutes away" — a real-time
+	# cycle the user replaced with the clock on 2026-08-01. The earliest a
+	# raid can see her is ~12.6 real minutes in, and only on a night she
+	# runs at all; night_freight.gd's own header already said so.)
 	var freight := NightFreight.new()
 	freight.name = "NightFreight"
 	ysort.add_child(freight)

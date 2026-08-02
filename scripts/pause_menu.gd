@@ -1,6 +1,9 @@
 class_name PauseMenu
 extends CanvasLayer
-## Esc pause menu. Main panel: RESUME / SETTINGS / QUIT TO DESKTOP.
+## Esc pause menu. Main panel, in order: RESUME / SETTINGS / ABANDON RAID /
+## QUIT TO DESKTOP. "abandon raid" is not a free exit — it hands you the same
+## debrief dying does (main.gd:abandon_raid). This list said three buttons
+## and omitted it, which is the one with a scoring side-effect.
 ## Settings live in the shared SettingsPanel. Everything renders with the
 ## bitmap pixel font via UITheme — no vector-font blur.
 

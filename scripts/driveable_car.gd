@@ -175,13 +175,21 @@ func exit_car() -> void:
 	Sfx.play_car_door(true)
 	_apply_variant("%s_door" % _base_variant_name())
 	await get_tree().create_timer(DOOR_TIME).timeout
-	if _player == null:
-		# died at the wheel DURING the door swing: abandon() already emptied
-		# the cabin, so there is nobody to put on the pavement — just finish
-		# the door. enter() has carried this guard all along; this path was
-		# missing it and would call unboard_car() on a freed player, killing
-		# the coroutine before it could clear _busy and leaving the car
-		# half-exited for the rest of the raid.
+	if _player == null or _player.dead:
+		# died at the wheel DURING the door swing: nobody gets put on the
+		# pavement, just finish the door. TWO distinct cases, which is why
+		# both arms are needed and why this is NOT identical to enter():
+		#   _player == null — abandon() (main.gd, ~1.55 s after death) has
+		#     already emptied the cabin and cleared driven/_busy itself.
+		#   _player.dead    — F pressed in the ~1.2 s BEFORE abandon() runs.
+		#     The ref is still live but the player is a corpse; without this
+		#     arm unboard_car() stood the body up on the pavement mid-fade.
+		#     Leave driven/_player alone here — abandon() still has to run.
+		# enter() needs the mirror of this for its own reason: during ITS
+		# swing you are not boarded yet, so abandon() never fires and only
+		# the .dead arm can catch it. (The note here said the two guards
+		# were "identical" and that enter() had carried it "all along";
+		# enter() got its guard in v0.6.43, and the arms differ.)
 		_apply_variant(_base_variant_name())
 		_busy = false
 		return

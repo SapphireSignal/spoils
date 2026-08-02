@@ -3,6 +3,54 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.28] — 2026-08-02 — the chain skipped two releases
+
+A third migration audit — six lenses over the docs and the code comments,
+19 candidates, 13 confirmed and 6 refuted by adversarial verifiers. Both
+gates were green before, during and after, for the third time running.
+
+### Fixed
+- **Dying at the wheel could stand your corpse up on the pavement.**
+  `exit_car()` guarded only `_player == null`, which covers the case where
+  `abandon()` has already emptied the cabin — but `abandon()` does not run
+  until ~1.55 s after death, so pressing F in the ~1.2 s before that resumed
+  the coroutine with a live reference to a dead player and called
+  `unboard_car()` on the body mid-fade. Now `_player == null or _player.dead`,
+  the same shape `enter()` uses, with the two arms and why they differ
+  written out at the guard. **Found by auditing v0.6.27's own changelog
+  entry, which had overclaimed the bug it fixed and papered over this one.**
+
+### Changed
+- **`--checkdocs` gained a sixth part: `HANDOFF.md` must NAME the current
+  release.** v0.6.26 and v0.6.27 both shipped while the newest handoff entry
+  still read "still v0.6.25 … tree clean at v0.6.25", and nothing caught it —
+  that file was read for dead paths but never for a version. **Fire-tested on
+  the real violation** rather than a planted one: it failed with "HANDOFF.md
+  never mentions v0.6.27" before the entry that closed the gap was written.
+  Its limit is stated at the check: it proves the number is mentioned, never
+  that the entry is true.
+- **13 false doc and code-comment claims corrected**, each verified against
+  the code and each adversarially re-checked before it was believed:
+  `TASKS.md` claimed M2's gun art was "already generated and waiting" (the
+  three generator functions have zero call sites and no sprite has ever been
+  produced); `CLAUDE.md`'s "visible power cables" standing rule commanded an
+  interior flex the user had explicitly deleted; `CLAUDE.md` still said
+  "death fade → respawn" when dying ends the raid into the debrief, and still
+  listed the licensed audio without the car doors and engine (ggbotnet, cc0 —
+  an attribution obligation); `pause_menu.gd`'s header listed three buttons
+  and omitted "abandon raid", the one with a scoring side-effect; `main.gd`
+  described the freight as "five minutes away" when the in-game clock runs it
+  at midnight, 3 nights in 7; `main.gd` said the warm-up camera aims at "the
+  spawn crossroads" when it aims at the map centre, ~3200 px from the actual
+  spawn; `world_builder.gd` put the comms relay in the open block when it
+  sits in the forest; `DESIGN.md` said extraction "ships early, in the 0.6.x
+  line" — a pre-renumber number that now reads as upcoming work for something
+  that shipped in v0.3.10–v0.4.0 — and described the fallback respawn as a
+  crossroads that no longer exists.
+- **v0.6.27's entry corrected in place** (see below): the car was never
+  "wedged for the rest of the raid", and the two coroutine guards were never
+  "identical".
+
 ## [0.6.27] — 2026-08-02 — three that outlived their scene
 
 Found by a scene-swap audit: state that survives longer than the thing that
@@ -28,12 +76,20 @@ first one reproduced end to end.
   you extracted kept playing through the scene change and over the menu
   guitar. `environment_system.gd` already guarded the *deferred* half of a
   strike; this covers the clap already in flight.
-- **Dying at the wheel could leave a car stuck half-exited.** `exit_car()`
+- **Dying at the wheel left a car's door sprite stuck open.** `exit_car()`
   awaits a 0.34 s door swing, then uses `_player` — but the death path
   (`abandon()`) nulls that reference, so pressing F inside the death fade
-  called `unboard_car()` on nothing. The coroutine died before clearing
-  `driven`/`_busy`, wedging the car for the rest of the raid. `enter()` has
-  carried the identical guard all along; the exit path never got it.
+  called `unboard_car()` on nothing and the coroutine died before reverting
+  the open-door variant. **Two claims in this entry were WRONG when it
+  shipped and are corrected here rather than quietly dropped** (found by the
+  next session's audit): it said the car was "wedged for the rest of the
+  raid" — it was not, because `abandon()` clears `driven` and `_busy` itself
+  two lines after nulling `_player`, so the car stayed enterable and the only
+  residue was the cosmetic sprite. And it said `enter()` "has carried the
+  identical guard all along" — the guards are **not** identical (`enter()`
+  also tests `.dead`, and must), and it got its own guard in v0.6.43, not
+  from the start. The `.dead` half of the story turned out to be a real
+  remaining bug; see v0.6.28.
 
 ### Changed
 - Every blockquote removed from all seven docs (user call: the `>` marker

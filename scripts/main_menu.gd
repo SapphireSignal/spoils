@@ -73,10 +73,15 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.28", [
+		"dying at the wheel could stand your body up on the pavement. if you pressed f to get out in the second or so after being killed, the game put the corpse down beside the car mid-fade. getting in already guarded against this, getting out only half did",
+		"the handoff notes for two whole releases were never written, and nothing could tell. the check that guards these docs now fails the build if the current version isnt named in them - and it was proven by watching it fail on the real gap before it was filled",
+		"a third pass over the written docs against the actual code, this time including the notes inside the code itself. thirteen wrong statements found and fixed - including one telling a future session that artwork for the guns already existed when none of it had ever been made",
+	]],
 	["v0.6.27", [
 		"running the audio debug tool used to leave the whole game muted - permanently, on every future launch, with no sign of why. it turned the master volume down to test the slider and never turned it back up, and that setting is saved to disk. it now puts it back, and i tested that end to end rather than assuming",
 		"thunder no longer keeps rolling over the main menu. if lightning struck a second or two before you got out, the clip carried on playing through the scene change and over the menu music",
-		"dying at the wheel while the car door was still swinging open left the car stuck half-exited for the rest of the raid. getting in already handled this, getting out didnt",
+		"dying at the wheel while the car door was still swinging open left the car door stuck open for the rest of the raid. getting in already handled this, getting out didnt",
 	]],
 	["v0.6.26", [
 		"the menu and the studio card now reset the effects clock themselves instead of relying on the raid to tidy up on its way out. nothing was broken, but it meant one path was holding the whole thing up - and the guns coming in the next milestone lean on it constantly",
