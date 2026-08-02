@@ -3,6 +3,22 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.75] — 2026-08-02 — the train is solid
+
+### Fixed
+- **You could walk and drive straight through the extraction train**
+  (user). The rake was three sprites and nothing else. It has a hull
+  now — one parallelogram per car along the rail axis — which switches
+  off while you are riding it, so it never fights the weld that keeps
+  you aboard.
+- **"the freight leaves in..." was printing over the fps counter**
+  (user). It sits top-centre now, on fractional anchors so it stays
+  centred at any resolution.
+- **The map remembers where you left it.** Pan and zoom survive closing
+  and reopening; it only fits the whole district on the first open of a
+  raid. The values were already being kept — an unconditional recentre
+  on every open was throwing them away.
+
 ## [0.6.74] — 2026-08-02 — the toll you paid for, and a bench you can sit on
 
 ### Fixed

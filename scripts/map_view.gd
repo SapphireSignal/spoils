@@ -51,6 +51,7 @@ var _tooltip_label: Label
 var _zoom := 3.0                      # screen px per map cell, continuous
 var _pan := Vector2.ZERO
 var _recenter := false                # centering waits for real layout
+var _ever_centred := false            # ...and only happens once per raid
 var _status_stamp := -1               # last minute shown on the clock bar
 var _status_weather := ""
 var _dragging := false
@@ -352,7 +353,11 @@ func set_open(open: bool) -> void:
 	visible = open
 	if open:
 		Ui.open(&"map")
-		if _mode == "transit":
+		# Fit the district ONCE. After that the map stays where you left
+		# it — close it half-zoomed on the trainyard and that is what you
+		# get back (user). _pan and _zoom already persisted; it was this
+		# unconditional recentre that threw them away every open.
+		if _mode == "transit" and not _ever_centred:
 			_recenter = true
 	else:
 		Ui.close(&"map")

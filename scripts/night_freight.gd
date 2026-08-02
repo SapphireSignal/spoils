@@ -28,6 +28,7 @@ enum { AWAY, ARRIVING, WAITING, DEPARTING, GONE }
 
 var state := AWAY
 var boarded := false
+var _hull: StaticBody2D        # the rake's collision; off while you ride it
 
 var _stop_pos := Vector2.ZERO
 var _clock := 0.0              # seconds into the current cycle
@@ -90,6 +91,23 @@ func setup(stop_pos: Vector2, player: Player, radio: Radio,
 		add_child(sprite)
 		back += 104.0
 
+	# THE RAKE IS SOLID. It was three sprites and nothing else, so you could
+	# walk — or drive — straight through the train you are supposed to board
+	# (user). One parallelogram per car, laid along the rail axis.
+	_hull = StaticBody2D.new()
+	_hull.name = "Hull"
+	add_child(_hull)
+	var across := Vector2(RAIL_DIR.x, -RAIL_DIR.y) * 16.0
+	var along := 0.0
+	for _car in rake:
+		var head := -RAIL_DIR * along
+		var tail := head - RAIL_DIR * 96.0
+		var poly := CollisionPolygon2D.new()
+		poly.polygon = PackedVector2Array([head - across, tail - across,
+			tail + across, head + across])
+		_hull.add_child(poly)
+		along += 104.0
+
 	# it runs at night, so it has to carry its own light: a headlamp
 	# throwing down the rails, and a warm spill out of the cab windows
 	var lamp := PointLight2D.new()
@@ -119,11 +137,16 @@ func setup(stop_pos: Vector2, player: Player, radio: Radio,
 	_notice = Label.new()
 	_notice.theme = UITheme.get_theme()
 	_notice.add_theme_color_override("font_color", Color("de9e41"))
-	_notice.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	_notice.offset_left = -300
+	# TOP CENTRE, not top right: the fps counter lives in the right corner
+	# and the two were printing over each other (user). Fractional anchors
+	# so it stays centred at any resolution.
+	_notice.anchor_left = 0.5
+	_notice.anchor_right = 0.5
+	_notice.anchor_top = 0.0
+	_notice.anchor_bottom = 0.0
+	_notice.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_notice.offset_top = 8
-	_notice.offset_right = -12
-	_notice.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_notice.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_notice.visible = false
 	root.add_child(_notice)
 	_countdown = Label.new()
@@ -175,6 +198,10 @@ func board() -> void:
 	if not can_board():
 		return
 	boarded = true
+	# you're inside it now: a solid hull riding with you would only fight
+	# the weld that keeps you aboard
+	if _hull != null:
+		_hull.collision_layer = 0
 	_player.board_ride(self, Vector2(0.0, -18.0))
 	_count_left = float(DEPART_COUNT)
 	Sfx.play_door(false)

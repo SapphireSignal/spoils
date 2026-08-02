@@ -72,6 +72,11 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.75", [
+		"the extraction train is solid. you could walk and drive straight through it before",
+		"the freight countdown moved to the top middle, it was printing over the fps counter",
+		"the map remembers where you left it. pan and zoom survive closing and reopening it",
+	]],
 	["v0.6.74", [
 		"you could drive straight through the toll extraction before the counter finished. the zone is much bigger now, and clipping the edge of it at speed doesnt reset the count",
 		"paying the warden lasts the whole raid. it used to buy one crossing, so you could drive back in, turn around, and get shot on the way out through a gate you already paid for",
