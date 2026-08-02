@@ -239,15 +239,22 @@ house AT THE COURTYARD shows its upper FURNITURE but no upper FLOOR
 when you climb — the furniture floats. Must hold for every two-story
 building, and they also want a sweep of ALL interiors (houses,
 warehouses, school, safehouse) for furniture that floats / sits wrong
-/ overlaps. STRONGEST LEAD, check it first: `_plan_plots` (v0.6.23)
-force-upgrades some houses to `stories = 2` AFTER the plots are
-built — if `_build_shell` already decided that plot's floor plan, the
-upper never gets built while the furniture still does. Second lead: an
-INDEX MISMATCH between `Stairs.upper_index` and the `_uppers` registry
-(one building registering stairs without an upper shifts every later
-index). Cheap first measurement: compare `_uppers.size()` against the
-number of nodes in group "stairs" in a probe. The tile maths inside
-`_build_upper` looks correct on paper — measure before touching it.
+/ overlaps. **BOTH OLD LEADS ARE DEAD — measured v0.6.68, do not re-derive.**
+`--probe-world` prints `UPPERS total=6 floorless=0 propless=0
+stairs=6`: six flights, six registries, every upper container holding
+its floor sprites. The "`_plan_plots` upgrades stories after the shell
+is built" lead is false — `build()` awaits `_plan_plots()` at :173
+*before* the `_build_shell` loop at :176. An index mismatch is
+impossible — `_build_upper` passes `_uppers.size()` to `stairs.setup`
+and appends the matching entry with no await between, and `main.gd`
+binds the index off `_uppers[i]` itself. `_build_upper` paints every
+cell unconditionally. **So the slab IS built and is not being seen —
+this is DRAW ORDER, not construction.** Best remaining lead: the upper
+container is anchored far NORTH of the footprint so it y-sorts under
+the player, but that makes it sort as one unit *behind* the building's
+own ground-floor wall segments, which sit at much larger y. The upper
+furniture keeps its true cell position and sorts late, so it stays
+visible — exactly the reported symptom. See TASKS.md item 2.
 
 **OPEN USER ASKS as of v0.6.65 — the live playtest queue.** Full
 detail (repro steps, implementation notes) is in the session task list;
