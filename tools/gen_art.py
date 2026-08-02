@@ -6183,6 +6183,22 @@ def make_leaves() -> list[Image.Image]:
         img.putpixel((4, 1), ca)
         img.putpixel((3, 1), cb)
         out.append(img)
+    # 4-5: NEEDLES. A pine that sheds nothing reads as dead (user), but a
+    # conifer dropping broadleaf leaves reads as a bug — so they get their
+    # own drop: a thin spine, not a blade, one fresh and one dried out.
+    # brighter than the canopy they fall from, or they vanish into the
+    # forest floor they land on (a dark needle over dark ground is a
+    # needle nobody ever sees)
+    for (a, b) in [("468232", "25562e"), ("ad7757", "884b2b")]:
+        ca, cb = C(a), C(b)
+        img = Image.new("RGBA", (6, 3), (0, 0, 0, 0))
+        img.putpixel((0, 0), cb)    # frame 0: falling at a slant
+        img.putpixel((1, 1), ca)
+        img.putpixel((2, 2), ca)
+        img.putpixel((4, 0), ca)    # frame 1: turned edge-on, near vertical
+        img.putpixel((4, 1), ca)
+        img.putpixel((4, 2), cb)
+        out.append(img)
     return out
 
 

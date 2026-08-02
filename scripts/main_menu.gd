@@ -68,6 +68,11 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.52", ["pines shed now. they drop needles, not leaves - a",
+		"thinner sprite that falls straight down instead of",
+		"fluttering, because a needle has no blade to catch",
+		"the air. dead bare snags still drop nothing, on",
+		"purpose"]],
 	["v0.6.51", ["transit is not laid out on graph paper any more.",
 		"half the roads stop somewhere - the council never",
 		"finished this district - and where the paving gives",

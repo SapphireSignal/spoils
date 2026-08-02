@@ -216,9 +216,12 @@ marked; don't attempt them without them.
    the piece is dropped, rolls burn identically).
 4. **Interior lights at night**, some flickering, cable visibly pathed
    to the power box (see the standing cable rule below).
-5. **Pines shed nothing** — by design (v0.6.31 excluded conifers so they
-   wouldn't drop broadleaf leaves), but a pine that drops nothing reads
-   as dead. Give conifers NEEDLES; dead snags stay bare.
+5. ~~Pines shed nothing~~ **DONE v0.6.52** — conifers register in
+   `_leaf_trees_needle` (encoded 200000+ in the environment's near-list),
+   sprites leaves_4/5, fall pattern 3 = straight down. Snags still bare.
+   **AWAITING THE USER'S EYE**: needles are subtle inside dense woods
+   (the forest floor has its own green speckle) — if they want them
+   louder, raise the sprite size/brightness or the drop rate.
 6. ~~Flip vehicles~~ **DONE v0.6.45** (was the flank facing bug — see
    the overnight batch above).
 7. **Pickup bed** — NEEDS THE USER (sample → sign-off): shade the

@@ -80,6 +80,7 @@ var _fog_alive := 0                 # capped vs nearby spots — never a wall
 # falling leaves: a few shedder oaks flutter one leaf at a time
 var _leaf_trees := PackedVector2Array()      # green shedders
 var _leaf_trees_red := PackedVector2Array()  # the autumn grove
+var _leaf_trees_needle := PackedVector2Array()   # conifers: needles, not leaves
 var _leaf_sprites: Array[Sprite2D] = []
 var _leaf_state: Array[Dictionary] = []
 var _leaf_tex: Array[Texture2D] = []         # 0-1 green, 2-3 autumn red
@@ -92,10 +93,12 @@ var _leaf_cursor := 0                # whose turn it is to drop one
 func setup(root: Node2D, floor_layer: TileMapLayer, puddle_spots: Array,
 		roofs: Array, fog_spots := PackedVector2Array(),
 		leaf_trees := PackedVector2Array(),
-		leaf_trees_red := PackedVector2Array()) -> void:
+		leaf_trees_red := PackedVector2Array(),
+		leaf_trees_needle := PackedVector2Array()) -> void:
 	_fog_spots = fog_spots
 	_leaf_trees = leaf_trees
 	_leaf_trees_red = leaf_trees_red
+	_leaf_trees_needle = leaf_trees_needle
 	# setup is async (pool creation yields) — _process must not run until
 	# everything below exists
 	set_process(false)
@@ -182,7 +185,7 @@ func setup(root: Node2D, floor_layer: TileMapLayer, puddle_spots: Array,
 	leaf_layer.name = "Leaves"
 	leaf_layer.z_index = 45
 	root.add_child(leaf_layer)
-	for i in 4:
+	for i in 6:   # 0-1 green, 2-3 autumn red, 4-5 conifer needles
 		_leaf_tex.append(load("res://art/gen/leaves_%d.png" % i))
 	for i in LEAF_COUNT:
 		var sprite := Sprite2D.new()
@@ -414,7 +417,7 @@ func _update_fog(delta: float, morning: float) -> void:
 
 
 func _update_leaves(delta: float) -> void:
-	if _leaf_trees.is_empty():
+	if _leaf_trees.is_empty() and _leaf_trees_needle.is_empty():
 		return
 	# keep a fresh list of shedders the camera can see — the old code rolled
 	# ONE tree from the WHOLE district and only shed if that exact tree was
@@ -439,6 +442,11 @@ func _update_leaves(delta: float) -> void:
 				if absf(red_tree.x - near_center.x) <= near_view.x \
 						and absf(red_tree.y - near_center.y) <= near_view.y:
 					_leaf_near.append(100000 + ti)
+			for ti in _leaf_trees_needle.size():
+				var pine := _leaf_trees_needle[ti]
+				if absf(pine.x - near_center.x) <= near_view.x \
+						and absf(pine.y - near_center.y) <= near_view.y:
+					_leaf_near.append(200000 + ti)
 			# shuffled so the take-turns cursor doesn't march through the
 			# trees in map order (cosmetic only — the world layout's
 			# randomness still flows through the builder's own rng)
@@ -454,19 +462,29 @@ func _update_leaves(delta: float) -> void:
 		# walking a shuffled list gives every visible tree its turn.
 		_leaf_cursor = (_leaf_cursor + 1) % _leaf_near.size()
 		var pick: int = _leaf_near[_leaf_cursor]
-		var red := pick >= 100000
-		var tree := _leaf_trees_red[pick - 100000] if red else _leaf_trees[pick]
+		var needle := pick >= 200000
+		var red := not needle and pick >= 100000
+		var tree := _leaf_trees[pick] if pick < 100000 else Vector2.ZERO
+		if needle:
+			tree = _leaf_trees_needle[pick - 200000]
+		elif red:
+			tree = _leaf_trees_red[pick - 100000]
 		for i in LEAF_COUNT:
 			if not _leaf_state[i]["active"]:
 				var state := _leaf_state[i]
 				state["active"] = true
 				state["t"] = 0.0
-				state["dur"] = randf_range(2.2, 3.8)
-				state["pattern"] = randi_range(0, 2)
+				# a needle is heavy for its size: it drops sooner, and from
+				# tighter in against the trunk than a leaf lets go
+				state["dur"] = randf_range(1.7, 2.6) if needle \
+					else randf_range(2.2, 3.8)
+				state["pattern"] = 3 if needle else randi_range(0, 2)
 				state["origin"] = tree + Vector2(
-					randf_range(-11.0, 11.0), randf_range(-8.0, 2.0))
+					randf_range(-7.0, 7.0) if needle else randf_range(-11.0, 11.0),
+					randf_range(-8.0, 2.0))
 				var sprite := _leaf_sprites[i]
-				sprite.texture = _leaf_tex[(2 if red else 0) + randi_range(0, 1)]
+				var tex_base := 4 if needle else (2 if red else 0)
+				sprite.texture = _leaf_tex[tex_base + randi_range(0, 1)]
 				sprite.visible = true
 				break
 	for i in LEAF_COUNT:
@@ -491,6 +509,9 @@ func _update_leaves(delta: float) -> void:
 			2:  # caught by the wind
 				sprite.position = origin + Vector2(
 					t * 0.9 * _fog_wind + sin(t * 4.0) * 2.0, p * fall * 1.1)
+			3:  # a NEEDLE: no blade to catch the air, so it drops straight
+				sprite.position = origin + Vector2(sin(t * 2.2) * 1.5,
+					p * fall * 1.35)
 		sprite.frame = int(t * 6.0) % 2
 		sprite.modulate.a = 1.0 if p < 0.8 else 1.0 - (p - 0.8) / 0.2
 

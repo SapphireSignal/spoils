@@ -603,6 +603,10 @@ func _probe_world() -> void:
 	var vec: Dictionary = info.get("map_vec", {})
 	print("ROADS_V %s" % [vec.get("roads_v", [])])
 	print("ROADS_H %s" % [vec.get("roads_h", [])])
+	print("SHEDDERS green=%d red=%d needle=%d" % [
+		(info.get("leaf_trees", PackedVector2Array()) as PackedVector2Array).size(),
+		(info.get("leaf_trees_red", PackedVector2Array()) as PackedVector2Array).size(),
+		(info.get("leaf_trees_needle", PackedVector2Array()) as PackedVector2Array).size()])
 	var stairs_cells: Array[Vector2i] = []
 	for s in get_tree().get_nodes_in_group("stairs"):
 		stairs_cells.append(floor_layer.local_to_map((s as Node2D).global_position))

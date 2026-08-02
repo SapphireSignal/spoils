@@ -95,6 +95,7 @@ var _bush_nodes: Array[Node2D] = []  # registered with the Foliage manager
 var _fog_spots := PackedVector2Array()   # dawn-fog anchors (woods + roads)
 var _leaf_trees := PackedVector2Array()  # green shedder canopies
 var _leaf_trees_red := PackedVector2Array()  # the autumn grove's shedders
+var _leaf_trees_needle := PackedVector2Array()  # conifers — needles, not leaves
 var _autumn_rect := Rect2i()             # east half of the woods turns
 
 # zoning (v0.6.18): the district is PLACES now, not sprawl
@@ -218,6 +219,7 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 		"fog_spots": _fog_spots,
 		"leaf_trees": _leaf_trees,
 		"leaf_trees_red": _leaf_trees_red,
+		"leaf_trees_needle": _leaf_trees_needle,
 		"uppers": _uppers,
 		"cars": _cars,
 		"zones": _zone_summary(),
@@ -3043,8 +3045,14 @@ func _maybe_shed_leaves(variant: String, node: Node2D, red: bool = false) -> voi
 		_leaf_trees_red.append(node.position + Vector2(0, -30.0))
 		return
 	var index := int(variant.get_slice("_", 1))
-	if index < 4 or index > 6:
-		return                      # conifers and bare snags keep theirs
+	if index < 4:
+		# CONIFERS drop needles (user: a pine that sheds nothing reads as
+		# dead). Their own sprite, their own straight-down fall — never a
+		# broadleaf leaf out of a pine.
+		_leaf_trees_needle.append(node.position + Vector2(0, -26.0))
+		return
+	if index > 6:
+		return                      # bare dead snags stay bare, by design
 	_leaf_trees.append(node.position + Vector2(0, -30.0))
 
 

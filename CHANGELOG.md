@@ -3,6 +3,27 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.52] — 2026-08-01 — pines shed needles
+
+### Added
+- **Conifers drop needles.** v0.6.31 excluded them from shedding so
+  they couldn't drop broadleaf leaves out of a pine — but a pine that
+  drops nothing reads as dead (user). They now have their own drop:
+  two needle sprites (a fresh green and a dried tan, both brighter
+  than the canopy so they don't vanish into the forest floor), a
+  thinner shape than a leaf, and their own fall pattern — straight
+  down with a slight lean and no flutter, because a needle has no
+  blade to catch the air. They fall faster and from tighter in against
+  the trunk than a leaf lets go.
+- Dead bare snags still drop nothing, by design.
+- `--probe-world` prints `SHEDDERS green=/red=/needle=` — this seed
+  registers 182 green, 46 autumn and **136 conifer** shedders.
+
+**Worth a look in motion:** inside the dense woods the needles are
+subtle against the forest floor's own green speckle; they read most
+clearly on pines standing in the open. Say the word and they can go
+bigger, brighter or more frequent.
+
 ## [0.6.51] — 2026-08-01 — the roads stop somewhere
 
 A deliberate **map revision** of transit-01, approved by the user
