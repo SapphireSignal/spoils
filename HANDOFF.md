@@ -59,12 +59,14 @@ check: *"yes i do want to add a check to the smoke test that compares the
 version CLAUDE.md claims against the actual newest git tag"*.
 
 **Learned:**
-- **The renumbering left one tag on the wrong commit.** `v0.6.14` points at
-  `f8e83ae` ("renumber the whole release history, evenly") — the bookkeeping
-  commit — instead of `9c79c9b`, the release it is supposed to mark. 89 of
-  the 90 renumbered tags are correct; this one is not, on the local repo and
-  on the remote. **Still open** — the fix needs a tag force-push and the
-  permission classifier blocked it. Commands are in `TASKS.md` C5.
+- **The renumbering left one tag on the wrong commit — now FIXED.**
+  `v0.6.14` had been left on `f8e83ae` ("renumber the whole release history,
+  evenly", the bookkeeping commit) instead of `9c79c9b`, the release it
+  marks — almost certainly the renumbering script tagging its last entry
+  against HEAD rather than the recorded sha. 89 of the 90 were correct. The
+  user ran `git tag -f` + a tag force-push (the permission classifier blocks
+  force operations, so that fix will always need them); local and remote both
+  point at `9c79c9b` now and `--checkdocs` is green.
 - **Commit messages still carry pre-renumber version numbers.** Only tags
   moved. `git log` shows "v0.6.76: menu housekeeping" on a commit whose tag
   is `v0.6.13`+. **Never read a version out of a commit subject** for
@@ -73,9 +75,9 @@ version CLAUDE.md claims against the actual newest git tag"*.
   `docs/version_renumber_2026-08-02/tag_commits.json`, so this class of
   damage can never go unnoticed again.
 
-**Picked up at:** The tag fix (TASKS.md C5, one command, needs the user).
-Then the smoker on the bench (TASKS.md B4), then the LZ smoke (B4b) — both
-unchanged from the last session's plan.
+**Picked up at:** The smoker on the bench (TASKS.md B4), then the LZ green
+smoke (B4b) — both unchanged from the last session's plan. Nothing is
+blocked; `--checkdocs` and `--smoke` are green.
 
 ---
 

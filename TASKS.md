@@ -236,27 +236,6 @@ outlasts the animation.
 
 # C. HOUSEKEEPING
 
-## C5. One renumbered tag is on the wrong commit — DO THIS FIRST
-
-**`--checkdocs` fails until this is fixed.** Found 2026-08-02 by auditing all
-90 renumbered tags against `docs/version_renumber_2026-08-02/tag_commits.json`.
-89 are correct. `v0.6.14` is not: it sits on `f8e83ae` ("renumber the whole
-release history, evenly" — the bookkeeping commit) instead of `9c79c9b`
-("v0.6.76: menu housekeeping"), the release it is meant to mark. The remote
-has it wrong too. Almost certainly the renumbering script tagged the last
-entry against HEAD rather than the recorded sha.
-
-Two commands, and the second is a tag force-push, so **it needs the user** —
-the permission classifier blocks it:
-
-```
-git tag -f v0.6.14 9c79c9bd4788c7455aa7f7bb0a961f4a0d5ee0a9
-git push --force origin refs/tags/v0.6.14
-```
-
-Then `--checkdocs` goes green. Nothing else in the repo is affected: no commit
-moved, and every other tag verified correct.
-
 ## C1. Changelog bullets in the wrong places *(user)*
 
 `CHANGELOG_ENTRIES` stores each entry as an array of strings and the
