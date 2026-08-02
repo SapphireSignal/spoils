@@ -12,11 +12,11 @@ extends CanvasLayer
 ##
 ## Reusable on purpose: the walk-in tutorial in M2 is entirely her voice.
 
-const HOLD := 4.6              # how long a call stays up
+const HOLD := 6.5              # how long a call stays up (user: they went
+                               # by too quickly at 4.6)
 const FADE := 0.7
 
 var _panel: PanelContainer
-var _who: Label
 var _line: Label
 var _left := 0.0
 var _queue: Array[String] = []
@@ -49,11 +49,9 @@ func _ready() -> void:
 	var rows := VBoxContainer.new()
 	rows.add_theme_constant_override("separation", 2)
 	margin.add_child(rows)
-	_who = Label.new()
-	_who.text = "mara"
-	_who.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_who.add_theme_color_override("font_color", UITheme.ACCENT)
-	rows.add_child(_who)
+	# no name plate: she is the only voice on this channel, and a label
+	# saying "mara" over a line that ALSO said "magpie, mara." named her
+	# twice in three words (user report, with a screenshot)
 	_line = Label.new()
 	_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_line.custom_minimum_size = Vector2(240, 0)
@@ -75,6 +73,9 @@ func _speak(text: String) -> void:
 	_line.text = text
 	_left = HOLD
 	_panel.modulate.a = 1.0
+	# one very quiet tick as she keys up, and nothing at all when she
+	# drops off (user: subtle, and appear only)
+	Sfx.play_radio_tick()
 
 
 func _process(delta: float) -> void:

@@ -189,7 +189,7 @@ func _build_world() -> void:
 	freight.name = "NightFreight"
 	ysort.add_child(freight)
 	freight.setup(info["freight_stop"] as Vector2, _player, radio,
-		info["manifest"] as Dictionary)
+		info["manifest"] as Dictionary, environment)
 	freight.extracted.connect(_on_extracted)
 	# the warden's crossing: his window, and what paying him buys
 	var toll: TollGate = info.get("toll_gate", null)

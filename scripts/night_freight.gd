@@ -11,9 +11,12 @@ extends Node2D
 
 signal extracted(method: String)
 
-const PERIOD := 300.0          # five real minutes between arrivals
-const FIRST_ARRIVAL := 20.0    # the first one comes early enough to catch
-                               # (45 s read as "late" from inside a raid)
+## THE CLOCK RUNS IT (user call 2026-08-01): she arrives at 24:00, the
+## darkest point of the night, every in-game day — not on a real-time
+## cycle, and never in daylight. ARRIVE_AT is a fraction of the day, so
+## a longer day cycle just means a longer wait for her.
+const ARRIVE_AT := 0.0         # midnight — day_time wraps 0..1
+const WARN_AT := 0.985         # mara calls it in a little before
 const ARRIVE_TIME := 9.0       # the slide into the yard
 const WAIT_TIME := 60.0        # one real minute standing
 const WARN_LEAD := 18.0        # whistle this long before it appears
@@ -34,6 +37,8 @@ var _warned := false
 var _half_called := false
 var _player: Player
 var _radio: Radio
+var _environment: Node          # owns day_time — the freight runs on it
+var _last_day := -1.0           # so midnight only triggers once per day
 var _notice: Label
 var _countdown: Label
 var _steam_tex: Texture2D
@@ -49,17 +54,14 @@ func _radio_say(text: String) -> void:
 
 
 func setup(stop_pos: Vector2, player: Player, radio: Radio,
-		manifest: Dictionary) -> void:
+		manifest: Dictionary, environment: Node) -> void:
 	_stop_pos = stop_pos
 	_player = player
 	_radio = radio
+	_environment = environment
 	position = _stop_pos - RAIL_DIR * 2600.0
 	visible = false
-	# AWAY fires when _clock reaches PERIOD, so to arrive FIRST_ARRIVAL
-	# seconds from now the clock must START that far short of PERIOD.
-	# The sign was inverted, which put the first train 580 s out — the
-	# v0.6.40 note claiming "20 seconds in" was simply wrong.
-	_clock = PERIOD - FIRST_ARRIVAL
+	_clock = 0.0
 
 	# origins come from the manifest like every other prop — guessing them
 	# put the hauled cars off the rails. The builder already parsed the
@@ -169,15 +171,21 @@ func _process(delta: float) -> void:
 	_clock += delta
 	match state:
 		AWAY:
-			var until := PERIOD - _clock
-			if not _warned and until <= WARN_LEAD:
+			# the in-game clock decides, not a stopwatch: she is a NIGHT
+			# freight and she keeps to the timetable (user call)
+			var day: float = _environment.get("day_time") if _environment != null else 0.0
+			var wrapped := day < _last_day - 0.5   # the clock passed 24:00
+			_last_day = day
+			if not _warned and day >= WARN_AT:
+				# she is called in just BEFORE midnight, so the warning and
+				# the arrival are the same event from the raider's side
 				_warned = true
 				Sfx.play_horn()
-				_radio_say("magpie, mara. i've got a freight inbound to the "
-					+ "yard. twenty seconds, give or take.")
-			if _clock >= PERIOD:
-				_clock = 0.0
+				_radio_say("magpie, ive got a freight inbound to the "
+					+ "trainyard. give or take.")
+			elif _warned and wrapped:
 				_warned = false
+				_clock = 0.0
 				state = ARRIVING
 				visible = true
 				Sfx.play_horn()
@@ -201,7 +209,7 @@ func _process(delta: float) -> void:
 				if not _half_called and left <= 25.0:
 					_half_called = true
 					_radio_say("twenty five seconds. if you're not close, "
-						+ "don't run for it - next one's five minutes.")
+						+ "don't run for it - she's back tomorrow night.")
 				_show_notice(maxi(0, int(left)))
 				if left <= 0.0:
 					_leave()
@@ -220,6 +228,7 @@ func _process(delta: float) -> void:
 				else:
 					_clock = 0.0
 					_speed = 0.0
+					_warned = false        # ...and again tomorrow night
 					position = _stop_pos - RAIL_DIR * 2600.0
 					state = AWAY
 
@@ -272,8 +281,8 @@ func _leave() -> void:
 	_notice.visible = false
 	Sfx.play_horn()
 	if not boarded:
-		_radio_say("and she's rolling. that's that. five minutes till the "
-			+ "next one - find something to do that isn't dying.")
+		_radio_say("and she's rolling. that's that until tomorrow night - "
+			+ "find something to do that isn't dying.")
 
 
 func _show_notice(seconds: int) -> void:

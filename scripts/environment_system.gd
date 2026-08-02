@@ -8,8 +8,10 @@ extends Node
 ## Splashes never move with the camera, and no drop lands inside a roofed
 ## building. Every rain pixel — drop and splash — is the puddles' blue.
 
-const DAY_SECONDS := 600.0          # one full day/night cycle (10 min, user
-                                    # call) — night must ARRIVE every session
+const DAY_SECONDS := 1080.0         # one full day/night cycle (18 min). 10
+                                    # felt short to the user; night still
+                                    # ARRIVES inside a normal raid, and the
+                                    # freight now keeps to this clock
 const DEEP_NIGHT := Color(0.085, 0.095, 0.24)  # HARD-to-see dark (user call:
                                     # "that's why we have a flashlight")
 const STORM_TINT_SECONDS := 45.0    # storm darkening fades in over ~45 s —

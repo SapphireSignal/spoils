@@ -68,6 +68,15 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.54", ["the freight keeps a timetable now: she comes at 24:00,",
+		"the darkest point of the night, once per day - never in",
+		"the morning - and mara only calls her in when shes",
+		"actually coming",
+		"the day is longer (18 minutes end to end)",
+		"maras calls stay up two seconds longer, dont say her",
+		"own name twice, and key up with a very quiet tick",
+		"stranded boxcars sit BESIDE the running line instead of",
+		"on it - the freight used to drive straight through one"]],
 	["v0.6.53", ["houses have lights inside now. they come on with the",
 		"dark, a third of them flicker, and every one has a",
 		"cable you can follow across the floor to the power box",

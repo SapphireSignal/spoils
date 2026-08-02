@@ -188,6 +188,34 @@ This file carries everything a fresh session needs that isn't in those two.
 
 ## THE QUEUE (as of v0.6.44 — work straight down it)
 
+**NEW BATCH — user asks sent 2026-08-01 after v0.6.53** (they are
+playtesting live; work these next, they are all concrete):
+A. **Mara's popup wording** — it shows a "mara" title AND says
+   "magpie, mara. ..." Both name mentions go. Wanted line: "magpie,
+   ive got a freight inbound to the trainyard, give or take". Say
+   TRAINYARD, not yard. Also HOLD the popup 1–2 s longer (4.6 → ~6.5).
+B. **A really subtle sound when the popup APPEARS** (nothing on
+   disappear — v0.6.46 removed both at their ask). Quiet: ≤ -18 dB,
+   on the sfx bus.
+C. **The freight runs on the CLOCK, at 24:00** — peak darkness, a
+   fixed in-game time every day, never in the morning. Mara's freight
+   calls fire only with it (they saw popups at 3am and in daylight).
+D. **Longer day/night cycle** — DAY_SECONDS 600 feels short to them.
+E. **The freight must not drive through parked trains** — it clipped
+   straight through one on the main line.
+F. **Quitting to the menu mid-raid must count as DYING**: death screen
+   with loot lost, xp, who killed you, and WHERE you were hit — a
+   character doll marking real hit locations (thorax, stomach, head,
+   eyes), Tarkov-style. They also asked "how does saving work?" —
+   answer: nothing persists yet, the stash is M4.
+G. **Map select shows the live in-game clock + day/night**, ticking,
+   BEFORE you pick a map. Needs a time source shared with the raid.
+H. **Power lines across the district** — pylons with catenary, some
+   broken, some lines SNAPPED and hanging (overrun look). They run
+   underground to a YELLOW utility box on the BACK of a power tower
+   beside the comms relay: not a POI, just a small spot with power
+   boxes and tools scattered on the ground.
+
 **THE OVERNIGHT BATCH IS DONE** (all five user asks shipped as
 v0.6.45–48 — detail in "Where we are" above). What remains below is
 what the next session works, in order. Items needing THE USER are

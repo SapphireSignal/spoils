@@ -2161,11 +2161,14 @@ func _place_trainyard() -> void:
 				continue
 			var item := _pick_variant(["crate", "crate_stack", "pallet"][_rng.randi_range(0, 2)])
 			_add_prop_at_cell(item, spot, Vector2(6, 3))
-	# a couple of boxcars stranded on the main line too
+	# a couple of boxcars stranded BESIDE the main line. They used to sit
+	# ON it and the night freight drove straight through them (user
+	# report) — the running line stays clear, so these are shunted a
+	# track over onto the ballast shoulder.
 	for i in _rng.randi_range(1, 2):
 		await _tick()
 		var x := _rng.randi_range(BARRIER_INSET + 8, MAP_W - BARRIER_INSET - 8)
-		var cell := Vector2i(x, _rail_row)
+		var cell := Vector2i(x, _rail_row + (2 if _rng.randf() < 0.5 else -2))
 		if _occupied.has(cell) or _on_road(cell) or _rail_cross.has(cell) \
 				or _near_a_door(cell):
 			continue

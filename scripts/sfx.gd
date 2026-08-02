@@ -138,6 +138,13 @@ func play_click(quiet: bool = false) -> void:
 	_play(_click, -20.0 if quiet else -8.0)
 
 
+func play_radio_tick() -> void:
+	## mara keying up. DELIBERATELY tiny (user: "a really subtle sound
+	## effect") — the old squelch was too much and got cut entirely in
+	## v0.6.46. Nothing plays when the call drops off.
+	_play(_click, -30.0)
+
+
 func play_splash_ping(quiet: bool = false) -> void:
 	var player := _players[_next]
 	_next = (_next + 1) % _players.size()

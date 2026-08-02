@@ -3,6 +3,32 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.54] — 2026-08-01 — the freight keeps a timetable
+
+All from the user's live playtest.
+
+### Changed
+- **The night freight runs on the in-game clock, at 24:00.** She was
+  on a five-real-minute cycle, which is why she turned up in the
+  morning. Now she arrives at midnight — the darkest point — once per
+  in-game day, and mara calls her in just before, so the warning and
+  the arrival are the same event. Her lines no longer promise "five
+  minutes till the next one"; she's back tomorrow night.
+- **The day is longer**: a full cycle is 18 minutes, up from 10.
+- **Mara's popup**: the "mara" name plate is gone and the freight line
+  no longer says "magpie, mara." — she named herself twice in three
+  words. It reads "magpie, ive got a freight inbound to the trainyard.
+  give or take." Calls also hold **6.5 s** instead of 4.6 (user: they
+  went by too quickly).
+- **A very quiet tick** as she keys up (-30 dB, on the sfx bus), and
+  still nothing at all when the call drops off.
+
+### Fixed
+- **The freight drove through parked boxcars.** Stranded stock was
+  placed ON the running line; it now sits a track over on the ballast
+  shoulder, so the main line the freight uses stays clear. Sidings
+  keep their rolling stock.
+
 ## [0.6.53] — 2026-08-01 — lit rooms, and the cable that feeds them
 
 ### Added
