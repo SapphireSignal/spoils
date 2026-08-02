@@ -1,7 +1,7 @@
 """the underpass — transit's road ducking under the rail line, flooded and
 never drained: one failing sodium tube on the right, grey daylight in the far
-mouth on the left, a car sunk to its windows between them, and the whole
-picture repeated, broken, in the water.
+mouth on the left, a car that went in nose first lying half sunk in the near
+flood at the bottom left, and the whole picture repeated, broken, in the water.
 
 BACKDROP PITCH - static scene only, no living layer yet. Unwired: nothing
 imports this and gen_art.py never emits it. If the user picks this pitch it
@@ -14,8 +14,9 @@ ROOM LEFT FOR THE LIVING LAYER (not built here, per the brief):
     corrected size: it cannot reach past x=610 and so never touches the
     buttons.  a dropout removes the top end, never the shape.
   * three ceiling leaks at x = 300, 596 and 736 — chosen so a falling drip
-    never crosses the button box.  landing sites: the car roof (y 338), open
-    water (y 409), the walkway kerb (y 388).
+    never crosses the button box.  landing sites: open water (y 406 — this
+    said "the car roof (y 338)" until revision 3 moved the car out of that
+    column entirely), open water (y 409), the walkway kerb (y 388).
   * the walkway pool and the wall halo are baked here; a breathing glow
     goes on top of them, it does not replace them.
   * the water's dashes are baked at rest.  three (not five) surface strips
@@ -49,6 +50,29 @@ of these is FIXED and verified in the render, not planned:
      both ends, with a real top face and a tied ear.
   7. the top 108px was flat black.  it is a soffit now — girder flanges,
      bracing, one torn brace, leak runs.  still the darkest band in the frame.
+
+REVISION 3 — ONE thing was complained about and ONE thing changed.  the user:
+"the thing beside the door ... it kind of looks like the back of a car or
+something ... I can't even tell what it is", then "it's more down, towards the
+bottom left of the picture, it's like cropped.  That's the car thing I'm
+talking about."  FIXED, and it is the only edit in this revision:
+  * the car stood at x 202-352 with its front half BEHIND the portal's right
+    jamb, so no whole vehicle was ever on screen — hence "cropped".  what was
+    left of it was a flat-on rear panel with one lens, no flank, no wheels, no
+    bumper and no plate, which at this size is a box.
+  * it is rebuilt as a three-quarter rear view standing in the OPEN FLOOD at
+    the bottom left, nothing crossing it, water behind it on every side.  real
+    box geometry (a near vertical corner, a length axis and a width axis), a
+    three-box saloon profile, and the parts that say car: two lamps, a plate
+    recess, a bumper with its shadow, arches, handles, a wing mirror over the
+    water, a wiper.  it sits to the sills, cut DEAD LEVEL, nothing below.
+  * it is drawn at the END of paint(), after the flood, because the water pass
+    would otherwise paint straight over it.  its rust roll stays where it
+    always was in the seeded stream, so nothing behind it re-rolled: a diff of
+    the two renders is empty everywhere except the two car regions and the
+    flood columns that used to mirror the old car.
+  * the downpipe was NOT touched.  an earlier instruction to delete it was
+    withdrawn; it is the wrong object and it stays.
 
 CRITIC'S CORRECTIONS APPLIED (see the brief):
   1. the real button box is x 395-565 / y 237-307, ~55px higher than the
@@ -698,83 +722,14 @@ def paint() -> Canvas:
             c.set(x, MIRROR + 1, C("819796"))
 
     # ---------------------------------------------------- the sunken car -----
-    # three-quarter rear view, nose away toward the mouth, sills at the
-    # waterline.  built on its own canvas so the far flank's lit rim can be
-    # walked down the true silhouette edge, then composited.
-    CW, CH = 180, 78
-    CAR_X, CAR_Y = 180, 332
-    car = Canvas(CW, CH)
-
-    def span(ly: int):
-        if ly < 4:
-            return None
-        if ly < 12:
-            u = (ly - 4) / 8.0
-            return int(58 - 14 * u), int(130 + 16 * u)
-        u = (ly - 12) / 62.0
-        return int(44 - 22 * u), int(146 + 26 * u)
-
-    for ly in range(4, CH):
-        s = span(ly)
-        if s is None:
-            continue
-        x0, x1 = s
-        x1 = min(CW - 1, x1)
-        if ly < 11:                                            # roof top face
-            for lx in range(x0, x1 + 1):
-                car.set(lx, ly, C("394a50") if lx < 92 else C("202e37"))
-        elif ly < 37:                                          # greenhouse
-            car.rect(x0, ly, x1, ly, C("151d28"))
-        elif ly < 49:                                          # boot deck
-            car.rect(x0, ly, x1, ly, C("202e37"))
-        else:                                                  # flank at water
-            car.rect(x0, ly, x1, ly, C("151d28"))
-    for ly in range(12, 36):                                   # the rear glass
-        s = span(ly)
-        x0, x1 = s
-        car.rect(x0 + 15, ly, min(CW - 1, x1) - 16, ly, C("090a14"))
-    for ly in range(15, 18):                                   # sheen, stepped
-        s = span(ly)                                           # so it reads as a
-        car.rect(s[0] + 23, ly, s[0] + 58, ly, C("3c5e8b"))    # reflection and
-    for ly in range(17, 20):                                   # not an led bar
-        s = span(ly)
-        car.rect(s[0] + 64, ly, s[0] + 86, ly, C("3c5e8b"))
-    for ly in range(20, CH):                                   # rear panel, near
-        s = span(ly)
-        if s is None:
-            continue
-        car.rect(max(s[0], 146), ly, min(CW - 1, s[1]), ly, C("10141f"))
-    s = span(37)
-    car.hline(s[0], min(CW - 1, s[1]), 37, C("577277"))        # boot lip
-    car.hline(s[0], min(CW - 1, s[1]), 38, C("394a50"))
-    car.rect(160, 40, 170, 48, C("a53030"))                    # intact tail lens
-    car.hline(160, 170, 40, C("cf573c"))
-    car.rect(150, 42, 156, 48, C("341c27"))                    # smashed to a socket
-    car.hline(150, 156, 42, C("10141f"))
-    for ly in range(4, CH):                                    # far flank rim
-        s = span(ly)
-        if s is None:
-            continue
-        car.set(s[0], ly, C("577277"))
-        if ly > 30:
-            car.set(s[0] + 1, ly, C("394a50"))
-    for i in range(5):                                         # rust, as SOLID
-        rx = rng.randrange(34, 160)                            # patches: blob()
-        ry = rng.randrange(41, 60)                             # wanders into
-        rw, rh = rng.randint(5, 13), rng.randint(3, 6)         # scrawls here
-        col = C("4d2b32") if i % 2 else C("341c27")
-        for k in range(rh):
-            inset = 1 if (k == 0 or k == rh - 1) else 0
-            car.rect(rx + inset, ry + k, rx + rw - inset, ry + k, col)
-    for ly in range(62, 74):                                   # algae collar
-        s = span(ly)
-        if s is None:
-            continue
-        for lx in range(s[0], min(CW - 1, s[1]) + 1):
-            if ly > 63 + int(1.6 * math.sin(lx / 11.0) + 1.1 * math.sin(lx / 27.0)):
-                car.set(lx, ly, C("19332d"))
-    c.img.alpha_composite(car.img, (CAR_X, CAR_Y))
-    c.px = c.img.load()
+    # THE CAR IS NOT DRAWN HERE ANY MORE — it stood at (180, 332), half behind
+    # the portal's right jamb, and it is now built at the END of this file, out
+    # in the open flood where a whole vehicle fits.  see REVISION 3.
+    # what stays here is its rust roll, and ONLY its rust roll: it costs the
+    # seeded stream exactly the four draws per patch it always cost, so moving
+    # the car cannot re-roll one sandbag, ripple, slick or wake behind it.
+    car_rust = [(rng.randrange(34, 160), rng.randrange(41, 60),
+                 rng.randint(5, 13), rng.randint(3, 6)) for _ in range(5)]
 
     # ------------------------------------------------- the raised walkway ----
     # the one dry path through, and a legible game idea.  it stops at x=604 in
@@ -1256,6 +1211,202 @@ def paint() -> Canvas:
     for k in range(3):                                          # a rust bloom
         c.hline(OX - 14 + k, OX - 6 + k * 2, ORY + 17 + k, C("4d2b32"))
     float_wake(OX - 21, OX + 21, OWL, False, 20)
+
+    # ---------------------------------------------------- the sunken car -----
+    # REVISION 3.  USER: "the thing beside the door ... it kind of looks like
+    # the back of a car or something ... I can't even tell what it is", then
+    # "it's more down, towards the bottom left of the picture, it's like
+    # cropped.  That's the car thing I'm talking about."
+    # they were right on every count.  it stood at x 202-352 with its front
+    # half BEHIND the portal's right jamb, so no whole vehicle was ever on
+    # screen; what was left was a flat-on rear panel — one lens, no flank, no
+    # wheels, no bumper, no plate.  a flat rear at this size is a box.
+    # it is rebuilt as a THREE-QUARTER rear view standing in the OPEN FLOOD at
+    # the bottom left, where nothing crops it and the water is behind it on
+    # every side.  the geometry is a real box: a near vertical corner at
+    # (134, 478), a length axis running away up-left and a width axis running
+    # away up-right, so the rear face AND the whole near flank are in frame.
+    # three faces, three values — top 394a50, flank 202e37, rear 151d28 — the
+    # same cel language the walkway uses.  the cut is DEAD LEVEL at the
+    # waterline and nothing is drawn below it; it sits to the sills, not to the
+    # windows, so the doors, the arches and the bumper are all above water.
+    CARW, CARH = 232, 80
+    car = Canvas(CARW, CARH)
+    X0, WY = 128, 74                      # the near vertical corner, at the water
+    LUX, LUY = -108.0, -27.0              # along the car: rear -> nose
+    LWX, LWY = 78.0, -9.0                 # across it: near flank -> far side
+    HB, HR = 28, 46                       # beltline, roofline, px above water
+    BOOT, SCR, RFF, WSC = 0.14, 0.30, 0.56, 0.70      # the profile stations
+    TOPF, TOPE = C("394a50"), C("577277")
+    FLK, FLKD = C("202e37"), C("151d28")
+    RER, RERD = C("151d28"), C("10141f")
+    GLS, SHN, SIL = C("090a14"), C("3c5e8b"), C("090a14")
+
+    # python round() is BANKER rounding: round(53.5) is 54 and round(54.5) is
+    # also 54, so a plane sampled at exact half pixels drops whole rows.  it
+    # punched an every-other-row hole down the middle of the near tail lamp.
+    def rnd(z):
+        return int(math.floor(z + 0.5))
+
+    def cp(u, v, h):
+        return (X0 + u * LUX + v * LWX, WY - h + u * LUY + v * LWY)
+
+    # THE PROFILE IS THE WHOLE ARGUMENT.  two bakes of this were thrown away:
+    # a slab with a full-length greenhouse read as a panel van, and adding a
+    # bonnet to it only made it a pickup.  what a car has and neither of those
+    # had is a THREE-BOX SIDE PROFILE — a boot deck, a raked rear screen, a
+    # short crowned roof, a raked windscreen, a bonnet — and a nose that goes
+    # down.  it went in nose first and it is lying that way: sink() drops the
+    # far end and the bonnet drops 40px further, so the front wing tapers away
+    # UNDER the level waterline instead of ending on a vertical wall.
+    def sink(u):
+        return 12.0 * u
+
+    def belt_h(u):
+        drop = 0.0 if u <= WSC else 40.0 * (u - WSC) / (1.0 - WSC)
+        return HB - sink(u) - drop
+
+    def roof_h(u):
+        if u <= BOOT or u >= WSC:
+            return belt_h(u)
+        if u < SCR:
+            return HB + (HR - HB) * (u - BOOT) / (SCR - BOOT) - sink(u)
+        if u <= RFF:
+            return HR - sink(u)
+        return HR - (HR - HB) * (u - RFF) / (WSC - RFF) - sink(u)
+
+    def cquad(pts, col):                  # convex quad, clipped at the water
+        span = {}
+        for i in range(4):
+            (ax, ay), (bx, by) = pts[i], pts[(i + 1) % 4]
+            n = int(max(abs(bx - ax), abs(by - ay))) + 1
+            for k in range(n + 1):
+                t = k / float(n)
+                xx = ax + (bx - ax) * t
+                yy = rnd(ay + (by - ay) * t)
+                a, b = span.get(yy, (1e6, -1e6))
+                span[yy] = (min(a, xx), max(b, xx))
+        for yy in sorted(span):
+            if yy <= WY:
+                a, b = span[yy]
+                car.hline(rnd(a), rnd(b), yy, col)
+
+    def roof_patch(u0, u1, v0, v1, col):  # a patch lying ON the glazing planes
+        cquad([cp(u0, v0, roof_h(u0)), cp(u0, v1, roof_h(u0)),
+               cp(u1, v1, roof_h(u1)), cp(u1, v0, roof_h(u1))], col)
+
+    def rear_band(v0, v1, h0, h1, col):   # a band on the rear face, in v/h
+        for x in range(int(X0 + v0 * LWX), int(X0 + v1 * LWX) + 1):
+            v = (x - X0) / LWX
+            yb = WY + v * LWY
+            for h in range(int(h0), int(h1) + 1):
+                yy = rnd(yb - h)
+                if yy <= WY:
+                    car.set(x, yy, col)
+
+    def flank_band(u0, u1, h0, h1, col):  # the same on the near flank, in u/h
+        for x in range(int(X0 + u1 * LUX), int(X0 + u0 * LUX) + 1):
+            u = (x - X0) / LUX
+            yb = WY + u * LUY
+            for h in range(int(h0), int(h1) + 1):
+                yy = rnd(yb - h)
+                if yy <= WY:
+                    car.set(x, yy, col)
+
+    # the five top planes, back to front along the car.  they are what makes
+    # this a solid with length instead of a panel, and the two glazed ones are
+    # what makes the length read as a CABIN.
+    roof_patch(0.0, BOOT, 0.0, 1.0, TOPF)                   # the boot deck
+    roof_patch(BOOT, SCR, 0.0, 1.0, RER)                    # the rear screen
+    roof_patch(BOOT + 0.015, SCR - 0.01, 0.07, 0.93, GLS)   # and its glass
+    roof_patch(SCR, RFF, 0.0, 1.0, TOPF)                    # the roof
+    roof_patch(RFF, WSC, 0.0, 1.0, FLKD)                    # the windscreen
+    roof_patch(WSC, 1.0, 0.0, 1.0, TOPF)                    # the bonnet
+    roof_patch(0.194, 0.208, 0.18, 0.36, SHN)               # sheen on the rear
+    roof_patch(0.240, 0.252, 0.60, 0.72, SHN)               # screen, stepped
+    cquad([cp(0.172, 0.22, roof_h(0.172)), cp(0.246, 0.70, roof_h(0.246)),
+           cp(0.256, 0.70, roof_h(0.256)), cp(0.182, 0.22, roof_h(0.182))], FLK)
+    roof_patch(0.164, 0.186, 0.17, 0.23, FLK)               # the wiper pivot
+
+    for x in range(int(X0 + LUX), X0):                      # the near flank
+        u = (x - X0) / LUX
+        yb = WY + u * LUY
+        rt = rnd(yb - roof_h(u))
+        bt = rnd(yb - belt_h(u))
+        if rt > WY:
+            continue                                        # the nose, gone under
+        car.rect(x, rt, x, WY, FLK)
+        car.rect(x, WY - 4, x, WY, FLKD)                    # the sill, in shade
+        car.set(x, rt, TOPE)
+        car.set(x, rt + 1, TOPF)
+        if bt - rt > 5:                                     # a greenhouse here
+            if 0.20 < u < 0.64:
+                car.rect(x, rt + 3, x, bt - 2, GLS)         # the side glass
+            car.set(x, bt, TOPE)                            # the beltline
+            car.set(x, bt + 1, TOPF)
+    for x in range(X0, int(X0 + LWX) + 1):                  # the rear face
+        v = (x - X0) / LWX
+        yb = WY + v * LWY
+        top = rnd(yb - HB)
+        car.rect(x, top, x, WY, RER)
+        car.set(x, top, TOPE)                               # the boot lip
+        car.set(x, top + 1, TOPF)
+    car.vline(X0 - 1, WY - HB, WY - 7, TOPF)                # the near corner:
+    car.vline(X0, WY - HB, WY - 7, RERD)                    # lit flank against
+    car.set(X0 - 1, WY - HB - 1, TOPE)                      # the shaded rear
+
+    for u_ in (0.34, 0.58):                                 # door shut lines
+        x = rnd(X0 + u_ * LUX)
+        yb = WY + u_ * LUY
+        car.rect(x, rnd(yb - belt_h(u_)) + 2, x, WY - 5, RERD)
+    flank_band(0.37, 0.53, 7, 17, FLKD)                     # one caved door, and
+    flank_band(0.38, 0.52, 13, 13, TOPF)                    # the crease in it
+    flank_band(0.25, 0.30, 18, 18, TOPF)                    # two door handles, at
+    flank_band(0.45, 0.50, 18, 18, TOPF)                    # the depth it sits to
+    for x in range(int(X0 + LUX), 118):                     # the algae collar
+        yy = WY - 3 + int(1.4 * math.sin(x / 9.0) + 1.0 * math.sin(x / 23.0))
+        car.rect(x, yy, x, WY, C("19332d"))
+    for (uc, arx, ary) in ((0.22, 16, 10), (0.76, 13, 7)):  # the wheel arches,
+        cx_ = rnd(X0 + uc * LUX)                            # dipping into it
+        for dx in range(-arx, arx + 1):
+            dy = rnd(((1.0 - (dx / float(arx)) ** 2) ** 0.5) * ary)
+            car.rect(cx_ + dx, WY - dy, cx_ + dx, WY, SIL)
+            car.set(cx_ + dx, WY - dy, RERD)
+    car.rect(118, WY - 6, 208, WY - 6, TOPF)                # the rear bumper,
+    car.rect(118, WY - 5, 208, WY - 2, FLK)                 # standing proud and
+    car.rect(118, WY - 1, 208, WY, SIL)                     # shadowed underneath
+    rear_band(0.04, 0.22, 8, 20, RERD)                      # both lamp recesses
+    rear_band(0.78, 0.96, 8, 20, RERD)
+    rear_band(0.06, 0.20, 10, 18, C("a53030"))              # the lens still whole
+    rear_band(0.06, 0.20, 18, 18, C("cf573c"))
+    rear_band(0.80, 0.94, 10, 18, C("341c27"))              # and the dead one
+    rear_band(0.83, 0.91, 12, 16, RERD)
+    rear_band(0.80, 0.84, 18, 18, C("cf573c"))              # one surviving shard
+    rear_band(0.37, 0.63, 7, 17, RERD)                      # the plate recess
+    rear_band(0.37, 0.63, 17, 17, TOPF)
+    rear_band(0.39, 0.61, 9, 15, TOPF)                      # the plate itself
+    rear_band(0.39, 0.61, 15, 15, TOPE)
+    for i, (rrx, rry, rrw, rrh) in enumerate(car_rust):     # rust, as SOLID
+        px_ = 30 + int((rrx - 34) * 1.30)                   # patches — wide and
+        py_ = 42 + (rry - 41)                               # flat, never dots,
+        rh_ = max(2, rrh - 2)                               # and only where
+        rc = C("4d2b32") if i % 2 else C("341c27")          # there is car
+        for k in range(rh_):
+            inset = 1 if (k == 0 or k == rh_ - 1) else 0
+            for xx in range(px_ + inset, px_ + rrw + 5 - inset):
+                q = car.get(xx, py_ + k)
+                if q[3] and q[:3] not in (GLS[:3], SIL[:3]):
+                    car.set(xx, py_ + k, rc)
+    car.rect(44, 35, 53, 39, SIL)                           # the wing mirror.
+    car.rect(45, 36, 52, 38, FLKD)                          # the bonnet is under
+    car.rect(33, 31, 45, 40, SIL)                           # the flood, so the
+    car.rect(34, 32, 44, 39, FLKD)                          # head stands over
+    car.hline(34, 44, 32, TOPF)                             # open water on an
+    car.set(34, 39, TOPF)                                   # arm reaching back
+    car.outline_auto(SIL)
+    c.img.alpha_composite(car.img, (6, 404))
+    c.px = c.img.load()
+    float_wake(25, 213, 478, False, 26)
 
     return c
 

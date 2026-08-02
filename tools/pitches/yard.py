@@ -413,8 +413,21 @@ def paint() -> Canvas:
     while d < 90.0:
         y_near = gy(d)
         y_far = gy(d + 0.25)
-        if y_near - y_far < 0.8:
+        # STOP DRAWING RUNGS ONCE THE PITCH IS UNDER ~3 px. below that two
+        # consecutive sleepers land on the same rows, so "drawing them all"
+        # is really just flood-filling the four-foot - which is what it did:
+        # the whole distance fused into one solid maroon wedge. the test is
+        # the SLEEPER PITCH (~0.6 m to the next chair), not the 0.25 m face,
+        # because the face can still be sub-pixel while the gaps read fine.
+        # THE LOOP DOES NOT BREAK THERE. it keeps running, keeps taking every
+        # rng draw, and only stops writing pixels - because ending the loop
+        # early would shorten the rng stream and re-roll the poles, the rust
+        # and the boxcar wear further down the file, all of which are signed
+        # off. same rule as the world builder: take the roll, throw it away.
+        if far_merge_y is None and y_near - gy(d + 0.60) < 2.4:
             far_merge_y = y_near
+        visible = far_merge_y is None
+        if y_near - y_far < 0.8:
             break
         if y_far < SCENE_H + 40:
             half = min(HALF_MAX, rng.uniform(0.94, 1.26))
@@ -455,19 +468,23 @@ def paint() -> Canvas:
             x0 = int(xl + span * bl)
             x1 = int(xr - span * br)
             if not missing and x1 > x0:
-                for x in range(x0, x1 + 1):
-                    t = (x - xl) / span
-                    off = skew * (t - 0.5) * 2.0
-                    y0 = int(round(y_top + off))
-                    y1 = int(round(y_near + off))
-                    c.vline(x, y0, y1, C(body))
-                    c.set(x, y0, C("241527") if y_near > 372 else C("10141f"))
-                    if y1 - y0 >= 2:
-                        c.set(x, y1, C(lit))
+                if visible:
+                    for x in range(x0, x1 + 1):
+                        t = (x - xl) / span
+                        off = skew * (t - 0.5) * 2.0
+                        y0 = int(round(y_top + off))
+                        y1 = int(round(y_near + off))
+                        c.vline(x, y0, y1, C(body))
+                        c.set(x, y0,
+                              C("241527") if y_near > 372 else C("10141f"))
+                        if y1 - y0 >= 2:
+                            c.set(x, y1, C(lit))
                 if y_near - y_top >= 5 and rng.random() < 0.45:
                     # a split / adze mark, structural not noise
                     wx = int(rng.uniform(x0 + 6, max(x0 + 7, x1 - 6)))
-                    c.vline(wx, int(y_top + 1), int(y_near - 1), C("241527"))
+                    if visible:
+                        c.vline(wx, int(y_top + 1), int(y_near - 1),
+                                C("241527"))
                 # ballast washed clean over one end: a solid tongue of the
                 # ground colour eating into the sleeper, so the row loses a
                 # rung end without losing the sleeper
@@ -475,7 +492,7 @@ def paint() -> Canvas:
                     bal = C("151d28") if y_near > 404 else C("202e37")
                     side = rng.choice((-1, 1))
                     wln = int(span * rng.uniform(0.12, 0.34))
-                    for k in range(wln):
+                    for k in range(wln if visible else 0):
                         u = k / max(1.0, wln - 1.0)
                         wx = x0 + k if side < 0 else x1 - k
                         t = (wx - xl) / span
@@ -489,13 +506,64 @@ def paint() -> Canvas:
         if rng.random() < 0.07:
             d += rng.uniform(0.22, 0.44)
 
-    # beyond the merge point the individual sleepers are sub-pixel: one
-    # continuous bed instead of a moire ladder.
+    # BEYOND THE MERGE POINT THE BED IS NOT SLEEPER COLOUR. it used to be:
+    # one flat 341c27/241527 slab from the merge all the way to the horizon,
+    # which stayed fully saturated as it narrowed and so read as a red
+    # triangle pointing at the vanishing point (user report). up there the
+    # rungs cannot be resolved, so the bed becomes a single band running the
+    # AERIAL PERSPECTIVE ladder instead - warm sleeper tone at the merge,
+    # then cooling and desaturating step by step with distance, the same
+    # trick the telegraph poles use, until inside the haze it is literally
+    # the haze colour and has no edge at all. the steps are placed off the
+    # rail-head colour breaks (276 / 306 / 330), so the two rails keep a
+    # value step against the bed the whole way up and stay the thing that
+    # carries the eye to the VP.
     if far_merge_y:
-        for y in range(HZI + 5, int(far_merge_y) + 1):
+        # a SIDE rng, so adding this band costs the main stream nothing and
+        # the poles / rust / wear further down the file stay exactly as the
+        # user signed them off.
+        brng = random.Random("spoils:pitch:yard:bed")
+        bot = int(far_merge_y)
+        FADE = ("202e37", "151d28", "241527", "341c27")
+        # each seam gets its own amplitude, period and phase, so the three
+        # steps are never parallel and none of them is a ruled line.
+        SEAMS = [(277.0, 3.4, 8.6, 1.9, 23.0),
+                 (316.0, 4.2, 13.3, 2.3, 31.0),
+                 (316.0 + 0.82 * (bot - 316.0), 3.8, 10.9, 2.1, 27.0)]
+        SEAMS = [(b, a1, p1, brng.uniform(0.0, 6.28), a2, p2,
+                  brng.uniform(0.0, 6.28)) for (b, a1, p1, a2, p2) in SEAMS]
+        eph = brng.uniform(0.0, 6.28)
+        for y in range(HZI + 4, bot + 1):
             half = 0.5883 * 1.2 * (y - HZ)
-            c.hline(int(VPX - half), int(VPX + half), y,
-                    C("341c27") if y > 300 else C("241527"))
+            half += min(2.2, 0.05 * (y - HZ)) * math.sin(y / 9.0 + eph)
+            for x in range(max(0, int(VPX - half)),
+                           min(SCENE_W, int(VPX + half) + 1)):
+                if y < e2s[x]:
+                    c.set(x, y, hz_col[x])   # inside the haze: simply gone
+                    continue
+                i = 0
+                for (b, a1, p1, ph1, a2, p2, ph2) in SEAMS:
+                    if y > b + wob(x, a1, p1, ph1, a2, p2, ph2):
+                        i += 1
+                c.set(x, y, C(FADE[i]))
+        # THE JUNCTION MUST NOT BE AN EDGE either. right at the merge the
+        # gaps are still only just gone, so a few last ballast breaks carry
+        # the rhythm of the rungs a little way up into the band and then
+        # stop - each one shorter, rarer and nearer the centre than the one
+        # before. it is the same ramp the telegraph poles use walking down
+        # to silhouette: the regime changes over a stretch, not on a row.
+        yk = float(bot) - 1.0
+        for _ in range(14):
+            dk = K / max(1.0, yk - HZ) + 0.62 + brng.uniform(-0.12, 0.14)
+            yk = gy(dk)
+            if yk <= bot - 17:
+                break
+            if brng.random() < 0.42:
+                continue
+            frac = max(0.30, 1.0 - (bot - yk) / 16.0)
+            gh = 0.5883 * 1.2 * (yk - HZ) * frac
+            gx = VPX + brng.uniform(-3.5, 3.5)
+            c.hline(int(gx - gh), int(gx + gh), int(yk), C("151d28"))
 
     # ======================================================= 5. THE RAILS ==
     GAUGE_H = 0.7175
