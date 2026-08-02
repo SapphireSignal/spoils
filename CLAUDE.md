@@ -188,6 +188,21 @@ This file carries everything a fresh session needs that isn't in those two.
 
 ## THE QUEUE (as of v0.6.44 — work straight down it)
 
+**BUG WITH A REPRO — DO THIS FIRST (user, 2026-08-01):** a two-story
+house AT THE COURTYARD shows its upper FURNITURE but no upper FLOOR
+when you climb — the furniture floats. Must hold for every two-story
+building, and they also want a sweep of ALL interiors (houses,
+warehouses, school, safehouse) for furniture that floats / sits wrong
+/ overlaps. STRONGEST LEAD, check it first: `_plan_plots` (v0.6.23)
+force-upgrades some houses to `stories = 2` AFTER the plots are
+built — if `_build_shell` already decided that plot's floor plan, the
+upper never gets built while the furniture still does. Second lead: an
+INDEX MISMATCH between `Stairs.upper_index` and the `_uppers` registry
+(one building registering stairs without an upper shifts every later
+index). Cheap first measurement: compare `_uppers.size()` against the
+number of nodes in group "stairs" in a probe. The tile maths inside
+`_build_upper` looks correct on paper — measure before touching it.
+
 **OPEN USER ASKS as of v0.6.65 — the live playtest queue.** Full
 detail (repro steps, implementation notes) is in the session task list;
 this is the durable copy:
