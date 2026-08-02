@@ -70,24 +70,21 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
-	["v0.6.67", ["doors are solid ALL the time now, not just when shut.",
-		"the panel keeps its collision when it swings open - it",
-		"just stands somewhere else - so you walk through the",
-		"doorway and never through the door",
-		"and the warden gets a prompt while youre in a car,",
-		"because thats how youll always arrive at his window"]],
-	["v0.6.66", ["the black lines running down every building are gone.",
-		"each wall piece was drawing its own outline, so every",
-		"join between them became a dark seam - and the gap",
-		"between two of those outlines is what let you see your",
-		"own arm through the wall. walls read as one surface now"]],
-	["v0.6.65", ["the freight only runs three nights out of seven now,",
-		"and which nights is different every week - two together",
-		"and one at the far end, or spread out, you have to",
-		"learn the timetable",
+	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
+	# sentence across several entries put a dash on every line (user).
+	["v0.6.67", [
+		"the warden gets a prompt while youre in a car, because thats how youll always arrive at his window",
+		"doors carry a second collider for the open leaf - though the open frames still need redrawing before that lands properly",
+	]],
+	["v0.6.66", [
+		"the black lines running down every building are gone. each wall piece was drawing its own outline, so every join between them became a dark seam",
+		"the gap between two of those outlines is what let you see your own arm through the wall. walls read as one surface now",
+	]],
+	["v0.6.65", [
+		"the freight only runs three nights out of seven now, and which nights is different every week - two together and one at the far end, or spread out. you have to learn the timetable",
 		"the cables inside houses are gone",
-		"closed doors are now covered by a test that walks into",
-		"one from five different angles"]],
+		"closed doors are covered by a test that walks into one from five different angles",
+	]],
 	["v0.6.64", ["opening a menu takes the worlds labels down with it.",
 		"press f to open, the driving hint, the freight notice",
 		"and maras call all come off the screen while a window",
