@@ -3,6 +3,38 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.74] — 2026-08-02 — the toll you paid for, and a bench you can sit on
+
+### Fixed
+- **You could drive straight through the toll extraction** (user). The
+  zone was 240 px across the radius — 480 wide — and a car tops out at
+  190 px/s, so you were out the far side in 2.5 s while the countdown
+  needs 5. It is 470 now, just over five seconds through the middle,
+  and still stops short of the wire so it can never fire while you are
+  inside the district. Clipping the edge at speed no longer resets the
+  count either: a two-second grace keeps it running, because you are
+  still leaving.
+- **Paying the warden lasts the whole raid now** (user drove back in,
+  turned around, and was shot on the way out). The stand-down used to
+  buy exactly one crossing. That read as a bug, because the boom stays
+  up and the warden keeps your money — you were being fired on while
+  driving out through an open gate. Dying still cancels it.
+- **The benches are benches.** The old one had a *one pixel* seat, so
+  it read as a fence going up with nowhere to sit (user). Rebuilt as a
+  real isometric bench: a seat surface with lengthwise slats, a
+  two-slat backrest and four legs.
+
+### Fixed (regression caught in the same pass)
+- Removing the telegraph poles' random offset in v0.6.73 also removed
+  **two draws from the layout RNG**, which silently re-rolled part of a
+  district that is supposed to be FIXED. The roll is taken and thrown
+  away now, and doors, stairs, lamps and walkable cells are once again
+  bit-identical.
+- The closed-door smoke test now walks into **every** door from **both
+  sides** at five offsets, not just the first one. Testing a single
+  door hid a real failure: when the layout shifted, a different door
+  let the player through. All 15 pass.
+
 ## [0.6.73] — 2026-08-02 — the wires along the line
 
 ### Added

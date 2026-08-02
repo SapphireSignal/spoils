@@ -36,7 +36,6 @@ var _round_age: Array[float] = []
 var _pending: Array[float] = []  # countdowns to the volley's staggered shots
 var _round_tex: Texture2D        # cached once — not re-fetched per shot
 var stood_down := false          # the toll was paid: this stretch looks away
-var _was_beyond := false         # the runner actually went past the line
 
 
 func setup(player: Player, world: Node2D, map_center: Vector2, barrier_f: float) -> void:
@@ -87,7 +86,6 @@ func _process(delta: float) -> void:
 		# a new life gets no old favors: whatever the last one paid the
 		# warden, the ring is watching again when you respawn
 		stood_down = false
-		_was_beyond = false
 		_pending.clear()
 		_leave_zone()
 		return
@@ -98,16 +96,12 @@ func _process(delta: float) -> void:
 		# stand-down, which is the very thing v0.6.40 claimed to fix.
 		_pending.clear()
 		_leave_zone()
-		# but it buys ONE crossing: go past the wire and come back inside
-		# and the marksmen pick their rifles back up (the stand-down used
-		# to blind the whole ring for the rest of the raid)
-		var su := _player.global_position - _map_center
-		var sdepth := absf(su.x) * 0.5 + absf(su.y) - _barrier_f
-		if sdepth >= 8.0:
-			_was_beyond = true
-		elif _was_beyond:
-			stood_down = false
-			_was_beyond = false
+		# It used to buy exactly ONE crossing — step back inside the wire
+		# and the marksmen picked their rifles up again. That read as a
+		# bug: the boom is still up, the warden has your money, and you
+		# get shot on the way back out (user drove in, turned round, and
+		# was fired on). The fee is paid for the RAID now. Dying still
+		# cancels it above: a new life gets no old favours.
 		return
 	var u := _player.global_position - _map_center
 	var f := absf(u.x) * 0.5 + absf(u.y)

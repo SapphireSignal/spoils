@@ -11,11 +11,17 @@ extends Node
 signal extracted(method: String)
 
 const COUNT_FROM := 5.0
+# Clipping the edge of a zone at speed used to reset the whole count, so you
+# could pay the warden and then drive straight out through the extract
+# without it ever firing (user). A short grace keeps the count running while
+# you're briefly outside — you're still leaving.
+const LEAVE_GRACE := 2.0
 
 var _zones: Array[Dictionary] = []
 var _player: Player
 var _label: Label
 var _active := -1
+var _grace := 0.0
 var _count := 0.0
 var _count_shown := -1          # label re-shapes only when the digit changes
 var _leaving := false
@@ -85,10 +91,16 @@ func _process(delta: float) -> void:
 			inside = i
 			break
 	if inside == -1:
-		if _active != -1:
+		if _active == -1:
+			return
+		_grace -= delta
+		if _grace <= 0.0:
 			_active = -1
 			_label.visible = false
-		return
+			return
+		inside = _active        # still on your way out; keep counting
+	else:
+		_grace = LEAVE_GRACE
 	if inside != _active:
 		_active = inside
 		_count = COUNT_FROM

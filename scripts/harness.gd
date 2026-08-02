@@ -234,27 +234,39 @@ func _smoke() -> void:
 	# SHORT lets you round its ends, which reads as walking through the door.
 	var block_doors := get_tree().get_nodes_in_group("doors")
 	var gap_offsets := [-8.0, -4.0, 0.0, 4.0, 8.0]
-	if player != null and not block_doors.is_empty():
-		var blocker := block_doors[0] as Door
-		if blocker != null and not blocker.is_open():
+	# EVERY door, not just the first. Testing doors[0] alone hid a real seam
+	# for releases: when an unrelated change shifted the layout, a DIFFERENT
+	# door failed this same check. One sample is not a test.
+	var leaky_doors: Array[String] = []
+	if player != null:
+		for di in block_doors.size():
+			var blocker := block_doors[di] as Door
+			if blocker == null or blocker.is_open():
+				continue
 			var shut_mid := blocker.doorway_center()
 			var shut_thru := blocker.doorway_through()
 			var shut_along := blocker.doorway_along()
 			var shut_norm := blocker.doorway_normal()
 			for lateral in gap_offsets:
 				var at: Vector2 = shut_mid + shut_along * float(lateral)
-				player.position = at - shut_thru * 20.0
-				await get_tree().process_frame
-				# which side of the wall PLANE we set off from — crossing it
-				# is the only thing that counts as walking through
-				var side_before: float = signf(
-					(player.position - at).dot(shut_norm))
-				_shove(player, shut_thru, 34.0)
-				await get_tree().process_frame
-				if (player.position - at).dot(shut_norm) * side_before < -1.0:
-					failures.append("walked through a closed door (offset %d)"
-						% int(lateral))
-					break
+				# from BOTH sides: a seam you can only reach from the street
+				# is still a seam
+				for face in [-1.0, 1.0]:
+					player.position = at - shut_thru * 20.0 * face
+					await get_tree().process_frame
+					# which side of the wall PLANE we set off from —
+					# crossing it is the only thing that counts as through
+					var side_before: float = signf(
+						(player.position - at).dot(shut_norm))
+					_shove(player, shut_thru * face, 34.0)
+					await get_tree().process_frame
+					if (player.position - at).dot(shut_norm) * side_before < -1.0:
+						leaky_doors.append("#%d off %d side %d"
+							% [di, int(lateral), int(face)])
+						break
+	if not leaky_doors.is_empty():
+		failures.append("walked through closed doors: %s"
+			% ", ".join(leaky_doors))
 
 	# an OPEN door's leaf is still solid — it just stands somewhere else.
 	# Not a flag check: SHOVE INTO the swung panel where the art draws it.

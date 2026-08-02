@@ -3041,6 +3041,12 @@ func _dress_rail_line() -> void:
 			# NO clutter offset. A jittered pole is a pole the wire cannot
 			# reach — exactly the bug the pylons already taught us
 			# (CLAUDE.md): the span art is drawn for one exact gap.
+			# THE ROLL STILL BURNS. _clutter_offset draws twice from the
+			# layout rng, and simply not calling it shifted the stream for
+			# every prop placed afterwards — which quietly re-rolled part of
+			# a district that is supposed to be FIXED. Take the numbers,
+			# throw them away.
+			_clutter_offset(7.0)
 			_add_prop(_pick_variant_varied("telegraph_pole"),
 				_floor_layer.map_to_local(cell))
 			_occupied[cell] = true
@@ -3125,7 +3131,13 @@ func _place_toll_gate() -> void:
 		"name": "the toll gate",
 		"kind": "toll",
 		"pos": _floor_layer.map_to_local(Vector2i(gate_x, gate_y + 16)),
-		"radius": 240.0,
+		# Big enough that you cannot DRIVE THROUGH it before the count runs
+		# out (user). The countdown is 5 s and a car tops out at 190 px/s,
+		# so a straight run through the middle needs ~950 px of zone; at the
+		# old 240 radius you were out the far side in 2.5 s and the extract
+		# simply never fired. It stays clear of the wire — the zone centre
+		# sits 16 cells beyond it, about 570 px.
+		"radius": 470.0,
 		"auto": false,
 	})
 	_map_marks.append([booth_cell, "toll"])

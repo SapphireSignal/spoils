@@ -2440,40 +2440,85 @@ def draw_bench(rng: random.Random, broken: bool) -> tuple[Canvas, tuple, list]:
     want them more 3d"): a real seat slab with a lit top face, a front
     face and an underside shadow, a wood backrest with a bright top edge,
     and legs with lit/shade sides."""
-    c = Canvas(62, 54)
-    ox, oy = 14, 24
-    ln = 32
-    for i in range(ln):
-        x = ox + i
-        by = oy + i // 2
-        # backrest slat: lit top edge over a wood face, gap to the seat
-        c.set(x, by - 9, C("884b2b"))
-        c.set(x, by - 8, C("602c2c"))
-        c.set(x, by - 7, C("602c2c"))
-        c.set(x, by - 6, C("341c27"))
-        # seat slab: grooved top face, front face, under-shadow
-        if broken and 11 < i < 19:
-            if i in (12, 18):                        # splintered ends
-                c.set(x, by, C("341c27"))
+    c = Canvas(56, 62)
+    ox, oy = 4, 30
+    ln = 32          # along the bench, on the (2,1) axis
+    depth = 12       # ACROSS it, on the (2,-1) axis — the bit you sit on
+    slab = 3         # seat thickness
+    back_h = 15      # backrest above the seat's far edge
+    leg_h = 9
+    wood, wood_dk, wood_lt = C("602c2c"), C("341c27"), C("884b2b")
+    steel, steel_dk = C("394a50"), C("202e37")
+
+    def pt(i: int, d: int) -> tuple:
+        # run i along (2,1), depth d across on (2,-1)
+        return ox + i + d, oy + i // 2 - d // 2
+
+    gap_lo, gap_hi = (12, 20) if broken else (-1, -1)
+
+    # THE SEAT, as a real surface: a parallelogram top face with slats
+    # running along the bench. Without this the bench had a one-pixel seat
+    # line and read as a fence going up, with nothing to sit on (user).
+    #
+    # Filled per SCREEN COLUMN, not by stepping i and d. Both axes move a
+    # half pixel vertically, so integer stepping lands two (i, d) pairs on
+    # the same pixel and leaves the one below empty — the first cut came
+    # out stippled with holes, which is dot noise and banned.
+    for k in range(ln + depth - 1):
+        d_lo = max(0, k - (ln - 1))
+        d_hi = min(k, depth - 1)
+        if d_lo > d_hi:
             continue
-        groove = i % 8 == 7
-        c.set(x, by - 1, C("602c2c") if groove else C("884b2b"))
-        c.set(x, by, C("602c2c") if groove else C("884b2b"))
-        c.set(x, by + 1, C("602c2c"))
-        c.set(x, by + 2, C("341c27"))
-        c.set(x, by + 3, C("241527"))
-    for (px_, lean) in ((ox + 2, 0), (ox + ln - 3, 0)):
-        top = oy + (px_ - ox) // 2
-        for k in range(9):                           # legs: lit + shade side
-            dx = k // 5 if broken and lean == 0 and px_ > ox + 4 else 0
-            c.set(px_ + dx, top + 4 + k, C("394a50"))
-            c.set(px_ + dx + 1, top + 4 + k, C("202e37"))
-        for k in (9, 8, 7, 6, 5, 4, 3, 2):           # back posts to the rest
-            c.set(px_, top - k, C("202e37"))
-        c.set(px_, top - 9, C("394a50"))             # post cap catches light
+        i_here = k - d_hi
+        if gap_lo < i_here < gap_hi and gap_lo < k - d_lo < gap_hi:
+            continue
+        ys = [(k - d) // 2 - d // 2 for d in range(d_lo, d_hi + 1)]
+        y0, y1 = min(ys), max(ys)
+        for y in range(y0, y1 + 1):
+            rel = y - y0                      # 0 is the far edge
+            slat = rel % 4 == 3               # slat joints run lengthwise
+            col = wood_dk if slat else (wood_lt if rel < 4 else wood)
+            c.set(ox + k, oy + y, col)
+    # the seat's near edge: front face and the shadow under it
+    for i in range(ln):
+        if gap_lo < i < gap_hi:
+            if i in (gap_lo + 1, gap_hi - 1):          # splintered ends
+                x, y = pt(i, 0)
+                c.set(x, y, wood_dk)
+            continue
+        x, y = pt(i, 0)
+        for k in range(1, slab + 1):
+            c.set(x, y + k, wood if k < slab else wood_dk)
+        c.set(x, y + slab + 1, C("241527"))
+    # ...and its far edge, so the slab has thickness on both sides
+    for i in range(ln):
+        x, y = pt(i, depth - 1)
+        c.set(x, y + 1, wood_dk)
+
+    # THE BACKREST: two slats standing off the far edge, lit along the top
+    for i in range(ln):
+        x, y = pt(i, depth - 1)
+        for k in range(2, back_h):
+            if k in (7, 8):                   # the gap between the slats
+                continue
+            col = wood_lt if k in (back_h - 1, 9) else wood
+            c.set(x, y - k, col)
+        c.set(x, y - back_h, wood_dk)
+
+    # LEGS at both ends, front pair and back pair
+    for i in (2, ln - 3):
+        for d in (1, depth - 2):
+            x, y = pt(i, d)
+            lean = 1 if (broken and i > 4 and d == 1) else 0
+            top = y + (slab + 1 if d == 1 else 1)
+            for k in range(leg_h):
+                dx = (k // 5) * lean
+                c.set(x + dx, top + k, steel)
+                c.set(x + dx + 1, top + k, steel_dk)
     c.outline_auto()
-    cr, orr = crop_canvas(c, (ox + ln // 2, oy + ln // 4 + 11))
-    return cr, orr, ["diamond", 15.0, 6.0]
+    cr, orr = crop_canvas(c, (ox + ln // 2 + depth // 2,
+                              oy + ln // 4 - depth // 4 + slab + leg_h))
+    return cr, orr, ["diamond", 15.0, 8.0]
 
 
 def draw_shelter(rng: random.Random, wrecked: bool) -> tuple[Canvas, tuple, list]:
