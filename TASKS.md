@@ -68,7 +68,8 @@ Agreed order for the remaining art work:
    and orange/green blobs, stretched 1.25× into a 120×120 button — so it
    is blurred as well as dull. Wants "an actual picture of the map from a
    scenic view, very detailed". **Generate at exactly 120×120** so it maps
-   1:1. The overlook backdrop below can serve double duty.
+   1:1. (This said the overlook backdrop could serve double duty; that
+   pitch was dropped 2026-08-02, so the tile needs its own art now.)
 3. **The title.** *(user: "its just white, and it goes up and down a bit
    thats all, it seems boring")* Needs real treatment — weight, depth, a
    material, something happening beyond a bob.
@@ -76,28 +77,34 @@ Agreed order for the remaining art work:
 5. **The player model.**
 6. **World objects and textures.**
 
-## A1. Menu backdrops — BUILD ALL FIVE, the user picks
+## A1. Menu backdrops — FOUR pitches, the user picks a couple
 
-They asked to see all of them rather than choose from descriptions. Paint
-each as a complete STATIC scene at 960×544 first; add the living animated
-layers (the den's candle and needles, the drain's ray and drips) only to
-the ones they keep.
+**THE OVERLOOK WAS DROPPED (user call 2026-08-02.)** It was the only pitch
+anyone had painted; the user looked at it and said *"yes just drop it"*.
+`make_scene_overlook()` is DELETED from gen_art.py — it was never wired into
+the menu and never emitted a file, so removing it left `manifest.json`
+byte-identical. Restore from git history if that ever reverses.
 
-1. **the overlook** — the district from a hillside at night: lamp
-   constellations, one lit window, the wire drawn across the valley in
-   broken red, a raider on the near ridge. **STARTED, work in progress.**
-   `make_scene_overlook()` in gen_art.py. Composition is right; the pines
-   read as stepped ladders rather than trees, the figure barely registers,
-   and it needs more tonal separation between the valley band and the
-   foreground. Not wired into the menu — it is a pitch, rendered to the
-   scratchpad.
-2. **the yard at dusk** — down the rail between two boxcars, telegraph
+**The plan also changed with it:** the old note here said they wanted to see
+all five painted rather than choose from descriptions. Having seen one, they
+asked instead to pick from the written pitches — *"show me the pitches again
+and what the living layer would be, I will pick a couple and we make them"*.
+So it is **two picks, not five paintings.**
+
+Paint each pick as a complete STATIC scene at 960×544 first; add the living
+layer only once they keep it. The living layer has exactly five techniques
+and they all already exist in `scripts/main_menu.gd`: a breathing additive
+glow, a 3-frame sprite swap, a visibility blink on offset timers, dust
+particles with a fade ramp, and one travelling sprite that triggers
+something when it lands. Anything else needs new engine work.
+
+1. **the yard at dusk** — down the rail between two boxcars, telegraph
    poles to a vanishing point, signal lamp ticking red, rain starting.
-3. **the warden's window** — from outside the booth looking in: him lit
+2. **the warden's window** — from outside the booth looking in: him lit
    from below, tally marks on the wall, the boom across the foreground.
-4. **the flooded underpass** — knee-deep water, one stuttering strip
+3. **the flooded underpass** — knee-deep water, one stuttering strip
    light, reflections breaking as drips land.
-5. **mara's counter** — over the shoulder at the trade counter: her
+4. **mara's counter** — over the shoulder at the trade counter: her
    hands, the radio set, the job board, a mug going cold.
 
 Also asked for: **upgrade the two existing backdrops** (den, drain).

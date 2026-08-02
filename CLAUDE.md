@@ -352,8 +352,10 @@ road, and his dialogue is a monologue rather than a conversation.
 1. **M2 "go"** — guns + tunnels + the story opening (v0.7.0). The gunplay
    design is settled; see the bottom of TASKS.md for what the panel
    decided and the two traps it caught.
-2. **Which menu backdrops to keep**, once all five pitches are painted.
-   One ("the overlook") is started and is a work in progress.
+2. **Which menu backdrops to build.** FOUR pitches are on the table and the
+   user picks a couple to make (TASKS.md A1). The fifth, "the overlook", was
+   the only one ever painted and they **dropped it on sight** (2026-08-02);
+   its generator function is deleted. Nothing is painted right now.
 3. **The trailer is PARKED, not dropped** (user, 2026-08-02). Concept (a)
    "the wire" is the one to build. **ffmpeg IS NOW INSTALLED** (Gyan
    8.1.2 via winget) — the old note in this file saying otherwise is
