@@ -1,291 +1,281 @@
 # SPOILS — open work
 
-Everything outstanding, with the diagnosis already done. **Read
-`CLAUDE.md` first** (project rules, systems map, verification workflow),
-then this file for what to actually build. `CHANGELOG.md` records what
-already shipped.
+Everything outstanding, with the diagnosis already done where there is
+one. **Read `CLAUDE.md` first** (project rules, systems map, verification
+workflow), then this file for what to actually build. `CHANGELOG.md`
+records what already shipped.
 
-Ordered roughly by what's worth doing first. Every item says what is
-already known so nothing gets re-derived.
+**Current version: v0.6.15.** The release history was renumbered evenly on
+2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
+version number, because they were all remapped.
 
----
-
-## 1. Doors: solid at all times — SHIPPED v0.6.6, awaiting the user's eye
-
-Asked four times. Fixed; the user has not seen it in a playtest yet.
-
-**The old diagnosis in this file was WRONG — do not resurrect it.** It
-claimed the leaf "opens roughly in place" because the sprite centroid
-only moved cx 23.5 → 23.8 across the four frames. That reading is a
-trap: in iso *both* ground axes point +x, so a correct 90° turn barely
-moves the centroid sideways. Measuring the leaf's free end instead
-shows it always went from `(+20,+10)` to `(+20,-10)` off the hinge — a
-proper quarter turn into the room. The art was never the problem.
-
-**The three real bugs, all measured:**
-1. `Door._swung_points` derived the open collider as `(-along.x,
-   along.y)`. Correct for east (`y`) doors, **180° wrong for south
-   (`x`) doors** — the panel sat a full cell on the opposite side, so
-   south doors were ghosts. Most doors are south doors.
-2. The east door's open frames **ran off the left of their canvas** and
-   were silently cut. `door_` was on the clip-audit exemption list, so
-   the build never complained.
-3. The open leaf used **wall** thickness. At that thickness the swung
-   panel reached back across its own doorway and sealed the middle,
-   leaving a 4.4 px corridor — narrower than the player.
-
-**What shipped:** the leaf now rotates in the ground plane and is
-sampled along its screen run (the old code lerped the step vector,
-which under-sampled the middle frames — east doors lost most of their
-leaf and their handle). Canvas 48×60 → 54×66. `door_` removed from the
-clip-audit exemption. The panel is door-thickness. The jamb boards got
-real colliders, so an open door no longer lets you walk through the
-boards beside the opening. Mid-swing **both** panels are solid, so a
-door that still looks shut cannot be walked through. Every polygon now
-comes from the generator via `manifest.collider_open` /
-`collider_jambs`; `Door` derives nothing.
-
-**If the user still reports walk-through:** ask which door and whether
-it was open, shut, or mid-swing, and get a zoomed screenshot. The smoke
-now covers all three states for real (see below).
+Ordered by priority. The user playtests and reacts; items marked *(user)*
+came straight from them.
 
 ---
 
-## 2. Second floors: furniture floats — FIXED v0.6.7
+# A. THE VISUAL POLISH PASS (the big current direction)
 
-**Root cause: DRAW ORDER.** A second floor is a horizontal plane, and
-y-sorting a plane against vertical walls cannot work. The container is
-anchored far north so the player always sorts above it — which also
-put it behind the building's OWN wall segments, sitting at much larger
-y. The walls painted over most of the slab, leaving a band of boards
-and furniture apparently standing on nothing.
+The user wants the whole game to look markedly better while staying pixel
+art: *"the ui, the icons, the in game stuff as well, like the player
+model, the textures, the objects, everything all visually appealing but
+still keeping that pixel look."*
 
-**Fix (final, v0.6.8):** every floor tile is **its own y-sorted node**
-in `_ysort`, at its true cell position, with the art lifted by the
-sprite's `offset` instead of by moving the node. **Sorting position and
-drawing position are different things, and splitting them is the whole
-trick.** Near walls then occlude the floor and far walls don't, with no
-`z_index` anywhere.
+**HOW THIS RUNS — do not batch it.** One family at a time, each shipped as
+its own version with a screenshot, so a direction they dislike costs one
+version instead of five. This is the sample → sign-off → fleet rule that
+saved the 8-direction vehicles. Reverting is exact: all art is generated
+from code, so `git revert <tag>` restores the old sprites byte for byte,
+and each family ships separately so disliking one does not cost the rest.
 
-**The z-band attempt (v0.6.7) was wrong — don't retry it.** Putting
-the slab at z 1 and the player/props/stairs at z 2 fixed the floating
-furniture but made the floor clip over the top of the house, because a
-plane sorted as ONE unit is either in front of every wall or behind
-every wall. It also needed a special case to stop the slab swallowing
-the staircase. Both are gone.
+Agreed order:
 
-**Tooling:** `--upstairs=<n>` puts the player on second story *n*,
-prints `upstairs/lift/cells` and the slab's `visible/children/pos`,
-and is shot-able. Use it if this ever regresses.
+1. **The in-game map screen (M).** *(user: "its like some minecraft map")*
+   It is drawn as flat coloured rectangles — building footprints as solid
+   fills, roads as grey bands — so it reads as a diagram. It should read
+   as a DRAWN MAP: paper-toned base, ink edges, hatching for the woods,
+   the rail as a ladder, the wire as a broken red ink line. **Every POI
+   gets its own drawn glyph** instead of a text label — a bus for the
+   depot, a crane hook for the scrapyard, a chimney for the warehouse, a
+   swing for the playground, a mast for comms, a boom for the toll gate,
+   a home marker for the safehouse.
+2. **The map-select tile.** *(user)* Currently a 96×96 mini-map of grid
+   and orange/green blobs, stretched 1.25× into a 120×120 button — so it
+   is blurred as well as dull. Wants "an actual picture of the map from a
+   scenic view, very detailed". **Generate at exactly 120×120** so it maps
+   1:1. The overlook backdrop below can serve double duty.
+3. **The title.** *(user: "its just white, and it goes up and down a bit
+   thats all, it seems boring")* Needs real treatment — weight, depth, a
+   material, something happening beyond a bob.
+4. **UI and icons** — buttons, panels, the HUD.
+5. **The player model.**
+6. **World objects and textures.**
 
-*Everything below is the record of how the old leads were killed —
-kept so nobody resurrects them.*
+## A1. Menu backdrops — BUILD ALL FIVE, the user picks
 
-## 2b. The old leads (both dead, for the record)
+They asked to see all of them rather than choose from descriptions. Paint
+each as a complete STATIC scene at 960×544 first; add the living animated
+layers (the den's candle and needles, the drain's ray and drips) only to
+the ones they keep.
 
-**Repro:** a two-story house **at the courtyard** — climbing the stairs
-shows the upper *furniture* but no upper *floor*.
+1. **the overlook** — the district from a hillside at night: lamp
+   constellations, one lit window, the wire drawn across the valley in
+   broken red, a raider on the near ridge. **STARTED, work in progress.**
+   `make_scene_overlook()` in gen_art.py. Composition is right; the pines
+   read as stepped ladders rather than trees, the figure barely registers,
+   and it needs more tonal separation between the valley band and the
+   foreground. Not wired into the menu — it is a pitch, rendered to the
+   scratchpad.
+2. **the yard at dusk** — down the rail between two boxcars, telegraph
+   poles to a vanishing point, signal lamp ticking red, rain starting.
+3. **the warden's window** — from outside the booth looking in: him lit
+   from below, tally marks on the wall, the boom across the foreground.
+4. **the flooded underpass** — knee-deep water, one stuttering strip
+   light, reflections breaking as drips land.
+5. **mara's counter** — over the shoulder at the trade counter: her
+   hands, the radio set, the job board, a mug going cold.
 
-**Both of the old leads are DEAD. Measured on transit-01, do not
-re-derive:**
-- `--probe-world` now prints
-  `UPPERS total=6 floorless=0 propless=0 stairs=6`. Six flights, six
-  registries, and **every** upper container has its floor sprites. So
-  there is no index mismatch and no unbuilt upper.
-- The "`_plan_plots` upgrades stories after the shell is built" lead is
-  false: `build()` awaits `_plan_plots()` *before* the `_build_shell`
-  loop, so the quota upgrade always lands first.
-- An index mismatch is structurally impossible anyway —
-  `main.gd` connects `used` with `_on_stairs_used.bind(i)` where the
-  stairs node is read out of `_uppers[i]` itself.
-- `_build_upper` paints **every** cell unconditionally, and the tile
-  maths is correct: a tile's global position works out to
-  `map_to_local(cell) + (0, -story_h)`.
-
-**So the slab is built and it is not being seen — this is DRAW ORDER
-or visibility, not construction.** The strongest remaining lead: the
-upper container is anchored NORTH of the whole footprint
-(`map_to_local(interior.position) + (0, -24 - story_h)`) so that it
-y-sorts under the player. But it sorts as ONE unit at that far-north
-position, which puts it *behind* every ground-floor wall segment of the
-same building — and those walls are drawn at their own, much larger y.
-The upper furniture keeps its TRUE cell position, so it sorts late and
-stays visible. That is exactly the reported symptom: furniture visible,
-slab hidden behind the ground floor's own walls. Test by temporarily
-hiding the ground-floor walls while upstairs, or by giving the slab its
-own sort position south of the walls.
-
-**Also asked:** sweep every interior — houses, warehouses, school,
-safehouse — for furniture that floats, sits in a wrong spot, or
-overlaps.
+Also asked for: **upgrade the two existing backdrops** (den, drain).
 
 ---
 
-## 3. Flat ground props draw over the player
+# B. GAMEPLAY THE USER HAS ASKED FOR
 
-**Repro:** a small flat orange-brown object on the ground renders **on
-top of** the raider standing on it, so walking over it reads as walking
-through it. The user confirmed it does **not** block — this is purely
-draw order.
+## B1. Sprint *(user)*
 
-**The fix already exists:** `_flat` in `world_builder.gd` (added v0.5.6
-for the interior cables) is a `Node2D` sibling between the floor
-`TileMapLayer` and the y-sorted `_ysort`. Anything lying flat belongs
-there. Add a helper mirroring `_add_cable` and route flat props through
-it.
+Left shift, **hold-or-toggle like crouch**. Needs a run cycle for all 8
+facings — a new `char_run.png` matching the existing sheet layout exactly,
+so the stance system can switch to it the way crouch and prone already do.
+Speed clearly above the 120 walk but nowhere near the car's 190: *"i dont
+want it as fast as a car, but still faster than walking speed."* Add
+`sprint` to project.godot `[input]` AND to `Settings.BIND_ACTIONS` +
+labels + defaults — it is a keyboard bind, so it is rebindable.
 
-**Trap:** do **not** use a negative `z_index` inside `_ysort`. z sorts
-globally within the canvas layer, so the sprite disappears behind the
-floor entirely — this is exactly what happened to the cables.
+## B2. The warden should actually converse *(user)*
 
-Sweep the catalogue for others that read as ground: spilled trash,
-paint, spray cans, painted markers. Anything with real height stays
-y-sorted.
+*"make them actually talk to one another, the user and the warden."*
+Right now the reply button pulls the next line off a pile and the player
+never says anything. Needs real player lines and warden responses that
+follow on from what was just said — topic threads, not a random ramble.
+`toll_dialog.gd`.
 
----
+## B3. The scrapyard building *(user)*
 
-## 4. Power box repair — the first quest interaction
+- **Recolour to red/orange.** Walls have only two styles today: `brick_a`
+  (red brick) and `brick_b` (grey masonry), both in `WALL_STYLES` in
+  gen_art.py. Add a **rust** style so it reads as a different building
+  from the warehouse POI, not a redder copy of it.
+- **Strip every box and shelf, inside and out.** Root cause found: the
+  hall is created in `_plan_scrap_hall` with `"kind": "warehouse"`, so
+  `_furnish_warehouse` fills it with racks and crates. It needs its own
+  kind and its own furnisher.
+- **Restock with scrapyard material** — machines, cable drums, toolboxes,
+  cylinders, tires, part-stripped wrecks. Keep it restrained; their
+  standing note is that too many objects looks odd.
 
-1. Standing near the broken box plays a **subtle spark sound**
-   (positional, quiet — standing rule: one-shots ≤ -18 dB, on the `sfx`
-   bus).
-2. A prompt: **"press f to open the power box"**.
-3. F opens a **window** showing the broken box **and the player's
-   inventory**, with text **"drag electricians kit on the power box"**.
-4. Dragging the kit onto the box plays a **wire-cutter animation** of a
-   couple of seconds.
-5. It is then **repaired**: no further interaction, and it **stops
-   sparking** (kill the arc, the glow and the thrown blue sparks).
+## B4. The smoker on the bench *(user)*
 
-**Needs:** a stub inventory holding an "electricians kit" (the real
-inventory is M4), drag-and-drop in the window, cutter animation frames,
-a repaired box sprite, and a repaired state in `power_box.gd`. The box
-is pinned to the safehouse (v0.4.14), so it is always findable.
+Benches were rebuilt with a real seat. Still to do: seat him properly ON
+it, move the ground item that sits over his head, and redraw his legs —
+they read wrong.
 
----
+## B5. Power box repair — the first quest interaction
 
-## 5. Cosy safehouse
+1. Near the broken box: a subtle spark sound (positional, quiet — the
+   standing rule is one-shots ≤ -18 dB on the `sfx` bus).
+2. Prompt: **"press f to open the power box"**.
+3. F opens a window showing the box **and the player's inventory**, with
+   **"drag electricians kit on the power box"**.
+4. Dragging the kit plays a wire-cutter animation of a couple of seconds.
+5. Repaired: no further interaction, and the sparks, arc and glow stop.
 
-**Inside:** a bookshelf, a cabinet and a TV (families `bookshelf`,
-`cabinet`, `tv_stand` exist — check whether a TV sprite exists
-separately), plus **posters and pictures on the walls**. The posters
-are new art: wall-face decals, like the graffiti walls. Mind that walls
-are drawn as segments and only the camera-facing interior faces are
-visible.
+Needs a stub inventory holding an "electricians kit" (the real one is M4),
+drag-and-drop, cutter frames, a repaired sprite, and a repaired state in
+`power_box.gd`. The box is pinned to the safehouse so it is always
+findable.
 
-**Outside:** a little **dirt road from the safehouse door to the
-nearest POI**. Reuse `_walk_dirt_path(from, to)` with the safehouse's
-`door_out` cell and the closest POI centre — it already skips roads and
-slabs.
+## B6. Cosy safehouse
 
-Keep it restrained; the user's standing note is that too many objects
-looks odd.
+**Inside:** bookshelf, cabinet, TV, plus **posters and pictures on the
+walls** — new art, wall-face decals like the graffiti walls. Mind that
+walls are drawn as segments and only the camera-facing interior faces
+show. **Outside:** a little dirt road from the safehouse door to the
+nearest POI — reuse `_walk_dirt_path(from, to)` with the safehouse's
+`door_out` cell and the closest POI centre; it already skips roads and
+slabs. Keep it restrained.
 
----
+## B7. Flashlight shines through walls
 
-## 6. Flashlight shines through walls
+Standing inside a building, the cone is visible outside. Godot 2D lights
+ignore walls without occluders. Either add `LightOccluder2D` to the wall
+segments built in `_build_shell`, or take the cheap route: `main.gd`
+already tracks which interior cells the player is in for the roof reveal,
+so the cone can be masked or shrunk while inside. **Check the same leak**
+on the interior room lights and on street lamps standing near buildings.
 
-Standing **inside** a building, the flashlight cone is visible
-**outside** — it passes through the wall. It should only light the
-interior while you're inside.
+## B8. Warden: opposite sidewalk, facing the road
 
-Godot 2D lights ignore walls without occluders. Either add
-`LightOccluder2D` to the wall segments built in `_build_shell`, or take
-the cheap route: `main.gd` already tracks which interior cells the
-player is in for the roof reveal, so the cone can be masked or shrunk
-while inside.
-
-**Check the same leak** on the interior room lights (v0.5.6) and on
-street lamps standing near buildings.
-
----
-
-## 7. Warden: opposite sidewalk, facing the road
-
-He sits on the wrong side and faces away — "hes like facing the void" —
-which makes pulling up awkward.
-
-`_toll_booth_cell()` returns `Vector2i(road.x + 1 + 3, MAP_H - 1 -
-BARRIER_INSET)`; the `+3` puts him on one side, so mirror it to the
-other side of the road band. `_place_barricades` reserves his cells via
+He sits on the wrong side and faces away — *"hes like facing the void"* —
+which makes pulling up awkward. `_toll_booth_cell()` returns
+`Vector2i(road.x + 1 + 3, MAP_H - 1 - BARRIER_INSET)`; the `+3` puts him
+on one side, so mirror it. `_place_barricades` reserves his cells via
 `_toll_reserve` using the **same helper**, so changing the helper moves
 both together. The booth art may need a mirrored facing so the window
-faces the asphalt — check `toll_booth` in `gen_art.py`. Re-verify
-`TollGate.setup`'s boom offset (currently -4 cells along x) still spans
+faces the asphalt. Re-verify `TollGate.setup`'s boom offset still spans
 the road, and that the extract zone beyond the wire still lines up.
 
-*(Talking to him from a car already works — shipped in v0.6.5.)*
+## B9. Flat ground props draw over the player
 
----
+**Repro:** a small flat orange-brown object renders **on top of** the
+raider standing on it. It does **not** block — purely draw order.
 
-## 8. Door sound: a real creak
+**The fix already exists:** `_flat` in `world_builder.gd` is a `Node2D`
+sibling between the floor `TileMapLayer` and the y-sorted `_ysort`.
+Anything lying flat belongs there; add a helper mirroring `_add_cable`.
+
+**Trap:** do **not** use a negative `z_index` inside `_ysort` — z sorts
+globally within the canvas layer, so the sprite vanishes behind the floor
+entirely. That is exactly what happened to the cables, and to the second
+floor when a z band was tried on it. Where a thing has HEIGHT, the
+second-floor fix is the better pattern: give each piece its own sort
+position and offset the ART, not the node.
+
+Sweep the catalogue for others that read as ground: spilled trash, paint,
+spray cans, painted markers. Anything with real height stays y-sorted.
+
+## B10. Door sound: a real creak
 
 `Sfx.play_door(open)` plays `_synth_blip` tones, which read as a thunk,
 not timber. Either synthesise a creak (a slow pitch-sweeping resonant
 scrape with irregular stick-slip amplitude, plus a soft latch thunk on
-close) or source a CC0 recording the way the car doors and thunder were
-(licences in `assets/audio/LICENSES.md`; the ggbotnet CC0 pack is
-already credited). **Ship it quiet on the first cut** — ≤ -18 dB, on
-the `sfx` bus. The swing is 4 frames × 0.06 s ≈ 0.24 s, so the creak
-should be about that long or it outlasts the animation.
+close) or source a CC0 recording the way the car doors and thunder were.
+**Ship it quiet on the first cut** — ≤ -18 dB on the `sfx` bus. The swing
+is 4 frames × 0.06 s, so the creak should be about that long or it
+outlasts the animation.
 
 ---
 
-## 9. Non-rectangular buildings
+# C. HOUSEKEEPING
 
-"make all the houses and warehouses and stuff like that not all a
-square or rectangle... non-orthogonal layout or isometric tile
-variations".
+## C1. Changelog bullets in the wrong places *(user)*
 
-**This is architectural, not a tweak.** Plots are `Rect2i` end to end:
-`_plan_plots`, `_rect_clear`, `_build_shell` (walls, roof, doors,
-windows), `_furnish_*`, `RoofReveal.cells`, the upper-floor containers,
-`_claim_building_ground`, and the map screen's building rects all
-assume a rectangle.
+`CHANGELOG_ENTRIES` stores each entry as an array of strings and the
+renderer prefixes **every** element with `- `. **55 older entries** were
+hand-wrapped at ~52 characters, so one sentence gets a dash on every line.
+The convention going forward is **one string per bullet, unwrapped** (the
+labels autowrap, so the renderer needs no change).
+
+**Do it as a reviewed pass, not a blind script.** A length-based join gets
+most of them right but mis-merges genuinely separate short bullets —
+verified: v0.2.4's three bullets become two. Join with a heuristic, then
+read all 55 results before committing. The menu's version label derives
+from `CHANGELOG_ENTRIES[0][0]`, so do not disturb ordering.
+
+## C2. v0.4.3 has no in-game changelog entry
+
+It has a git tag and a `CHANGELOG.md` entry but no `CHANGELOG_ENTRIES`
+row — the policy says every version gets one. Write it from the commit.
+
+## C3. Non-rectangular buildings *(user)*
+
+*"make all the houses and warehouses and stuff like that not all a square
+or rectangle."* **Architectural, not a tweak.** Plots are `Rect2i` end to
+end: `_plan_plots`, `_rect_clear`, `_build_shell`, `_furnish_*`,
+`RoofReveal.cells`, the upper-floor containers, `_claim_building_ground`,
+and the map screen's building rects all assume a rectangle.
 
 **Suggested approach:** keep a bounding `Rect2i` but add an optional
-**cell set** (an L or T from two unioned rects), and drive wall, roof
-and interior generation off cell membership plus neighbour masks rather
-than rect edges. The wall art is **already neighbour-masked**, which is
-the piece that makes this feasible. Expect the roof reveal and the map
-drawing to need matching work.
+**cell set** (an L or T from two unioned rects), and drive wall, roof and
+interior generation off cell membership plus neighbour masks rather than
+rect edges. The wall art is **already neighbour-masked**, which is the
+piece that makes this feasible. Expect the roof reveal and the map drawing
+to need matching work. Do it sample → sign-off → fleet.
 
-Do it **sample → user sign-off → fleet**, per the process rule.
-
----
-
-## 10. Changelog entries: one string per bullet
-
-`CHANGELOG_ENTRIES` in `main_menu.gd` stores each entry as an array of
-strings, and the renderer prefixes **every** element with `- `. Entries
-were hand-wrapped across several strings, so one sentence got a dash on
-every line.
-
-The labels already autowrap, so the convention is **one string per
-bullet, unwrapped** — the renderer needs no change. **Done:** v0.6.3,
-v0.6.4, v0.6.5. **To do:** every entry from v0.6.2 down to v0.2.1 —
-merge each hand-wrapped run into one string per idea, keeping the
-wording. Note the menu's version label derives from
-`CHANGELOG_ENTRIES[0][0]`, so don't disturb ordering or version strings.
-
----
-
-## Older standing queue (pre-dates this session's batch)
+## C4. Older standing queue
 
 - **Pickup bed** — shade the interior so it reads as a container, put a
   box in it, sample sheet across all angles. *Sample → sign-off first.*
-- **Catalogue variety** — families still on two variants (bench,
-  dumpster, shelter, vending, newsbox, forklift, planter, swing) plus
-  singleton crane/sandbox. The deeper fix is parameterising the
-  builders so **shapes** differ, not just wear.
+- **Catalogue variety** — families still on two variants (bench, dumpster,
+  shelter, vending, newsbox, forklift, planter, swing) plus singleton
+  crane/sandbox. The deeper fix is parameterising the builders so
+  **shapes** differ, not just wear.
 
-## Waiting on the user
+---
 
-- **M2 — guns, tunnels, story (v0.7.0).** Starts on their explicit
-  "go".
-- **Trailer concept.** Pitches were sent; they pick one before anything
-  is built. ffmpeg is **not installed** on the box.
-- **Door option A vs B** (item 1) — B is recommended and explained.
+# WAITING ON THE USER
+
+- **M2 — guns, tunnels, story.** The gunplay design is settled (below);
+  it starts on their explicit go.
+- **Trailer concept.** Pitches were sent; they pick one before anything is
+  built. ffmpeg is **not installed** on the box.
+- **Which menu backdrops to keep**, once all five are painted.
+
+---
+
+# THE GUNPLAY DESIGN (settled, ready to build)
+
+A three-way design panel was run and judged; the "weight and consequence"
+approach won. What it settled, and the two traps it caught:
+
+- **The muzzle position must come from the GENERATOR via the manifest**,
+  never derived in GDScript. This is the door-collider lesson verbatim: a
+  hand-derived offset is exactly how the open-door collider ended up a
+  cell away from its own art for a whole release.
+- **`fire` must NOT go in `Settings.BIND_ACTIONS`.** That list erases every
+  event on each listed action and replaces it with an `InputEventKey`, so a
+  mouse binding is silently destroyed on the first settings load — which is
+  why the mouse-wheel zoom actions are already excluded from it.
+- Continuous mouse aim is authoritative; the 8-facing sprite is a READOUT
+  of it, with a small deadband so a cursor parked on a facing boundary does
+  not flip the row every frame at 240 Hz.
+- Weight comes from TIME and PIXELS, not scale or rotation (both banned):
+  a fire-rate gate, recoil that visibly shoves the reticle off the mouse
+  and drifts home, a whole-screen-pixel camera kick, and a tracer with real
+  flight time so the impact lands after the report.
+
+Art already generated and waiting, unwired: directional muzzle flashes
+(one sprite per facing, since rotation is banned), a warm tracer head
+distinct from the sniper's, and impact grit.
 
 ---
 
@@ -293,7 +283,9 @@ wording. Note the menu's version label derives from
 
 Full design detail lives in `DESIGN.md` §8; `LORE.md` carries the world
 bible. **1.0 = the complete v1 game.** Minor versions bump only when a
-milestone lands; everything else is a patch (0.6.x).
+milestone lands; everything else is a patch (0.6.x). With the history
+renumbered to fifteen per minor line, if 0.6 fills up before guns land it
+keeps counting (0.6.16, 0.6.17…) rather than stealing 0.7.
 
 - **M1 — a walkable world. DONE.** Shipped across v0.1.2 → v0.6.x: the
   fixed transit district, barricade ring and sniper buffer, weather and
@@ -328,8 +320,8 @@ milestone lands; everything else is a patch (0.6.x).
   read as other raiders, the real lighting pass (the "graphics quality"
   setting is stored but drives nothing until this), and trading.
 
-- **M6 → v1.1 — quests.** The safehouse power box repair (item 4 above)
-  is the first one and is deliberately built to be quest fodder.
+- **M6 → v1.1 — quests.** The safehouse power box repair (B5 above) is
+  the first one and is deliberately built to be quest fodder.
 
 - **M7 → v1.2 — a second map.** **DO NOT reuse the transit district
   system for this.** DESIGN.md §8.7 carries a HARD RULE (user call,
