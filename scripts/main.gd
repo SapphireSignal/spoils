@@ -541,9 +541,11 @@ func _process(delta: float) -> void:
 		# heavy weather — you do not get shafts through a storm.
 		var d := float(_environment.get("day_time"))
 		var lit := 1.0 - float(_environment.get("night_amount"))
-		var wet := float(_environment.get("rain_intensity"))
+		# rain OR cloud blots out the sun — an overcast day must not get
+		# beams just because it isn't raining
+		var wet := float(_environment.call("sun_blocked"))
 		var low := maxf(_bump(d, 0.335, 0.075), _bump(d, 0.700, 0.095))
-		var want := clampf(low * lit * (1.0 - wet * 0.85), 0.0, 1.0)
+		var want := clampf(low * lit * (1.0 - wet * 0.92), 0.0, 1.0)
 		if _last_roof_cell != Vector2i(-9999, -9999) and _indoors_now:
 			want = 0.0
 		_shaft_now = move_toward(_shaft_now, want, delta * 1.6)

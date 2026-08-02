@@ -3,6 +3,26 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.25] — 2026-08-02 — grey days
+
+### Added
+- **Overcast weather** (user asked whether the sun shafts only appear when
+  it is sunny — they did, but "not sunny" only ever meant "raining", so
+  every dry day was a sunny one). Overcast is dry, flat and slightly cool,
+  it kills the sun shafts, and it reads as its own forecast on the map
+  bar. Eased in on the same slow ramp as the storm tint, so the sky never
+  visibly switches.
+- This is **not** the fog spell that was rejected earlier. Dawn mist
+  happens every morning anyway, so forecasting it said nothing; overcast
+  changes the light for a stretch, which is the point.
+- The shafts now read a single `sun_blocked()` signal — the greater of
+  rain and cloud — rather than rain alone, or an overcast day would still
+  have got beams.
+
+### Notes
+- Simulated over 500 days the mix now runs **clear 52%, overcast 33%,
+  rain 9%, storm 6%**: dry 85% of the time, but sunny only about half.
+
 ## [0.6.24] — 2026-08-02 — a smaller font, and the safehouse moves
 
 ### Added

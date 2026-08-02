@@ -44,10 +44,16 @@ var _last_night_broadcast := -1.0   # last value sent to the lamp group
 ## were not). There is deliberately NO fog spell: the dawn mist rolls in
 ## every morning already, so a fog "weather" on top of it would say
 ## nothing (user call).
-enum { CLEAR, RAIN, STORM }
+## OVERCAST added 2026-08-02 (user): without it every dry day was a sunny
+## day, because "not clear" only ever meant "raining". A grey dry stretch
+## flattens the light, kills the sun shafts, and reads as its own forecast.
+## NOT the fog spell we rejected - dawn mist happens every morning anyway,
+## so forecasting it said nothing. This changes the light.
+enum { CLEAR, OVERCAST, RAIN, STORM }
 
 var weather := CLEAR
 var _raining := false               # RAIN or STORM — the wet states
+var _overcast := 0.0                # 0..1 cloud cover, eased like storm
 var _storm_tint := 0.0              # visual darkening, slower than the rain
 var _weather_timer := 0.0
 var _lightning_timer := 999.0
@@ -272,14 +278,17 @@ func _roll_weather() -> void:
 	## one spell at a time, weighted: mostly clear, rain more often than
 	## storm, fog the rarest. Clear spells run longest.
 	var roll := randf()
-	if weather != CLEAR and roll < 0.62:
+	if weather != CLEAR and roll < 0.46:
 		weather = CLEAR
-	elif roll < 0.82:
+	elif roll < 0.68:
+		weather = OVERCAST
+	elif roll < 0.87:
 		weather = RAIN
 	else:
 		weather = STORM
 	_raining = weather == RAIN or weather == STORM
-	_weather_timer = randf_range(240.0, 540.0) if weather == CLEAR \
+	_weather_timer = randf_range(240.0, 540.0) \
+		if weather == CLEAR or weather == OVERCAST \
 		else randf_range(140.0, 320.0)
 	if _raining:
 		_lightning_timer = randf_range(10.0, 30.0) if weather == STORM \
@@ -293,10 +302,17 @@ func _rain_target() -> float:
 	return 0.0
 
 
+func sun_blocked() -> float:
+	## how much sky is in the way, 0..1 - rain OR cloud. The sun shafts read
+	## this rather than rain alone, or an overcast day would still get beams.
+	return maxf(rain_intensity, _overcast)
+
+
 func weather_label() -> String:
 	match weather:
 		STORM: return "storming"
 		RAIN: return "raining"
+		OVERCAST: return "overcast"
 	# the mist is a time of day, not a forecast — every morning has one
 	return "morning mist" if _morning_amount(day_time) > 0.25 else "clear"
 
@@ -338,6 +354,16 @@ func _process(delta: float) -> void:
 		delta / STORM_TINT_SECONDS)
 	if _storm_tint > 0.0:
 		tint = tint.darkened(0.12 * smoothstep(0.0, 1.0, _storm_tint))
+	# overcast: flatter and cooler than clear, nowhere near as dark as a
+	# storm - a grey afternoon, not a threat. Same slow ramp, because the
+	# sky must never visibly switch.
+	_overcast = move_toward(_overcast, 1.0 if weather == OVERCAST else 0.0,
+		delta / STORM_TINT_SECONDS)
+	if _overcast > 0.0:
+		var flat := smoothstep(0.0, 1.0, _overcast)
+		tint = tint.darkened(0.07 * flat)
+		tint = tint.lerp(Color(tint.r * 0.93, tint.g * 0.97, tint.b,
+			tint.a), flat)
 	_tint.color = tint
 	night_amount = _night_amount_for(day_time)
 	# broadcast only when the level actually moves — all day and deep

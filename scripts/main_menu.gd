@@ -73,6 +73,9 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.25", [
+		"grey days. it can be dry without being sunny now - overcast is its own weather, flat and a little cold, and the sun doesnt break through it. before this, every day that wasnt raining was a sunny one",
+	]],
 	["v0.6.24", [
 		"the car and truck labels on the map are much smaller. the games font only comes in one size, so this is a second font drawn from scratch at half the height rather than the old one shrunk down and blurred",
 		"two vehicles parked together used to print their names on top of each other. now the second one waits its turn",
