@@ -73,6 +73,9 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.22", [
+		"the sun gets into the district now. light rakes across the ground when its low - mid morning and late afternoon - and comes from a different side depending on which. nothing at noon when its overhead, nothing at night, and it shuts off when you step under a roof or when the weather turns",
+	]],
 	["v0.6.21", [
 		"the time of day actually changes now. half past seven to five in the afternoon used to be one flat unchanging light - nearly forty percent of the day looking identical. the sun is low and warm in the morning, high and neutral at noon, and golden again by late afternoon",
 		"the faint rings that followed you around the screen are gone. that was the darkening at the edges of the picture stepping in visible bands instead of fading smoothly",

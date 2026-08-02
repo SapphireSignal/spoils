@@ -3,6 +3,29 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.22] — 2026-08-02 — the sun gets in
+
+### Added
+- **Sun shafts** (user asked for them; the game had never had any). Light
+  rakes across the district when the sun is LOW — nothing at night,
+  nothing at noon when it is overhead, strongest mid-morning and late
+  afternoon. The bearing swings through the day, so morning light and
+  evening light do not arrive from the same side.
+- They close off when you step under a roof, and heavy weather kills
+  them: you do not get shafts through a storm.
+- Screen-space bands rather than volumes cast from the buildings. At this
+  scale the read you want is "the light is coming from over there", and
+  that costs one full-screen pass; real cast volumes would need an
+  occluder per wall and would still be hidden behind the rooftops most of
+  the time.
+- Dithered in the shader, for the same reason the grade is — these are
+  very gradual ramps and they would contour into visible bands otherwise.
+
+### Notes
+- Deliberately restrained. Strong god-rays over pixel art read as a
+  filter laid on top; this is meant to look like the time of day.
+- Perf unchanged.
+
 ## [0.6.21] — 2026-08-02 — the day actually moves
 
 ### Fixed

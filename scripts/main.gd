@@ -23,6 +23,9 @@ var _uppers: Array = []
 var _environment: EnvironmentSystem
 var _grade_layer: CanvasLayer
 var _grade_mat: ShaderMaterial
+var _shaft_mat: ShaderMaterial
+var _shaft_now := 0.0           # eased, so a doorway fades the light out
+var _indoors_now := false       # roof over your head: kills the shafts
 var _grade_night := -1.0        # last value pushed; the grade only updates
                                 # when the cycle actually moves it
 var _player_upper := -1        # index into _uppers while on a second story
@@ -138,6 +141,19 @@ func _build_world() -> void:
 	motes.name = "Motes"
 	ysort.add_child(motes)
 	motes.setup(_player)
+
+	# SUN SHAFTS, under the grade so the grade treats them as part of the
+	# picture rather than paint on top of it
+	var shaft_layer := CanvasLayer.new()
+	shaft_layer.layer = 23
+	var shafts := ColorRect.new()
+	shafts.set_anchors_preset(Control.PRESET_FULL_RECT)
+	shafts.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_shaft_mat = ShaderMaterial.new()
+	_shaft_mat.shader = load("res://scripts/sunshafts.gdshader")
+	shafts.material = _shaft_mat
+	shaft_layer.add_child(shafts)
+	add_child(shaft_layer)
 
 	# SCREEN GRADE: contrast, split-tone, a highlight lift and a vignette,
 	# in one pass over the finished frame. Engine-side, so it lifts every
@@ -518,6 +534,26 @@ func _process(delta: float) -> void:
 		if absf(n - _grade_night) > 0.004:
 			_grade_night = n
 			_grade_mat.set_shader_parameter("night", n)
+	if _shaft_mat != null and _environment != null:
+		# the sun only rakes when it is LOW: nothing at night, nothing at
+		# noon overhead, strongest mid-morning and late afternoon. Two
+		# bumps on the clock, killed by the roof over your head and by
+		# heavy weather — you do not get shafts through a storm.
+		var d := float(_environment.get("day_time"))
+		var lit := 1.0 - float(_environment.get("night_amount"))
+		var wet := float(_environment.get("rain_intensity"))
+		var low := maxf(_bump(d, 0.335, 0.075), _bump(d, 0.700, 0.095))
+		var want := clampf(low * lit * (1.0 - wet * 0.85), 0.0, 1.0)
+		if _last_roof_cell != Vector2i(-9999, -9999) and _indoors_now:
+			want = 0.0
+		_shaft_now = move_toward(_shaft_now, want, delta * 1.6)
+		_shaft_mat.set_shader_parameter("strength", _shaft_now * 0.55)
+		# the bearing swings through the day, so morning light and evening
+		# light do not come from the same side
+		_shaft_mat.set_shader_parameter("angle", lerpf(-0.95, -0.30,
+			clampf((d - 0.30) / 0.42, 0.0, 1.0)))
+		_shaft_mat.set_shader_parameter("drift",
+			float(Time.get_ticks_msec()) * 0.001)
 	if _player == null or _floor_layer == null:
 		return
 	# This runs EVERY frame on purpose. It walks five node groups, which
@@ -546,9 +582,16 @@ func _process(delta: float) -> void:
 		var here := reveal.cells.has_point(cell)
 		reveal.set_inside(here)
 		indoors = indoors or here
+	_indoors_now = indoors
 	# a roof over your head muffles the weather (user). Same test that
 	# reveals the interior, so the sound can never disagree with the view.
 	Sfx.set_indoors(indoors)
+
+
+func _bump(x: float, centre: float, width: float) -> float:
+	## 1 at `centre`, falling to 0 by `width` either side. Used to give the
+	## sun two low passes a day instead of one flat value.
+	return maxf(0.0, 1.0 - absf(x - centre) / maxf(width, 0.001))
 
 
 func abandon_raid() -> void:
