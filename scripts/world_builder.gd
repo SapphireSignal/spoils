@@ -239,9 +239,11 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 		# 137 KB json mid-deploy (the freight used to)
 		"manifest": _manifest,
 		"poi": {
-			"court": [_court_rect.position.x, _court_rect.position.y,
+			# the names the map screen prints — say them the way a person
+			# would (user call: "court" and "depot" were shorthand)
+			"courtyard": [_court_rect.position.x, _court_rect.position.y,
 				_court_rect.size.x, _court_rect.size.y],
-			"depot": [_depot_rect.position.x, _depot_rect.position.y,
+			"bus depot": [_depot_rect.position.x, _depot_rect.position.y,
 				_depot_rect.size.x, _depot_rect.size.y],
 			"school": [_school_rect.position.x, _school_rect.position.y,
 				_school_rect.size.x, _school_rect.size.y],
@@ -3446,8 +3448,33 @@ func _map_vectors() -> Dictionary:
 			_court_rect.size.x, _court_rect.size.y],
 		"apron": [_depot_rect.position.x, _depot_rect.position.y,
 			_depot_rect.size.x, _depot_rect.size.y],
+		# places that are a PLACE but not a paved slab: the map outlines
+		# them so they read as somewhere, like the courtyard and the apron
+		# do (user: the lz, the gallery, comms and the trainyard had
+		# nothing but a word floating over them)
+		"areas": _map_areas(),
 		"spawn_cell": [_spawn_cell.x, _spawn_cell.y],
 	}
+
+
+func _map_areas() -> Array:
+	## outlined places for the map screen: everything that IS somewhere but
+	## isn't a paved slab the terrain already shows
+	var out: Array = []
+	for entry in [[_lz_rect, "lz"], [_gallery_rect, "gallery"],
+			[_comms_rect, "comms"], [_scrap_rect, "scrapyard"],
+			[_playground, "playground"]]:
+		var r: Rect2i = entry[0]
+		if r.size.x > 0 and r.size.y > 0:
+			out.append([r.position.x, r.position.y, r.size.x, r.size.y,
+				str(entry[1])])
+	# the trainyard is a whole block rather than a rect of its own
+	for b in _zones:
+		if str(_zones[b]) == "trainyard":
+			var br: Rect2i = _block_rects[b]
+			out.append([br.position.x, br.position.y, br.size.x, br.size.y,
+				"trainyard"])
+	return out
 
 
 func _collect_fog_spots() -> void:

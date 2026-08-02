@@ -92,9 +92,9 @@ func _build_poi_list(info: Dictionary) -> void:
 		"warehouse": "the warehouses - racks and freight worth taking",
 		"school": "the school - classrooms over a playground",
 		"playground": "the playground - swings, slide, sandbox",
-		"court": "the courtyard - the town square and its dry fountain",
+		"courtyard": "the courtyard - the town square and its dry fountain",
 		"trainyard": "the trainyard - boxcars and rails going nowhere",
-		"depot": "the bus depot - the last buses, some pried open",
+		"bus depot": "the bus depot - the last buses, some pried open",
 		"comms": "the comms relay - a mast still blinking at nobody",
 		"gallery": "the gallery - fresh paint on old walls",
 		"scrapyard": "the scrapyard - wrecks, machines, and one crane",
@@ -424,21 +424,24 @@ func _process(delta: float) -> void:
 		var t: float = float(_environment.get("day_time"))
 		var hour := int(t * 24.0)
 		var minute := int(fmod(t * 24.0, 1.0) * 60.0)
-		var rain: float = float(_environment.get("rain_intensity"))
 		var stamp := hour * 60 + minute
-		var weather := "clear"
-		if rain > 0.65:
-			weather = "storming"
-		elif rain > 0.1:
-			weather = "raining"
-		elif t >= 0.10 and t <= 0.38:
-			weather = "morning mist"
-		# the clock changes once a minute — don't reformat it 240 times a
-		# second just because the marker layer is redrawing
+		# the environment names its own weather now — rain and storm are
+		# different spells, and fog is one too
+		var weather := str(_environment.call("weather_label"))
+		# ...and say which part of the day it is, not just the clock
+		var part := "night"
+		if t >= 0.208 and t < 0.29:
+			part = "dawn"
+		elif t < 0.5:
+			part = "morning"
+		elif t < 0.72:
+			part = "afternoon"
+		elif t < 0.875:
+			part = "evening"
 		if stamp != _status_stamp or weather != _status_weather:
 			_status_stamp = stamp
 			_status_weather = weather
-			_status.text = "time %02d:%02d   -   %s" % [hour, minute, weather]
+			_status.text = "%02d:%02d %s   -   %s" % [hour, minute, part, weather]
 	_update_tooltip(delta)
 
 
@@ -533,6 +536,17 @@ func _draw_district() -> void:
 		_canvas.draw_rect(Rect2(
 			_cell_to_screen(Vector2(float(pr[0]), float(pr[1]))),
 			Vector2(float(pr[2]), float(pr[3])) * z), ROAD_EDGE)
+	# the places that aren't paved get an OUTLINE, so the lz, the gallery,
+	# the comms relay and the trainyard read as somewhere instead of a
+	# word floating over open ground (user call)
+	for area in (_vec.get("areas", []) as Array):
+		var ar: Array = area
+		if float(ar[2]) <= 0.0:
+			continue
+		_canvas.draw_rect(Rect2(
+			_cell_to_screen(Vector2(float(ar[0]), float(ar[1]))),
+			Vector2(float(ar[2]), float(ar[3])) * z),
+			ROAD_EDGE.lightened(0.18), false, maxf(1.0, z * 0.22))
 	# roads: real strokes, edged, with a hairline centre — a chart, not
 	# a grid of squares (user: "just make it a normal map")
 	for r in (_vec["roads_v"] as Array):

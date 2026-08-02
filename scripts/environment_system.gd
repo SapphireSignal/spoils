@@ -38,9 +38,18 @@ var rain_intensity := 0.0           # 0..1, ramps in and out
 var night_amount := 0.0             # 0 day .. 1 deep night
 var _last_night_broadcast := -1.0   # last value sent to the lamp group
 
-var _raining := false
+## The four weathers. CLEAR is the baseline; FOG is its own spell, not
+## just the dawn effect; RAIN is wet with the rare distant flash; STORM
+## is heavier rain that actually throws lightning (user: "theres a
+## chance it can rain, chance it can be storming, which makes it have
+## more lightning strikes ... there should also be foggy too").
+enum { CLEAR, FOG, RAIN, STORM }
+
+var weather := CLEAR
+var _raining := false               # RAIN or STORM — the wet states
 var _storm_tint := 0.0              # visual darkening, slower than the rain
 var _weather_timer := 0.0
+var _weather_fog := 0.0             # fog spell strength, 0..1
 var _lightning_timer := 999.0
 var _flash: ColorRect
 var _tint: CanvasModulate
@@ -248,7 +257,46 @@ func setup(root: Node2D, floor_layer: TileMapLayer, puddle_spots: Array,
 	set_process(true)
 
 
+func _roll_weather() -> void:
+	## one spell at a time, weighted: mostly clear, rain more often than
+	## storm, fog the rarest. Clear spells run longest.
+	var roll := randf()
+	if weather != CLEAR and roll < 0.62:
+		weather = CLEAR
+	elif roll < 0.76:
+		weather = RAIN
+	elif roll < 0.88:
+		weather = STORM
+	elif roll < 0.95:
+		weather = FOG
+	else:
+		weather = RAIN
+	_raining = weather == RAIN or weather == STORM
+	_weather_timer = randf_range(240.0, 540.0) if weather == CLEAR \
+		else randf_range(140.0, 320.0)
+	if _raining:
+		_lightning_timer = randf_range(10.0, 30.0) if weather == STORM \
+			else randf_range(40.0, 90.0)
+
+
+func _rain_target() -> float:
+	match weather:
+		STORM: return 1.0
+		RAIN: return 0.55        # wet, but visibly lighter than a storm
+	return 0.0
+
+
+func weather_label() -> String:
+	match weather:
+		STORM: return "storming"
+		RAIN: return "raining"
+		FOG: return "fog"
+	# a clear morning still has its mist
+	return "morning mist" if _morning_amount(day_time) > 0.25 else "clear"
+
+
 func force_weather(rain_on: bool) -> void:  # harness hook
+	weather = STORM if rain_on else CLEAR
 	_raining = rain_on
 	rain_intensity = 1.0 if rain_on else 0.0
 	_storm_tint = rain_intensity
@@ -292,18 +340,22 @@ func _process(delta: float) -> void:
 		_last_night_broadcast = night_amount
 		get_tree().call_group("street_lamps", "set_night", night_amount)
 
-	# weather state machine — long spells, slow ramps
+	# WEATHER STATE MACHINE — long spells, slow ramps. Rain and STORM are
+	# genuinely different now (user asked, correctly, whether they were):
+	# a storm rains harder and throws lightning several times as often,
+	# where plain rain only rarely flashes. Fog is its own weather too,
+	# not just a dawn effect.
 	_weather_timer -= delta
 	if _weather_timer <= 0.0:
-		_raining = not _raining
-		_weather_timer = randf_range(140.0, 320.0) if _raining \
-			else randf_range(240.0, 540.0)
-		if _raining:
-			_lightning_timer = randf_range(12.0, 40.0)
-	rain_intensity = move_toward(rain_intensity, 1.0 if _raining else 0.0, delta / 14.0)
+		_roll_weather()
+	rain_intensity = move_toward(rain_intensity,
+		_rain_target(), delta / 14.0)
+	# a fog spell rolls in and out as slowly as the rain does
+	_weather_fog = move_toward(_weather_fog,
+		1.0 if weather == FOG else 0.0, delta / 18.0)
 
 	_update_rain(delta)
-	var morning := _morning_amount(day_time)
+	var morning := maxf(_morning_amount(day_time), _weather_fog)
 	if morning > 0.0 and not _was_morning:
 		# a fresh morning rolls the wind: everything drifts one way today
 		_fog_wind = (1.0 if randf() < 0.5 else -1.0) * randf_range(6.0, 11.0)
@@ -329,10 +381,12 @@ func _process(delta: float) -> void:
 	# lightning during heavy rain: ONE strike, ONE thunder (user call —
 	# chained strikes also restarted the thunder player mid-clap, which
 	# read as the sound cutting out)
-	if _raining and rain_intensity > 0.6:
+	# a STORM throws lightning several times as often as plain rain does
+	if _raining and rain_intensity > 0.55:
 		_lightning_timer -= delta
 		if _lightning_timer <= 0.0:
-			_lightning_timer = randf_range(18.0, 50.0)
+			_lightning_timer = randf_range(7.0, 19.0) if weather == STORM \
+				else randf_range(45.0, 110.0)
 			_strike()
 
 

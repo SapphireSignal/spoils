@@ -70,6 +70,15 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.57", ["rain and storms are actually different weather now. a",
+		"storm rains harder and throws lightning several times",
+		"as often; plain rain only rarely flashes. fog is its",
+		"own weather too, not just a dawn thing",
+		"the map bar says the time, the part of the day and the",
+		"weather - 07:12 morning - raining",
+		"court and depot are now courtyard and bus depot, and",
+		"the lz, gallery, comms and trainyard are outlined on",
+		"the map like the other places"]],
 	["v0.6.56", ["the clock and the light agree now: dawn at 06:00, dusk",
 		"at 21:00, dark by 22:15 and still dark at 05:00. the",
 		"dawn fog moved with it, and a raid starts at 07:12",

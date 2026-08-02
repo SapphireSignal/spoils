@@ -3,6 +3,27 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.57] — 2026-08-01 — real weather, and a map that names things
+
+### Changed
+- **Rain and storms are genuinely different weather now.** The user
+  asked whether there was actually a difference — there wasn't: one
+  wet state, and "storming" was just the label for heavy rain. There
+  are four spells now: **clear**, **fog**, **rain** and **storm**.
+  A storm rains at full strength and throws lightning every 7–19 s;
+  plain rain is visibly lighter and only flashes every 45–110 s. Fog
+  is its own spell that rolls in and out over ~18 s, on top of the
+  dawn mist that was always there. Clear runs longest.
+- **The map bar reads "07:12 morning — raining"** — the clock, the
+  part of the day (dawn / morning / afternoon / evening / night) and
+  the weather, with the environment naming its own weather instead of
+  the map guessing from rain density.
+- **"court" → "courtyard"** and **"depot" → "bus depot"** on the map.
+- **The lz, the gallery, the comms relay, the trainyard, the scrapyard
+  and the playground are outlined** on the map like the paved places
+  are, so they read as somewhere rather than a word floating over open
+  ground.
+
 ## [0.6.56] — 2026-08-01 — the clock and the light agree
 
 ### Changed
