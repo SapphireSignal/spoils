@@ -1,13 +1,19 @@
 class_name NightFreight
 extends Node2D
-## The night freight: the one train still running in transit. It comes
-## into the yard every five minutes, stands for one, and goes — whether
-## you're aboard or not.
+## The night freight: the one train still running in transit. She keeps to
+## the IN-GAME CLOCK, not a stopwatch — she slides into the yard at
+## midnight, stands for one real minute, and goes whether you're aboard or
+## not. Only that sixty-second platform wait is real time.
 ##
-## Timing is REAL time and deliberately indifferent to you (user spec):
-## arrive, wait sixty seconds, leave. Miss it and you wait five minutes
-## or walk. The whistle and the corner notice exist so you're never
-## guessing where it is in that cycle.
+## She does NOT run every night (user call 2026-08-01): three nights out of
+## every seven, drawn fresh each week. So miss her and the next one is at
+## least a full day/night cycle off and can be several — walking may be
+## quicker. The whistle and the corner notice exist so you're never
+## guessing where she is inside that minute.
+##
+## (This header used to say "every five minutes… timing is REAL time",
+## which the clock block directly below it has contradicted since
+## 2026-08-01.)
 
 signal extracted(method: String)
 

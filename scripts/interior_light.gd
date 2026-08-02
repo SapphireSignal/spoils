@@ -2,9 +2,13 @@ class_name InteriorLight
 extends Node2D
 ## A room's ceiling light. Comes on with the dark, the same broadcast the
 ## street lamps ride, and a third of them flicker — the district's power
-## is not well. Every one of these has a CABLE the builder lays cell by
-## cell to its building's exterior power box (standing rule: nothing in
-## this world is powered by magic).
+## is not well. There is NO cable inside: the interior flex was cut on a
+## user call ("the cables inside houses are gone") because it read as floor
+## clutter rather than as wiring. The exterior power box on the wall is
+## what shows where the house gets its power — the standing "nothing is
+## powered by magic" rule is satisfied outside, not in here. (This comment
+## claimed a cable the builder lays cell by cell; `_add_cable` is never
+## called.)
 
 const LIGHT_COLOR := Color("e8c170")
 

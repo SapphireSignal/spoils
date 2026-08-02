@@ -1,6 +1,8 @@
 extends Node
 ## Authority: every authoritative game-state mutation routes through this
-## autoload (spawns now; damage/loot/extraction in later milestones). This is
+## autoload (spawns AND damage now — `damage_player` is right below this
+## comment, which used to file it under "later milestones"; loot and
+## extraction are the ones still to come). This is
 ## the seam a future multiplayer server would own — gameplay code must call
 ## these functions instead of mutating state directly.
 

@@ -4,8 +4,16 @@ palette. Deterministic: same script -> same pixels. If an asset looks bad, fix
 this file and rerun; never hand-edit outputs.
 
 Outputs:
-  art/gen/floors.png     - 64x32 iso floor tiles, 4x5 atlas grid
-  art/gen/wall_*.png     - neighbor-masked brick wall pieces
+  art/gen/floors.png     - 64x32 iso floor tiles, 4-COLUMN atlas, rows =
+                           ceil(len(FLOOR_TILES)/4) — 76 tiles today, so a
+                           4x19 grid at 256x608 (this said "4x5")
+  art/gen/seg*_*.png,
+  art/gen/post*_*.png    - thin EDGE-wall segments (plain/window/broken,
+                           seg2_/post2_ for the two-story cut) and the
+                           square corner posts that cover their joints.
+                           (This said "wall_*.png"; no such file is ever
+                           written — the edge-wall system replaced the
+                           full-tile blocks.)
   art/gen/roof_*.png     - roof tiles/vent/hatch (interior-reveal system)
   art/gen/<family>_<n>   - prop variants (procedurally varied per instance)
   art/gen/char.png       - player sheet, 8 dirs x 7 frames (idle + 6 walk), 32x40
@@ -146,10 +154,14 @@ CONC_D2, CONC_D1, CONC_BASE, CONC_L1, CONC_L2 = (
 
 def speckle(c: Canvas, rng: random.Random, region, colors: list[tuple], probs: list[float]) -> None:
     """Organic wear PATCHES, not dot noise (user call 2026-08-01: no little
-    dots anywhere, ever). Each color covers roughly prob*3 of the region as
-    a few soft blob-shaped patches — reads as stains and wear instead of
-    static. Same signature as the old per-pixel speckle so every call site
-    stays valid."""
+    dots anywhere, ever). Each color TARGETS roughly prob*0.9 of the region,
+    hard-capped at 20%, painted as at most 3 soft blob-shaped patches of
+    6-16 px — so coverage lands near the old per-pixel prob, and at the
+    larger probs the 3-patch cap holds it well under even that. Reads as
+    stains and wear instead of static. (This said "prob*3"; that was the
+    FIRST cut and it was retuned down for reading as camo clutter — see the
+    inline comment on the loop.) Same signature as the old per-pixel
+    speckle so every call site stays valid."""
     pts = list(region)
     if not pts:
         return
@@ -821,10 +833,13 @@ def wall_piece_inventory() -> dict[str, tuple[Canvas, tuple, list]]:
     return pieces
 
 # ----------------------------------------------------------------- roofs -----
-# One purpose-built roof slab per building size (user call: the tile-assembled
-# roof never sat right on the thin walls). The slab spans the interior plus a
-# small overhang so it caps the walls exactly; fascia trim on the lower edges,
-# vents/hatch baked in. The game fades it for the interior reveal.
+# MODULAR roof, assembled per interior cell — see the placement formulas
+# below, which are the truth. (This block used to describe "one purpose-built
+# roof slab per building size" that "spans the interior plus a small
+# overhang". There is no slab and no per-size asset: no make_roof_slab
+# exists, and the comment 8 lines down says the opposite.)
+# Vents and a hatch are placed as separate props. The game lifts the whole
+# assembly by the wall height and fades it for the interior reveal.
 
 ROOF_TONES = {  # both black (user call), subtly distinct
     "charcoal": ("151d28", "10141f", "394a50"),
@@ -837,7 +852,12 @@ ROOF_TONES = {  # both black (user call), subtly distinct
 # and per boundary edge of the interior, at edge_midpoint + (0, -WALL_H):
 #     roof_fascia_<tone>_s   (south edges: dark trim hanging off the eave)
 #     roof_fascia_<tone>_e   (east edges)
-#     roof_rim_<tone>        (north/west edges: 1px lit rim only)
+#     roof_eave_<tone>_n     (north edges: flat flush 3px closure over the
+#                             wall coping)
+#     roof_eave_<tone>_w     (west edges: the same, on the y-axis)
+#     roof_corner_<tone>     (a cap at each corner)
+# (These three lines said "roof_rim_<tone> — 1px lit rim only". No roof_rim
+#  asset has ever existed; make_roof_eave is the real maker.)
 # Tiles use the same tessellating diamond as the floor, so seams are exact.
 
 def make_roof_tile(tone: str, variant: int) -> tuple[Canvas, tuple, list | None]:
@@ -5644,8 +5664,11 @@ def make_title() -> tuple[Image.Image, Image.Image, Image.Image]:
     return title, shine, tag
 
 # ---------------------------------------------------------- menu backdrops ---
-# Four rotating main-menu scenes, 960x544 (covers the expanded view on any
+# TWO rotating main-menu scenes, 960x544 (covers the expanded view on any
 # reasonable display; important content stays inside the central 640x360).
+# (This said "Four". Only make_scene_den and make_scene_drain are wired into
+# the manifest; the storm scene was RETIRED 2026-08-01 on a user call, and
+# make_scene_overlook below is an unwired pitch, not one of the two.)
 # Rendered in world space at 1:1 so they stay pixel-crisp at any window size.
 
 SCENE_W, SCENE_H = 960, 544
@@ -6041,7 +6064,9 @@ def make_scene_den() -> tuple[Canvas, Image.Image, Canvas]:
     """Menu 2 — THE DEN: the traders' back room, all three of them home.
     kettle hunched behind his scale on the candle side, verne at the
     medicine shelf, mara at the radio wall. Two light sources own the frame
-    (warm candle left, cool radio right) with DITHERED falloff. The job
+    (warm candle left, cool radio right) with clean BANDED falloff — never
+    dithered (this said DITHERED; the coin-flip dither read as dot static
+    and was removed from this very function — see ramp_pick). The job
     board carries paper JOB SHEETS — pin, title, a little photo of the
     district, squiggled unreadable notes; transit ringed red: tonight's
     job. Returns (base, candle-glow overlay, VU-needle strip)."""
@@ -6512,7 +6537,10 @@ def make_scene_den() -> tuple[Canvas, Image.Image, Canvas]:
 def make_menu_map_thumb() -> Canvas:
     """The map-select screen's painted preview of transit: the diamond
     district, its road grid, the woods, the rail line — stylized, not a
-    live bake (every raid rolls its own layout anyway)."""
+    live bake. (This used to justify that with "every raid rolls its own
+    layout anyway" — false since the fixed-district change: build() defaults
+    to DISTRICT_SEED "transit-01", so every deploy is bit-identical and a
+    faithful bake IS possible if this is ever redone.)"""
     rng = random.Random(f"{SEED}:mapthumb")
     c = Canvas(96, 96)
     cx = cy = 48
@@ -6696,8 +6724,11 @@ def make_power_wire(variant: int) -> tuple[Canvas, tuple, list | None]:
 
 
 def make_telegraph_wire(span_cells: int) -> tuple[Canvas, tuple, list | None]:
-    """The wires between two telegraph poles, one span. Six of them — three
-    per crossarm, off the insulators — running down the map's +x axis, which
+    """The wires between two telegraph poles, one span. FOUR of them — two
+    per crossarm, off the OUTER insulators only (the centre insulator
+    deliberately gets none; see the loop comment). This said "six — three
+    per crossarm", which is exactly the version that was rejected for
+    merging into a solid dark band. They run down the map's +x axis, which
     is screen down-right at 32 x 16 px per cell.
 
     Thinner and slacker than the power catenary on purpose: a transmission

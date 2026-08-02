@@ -5,8 +5,13 @@ extends Node
 ##
 ## Each zone is a Dictionary: {name, pos, radius, kind, auto}. An `auto`
 ## zone starts counting the moment you're inside it (the lift's green
-## smoke); the others are armed by something else — paying the warden at
-## the toll gate, climbing aboard the freight.
+## smoke); a non-auto zone waits to be armed, and TODAY THE TOLL GATE IS
+## THE ONLY ONE — `arm("toll")` from main.gd is the sole caller.
+##
+## The night freight is NOT a zone here at all: `night_freight.gd` owns its
+## own `extracted` signal and emits it directly when a boarded train pulls
+## out, and main.gd wires both signals to the same debrief. (This comment
+## used to list the freight as something that arms a zone.)
 
 signal extracted(method: String)
 

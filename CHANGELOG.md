@@ -22,6 +22,14 @@ All notable changes to SPOILS are documented here. Versions follow a simple
 ### Notes
 - Simulated over 500 days the mix now runs **clear 52%, overcast 33%,
   rain 9%, storm 6%**: dry 85% of the time, but sunny only about half.
+  > **Correction, 2026-08-02 — this figure was never right.** Solving the
+  > roll in `scripts/environment_system.gd` for its steady state and
+  > weighting by spell length gives **overcast ~42%, clear ~36%, rain ~13%,
+  > storm ~9%** (dry ~78%). The `weather != CLEAR` guard makes it impossible
+  > for one clear spell to follow another, while overcast can repeat — so
+  > **overcast is the most common sky, not clear.** Left in place as shipped
+  > history with the correction attached; the true numbers live in
+  > `CLAUDE.md`.
 
 ## [0.6.24] — 2026-08-02 — a smaller font, and the safehouse moves
 

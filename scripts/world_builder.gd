@@ -428,9 +428,12 @@ func _on_road(cell: Vector2i) -> bool:
 
 func _plan_zones() -> void:
 	# v0.3.1: carve the 3x3 grid of blocks between the roads and deal out
-	# the PLACES — a two-block town, a two-block forest, one block each for
-	# the warehouses, the school, the trainyard and the bus depot; the last
-	# block stays open with the comms relay in one corner. Every district
+	# the PLACES — a two-block town, then ONE block each for the forest, the
+	# warehouses, the school, the trainyard, the bus depot and the
+	# scrapyard; the last block stays open. (This comment used to say "a
+	# two-block forest" and leave the scrapyard out entirely: the forest
+	# went 2 blocks -> 1, denser instead, to make room for it. The `deals`
+	# array below is the truth.) Every district
 	# now has an address ("the stuff in our map is like all scattered
 	# around theres like no distinct locations" — user).
 	for by in ROAD_COUNT - 1:
@@ -2750,9 +2753,14 @@ func _dress_pois() -> void:
 
 func _place_room_light(interior: Rect2i, box_cell: Vector2i,
 		dead_supply: bool) -> void:
-	## One fixture per house, hung mid-room, wired back to the box. The
-	## house whose box is hanging open and arcing gets NO working light —
-	## that is the whole reason its box is a repair job.
+	## One fixture per house, hung mid-room and pushed clear of its box.
+	## NO cable is drawn inside — the interior flex was cut on a user call
+	## ("the cables inside houses are gone") because it read as floor
+	## clutter rather than as wiring, so the exterior power box alone shows
+	## where the house gets its power. (This line said "wired back to the
+	## box"; `_add_cable` has no call sites at all.) The house whose box is
+	## hanging open and arcing gets NO working light — that is the whole
+	## reason its box is a repair job.
 	if interior.size.x <= 0 or interior.size.y <= 0:
 		return
 	var lamp_cell := interior.get_center()
@@ -3346,7 +3354,9 @@ func _maybe_shed_leaves(variant: String, node: Node2D) -> void:
 	# shedding autumn leaves is exactly the kind of mismatch nobody spots
 	# in code review (user reported seeing it). One source of truth.
 	var red := variant.begins_with("tree_autumn")
-	# EVERY broadleaf tree sheds, and only broadleaf trees do.
+	# EVERY broadleaf tree sheds leaves, and conifers shed needles of their
+	# own — only the bare dead snags shed nothing. (This line used to end
+	# "and only broadleaf trees do", which the pine branch below disproves.)
 	# The old flat 50% roll had two faults the user caught between them:
 	# a lone oak could lose the coin flip and sit there inert forever
 	# ("a tree that doesnt have any leaves falling down, its the only
@@ -3819,8 +3829,12 @@ func _collect_puddle_spots() -> void:
 # ----------------------------------------------------------- boundaries -----
 
 func _build_border_collision(root: Node2D) -> void:
-	# 8-gon hugging the true diamond edge, tips chamfered so the camera clamp
-	# can always keep the player on screen
+	# 8-gon hugging the true diamond edge, tips chamfered a little for good
+	# measure. THE CAMERA IS NEVER CLAMPED — it is welded to the character
+	# (user call), so nothing here serves a clamp; this comment claimed one
+	# for releases after the clamp was removed, the same lie already fixed
+	# in this file's header and in player.gd's. This wall is only an
+	# absolute backstop; the edge sniper is the real edge.
 	var top_c := _floor_layer.map_to_local(Vector2i(0, 0)) + Vector2(0, -16)
 	var bottom_c := _floor_layer.map_to_local(Vector2i(MAP_W - 1, MAP_H - 1)) + Vector2(0, 16)
 	var center := (top_c + bottom_c) / 2.0

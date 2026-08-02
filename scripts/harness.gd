@@ -39,7 +39,14 @@ var _shot_face := ""
 
 func _audio_debug() -> void:
 	## --audiodebug: drop the master to zero and dump the bus graph, so a
-	## "the slider does nothing" report gets measured instead of guessed
+	## "the slider does nothing" report gets measured instead of guessed.
+	##
+	## NOT A STANDALONE ACTION TODAY. It is parsed in the FIRST arg loop,
+	## which only sets state and never sets `acted`, and the action loop has
+	## no branch for it — so passing it alone prints "HARNESS: no action in
+	## [--audiodebug]" and quits 2 before this can print (the first `await`
+	## below never resumes). Until it is moved into the second loop, pair it
+	## with a real action flag, e.g. `--perf --audiodebug`.
 	await get_tree().process_frame
 	# drive the REAL panel, not the setter behind it: the report is "the
 	# slider does nothing", so the slider is what has to be tested
@@ -121,10 +128,14 @@ func _ready() -> void:
 	# action.
 	if not args.is_empty() and not acted:
 		printerr("HARNESS: no action in %s" % str(args))
-		printerr("HARNESS: expected --smoke, --shot=<name>, --perf, "
+		printerr("HARNESS: expected --smoke, --shot=<name>, "
+			+ "--shot-splash=<name>, --perf, "
 			+ "--perf-deploy, --probe-world, --probe-sniper, "
-			+ "--probe-exclusive, --checkdocs, --checksec or --leakcheck. "
-			+ "--toll/--freight/--at=/--seed= only MODIFY --shot.")
+			+ "--probe-exclusive, --shaderwarm, --checkdocs, --checksec or "
+			+ "--leakcheck. --toll/--freight/--at=/--seed= are MODIFIERS, "
+			+ "not actions of their own — and --seed= pins the district for "
+			+ "ANY action that builds a world (--shot, --probe-world, "
+			+ "--perf, --probe-sniper, --smoke), not just --shot.")
 		get_tree().quit.call_deferred(2)
 
 
@@ -620,7 +631,13 @@ func _shaderwarm() -> void:
 
 func _shove(body: CharacterBody2D, dir: Vector2, distance: float) -> void:
 	## Push a body along dir in fixed 1 px steps until it has tried to cover
-	## `distance`, stopping dead on whatever it hits.
+	## `distance`. Each step stops at whatever it hits and then spends the
+	## REST of that step sliding along the surface, the way move_and_slide
+	## would — so a body can work its way AROUND an obstacle instead of
+	## halting at it. (This line used to say "stopping dead on whatever it
+	## hits", which the loop below contradicts.) Consequence worth keeping
+	## in mind: a non-zero displacement does NOT by itself mean the body got
+	## through something. Measure crossing against the wall PLANE.
 	##
 	## NOT velocity + move_and_slide. move_and_slide scales by the frame
 	## delta, and a headless run is uncapped — each call advanced the player
@@ -902,9 +919,18 @@ func _check_docs() -> Array[String]:
 # and each maps to a concrete way the project could be turned against the
 # user — most sharply, code that quietly ships their data somewhere.
 #
-# Every list below is an ALLOWLIST. Widening one should be a deliberate,
-# explained decision, which is the whole point: the check turns "nobody
-# noticed a network call appeared" into a red build.
+# MIXED, and the difference decides what this can promise. SEC_PY_IMPORTS
+# and expected_autoloads are ALLOWLISTS: they fail CLOSED, so anything new
+# is a red build until someone widens the list on purpose. SEC_REMOTE is a
+# single expected value, same idea. But SEC_NET_GD, SEC_NET_PY,
+# SEC_EXEC_PY, SEC_SECRET_NAMES and SEC_SECRET_CONTENT are DENYLISTS of
+# named strings and they fail OPEN — a socket class, exec primitive or
+# credential format nobody listed passes silently. This comment used to
+# call every list below an allowlist, which overstated the guarantee.
+#
+# SECOND HOLE: _check_security returns an EMPTY failure list (i.e. prints
+# SEC PASS having asserted nothing) when there is no .git at the project
+# root — including check 6, which reads project.godot and needs no git.
 #
 # HONEST LIMITATION: the auditor cannot fully audit itself. harness.gd is
 # skipped by the pattern scans because it necessarily contains the very

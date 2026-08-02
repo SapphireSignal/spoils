@@ -4,9 +4,13 @@ extends CanvasLayer
 ##
 ## There is no voice acting in SPOILS and there isn't going to be one by
 ## accident — bespoke lines can't be sourced from a sound library. The
-## popup is SILENT (user call 2026-08-01: no sound when it appears or
-## disappears — the squelch is gone; Sfx.play_radio still exists if M2
-## ever wants it back). The writing is the performance: she writes like
+## popup is APPEAR-ONLY on sound (user calls 2026-08-01): the squelch pair
+## is gone and nothing at all plays when a call drops off, but one very
+## quiet tick (`Sfx.play_radio_tick`, -30 dB) plays as she keys up — added
+## back after the user asked for "a really subtle sound effect", so do NOT
+## delete it. (This comment used to say the popup is silent outright.)
+## `Sfx.play_radio`, the full squelch, still exists if M2 ever wants it
+## back. The writing is the performance: she writes like
 ## a dispatcher because she was one — clipped, procedural, uses your
 ## callsign, never exclaims.
 ##

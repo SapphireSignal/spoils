@@ -275,8 +275,18 @@ func setup(root: Node2D, floor_layer: TileMapLayer, puddle_spots: Array,
 
 
 func _roll_weather() -> void:
-	## one spell at a time, weighted: mostly clear, rain more often than
-	## storm, fog the rarest. Clear spells run longest.
+	## one spell at a time. Branch weights are clear .46 / overcast .22 /
+	## rain .19 / storm .13 — but the `weather != CLEAR` guard means a clear
+	## spell can NEVER be followed by another clear one, so from clear the
+	## split is overcast .68 / rain .19 / storm .13. Solve that for its
+	## steady state and weight by spell length and the sky is overcast ~42%
+	## of the time, clear ~36%, rain ~13%, storm ~9%: OVERCAST is the most
+	## common weather, not clear. DRY spells run longest, and clear and
+	## overcast run EQUALLY long (240-540 s) against 140-320 s when wet.
+	## There is NO fog spell — the dawn mist is a time of day, not a
+	## forecast (see the enum above). This comment used to say "mostly
+	## clear … fog the rarest. Clear spells run longest" — every clause of
+	## that was wrong, including naming a spell that does not exist.
 	var roll := randf()
 	if weather != CLEAR and roll < 0.46:
 		weather = CLEAR
@@ -375,8 +385,10 @@ func _process(delta: float) -> void:
 	# WEATHER STATE MACHINE — long spells, slow ramps. Rain and STORM are
 	# genuinely different now (user asked, correctly, whether they were):
 	# a storm rains harder and throws lightning several times as often,
-	# where plain rain only rarely flashes. Fog is its own weather too,
-	# not just a dawn effect.
+	# where plain rain only rarely flashes. Fog is NOT a weather spell —
+	# it is a dawn effect driven off _morning_amount(day_time), never off
+	# `weather`, so it happens every morning whatever the forecast (user
+	# call; see the enum). These two lines used to claim the opposite.
 	_weather_timer -= delta
 	if _weather_timer <= 0.0:
 		_roll_weather()

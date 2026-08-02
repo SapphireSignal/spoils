@@ -119,10 +119,16 @@ labels + defaults — it is a keyboard bind, so it is rebindable.
 ## B2. The warden should actually converse *(user)*
 
 *"make them actually talk to one another, the user and the warden."*
-Right now the reply button pulls the next line off a pile and the player
-never says anything. Needs real player lines and warden responses that
-follow on from what was just said — topic threads, not a random ramble.
-`toll_dialog.gd`.
+
+**The player DOES already say something** — this task used to claim they
+never do, which sent the work in the wrong direction. The reply button
+carries one of the 14 lines in `REPLIES` (`toll_dialog.gd:54`), shown in
+quotation marks and picked so it never repeats twice running. What is
+actually missing is the LINK: pressing it draws the warden's answer at
+random from the unrelated `LINES` pile, so what he says never follows on
+from what the player just said. **The player lines exist; thread the
+warden's responses off the line that was actually pressed** — topic
+threads, not a random ramble. `toll_dialog.gd`.
 
 ## B3. The scrapyard building *(user)*
 
@@ -237,19 +243,29 @@ outlasts the animation.
 
 # C. HOUSEKEEPING
 
-## C1. Changelog bullets in the wrong places *(user)*
+## C1. Changelog bullets in the wrong places *(user)* — **DONE, nothing left**
 
 `CHANGELOG_ENTRIES` stores each entry as an array of strings and the
-renderer prefixes **every** element with `- `. **55 older entries** were
-hand-wrapped at ~52 characters, so one sentence gets a dash on every line.
-The convention going forward is **one string per bullet, unwrapped** (the
-labels autowrap, so the renderer needs no change).
+renderer prefixes **every** element with `- `, so the convention is **one
+string per bullet, unwrapped** (the labels autowrap, so the renderer needs
+no change). That still governs every new entry.
 
-**Do it as a reviewed pass, not a blind script.** A length-based join gets
-most of them right but mis-merges genuinely separate short bullets —
-verified: v0.2.4's three bullets become two. Join with a heuristic, then
-read all 55 results before committing. The menu's version label derives
-from `CHANGELOG_ENTRIES[0][0]`, so do not disturb ordering.
+**The rewrap already shipped in v0.6.16** and this task was left open
+describing work that no longer exists. Re-measured 2026-08-02 by parsing
+the array: **100 entries, and not one wrapped fragment remains.** Only four
+versions (v0.1.0, v0.1.2, v0.1.4, v0.1.11) have every bullet under 58
+characters, and reading them settles it — "8-direction movement and
+collision", "settings save and reload on launch" — those are **genuinely
+separate short bullets, not fragments of a wrapped sentence.** There is
+nothing to join.
+
+The old note here claimed "**55 older entries** hand-wrapped at ~52
+characters" and offered "verified: v0.2.4's three bullets become two" as
+proof a blind join would misfire. **Both are false now**: v0.2.4 has two
+bullets and the first is 269 characters, fully unwrapped, so the stated
+verification cannot be reproduced. If a future pass ever does touch this
+array, note the menu's version label derives from `CHANGELOG_ENTRIES[0][0]`
+— do not disturb ordering.
 
 ## C2. v0.4.3 has no in-game changelog entry
 
@@ -280,7 +296,28 @@ to need matching work. Do it sample → sign-off → fleet.
   crane/sandbox. The deeper fix is parameterising the builders so
   **shapes** differ, not just wear.
 
----
+## C5. The autoload-reset rule is only half-obeyed
+
+Found by the 2026-08-02 docs audit, and it is a **latent** gap rather than
+a live bug — worth closing before M2 adds more scene roots.
+
+CLAUDE.md's standing rule is that every scene root calls `Ui.clear()` and
+`Juice.reset()` in `_ready`, because those autoloads outlive the scene and a
+leftover entry bricks the next raid (input dead) or leaves the world at 4%
+speed. **Only `main.gd` does both** (`_ready` and `_exit_tree`).
+`main_menu.gd` calls `Ui.clear()` and never `Juice.reset()`; `splash.gd`
+calls neither.
+
+Nothing is broken today *because* `main.gd` resets on `_exit_tree`, so the
+menu is cleaned up on the way out of a raid rather than on the way in. That
+is one point of failure instead of defence in depth: any future path that
+reaches the menu or the splash without passing through `main.gd`'s exit —
+a crash-to-menu, a new scene, a harness jump — inherits a hit-stop time
+scale with nothing to clear it.
+
+**Fix:** add both calls to `main_menu.gd._ready` and `splash.gd._ready`.
+They are idempotent, so this costs nothing when the state is already clean.
+Then re-verify with `--leakcheck` (four deploy/return cycles) and `--smoke`.
 
 # WAITING ON THE USER
 

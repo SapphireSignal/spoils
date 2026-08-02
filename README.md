@@ -82,7 +82,11 @@ Right now SPOILS runs from source with Godot:
    ```
    godot --path .
    ```
-   On the development machine, double-clicking `Play.bat` does the same thing.
+   That assumes `godot` is on your PATH. **It is not on the development
+   machine** — there the engine lives at
+   `D:\Godot\Godot_v4.7.1-stable_win64_console.exe` and every command in the
+   project docs types that path in full. Double-clicking `Play.bat` does the
+   same thing.
 
 ### Controls
 
@@ -97,7 +101,11 @@ Right now SPOILS runs from source with Godot:
 | **Mouse wheel** | Zoom |
 | **Esc** | Pause menu (settings, keybinds, quit) |
 
-Every key is rebindable in **Esc → settings → keybinds**. The game runs
+Every key above **except Esc and the zoom wheel** is rebindable in
+**Esc → settings → keybinds**, which also covers reload, inventory and the
+weapon slots. Pause is the engine's built-in `ui_cancel` and the wheel zoom
+is fixed; neither appears in `Settings.BIND_ACTIONS` (14 actions), which is
+the only thing the keybinds panel iterates. The game runs
 borderless fullscreen at a pixel-perfect integer scale; display mode, FPS cap,
 and VSync live in settings too.
 
@@ -131,7 +139,9 @@ and VSync live in settings too.
   (cc-by 3.0), thunder by gregor quendel (cc-by 4.0), car sounds by ggbotnet
   (cc0); see [assets/audio/LICENSES.md](assets/audio/LICENSES.md).
 - **Self-verifying builds.** A headless smoke test
-  (`godot --headless --path . -- --smoke`) checks that the world builds, the
+  (`--smoke`; on the dev machine
+  `D:\Godot\Godot_v4.7.1-stable_win64_console.exe --headless --path . -- --smoke`,
+  since `godot` is not on PATH there) checks that the world builds, the
   player moves, collision holds, doors toggle, the edge sniper fires, and the
   menus work. A screenshot harness (`--shot=<name>`, with seed pinning via
   `--seed=`) captures the game's actual output for visual review, and frame

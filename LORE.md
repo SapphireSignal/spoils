@@ -86,7 +86,10 @@ nobody says that name either).
   still paints, the comms relay in the trees, and the autumn grove in
   the south-east corner where the oaks turned and never turned back.
   Roads run four by four; the barricade ring closes it all in.
-- **the safehouse.** Near the south wire, one squat house behind a
+- **the safehouse.** Tucked into the NORTH-EAST corner inside the wire
+  (this said "near the south wire"; it was moved 2026-08-02 because the
+  southern search kept dropping the spawn inside the playground), one
+  squat house behind a
   lattice fence with a parking pad: magpie's bolt-hole, and where every
   raid begins. The drain run in the film comes up two streets from its
   door. mara pretends not to know about it. kettle definitely does.
@@ -490,7 +493,10 @@ real patrol; M4 adds "pocket anything that shines."
 
 ## appendix c: menu backdrop canon (shipped v0.2.13)
 
-den (backdrop 0) / drain (1) / storm over the cordon (2) — see
-CHANGELOG. The den IS the game's home space; the board on it is the
+den (backdrop 0) / drain (1) — see CHANGELOG. A third, storm over the
+cordon, shipped as index 2 and was **RETIRED 2026-08-01 on the user's
+call**; its generator and textures are gone, and `show_backdrop` CLAMPS,
+so asking for index 2 silently re-shoots the drain. (This line still
+listed all three.) The den IS the game's home space; the board on it is the
 real map-select of the future (M7: deploy screen grows district
 selection off mara's board).

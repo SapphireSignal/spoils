@@ -41,6 +41,80 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-02 — the migration works; the docs still lied in ~50 places
+
+**Shipped:** No game changes, no version bump — still v0.6.25, all five
+version sources agree. A migration re-verification that turned into the
+second docs audit in two days. **~45 unique defects fixed across 16 files**
+(CLAUDE.md 10, gen_art.py 8, DESIGN.md 7, environment_system.gd 2,
+world_builder.gd 4, harness.gd 4, TASKS.md 3, LORE.md 2, plus README,
+CHANGELOG, extraction/authority/interior_light/night_freight/radio and the
+autosave log's header note). New **TASKS.md C5**. Art regenerated to a
+byte-identical manifest, proving no rng draw was disturbed.
+
+**The user's words:** *"im here for migration"*, then *"yes go, do the
+smoker"* — which they interrupted twice to ask instead for *"verify again
+that the migration all worked and everything is good"*. On the audit taking
+a while: *"critic is taking a long time, whats going on"*. Offered a choice
+between fixing the load-bearing subset or all of them, they chose **fix all
+~50 first**, ahead of the smoker.
+
+**Learned:**
+- **BOTH GATES PRINTED PASS THROUGHOUT. AGAIN.** Second audit, second time.
+  `--checksec`, `--checkdocs` and `--smoke` were green before, during and
+  after. Treat green as "nothing mechanical is broken", never as "the docs
+  are true".
+- **The last session fixed the .md files and some comments, and missed a
+  third copy of the camera-clamp lie** at `world_builder.gd:3822` — 3,800
+  lines below the header it did fix. Same lie, same file, still claiming a
+  clamp the user had explicitly removed.
+- **"FIX ONE COPY, LEAVE THE TWIN" IS THE DOMINANT FAILURE MODE, and I did
+  it myself mid-session.** I corrected DESIGN.md's render model in one place
+  and left its twin at line 185 saying "letterboxed" — creating a fresh
+  self-contradiction while fixing a contradiction. The weather statistic
+  lived in CLAUDE.md *and* CHANGELOG.md. **Every number in these docs
+  exists in two or three places: grep the VALUE across all seven docs and
+  the .gd/.py comments before calling a fix done.**
+- **The old entry below has the RENUMBERING ORDER INVERTED.** It says
+  v0.6.15→v0.6.25 shipped and "then" the history was renumbered. Verified
+  the opposite: `f8e83ae` ("renumber the whole release history, evenly") is
+  the direct PARENT of `3831421` (v0.6.15). The renumber came **first**, and
+  those eleven releases were minted on numbers it had just freed. **So
+  v0.6.15…v0.6.25 exist TWICE in this history** — as pre-renumber tags
+  (remapped to v0.2.13…v0.3.8) and as today's live releases. Do NOT look
+  today's v0.6.15+ up in `tag_commits.json`. Corrected here, not edited
+  there — the chain is append-only.
+- **The leak baseline had drifted and no gate could see it.** CLAUDE.md
+  claimed 932 nodes / 3585 objects; measured 814 / 3354. The *conclusion*
+  (no leaks, orphans 0, flat) held — only the figures rotted, in the one
+  place the file insists numbers live so they "cannot drift apart".
+- **Wrong-fact, not wrong-action.** Nothing found would destroy data — no
+  repeat of the phantom "stash file". The danger this time was traps that
+  waste a session: a `--extract=` flag that does not extract, a `Q engine`
+  key that does not exist, `~62% of sidewalks` whose 0.62 grep lands on
+  trainyard boxcar spacing.
+- **Three things the docs OVERCLAIMED about `--checksec`**, now written
+  down: only 2 of its 7 lists are allowlists that fail closed (the rest are
+  denylists that fail open); `harness.gd` is exempt from the network scan;
+  and with no `.git` it returns `SEC PASS` having asserted **nothing**.
+- **TASKS.md C1 was work that no longer existed** — the changelog rewrap
+  shipped in v0.6.16. Parsed all 100 entries: zero wrapped fragments remain.
+  Its stated proof ("v0.2.4's three bullets become two") is unreproducible;
+  v0.2.4 has two bullets and the first is 269 characters.
+- **A 66-agent audit is not self-certifying.** 50 of 55 candidates survived
+  adversarial verification — a rate high enough to distrust. Two findings
+  looked contradictory on weather; working the Markov chain out by hand
+  showed they measured different things (branch weights vs time-share) and
+  both were right. **Spot-check the audit before believing the audit.**
+
+**Picked up at:** **The smoker on the bench (TASKS.md B4)** — untouched,
+nothing blocked. Rebuild him from the PLAYER's character sheet so his
+shading matches, black hat to tell him apart, bigger smoke, seat him on the
+bench BELOW facing away from the backrest, and move the ground item over his
+head. Then the LZ green smoke (B4b). All gates green, tree clean at v0.6.25.
+
+---
+
 ## 2026-08-02 — the migration was broken and both gates said PASS
 
 **Shipped:** No game changes. A migration session that turned into a docs
@@ -264,48 +338,26 @@ blocked; `--checkdocs` and `--smoke` are green.
 
 ## 2026-08-02 — overcast, and the docs rebuilt
 
-*(Reconstructed at the start of the next session from the outgoing chat's own
-summary plus the commits. First-hand for the repo facts; the user quotes are
-verbatim from that transcript.)*
+*(Compressed per entry rule 6 on 2026-08-02. Reconstructed originally from
+the outgoing chat's summary plus the commits.)*
 
-**Shipped:** v0.6.15 → v0.6.25 across one long session — the harness stopped
-pretending (a smoke test that had been vacuous for three releases), a
-readable changelog, then the whole engine-side polish layer: impact
-(camera kick, hit-stop, per-sprite hit flash), quiet shader warm-up,
-atmosphere (colour grade, dust motes), a fix for the grade dimming
-everything, a real day-arc, sun shafts, five playtest fixes, a second tiny
-font plus the safehouse move, and finally **overcast weather** (v0.6.25).
-Then the whole release history was **renumbered** — 90 releases re-spread
-evenly to 15 per minor line, v0.1.0 → v0.6.14. Then `CLAUDE.md` was rebuilt
+**v0.6.15 → v0.6.25 in one long session**, on top of the renumbering: the
+harness stopped pretending (a smoke test vacuous for three releases), a
+readable changelog, then the whole engine-side polish layer — impact, shader
+warm-up, colour grade, dust motes, a real day-arc, sun shafts, a second tiny
+font, the safehouse move, and **overcast weather**. Then `CLAUDE.md` was cut
 from 977 lines to ~500 and `TASKS.md` rewritten against reality.
 
-**The user's words:** on the visual direction — *"keep the base art as-is,
-just use godot's visual toolkit to turn up the atmosphere"*. On the trailer —
-*"were not dropping it, just putting it aside for now"*. On the renumbering:
-0.1–0.5 flying past while 0.6 ground on for 76 patches *"read badly"*.
+**Its ORDER claim was wrong and is corrected in the newest entry:** the
+renumber came FIRST (`f8e83ae` is the parent of v0.6.15), not after these
+releases — so v0.6.15…v0.6.25 name two different things in this history.
 
-**Learned:**
-- **The smoke test can be vacuous.** The door check drove the player with
-  `velocity` + `move_and_slide()`, which scales by frame delta; a headless run
-  is uncapped, so the player moved a fraction of a pixel and never reached the
-  door. Green for three releases while testing nothing. Use `Harness._shove()`.
-- **A parse error in `harness.gd` looks exactly like a hang** — the autoload
-  fails, `--smoke` silently does nothing. Check the HEAD of the log.
-- **A colour grade must not change brightness**; **any gradual full-screen ramp
-  must dither in the shader that creates it**; **sort position and draw
-  position are different things**; **never skip an rng draw in the builder**.
-- **The docs had rotted badly.** `CLAUDE.md` had five stacked "version X
-  shipped" blocks, the newest claiming v0.6.6 while the repo was 19 releases
-  ahead. It had also pointed at the renumbering undo-map in a *session temp
-  folder* that would be deleted — a dead reference for the next session. Moved
-  into the repo at `docs/version_renumber_2026-08-02/`.
-- **Two previous sessions had recorded false diagnoses as settled fact** — the
-  door "opens roughly in place" (it had always swung a correct 90°; the wrong
-  measurement was taken from the sprite centroid instead of the free end), and
-  two "check this first" leads on the second floor that were both wrong (the
-  real cause was draw order). This is why entry rule 4 exists.
-
-**Picked up at:** the smoker on the bench, then the LZ green smoke.
+Every lesson it recorded now lives in `CLAUDE.md`: the vacuous smoke test
+and `_shove`, parse-error-looks-like-a-hang, a colour grade must not change
+brightness, ramps dither themselves, sort position ≠ draw position, never
+skip an rng draw. User quotes kept: *"keep the base art as-is, just use
+godot's visual toolkit to turn up the atmosphere"*; on the trailer *"were
+not dropping it, just putting it aside for now"*.
 
 ---
 

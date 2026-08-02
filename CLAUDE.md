@@ -120,26 +120,44 @@ light spill.
 - **The safehouse is in the NORTH-EAST corner** at cells [174, 73] (moved
   2026-08-02; it used to search out from the southmost road band and kept
   landing inside the playground).
-- **Weather is CLEAR / OVERCAST / RAIN / STORM.** Measured mix over 500
-  simulated days: clear 52%, overcast 33%, rain 9%, storm 6%. Overcast is
-  dry but kills the sun shafts — before it existed, every dry day was a
-  sunny one. There is deliberately **no fog spell**: dawn mist happens
-  every morning, so forecasting it says nothing.
+- **Weather is CLEAR / OVERCAST / RAIN / STORM.** Solving the roll in
+  `scripts/environment_system.gd` for its steady state and weighting by
+  spell length: **overcast ~42%, clear ~36%, rain ~13%, storm ~9%** — dry
+  about 78% of the time. **OVERCAST, not clear, is the most common
+  weather**, because the `weather != CLEAR` guard makes it impossible for
+  one clear spell to follow another, while overcast can repeat. (This line
+  claimed "clear 52%, overcast 33%, rain 9%, storm 6%, measured over 500
+  simulated days" — wrong, and wrong in the direction that matters: it
+  named the wrong most-common sky.) Overcast is dry but kills the sun
+  shafts — before it existed, every dry day was a sunny one. There is
+  deliberately **no fog spell**: dawn mist happens every morning, so
+  forecasting it says nothing.
 - **The day actually moves.** 07:30→17:00 used to be one flat white light
   — 39.5% of the clock with no visible change. The sun now runs
   warm-and-low in the morning, neutral and brightest at noon, gold through
   the afternoon, dusk 21:00, deep night 22:15–05:00.
 - **Autoloads:** `Authority`, `Settings`, `Sfx`, `Music`, `Ui`, `Raid`,
-  `Juice`, `Harness`. They OUTLIVE the scene — every scene root must call
-  `Ui.clear()` and `Juice.reset()` in `_ready`, or a leftover entry bricks
-  the next raid (input dead) or hands it a world running at 4% speed.
+  `Juice`, `Harness`. They OUTLIVE the scene, so a leftover entry bricks the
+  next raid (input dead) or hands it a world running at 4% speed. The rule
+  is that a scene root calls `Ui.clear()` and `Juice.reset()` — **but as of
+  2026-08-02 only `main.gd` actually does both** (in `_ready` AND
+  `_exit_tree`, which is what really protects the menu). `main_menu.gd`
+  calls `Ui.clear()` only, never `Juice.reset()`; `splash.gd` calls
+  neither. This line used to assert every scene root does both. Today the
+  safety comes from main.gd's exit reset rather than from each root
+  defending itself — see TASKS.md C5 before relying on it.
 - **Two fonts now.** `spoils_font` (5px x-height in 9) for everything, and
   `spoils_tiny` (3 in 6) for map dot labels. Both are BITMAP fonts — asking
   either for a different size resamples and blurs it. If text must be
   smaller, draw a new cut in `tools/gen_font.py`.
-- **Perf baseline:** 240 fps, ~4.5 ms worst frame, ~7.9k nodes, day and
-  storm-night alike. **Leaks: none** — `--leakcheck` settles to 932 nodes,
-  0 orphans, 3585 objects every cycle.
+- **Perf baseline:** 240 fps, ~4.5 ms worst frame, ~7.9k nodes in a raid,
+  day and storm-night alike. **Leaks: none** — re-measured 2026-08-02:
+  `--leakcheck` settles to **814 menu nodes, 0 orphans, 3354 objects**
+  every cycle, memory flat to 0.06 MB, verdict `nodes+0 objects+0`.
+  (This line said 932 nodes / 3585 objects — stale since the v0.6.17-0.6.25
+  polish layer changed the menu scene. The no-leak conclusion held; only the
+  absolute figures drifted, which is exactly what keeping them in ONE place
+  is supposed to prevent.)
 
 ## PROCESS (learned the hard way this session)
 
@@ -378,13 +396,18 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   look per building, interactive Door on a visible side, entrance pockets kept
   clear inside AND out), lane-correct road vehicles (some broken + litter),
   sparse mostly-dead street lamps, sticks, clustered scatter, puddle spots.
-  sidewalks flanking ~62% of road sides (pale slab tiles, v/h orientations,
-  13% broken), worn crosswalks on every intersection arm, rare manhole
+  sidewalks flanking EVERY road side (pale slab tiles, v/h orientations,
+  10% broken and a further 16% cracked; this line said "~62% of road sides,
+  13% broken" — there is NO coverage roll in `_plan_sidewalks`, and the 0.62
+  a grep finds is trainyard boxcar spacing. A band runs only as far as its
+  own road, skips cells already road/dirt/rail/ballast/crossing, and EVICTS
+  forest — user call: grass right next to asphalt looks odd),
+  worn crosswalks on every intersection arm, rare manhole
   tiles, dead traffic lights at crossings (traffic_light[_m]_0-3 + _flat,
   placed 0-2 per intersection, mirrored so heads hang over the asphalt),
   district weathering zones (concrete_worn/damp picked by two offset
   8-cell hash grids off _zone_salt — probabilistic mix, no patch grid).
-  BARRICADE RING at inset 66 (`BARRIER_INSET`, world_builder.gd:30 — this
+  BARRICADE RING at inset 66 (`BARRIER_INSET`, world_builder.gd:37 — this
   line said 72, a value the ring never held; the code's history is 78→68→66,
   and CLAUDE.md's own safehouse [174, 73] only computes from 66)
   = the advertised map edge (art axis x/y, flats
@@ -406,8 +429,12 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   thin wall-line collider disabled while open, group "doors".
 - `scripts/stairs.gd` — second-story flight, group "stairs", F flips the
   floor via main.gd. `scripts/driveable_car.gd` — intact cars as
-  CharacterBody2D: F enter/exit w/ door frames+sounds, Q engine, WASD
-  drive, E headlights (see v0.3.1 systems).
+  CharacterBody2D: F enter/exit w/ door frames+sounds, WASD drive, E
+  headlights (see v0.3.1 systems). **There is NO engine key** — this line
+  said "Q engine"; the engine wakes when you sit down and dies when you
+  get out (user call 2026-08-01, recorded at the head of the script).
+  `project.godot` declares no `engine` action, and the car reads exactly
+  two: `interact` and `flashlight`.
 - `scripts/edge_guard.gd` — barricade-line snipers with PREDICTIVE aim
   (lead the player's velocity by flight time, per-shooter 0.75-1.05x) and
   STAGGERED volleys (first shot instant, rest via _pending countdowns in
@@ -443,9 +470,12 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   (play_step(kind, quiet), -22/-27dB) and thunder — licenses in
   assets/audio/LICENSES.md, DESIGN.md §5 amended; rain+alarm still render
   on a Thread), `scripts/music.gd` (menu theme = licensed guitar loop at
-  -18dB; RAID mode since v0.2.13: play_raid()/stop_raid() — dongxiao/
-  harp/guitar loops at -26dB, one at a time, 70-180s silences, never the
-  same twice; main.gd starts it post-build, menu _ready switches back;
+  -18dB; RAID mode since v0.2.13: play_raid()/stop_raid() — the user's
+  three auditioned picks (guitar 02 / harp 01 / piano 01, shipped as
+  `raid_0..2.ogg`) at -26dB, one at a time, **24-38 s** silences between
+  them (user call: "like 30 secs"), never the same twice; this line said
+  "dongxiao/harp/guitar, 70-180s" and there is no dongxiao track in the
+  project; main.gd starts it post-build, menu _ready switches back;
   42 more pack tracks re-downloadable), `scripts/splash.gd` +
   `scenes/splash.tscn` (SapphireSignal
   studio card — THE BOOT SCENE; harness args skip it instantly),
@@ -492,16 +522,41 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
 **Start here, both take a second:**
 `godot_console --headless --path . -- --checksec` → must print `SEC PASS`.
 The security audit, and these are INVARIANTS not warnings: the git remote has
-not moved; **no network call exists anywhere** in `scripts/` or `tools/`; the
+not moved; no network call exists in `scripts/` or `tools/`; the
 python toolchain imports only vetted modules; shelling out is confined to
 `harness.gd` and only ever to git; nothing credential-shaped is tracked; and
 `project.godot` autoloads exactly the eight known entries (an autoload runs
 on every launch — it is the natural hiding place for something persistent).
 It scans committed AND uncommitted files, so a backdoor is caught before it
-reaches a commit, not after. Every list in it is an allowlist: widening one
-is a deliberate decision, which is the point. **All six checks were verified
+reaches a commit, not after — **but only files git will LIST**: the scan uses
+`ls-files --cached --others --exclude-standard`, which honours `.gitignore`,
+so appending one line there hides a `.gd` or `.py` from every pattern scan.
+**All six checks were verified
 to actually FIRE** by planting a violation of each — a check that only ever
 passes is decoration.
+
+**THREE LIMITS THIS SECTION USED TO OVERCLAIM. Know them or you will trust
+it further than it earns** (all three verified 2026-08-02):
+
+1. **Only two of its lists are ALLOWLISTS that fail CLOSED** — the vetted
+   python imports (`SEC_PY_IMPORTS`) and the eight autoloads
+   (`expected_autoloads`, checked both directions), plus the single expected
+   remote. **The rest are DENYLISTS and they fail OPEN**: `SEC_NET_GD`,
+   `SEC_NET_PY`, `SEC_EXEC_PY`, `SEC_SECRET_NAMES`, `SEC_SECRET_CONTENT`
+   flag only the strings they already name. A socket class nobody listed
+   (`TCPServer`, `MultiplayerPeer`, anything behind an addon) passes
+   silently. This file used to say "every list in it is an allowlist", and
+   so does the comment above the lists in `harness.gd` — both were wrong.
+2. **`harness.gd` is EXEMPT from the `.gd` network scan**, because it
+   necessarily contains the strings the scan looks for. It gets only a
+   narrower check that every `OS.execute` there invokes git. **A network
+   call added to `harness.gd` passes `--checksec`.** That one file is
+   guarded by reading it, not by the gate.
+3. **It needs a `.git` directory at the project root.** Without one,
+   `_check_security` returns before check 1 and prints `SEC PASS` having
+   asserted NOTHING — including the autoload check, which reads
+   `project.godot` off disk and needs no git at all. A copy of this repo
+   without `.git` is unguarded while still printing green.
 
 `godot_console --headless --path . -- --checkdocs` → must print `DOCS PASS`.
 It proves the handoff still matches the repo, in five parts:
@@ -589,8 +644,9 @@ then `godot_console --headless --path . --import`.
 - Leaks: `godot_console --headless --path . -- --leakcheck` → deploys into a
   raid and back to the menu FOUR times, printing nodes/orphans/objects/memory
   retained each cycle plus a growth verdict. **Read the TREND, not cycle 0**
-  (one-time caches fill on the first pass). v0.6.6 baseline: menu settles to
-  932 nodes / 0 orphans / 3585 objects every cycle, memory flat to 0.06 MB.
+  (one-time caches fill on the first pass). **The numbers live in "Current
+  state of the world" above — do not copy them here, that is how this line
+  went stale at the v0.6.6 figures for nineteen releases.**
   ORPHANS is the sharpest signal — a node out of the tree and unfreed is a
   leak with no excuse.
 - **NEVER test "can the player walk through X" with `velocity` +
@@ -736,9 +792,18 @@ then `godot_console --headless --path . --import`.
   to change.
 - **Anything full-screen and gradual must dither itself.** The film on the
   layer above cannot fix banding a later pass creates.
-- **Never scale or rotate a sprite at runtime** — including particles.
-  Bake variants instead. Camera shake, emitters and any follower move in
-  WHOLE pixels.
+- **Never scale or rotate a PIXEL-ART sprite at runtime** — including
+  particles (`scripts/motes.gd` pins `scale_min`/`scale_max` to 1.0 for
+  exactly this reason). Bake variants instead. Camera shake, emitters and
+  any follower move in WHOLE pixels.
+  **The exemption is SOFT-ALPHA atmosphere textures**, which have no pixel
+  grid to break: the LZ beacon squashes its `light_radial` ground wash once
+  at setup and billows its smoke puffs every frame
+  (`scripts/lz_beacon.gd`), and the freight does the same with its steam
+  (`scripts/night_freight.gd`). All three are shipped and CORRECT — this
+  rule used to carve out no exception, so do not "fix" them by baking scale
+  variants. Rotation already has the matching carve-out: smooth light
+  textures may rotate, pixel-art sprites never.
 - **Bitmap fonts do not resize.** There are two cuts (`spoils_font`,
   `spoils_tiny`); asking either for a different size resamples and blurs.
   Need another size? Draw it in `tools/gen_font.py`.
