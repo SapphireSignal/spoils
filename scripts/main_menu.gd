@@ -73,6 +73,10 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.18", [
+		"shaders are built once between the studio card and the menu, so the first flash in a raid cant cost you a frame. it only happens after an update - restarting the game with nothing changed skips it entirely",
+		"theres a compiling screen with a bar behind it, but it stays out of your way unless theres actually enough work to be worth showing",
+	]],
 	["v0.6.17", [
 		"getting shot hits harder. the camera kicks, time holds for a fraction of a second, and the raider flashes white - none of which touches the artwork itself",
 		"crashing a car shoves the screen, scaled by how hard you hit it, and close thunder gives the world a small shove of its own",

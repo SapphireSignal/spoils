@@ -3,6 +3,33 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.18] — 2026-08-02 — shaders compile once, quietly
+
+### Added
+- **A shader warm-up between the studio card and the menu.** It builds
+  every shader pipeline once, up front, rather than dropping a frame the
+  first time something flashes mid-raid. It carries a "compiling shaders"
+  screen with a progress bar — **which only appears when there is real
+  work.**
+- **It only runs after an update.** A fingerprint of the engine build plus
+  the contents of every `.gdshader` is kept in the user directory; if
+  nothing changed, the whole step is skipped. This matches how the user
+  expected it to behave, and how Godot already behaved: the engine keeps
+  a compiled shader cache on disk, so a plain restart never recompiled in
+  the first place.
+
+### Notes
+- **Today you will not see the bar, on purpose.** There is exactly one
+  shader in the project and a cold build of it takes 40 ms — under the
+  120 ms threshold, so the screen stays hidden rather than flashing a
+  meaningless progress bar. It starts earning its place as the polish
+  pass adds outline, colour-grade and sway shaders. The user pushed back
+  on this ("if its 8ms will i even see it? whats the point then") and
+  they were right; it ships dormant rather than padded with fake delay.
+- Measured with the new `--shaderwarm`: cold run 40 ms, stamp sticks,
+  second boot costs 0 ms. The smoke can't reach this path because the
+  harness skips the splash, so it gets its own check.
+
 ## [0.6.17] — 2026-08-02 — impact
 
 First slice of the visual-polish pass, and it takes the direction the user

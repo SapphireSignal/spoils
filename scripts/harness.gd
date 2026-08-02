@@ -8,6 +8,8 @@ extends Node
 ##   --probe-exclusive  report display mode capabilities and quit
 ##   --leakcheck      raid -> menu, four times; prints node/orphan/object/
 ##                    memory retention per cycle and a growth verdict
+##   --shaderwarm     run the boot shader warm-up cold then warm; the
+##                    second must be a no-op or every launch pays the cost
 
 var world_seed := ""  # --seed=<text>: pin the district layout (shots/probes)
 # the smoke needs a LIVING world to probe: dying ends the raid and pauses
@@ -90,6 +92,8 @@ func _ready() -> void:
 			_probe_exclusive.call_deferred()
 		elif arg == "--leakcheck":
 			_leakcheck.call_deferred()
+		elif arg == "--shaderwarm":
+			_shaderwarm.call_deferred()
 		else:
 			continue
 		acted = true
@@ -552,6 +556,38 @@ func _leakcheck() -> void:
 		var mem_growth := (float(last["mem"]) - float(first["mem"])) / 1048576.0
 		print("LEAK VERDICT nodes+%d objects+%d mem+%.2fMB orphans=%d" % [
 			node_growth, obj_growth, mem_growth, int(last["orphans"])])
+	get_tree().quit(0)
+
+
+func _shaderwarm() -> void:
+	## --shaderwarm: exercise the boot-time shader warm-up, which the smoke
+	## never reaches because the harness skips the splash. Runs it COLD, then
+	## again WARM, and reports both — the second run must be a no-op or the
+	## fingerprint is not sticking and every launch would pay the cost.
+	await get_tree().process_frame
+	var stamp := "user://shader_stamp.txt"
+	if FileAccess.file_exists(stamp):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(stamp))
+	print("SHADERWARM cold=%s (stamp cleared)" % str(ShaderWarm.is_cold()))
+	var warm := ShaderWarm.new()
+	get_tree().root.add_child(warm)
+	var t0 := Time.get_ticks_msec()
+	await warm.run()
+	var cold_ms := Time.get_ticks_msec() - t0
+	warm.queue_free()
+	await get_tree().process_frame
+	print("SHADERWARM first_run_ms=%d now_cold=%s" % [cold_ms,
+		str(ShaderWarm.is_cold())])
+	# and a second boot with nothing changed must skip entirely
+	var t1 := Time.get_ticks_msec()
+	var again := ShaderWarm.is_cold()
+	print("SHADERWARM second_boot_cold=%s check_ms=%d" % [str(again),
+		Time.get_ticks_msec() - t1])
+	if again:
+		printerr("SHADERWARM FAIL: the stamp did not stick — every launch "
+			+ "would recompile")
+		get_tree().quit(1)
+		return
 	get_tree().quit(0)
 
 

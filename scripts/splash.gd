@@ -212,6 +212,16 @@ func _finish(instant: bool = true) -> void:
 	if instant:
 		get_tree().change_scene_to_file.call_deferred("res://scenes/menu.tscn")
 		return
+	# Pay the shader pipeline cost HERE, between the studio card and the
+	# menu, rather than dropping a frame the first time something flashes
+	# mid-raid. Skipped entirely unless a shader actually changed — see
+	# ShaderWarm; a bar on every launch for work already cached would be
+	# theatre.
+	if ShaderWarm.is_cold():
+		var warm := ShaderWarm.new()
+		add_child(warm)
+		await warm.run()
+		warm.queue_free()
 	var cover := ColorRect.new()
 	cover.color = Color("090a14", 0.0)
 	cover.set_anchors_preset(Control.PRESET_FULL_RECT)
