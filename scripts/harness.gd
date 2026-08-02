@@ -815,8 +815,16 @@ func _check_docs() -> Array[String]:
 	# reader to DELETE, write it so it does not match — unbackticked, or
 	# without the checked prefix. Several correct lines in these docs already
 	# do exactly that; do not "fix" them into matching.
+	# ALL SEVEN. CHANGELOG.md was excluded at first on the theory that a
+	# changelog is frozen history and will name files that were later deleted.
+	# Measured before believing it: CHANGELOG.md has 4 unique backticked refs
+	# and ZERO dead ones, so the theory did not describe this repo. The
+	# exclusion was also INCONSISTENT — HANDOFF.md is append-only history too
+	# and has always been scanned. The real protection for a frozen entry is
+	# the writing convention below (name a doomed file so it does not match),
+	# not carving a hole in the check.
 	var docs_with_paths: Array[String] = ["CLAUDE.md", "TASKS.md", "HANDOFF.md",
-		"DESIGN.md", "README.md", "LORE.md"]
+		"DESIGN.md", "README.md", "LORE.md", "CHANGELOG.md"]
 	var path_re := RegEx.new()
 	if path_re.compile("`((?:(?:scripts|tools|docs|art|assets|scenes)/[A-Za-z0-9_./-]+)"
 			+ "|(?:[A-Za-z0-9_-]+\\.(?:md|bat|godot)))`") != OK:

@@ -517,8 +517,12 @@ It proves the handoff still matches the repo, in five parts:
    it rotted to v0.6.6 for nineteen releases.
 2. **all 90 renumbered tags still sit on their recorded commits**
    (`docs/version_renumber_2026-08-02/tag_commits.json`).
-3. **no backticked repo path names a file that does not exist**, now across
-   `CLAUDE.md`, `TASKS.md`, `HANDOFF.md`, `DESIGN.md`, `README.md`, `LORE.md`.
+3. **no backticked repo path names a file that does not exist**, across ALL
+   SEVEN docs — `CLAUDE.md`, `TASKS.md`, `HANDOFF.md`, `DESIGN.md`,
+   `README.md`, `LORE.md`, `CHANGELOG.md`. `CHANGELOG.md` was excluded at
+   first, on the theory that frozen history legitimately names deleted files;
+   measuring it found 4 refs and 0 dead, and `HANDOFF.md` is append-only too
+   and was always scanned, so the hole was inconsistent as well as unearned.
 4. **every executable the docs name resolves on disk**, and a
    `godot_console` COMMAND is never left in a doc that no longer spells out
    the real path. This part exists because the two commands at the TOP of

@@ -97,8 +97,10 @@ DELETING a doc made every check scan nothing and pass silently; (1) DESIGN.md
 as an **optional** version claim — state none and it never fires, state one
 and it must agree, so re-adding a version is safe instead of silent rot, and
 no fifth number has to be hand-bumped each release; (2) tags unchanged;
-(3) the path scan widened to DESIGN.md/README.md/LORE.md and to bare
-root-level `.md`/`.bat`/`.godot` names; (4) every `.exe` the docs name must
+(3) the path scan widened to ALL SEVEN docs and to bare root-level
+`.md`/`.bat`/`.godot` names (CHANGELOG.md was held out at first as "frozen
+history names deleted files" — measured: 4 refs, 0 dead, and HANDOFF.md is
+append-only too and was always scanned, so the hole was unearned); (4) every `.exe` the docs name must
 resolve on disk, and a `godot_console` COMMAND may not sit in a doc that no
 longer defines the shorthand. **All six planted violations FIRED.**
 Two things worth keeping: the exe path is never hardcoded in `harness.gd` —
