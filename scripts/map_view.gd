@@ -328,6 +328,22 @@ func _clamp_pan() -> void:
 		_pan.y = clampf(_pan.y, _canvas.size.y - span.y - origin.y, -origin.y)
 
 
+func prewarm() -> void:
+	## The district layer draws its ENTIRE vector plan the first time it is
+	## shown — roads, blocks, every building, the groves — and that first
+	## draw cost a visible hitch on the first M press (user measured a drop
+	## to ~80 fps for a moment). Pay it here instead: the deploy screen is
+	## an opaque layer 95 and this is layer 75, so the map can draw for
+	## real behind it. Deliberately does NOT touch Ui — this is not an open.
+	var remembered := _mode
+	visible = true
+	_set_mode("transit")
+	await get_tree().process_frame   # layout flows; the canvas gets a size
+	await get_tree().process_frame   # ...and the draw itself lands
+	visible = false
+	_set_mode(remembered)
+
+
 func toggle() -> void:
 	set_open(not visible)
 

@@ -222,11 +222,14 @@ marked; don't attempt them without them.
    shelter, vending, newsbox, forklift, planter, swing) + singleton
    crane/sandbox. Deeper fix: parameterise builders so SHAPES differ,
    not just wear.
-9. **Changelog panel fps dip** — needs INTERACTIVE measurement (the
-   user's 240 Hz eye; menu-shot fps numbers are a known harness
-   artifact). Note: the panel builds ONCE at menu _ready, so if a dip
-   exists it's likely the first-layout pass of ~48 versions of Labels
-   on first open — pre-layout offscreen or build incrementally.
+9. ~~Changelog / map first-open dip~~ **DONE v0.6.50** — user
+   confirmed it was FIRST OPEN ONLY (~80 fps for a moment). Changelog
+   built ~300 Labels in that one frame; map drew its whole vector
+   district in that one frame. Both prewarm now (changelog under the
+   menu fade, map behind the deploy screen). PATTERN TO REUSE: any
+   panel that builds or draws a lot lazily must be warmed behind a
+   covered moment — awaiting the user's confirmation that both feel
+   smooth now.
 
 ## PROCESS (learned the hard way this session)
 

@@ -3,6 +3,27 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.50] — 2026-08-01 — first-open hitches, prewarmed
+
+User confirmed the dip is **first open only** — the changelog panel,
+and the map "when i load into the map, i drop down to like 80 fps for
+a sec".
+
+### Fixed
+- **The changelog built ~300 Labels in the frame you clicked it.**
+  Every shipped version's lines were created, shaped and laid out
+  lazily on first open. They're now built during the menu's own boot,
+  a slice per frame on a ~1.2 ms budget (under the 0.5 s fade-in),
+  followed by one invisible layout pass — so the first open has
+  nothing left to pay for. Opening it mid-warm is handled; if the
+  prewarm never ran, first open still builds them as before.
+- **The map drew its whole vector district on first open.** Roads,
+  blocks, every building and grove, all in one frame. `MapView` now
+  takes one real draw during the deploy tail — the deploy screen is an
+  opaque layer 95 and the map is layer 75, so it draws for real behind
+  the curtain and the first M press is warm. The prewarm deliberately
+  does not touch the window stack, so it can't be mistaken for an open.
+
 ## [0.6.49] — 2026-08-01 — the centre line, actually centred
 
 Third attempt, first one measured instead of reasoned — the user's

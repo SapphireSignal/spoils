@@ -159,6 +159,7 @@ func _build_world() -> void:
 	map_view.name = "MapView"
 	add_child(map_view)
 	map_view.setup(info, _player, environment, _floor_layer)
+	await map_view.prewarm()   # first-open draw cost, paid behind the curtain
 	add_child(PauseMenu.new())
 
 	# the ways out, and the screen you get when you take one

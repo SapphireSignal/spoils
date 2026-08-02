@@ -59,6 +59,7 @@ var _keybinds: KeybindsPanel
 var _volume: VolumePanel
 var _changelog: PanelContainer
 var _changelog_list: VBoxContainer
+var _changelog_open := false   # the USER opened it (vs the boot prewarm)
 var _map_select: PanelContainer
 var _ms_name: Label
 var _ms_blurb: Label
@@ -67,6 +68,12 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.50", ["the stutter on first opening the changelog and the",
+		"first time you open the map is gone. both were doing",
+		"all their work in the frame you asked for them - the",
+		"changelog builds every version now while the menu is",
+		"still fading in, and the map draws itself once behind",
+		"the deploying screen"]],
 	["v0.6.49", ["the yellow centre line finally runs down the middle",
 		"of the road. it was drawing on the half of the tile",
 		"the neighbouring tile owns, so half the dash rendered",
@@ -546,6 +553,7 @@ func _ready() -> void:
 	var fade := create_tween()
 	fade.tween_property(cover, "color:a", 0.0, 0.5)
 	fade.tween_callback(cover_layer.queue_free)
+	_prewarm_changelog()   # builds under the fade; first open costs nothing
 
 
 func show_backdrop(index: int) -> void:  # harness hook for screenshots
@@ -954,28 +962,63 @@ func _build_changelog_panel() -> PanelContainer:
 	return panel
 
 
+func _add_changelog_entry(entry: Array) -> void:
+	var version_label := Label.new()
+	version_label.text = str(entry[0])
+	version_label.add_theme_color_override("font_color", UITheme.TEXT_BRIGHT)
+	_changelog_list.add_child(version_label)
+	for line in (entry[1] as Array):
+		var item := Label.new()
+		item.text = "- " + str(line)
+		item.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		item.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		item.add_theme_color_override("font_color", UITheme.TEXT_DIM)
+		_changelog_list.add_child(item)
+	var gap := Control.new()
+	gap.custom_minimum_size = Vector2(0, 4)
+	_changelog_list.add_child(gap)
+
+
+func _prewarm_changelog() -> void:
+	## Every shipped version lives in this panel — that is ~300 Labels, and
+	## building plus text-shaping them ALL in the frame the user first
+	## clicked "changelog" is the dip they reported. Build them during the
+	## menu's own boot instead, a slice per frame on the same kind of time
+	## budget the world builder uses, then take one invisible layout pass so
+	## the first open has nothing left to pay for.
+	await get_tree().process_frame
+	var deadline := Time.get_ticks_usec() + 1200
+	for entry in CHANGELOG_ENTRIES:
+		if not is_inside_tree():
+			return                       # menu left while warming
+		_add_changelog_entry(entry)
+		if Time.get_ticks_usec() >= deadline:
+			await get_tree().process_frame
+			deadline = Time.get_ticks_usec() + 1200
+	_changelog.modulate.a = 0.0
+	_changelog.visible = true
+	await get_tree().process_frame       # the container sorts its children
+	await get_tree().process_frame       # ...and everything shapes and draws
+	if not is_inside_tree():
+		return
+	_changelog.modulate.a = 1.0
+	if not _changelog_open:              # the user beat us to it: leave it up
+		_changelog.visible = false
+
+
 func _open_changelog() -> void:
 	if _changelog_list.get_child_count() == 0:
+		# opened before the prewarm got there (or it never ran)
 		for entry in CHANGELOG_ENTRIES:
-			var version_label := Label.new()
-			version_label.text = str(entry[0])
-			version_label.add_theme_color_override("font_color", UITheme.TEXT_BRIGHT)
-			_changelog_list.add_child(version_label)
-			for line in (entry[1] as Array):
-				var item := Label.new()
-				item.text = "- " + str(line)
-				item.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-				item.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-				item.add_theme_color_override("font_color", UITheme.TEXT_DIM)
-				_changelog_list.add_child(item)
-			var gap := Control.new()
-			gap.custom_minimum_size = Vector2(0, 4)
-			_changelog_list.add_child(gap)
+			_add_changelog_entry(entry)
+	_changelog_open = true
+	_changelog.modulate.a = 1.0
 	_buttons.visible = false
 	_changelog.visible = true
 
 
 func _close_changelog() -> void:
+	_changelog_open = false
 	_changelog.visible = false
 	_buttons.visible = true
 
