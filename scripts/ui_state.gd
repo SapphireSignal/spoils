@@ -15,10 +15,24 @@ func open(window: StringName) -> void:
 	if window in _stack:
 		return
 	_stack.append(window)
+	_sync_hud()
 
 
 func close(window: StringName) -> void:
 	_stack.erase(window)
+	_sync_hud()
+
+
+func _sync_hud() -> void:
+	## A window owns the screen, so nothing from the world sits on top of
+	## it: no "press f to open", no driving hint, no train notice, no
+	## radio call (user report — the door prompt stayed up behind the
+	## pause menu). The HUD cannot hide ITSELF, because most windows pause
+	## the tree and its owners stop processing the moment they'd need to;
+	## the stack has to do it for them.
+	if not is_inside_tree():
+		return
+	get_tree().call_group("hud", "set_hud_hidden", not _stack.is_empty())
 
 
 func any_open() -> bool:
@@ -34,3 +48,4 @@ func blocks_gameplay() -> bool:
 func clear() -> void:
 	## scene swaps (death, quit to menu) drop every window
 	_stack.clear()
+	_sync_hud()

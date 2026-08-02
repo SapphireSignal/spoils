@@ -3,6 +3,22 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.64] — 2026-08-01 — windows take the HUD with them
+
+### Fixed
+- **"press f to open" stayed on screen behind the pause menu** (user
+  report), and so did the driving hint, the freight's departure notice
+  and mara's radio call. All of them come down while any window is up
+  and come back when it closes.
+- The reason it couldn't fix itself: most windows **pause the tree**,
+  so the labels' owners stop processing at exactly the moment they'd
+  need to hide. The window stack now does it for them — opening or
+  closing anything tells the `hud` group, which works fine while
+  paused. The map, which deliberately doesn't pause, is covered by the
+  per-frame check as well.
+- The interaction target is dropped along with the prompt, so F can't
+  act on something you were standing next to before opening a menu.
+
 ## [0.6.63] — 2026-08-01 — the lines actually connect
 
 User photographed the run with red lines drawn where the wires should

@@ -58,6 +58,16 @@ func _ready() -> void:
 	_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_line.add_theme_color_override("font_color", UITheme.TEXT)
 	rows.add_child(_line)
+	# a window is up: her call goes off screen and comes back with the
+	# world. The hold is frozen with the tree, so nothing is missed.
+	add_to_group("hud")
+
+
+func set_hud_hidden(hidden: bool) -> void:
+	if hidden:
+		_panel.visible = false
+	elif _left > 0.0:
+		_panel.visible = true
 
 
 func say(text: String) -> void:
@@ -72,6 +82,7 @@ func say(text: String) -> void:
 func _speak(text: String) -> void:
 	_line.text = text
 	_left = HOLD
+	_panel.visible = not Ui.blocks_gameplay()
 	_panel.modulate.a = 1.0
 	# one very quiet tick as she keys up, and nothing at all when she
 	# drops off (user: subtle, and appear only)

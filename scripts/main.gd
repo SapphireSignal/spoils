@@ -28,6 +28,10 @@ var _death_screen: DeathScreen
 var _toll_dialog: TollDialog
 
 
+func _enter_tree() -> void:
+	add_to_group("hud")   # the window stack takes the world's labels down
+
+
 func _ready() -> void:
 	# The window stack lives in an AUTOLOAD, so it outlives the scene that
 	# pushed to it. Quitting to the menu with the pause menu (or the map)
@@ -325,9 +329,30 @@ func _set_upper_state(index: int, up: bool) -> void:
 			(node as StaticBody2D).collision_layer = 0 if up else 1
 
 
+func set_hud_hidden(hidden: bool) -> void:
+	## called by the window stack (group "hud"): a menu is up, so the
+	## world's own labels come down. Works while the tree is PAUSED, which
+	## is the whole point — _process isn't running to do it itself.
+	if hidden:
+		if _prompt != null:
+			_prompt.visible = false
+			_prompt_target = null
+			if _player != null:
+				_player.prompt_target = null
+		if _car_hint != null:
+			_car_hint.visible = false
+
+
 func _update_prompt() -> void:
 	# "press f to ..." — doors, stairs, and cars worth taking. Hidden while
-	# driving (the car hint covers that).
+	# driving (the car hint covers that) and behind any open window.
+	if Ui.blocks_gameplay():
+		# the map doesn't pause the tree, so this path still runs with it
+		# open — the group call above only covers the paused windows
+		_prompt.visible = false
+		_prompt_target = null
+		_player.prompt_target = null
+		return
 	if _player.driving != null or _player.extracting:
 		_prompt.visible = false
 		_prompt_target = null
@@ -435,7 +460,7 @@ func _process(delta: float) -> void:
 		_car_hint_until = Time.get_ticks_msec() / 1000.0 + 12.0
 	_was_driving = now_driving
 	if _car_hint != null:
-		_car_hint.visible = now_driving \
+		_car_hint.visible = now_driving and not Ui.blocks_gameplay() \
 			and Time.get_ticks_msec() / 1000.0 < _car_hint_until
 	var cell := _floor_layer.local_to_map(_player.position)
 	if cell == _last_roof_cell:

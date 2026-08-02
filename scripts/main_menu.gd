@@ -70,6 +70,10 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.64", ["opening a menu takes the worlds labels down with it.",
+		"press f to open, the driving hint, the freight notice",
+		"and maras call all come off the screen while a window",
+		"is up, and come back when you close it"]],
 	["v0.6.63", ["the power lines actually connect tower to tower now.",
 		"they were getting a cell of random jitter like every",
 		"other prop, which knocked each tower off the line so a",

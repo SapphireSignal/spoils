@@ -101,6 +101,7 @@ func setup(stop_pos: Vector2, player: Player, radio: Radio,
 	add_child(cab)
 	_steam_tex = load("res://art/gen/fog_1.png")
 	add_to_group("trains")
+	add_to_group("hud")     # her notices come down behind a window too
 
 	var layer := CanvasLayer.new()
 	layer.layer = 73
@@ -270,7 +271,7 @@ func _tick_countdown(delta: float) -> void:
 	if n != _count_shown:
 		_count_shown = n
 		_countdown.text = "departing in %d" % n
-	_countdown.visible = true
+	_countdown.visible = not Ui.blocks_gameplay()
 	if _count_left <= 0.0:
 		_leave()
 
@@ -285,8 +286,14 @@ func _leave() -> void:
 			+ "find something to do that isn't dying.")
 
 
+func set_hud_hidden(hidden: bool) -> void:
+	if hidden:
+		_notice.visible = false
+		_countdown.visible = false
+
+
 func _show_notice(seconds: int) -> void:
 	if seconds != _notice_shown:
 		_notice_shown = seconds
 		_notice.text = "the freight leaves in %d" % seconds
-	_notice.visible = true
+	_notice.visible = not Ui.blocks_gameplay()
