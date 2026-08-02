@@ -679,13 +679,16 @@ func _shot(shot_name: String) -> void:
 					main_node.call("_on_stairs_used", idx)
 					for i in 6:
 						await get_tree().process_frame
-					var cont := reg["container"] as Node2D
+					var tiles: Array = reg["floor_tiles"] as Array
+					var shown := 0
+					for t in tiles:
+						if (t as Node2D).visible:
+							shown += 1
 					print("UPSTAIRS idx=%d upstairs=%s lift=%.1f cells=%s"
 						% [idx, str(pl.upstairs), pl.floor_lift,
 							str(reg["cells"])])
-					print("UPSTAIRS slab visible=%s children=%d pos=%s props=%d"
-						% [str(cont.visible), cont.get_child_count(),
-							str(cont.global_position),
+					print("UPSTAIRS slab tiles=%d visible=%d props=%d"
+						% [tiles.size(), shown,
 							(reg["upper_props"] as Array).size()])
 		if arg.begins_with("--map="):
 			var wanted := arg.trim_prefix("--map=")
@@ -894,8 +897,7 @@ func _probe_world() -> void:
 	var propless := 0
 	for u in uppers:
 		var reg := u as Dictionary
-		var container := reg["container"] as Node2D
-		if container == null or container.get_child_count() == 0:
+		if (reg["floor_tiles"] as Array).is_empty():
 			floorless += 1
 		if (reg["upper_props"] as Array).is_empty():
 			propless += 1

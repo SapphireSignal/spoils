@@ -318,33 +318,15 @@ func _on_stairs_used(index: int) -> void:
 
 
 func _set_upper_state(index: int, up: bool) -> void:
-	## The upper floor gets its own z BAND while you're on it.
-	##
-	## Y-sorting a horizontal slab against vertical walls cannot work: the
-	## container is anchored far north so the player always sorts over it,
-	## but that also puts it behind the building's OWN walls, which sit at
-	## much larger y. The result was a floor drawn in a band with the room
-	## grey around it, and furniture apparently floating — measured with
-	## --upstairs=0 and proved with --slabtop.
-	##
-	## So: slab at 1 (over the ground floor and its walls), everything you
-	## are meant to see standing ON it at 2. Both drop back to 0 on the way
-	## down, so nothing outside this building is affected while you're not
-	## up there.
+	## Show the room you're on, hide the one you left. The floor is a list
+	## of individually y-sorted tiles, not one slab — see _build_upper for
+	## why. No z_index anywhere: a z band puts the floor in front of ALL
+	## walls, which made it clip over the top of the house.
 	var upper: Dictionary = _uppers[index]
-	var container := upper["container"] as Node2D
-	container.visible = up
-	container.z_index = 1 if up else 0
-	if _player != null:
-		_player.z_index = 2 if up else 0
-	# the flight is shared by both floors and has to keep rising THROUGH
-	# the slab — at z 0 the new floor swallowed it whole
-	var stairs := upper.get("stairs_node") as Node2D
-	if stairs != null:
-		stairs.z_index = 2 if up else 0
+	for tile in (upper["floor_tiles"] as Array):
+		(tile as Node2D).visible = up
 	for node in (upper["upper_props"] as Array):
 		(node as Node2D).visible = up
-		(node as Node2D).z_index = 2 if up else 0
 		if node is StaticBody2D:
 			(node as StaticBody2D).collision_layer = 1 if up else 0
 	for node in (upper["ground_props"] as Array):

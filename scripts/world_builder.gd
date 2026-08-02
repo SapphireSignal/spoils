@@ -1961,16 +1961,19 @@ func _furnish_school(interior: Rect2i, pocket: Array[Vector2i],
 func _build_upper(interior: Rect2i, stairs_cell: Vector2i, kind: String,
 		ground_floor_tile: String, ground_props: Array[Node2D]) -> void:
 	# the SECOND STORY: an upper room drawn only while the player is up
-	# there. Floor sprites live in a container anchored NORTH of the whole
-	# footprint (always under the player in the y-sort); furniture nodes
-	# keep their TRUE ground position for collision/sorting and lift only
-	# their sprites by story_h. The stairs prop is shared by both floors.
-	var upper := Node2D.new()
-	upper.name = "Upper%d" % _uppers.size()
-	upper.position = _floor_layer.map_to_local(interior.position) \
-		+ Vector2(0, -24.0 - float(_story_h))
-	upper.visible = false
-	_ysort.add_child(upper)
+	# there. Furniture keeps its TRUE ground position for collision and
+	# sorting, lifting only its sprites by story_h. The stairs prop is
+	# shared by both floors.
+	#
+	# EVERY floor tile is its OWN child of the y-sort, sitting at its true
+	# cell position with the art lifted by offset. It cannot be one
+	# container: a slab is a horizontal plane, and a plane sorted as a
+	# single unit is either in front of all the walls or behind all of
+	# them, and both are wrong. Anchored north it hid behind the building's
+	# own walls (furniture floating over grey); forced in front it painted
+	# over the near walls and clipped on top of the house. Per tile, the
+	# near walls occlude the floor and the far ones do not, on their own.
+	var floor_tiles: Array[Node2D] = []
 
 	var atlas: Texture2D = load("res://art/gen/floors.png")
 	# WOOD upstairs in EVERY building — the school's screed-over-screed
@@ -1991,9 +1994,13 @@ func _build_upper(interior: Rect2i, stairs_cell: Vector2i, kind: String,
 			tile.region_enabled = true
 			tile.region_rect = Rect2(float(int(tc[0]) * 64), float(int(tc[1]) * 32),
 				64.0, 32.0)
-			tile.position = _floor_layer.map_to_local(cell) - upper.position \
-				+ Vector2(0.0, -float(_story_h))
-			upper.add_child(tile)
+			# position = where it SORTS (the true cell), offset = where it
+			# DRAWS (a storey up). Splitting the two is the whole trick.
+			tile.position = _floor_layer.map_to_local(cell)
+			tile.offset = Vector2(0.0, -float(_story_h))
+			tile.visible = false
+			_ysort.add_child(tile)
+			floor_tiles.append(tile)
 
 	# the slab lip: a dark edge along the south and east borders — the
 	# plane needs a silhouette or it melts into the room below (user:
@@ -2004,20 +2011,22 @@ func _build_upper(interior: Rect2i, stairs_cell: Vector2i, kind: String,
 		var lip := Sprite2D.new()
 		lip.texture = edge_x_tex
 		lip.centered = false
-		lip.offset = Vector2(-32, -16)
+		lip.offset = Vector2(-32.0, -16.0 - float(_story_h))
 		lip.position = _floor_layer.map_to_local(
-			Vector2i(x, interior.end.y - 1)) - upper.position \
-			+ Vector2(0.0, -float(_story_h))
-		upper.add_child(lip)
+			Vector2i(x, interior.end.y - 1))
+		lip.visible = false
+		_ysort.add_child(lip)
+		floor_tiles.append(lip)
 	for y in range(interior.position.y, interior.end.y):
 		var lip2 := Sprite2D.new()
 		lip2.texture = edge_y_tex
 		lip2.centered = false
-		lip2.offset = Vector2(-32, -16)
+		lip2.offset = Vector2(-32.0, -16.0 - float(_story_h))
 		lip2.position = _floor_layer.map_to_local(
-			Vector2i(interior.end.x - 1, y)) - upper.position \
-			+ Vector2(0.0, -float(_story_h))
-		upper.add_child(lip2)
+			Vector2i(interior.end.x - 1, y))
+		lip2.visible = false
+		_ysort.add_child(lip2)
+		floor_tiles.append(lip2)
 
 	# the stairs themselves (ground object, tall enough to arrive upstairs)
 	var stairs_info: Dictionary = _manifest["props"]["stairs"]
@@ -2059,7 +2068,7 @@ func _build_upper(interior: Rect2i, stairs_cell: Vector2i, kind: String,
 
 	_uppers.append({
 		"cells": interior,
-		"container": upper,
+		"floor_tiles": floor_tiles,
 		"upper_props": upper_props,
 		"ground_props": ground_props,
 		"stairs_cell": stairs_cell,

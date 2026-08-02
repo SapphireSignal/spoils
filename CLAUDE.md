@@ -239,10 +239,16 @@ construction: a slab is a horizontal plane, and y-sorting a plane
 against vertical walls cannot work. The container is anchored far
 north so the player sorts above it, which also put it BEHIND the
 building's own walls (much larger y), so the walls painted over most
-of the floor. `_set_upper_state` now gives the upper floor its own z
-band while you're on it: slab 1, player + upper props + STAIRCASE 2
-(the flight must be in the band or the slab swallows it), all back to
-0 on the way down. Repro/verify with `--upstairs=<n>`. **STILL OPEN
+of the floor. **FINAL FIX v0.6.70:** every floor tile is
+its OWN y-sorted node in `_ysort` at its true cell position, with the
+art lifted by the sprite's `offset` instead of by moving the node.
+**SORT POSITION AND DRAW POSITION ARE DIFFERENT THINGS — splitting
+them is the whole trick**, and it is reusable for anything that sits
+at a height. Near walls occlude the floor, far walls don't, no
+`z_index` involved. The v0.6.69 z-band (slab 1 / player+props+stairs
+2) is DELETED — it made the floor clip over the top of the house,
+because a plane sorted as ONE unit is in front of every wall or behind
+every wall. Repro/verify with `--upstairs=<n>`. **STILL OPEN
 from this ask:** the sweep of ALL interiors (houses, warehouses,
 school, safehouse) for furniture that sits wrong or overlaps. **BOTH OLD LEADS ARE DEAD — measured v0.6.68, do not re-derive.**
 `--probe-world` prints `UPPERS total=6 floorless=0 propless=0

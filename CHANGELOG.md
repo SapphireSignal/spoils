@@ -3,6 +3,26 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.70] — 2026-08-02 — the upstairs floor stays inside the house
+
+### Fixed
+- **The second floor was clipping over the top of the house** (user,
+  with the shape drawn on a screenshot). v0.6.69 fixed the floor by
+  putting it in front of the walls — which was only half right. A
+  second floor is a horizontal plane, and a plane sorted as ONE unit
+  is either in front of every wall or behind every wall, and both are
+  wrong. Anchored north it hid behind the building's own walls, so the
+  furniture floated over grey. Forced in front, it painted over the
+  near walls and sat on top of the roofline.
+- Each floor tile is now **its own y-sorted node** at its true cell
+  position, with the art lifted by a sprite offset rather than by
+  moving the node. Sorting position and drawing position are separate
+  things, and splitting them is the whole trick: the walls in front of
+  you occlude the floor, the walls behind you do not, and neither
+  needs a z_index. The z band from v0.6.69 is gone, along with the
+  special case that had to be added to keep the staircase from being
+  swallowed.
+
 ## [0.6.69] — 2026-08-02 — the upstairs floor, and three audit finds
 
 ### Fixed

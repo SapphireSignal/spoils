@@ -72,6 +72,9 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.70", [
+		"the second floor was clipping over the top of the house. every floorboard is now sorted on its own, so the walls in front of you cover it and the walls behind you dont",
+	]],
 	["v0.6.69", [
 		"the upstairs floor is actually there now. the furniture was standing on nothing because the buildings own walls were being drawn on top of the floorboards, leaving only a strip of them showing",
 		"dying and then abandoning the raid during the fade gave you two debrief screens stacked on each other. now whichever one gets there first is the one you get",

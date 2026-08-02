@@ -60,12 +60,19 @@ put it behind the building's OWN wall segments, sitting at much larger
 y. The walls painted over most of the slab, leaving a band of boards
 and furniture apparently standing on nothing.
 
-**Fix:** `_set_upper_state` gives the upper floor its own z band while
-you are on it — slab at 1 (over the ground floor and its walls),
-player + upper props + the staircase at 2 (over the slab). All back to
-0 on the way down, so nothing outside that building is affected. The
-staircase needs to be in the band explicitly or the new floor
-swallows it.
+**Fix (final, v0.6.70):** every floor tile is **its own y-sorted node**
+in `_ysort`, at its true cell position, with the art lifted by the
+sprite's `offset` instead of by moving the node. **Sorting position and
+drawing position are different things, and splitting them is the whole
+trick.** Near walls then occlude the floor and far walls don't, with no
+`z_index` anywhere.
+
+**The z-band attempt (v0.6.69) was wrong — don't retry it.** Putting
+the slab at z 1 and the player/props/stairs at z 2 fixed the floating
+furniture but made the floor clip over the top of the house, because a
+plane sorted as ONE unit is either in front of every wall or behind
+every wall. It also needed a special case to stop the slab swallowing
+the staircase. Both are gone.
 
 **Tooling:** `--upstairs=<n>` puts the player on second story *n*,
 prints `upstairs/lift/cells` and the slab's `visible/children/pos`,
