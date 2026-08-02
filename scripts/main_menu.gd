@@ -73,6 +73,9 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.15", [
+		"a test flag that does nothing now says so and exits, instead of leaving the game running forever in the background",
+	]],
 	["v0.6.14", [
 		"the changelog window is much bigger, so there is a lot less scrolling",
 		"the changelog button is hidden while the district select screen is open, it used to still be clickable underneath it",

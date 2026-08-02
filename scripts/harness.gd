@@ -70,6 +70,7 @@ func _ready() -> void:
 			_shot_backdrop = int(arg.trim_prefix("--backdrop="))
 		elif arg.begins_with("--face="):
 			_shot_face = arg.trim_prefix("--face=")
+	var acted := false
 	for arg in args:
 		if arg == "--smoke":
 			_smoke.call_deferred()
@@ -89,6 +90,22 @@ func _ready() -> void:
 			_probe_exclusive.call_deferred()
 		elif arg == "--leakcheck":
 			_leakcheck.call_deferred()
+		else:
+			continue
+		acted = true
+	# FAIL LOUD ON A FLAG THAT DOES NOTHING. Args like --toll, --freight and
+	# --at= are MODIFIERS for --shot, not actions of their own. Passing one on
+	# its own used to boot the game to the menu and sit there forever, which
+	# looks exactly like a hung test and holds the shell open until somebody
+	# kills it by hand. If args were given at all, one of them has to be an
+	# action.
+	if not args.is_empty() and not acted:
+		printerr("HARNESS: no action in %s" % str(args))
+		printerr("HARNESS: expected --smoke, --shot=<name>, --perf, "
+			+ "--perf-deploy, --probe-world, --probe-sniper, "
+			+ "--probe-exclusive or --leakcheck. "
+			+ "--toll/--freight/--at=/--seed= only MODIFY --shot.")
+		get_tree().quit.call_deferred(2)
 
 
 func _ensure_game_scene() -> void:

@@ -3,6 +3,18 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.15] — 2026-08-02 — the harness stops pretending
+
+### Fixed
+- **A harness flag that does nothing now says so and exits.** `--toll`,
+  `--freight`, `--at=` and `--seed=` are MODIFIERS for `--shot`, not
+  actions. Passing one on its own booted the game to the menu and left
+  it sitting there forever — indistinguishable from a hung test, and it
+  held the shell open until the process was killed by hand. It cost two
+  stray Godot instances and about fifteen minutes of CPU before anyone
+  noticed. If arguments are given, one of them now has to be a real
+  action or the harness prints what it expected and quits with code 2.
+
 ## [0.6.14] — 2026-08-02 — menu housekeeping
 
 ### Changed
