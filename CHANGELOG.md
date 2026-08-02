@@ -3,6 +3,23 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.16] — 2026-08-02 — a changelog worth reading
+
+### Changed
+- **The in-game changelog is rewritten from the real write-ups.** Its
+  older entries were hand-wrapped into ~52-character fragments to fit a
+  narrow window, and the renderer dashes every fragment — so one
+  sentence became five stubby bullets and, once the window was widened,
+  the text stopped filling it. 65 versions have been rewritten from the
+  detail already sitting in this file: the reasoning, the numbers, the
+  why. One string per bullet, and the labels autowrap to whatever width
+  the window is.
+- **Apostrophes** (user: "im fine with apostrophes"). The font has the
+  glyph and always did; the old text simply avoided them. Natural
+  contractions everywhere now. Lowercase stays hard — the generated
+  font has no capital glyphs, so a capital cannot render at all.
+- The changelog window is a bit smaller again, 548x330.
+
 ## [0.6.15] — 2026-08-02 — the harness stops pretending
 
 ### Fixed
