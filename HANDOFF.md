@@ -104,6 +104,18 @@ this very entry's first run, because the entry quotes `godot_console` to say
 it is dead. Narrowed the rule rather than exempting the file — exempting is
 what makes a gate lie.
 
+**Then the autosave shipped** — the user's idea: *"cant it be instantly
+logged somewhere in the repo, its like an auto save"*. A `UserPromptSubmit`
+hook runs `.claude/autosave.py`, appending every message they send, verbatim,
+to a docs/sessions/ log. Two things the research caught that would have
+bitten us badly: **the published hook docs are WRONG about the field name**
+(they say `user_prompt`; the shipped binary emits `prompt` — the script reads
+both), and **exit code 2 on this event ERASES the user's typed message**, so
+the script exits 0 on every path including failure. On this event alone hook
+stdout is injected into Claude's context, so it prints nothing — verified
+stdout length 0, UTF-8 intact, zero CR bytes. A settings change needs a
+RESTART to take effect.
+
 **Picked up at:** The
 user's autosave: a prompt-submit hook appending their messages verbatim to a
 docs/sessions/ folder (unbackticked deliberately — it does not exist yet, and
@@ -193,8 +205,8 @@ commands whenever you need me to."*
   `docs/version_renumber_2026-08-02/tag_commits.json`, so this class of
   damage can never go unnoticed again.
 
-**Picked up at:** The smoker on the bench (TASKS.md B4), then the LZ green
-smoke (B4b) — both unchanged from the last session's plan. Nothing is
+**Picked up at (previous session):** The smoker on the bench (TASKS.md B4),
+then the LZ green smoke (B4b) — both unchanged from that session's plan. Nothing is
 blocked; `--checkdocs` and `--smoke` are green.
 
 ---

@@ -274,6 +274,37 @@ independently of Claude's reasoning, so it does not share Claude's context
 and cannot be talked into the same mistake. Do not treat it as friction to
 route around, and do not push the user toward `bypassPermissions`.
 
+## THE SESSION AUTOSAVE (user's idea, 2026-08-02)
+
+Every message the user sends is appended **verbatim, as they send it** to
+`docs/sessions/<date>.md`. Their words are the thing most likely to be lost
+forever and the thing that steers every art and feel decision, so saving them
+is automatic now instead of depending on a session remembering to.
+
+- **Wiring:** a `UserPromptSubmit` hook in `.claude/settings.json` runs
+  `.claude/autosave.py`. It is the harness that executes this, not Claude.
+- **It is the SAFETY NET, not the handoff.** Raw, complete, unreadable by
+  design. `HANDOFF.md` stays the curated memory a new session reads. Go to
+  the log when the handoff turns out to be wrong — never instead of writing
+  one.
+- **A settings change needs a RESTART.** Project settings load at startup;
+  this bit the last session with the permission allowlist. If the log is not
+  appearing, that is the first thing to check.
+- **Three rules live in that script and must not be softened.** It must never
+  write to stdout (on this event alone, hook stdout is injected into Claude's
+  context as if the user typed it); it must always exit 0 (exit code 2 on
+  this event BLOCKS the prompt and ERASES what the user typed); and it writes
+  UTF-8 with `\n` (PowerShell defaults mangle non-ASCII and double the CRs).
+  Its imports stay inside the `--checksec` vetted list — `datetime` was
+  avoided on purpose because `time` was already vetted.
+- **The logs stay INSIDE `--checksec`'s secret scan** (`.md` is in its suffix
+  list). User's explicit call: a real pasted credential can never slip
+  through, at the price of an occasional false alarm when we merely discuss
+  keys. **If it gets noisy, tighten the pattern — never exempt the file.**
+  Exempting is the one change that would make the gate lie.
+- **Off switch:** `"disableAllHooks": true` in settings, or delete the
+  `hooks` block. Nothing else depends on it.
+
 ## EXTRACTION — SHIPPED, all three exits
 
 **the lift** (green-smoke LZ, proximity countdown, helicopter, rope),

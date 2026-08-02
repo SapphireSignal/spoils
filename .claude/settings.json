@@ -14,5 +14,20 @@
 
       "Skill"
     ]
+  },
+
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "C:\\Users\\srrwz\\AppData\\Local\\Python\\pythoncore-3.14-64\\python.exe",
+            "args": ["D:\\Games\\Spoils\\.claude\\autosave.py"],
+            "timeout": 5
+          }
+        ]
+      }
+    ]
   }
 }
