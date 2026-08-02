@@ -14,6 +14,27 @@ This file carries everything a fresh session needs that isn't in those two.
 
 ## Where we are
 
+- **Version v0.6.68 SHIPPED** (2026-08-02) — **the doors are actually
+  solid now.** Three measured bugs, not the one this file used to
+  claim: the swung collider was mirrored 180° for south (`x`) doors,
+  the east (`y`) door's open frames ran off their canvas and were cut,
+  and the open leaf used wall thickness so it sealed its own doorway.
+  **The old "the leaf opens in place, it does not swing aside"
+  diagnosis was WRONG** — it came from measuring the sprite centroid,
+  and in iso both ground axes point +x, so a correct 90° turn barely
+  moves a centroid. The art always swung properly. Open/jamb colliders
+  now come from the generator via `manifest.collider_open` /
+  `collider_jambs`; `Door` derives nothing. Mid-swing both panels are
+  solid. **BIGGEST LESSON: the door smoke test had been VACUOUS since
+  v0.6.65** — it drove the player with `velocity` +
+  `move_and_slide()`, which scales by frame delta, and a headless run
+  is uncapped, so the player moved a fraction of a pixel and never
+  reached the door. That is why v0.6.65 "could not reproduce" the
+  user's report. `Harness._shove()` now uses `move_and_collide` in
+  fixed 1 px steps with sliding — **use it for any future
+  did-it-walk-through test, never velocity + move_and_slide.**
+  Perf after: 240 avg / 4.56 ms worst / 7892 nodes.
+
 - **Version v0.6.48 SHIPPED** (2026-08-01, overnight while the user
   slept — they pre-authorized the batch and went to bed; they wake to
   v0.6.45–48 plus the completed sweep versions below). The overnight
@@ -195,19 +216,11 @@ This file carries everything a fresh session needs that isn't in those two.
 
 ## THE QUEUE (as of v0.6.44 — work straight down it)
 
-**DOORS — ASKED THREE TIMES, STILL NOT RIGHT (user, 2026-08-01):** they
-want the door solid ALWAYS. v0.6.67 added a swung-leaf collider and
-they can still walk through an open door. MEASURED, do not re-derive:
-the door sprite's 4 frames barely move sideways (centroid cx 23.5 →
-23.8) and only rise (cy 33.3 → 27.9) — the leaf opens IN PLACE, it
-does NOT swing aside. So v0.6.67's collider, offset a full cell along
-the perpendicular axis, sits where there is no art. Two options, the
-USER MUST PICK: (A) keep the closed collider on at all times — exactly
-what they asked, but then no doorway is ever passable and buildings
-cannot be entered; (B) redraw the open frames so the leaf visibly
-swings clear, then match the collider to it, leaving the other half of
-the cell as the gap. RECOMMEND B. Rewrite or delete
-`Door._swung_points` to match whatever the art ends up doing.
+**DOORS — DONE v0.6.68** (see "Where we are"). Awaiting the user's
+playtest confirmation. If they still report walking through one, ask
+WHICH door and whether it was shut, open, or mid-swing, and get a
+zoomed screenshot — all three states are covered by real collision
+tests now.
 
 **FLAT PROPS DRAW OVER THE PLAYER (user, 2026-08-01, screenshot):** a
 small flat ground thing (orange-brown diamond) renders ON TOP of the
@@ -763,6 +776,25 @@ then `godot_console --headless --path . --import`.
 - Perf: `godot_console --path . -- --perf [--weather=rain --tod=0 ...]` →
   prints avg fps / worst frame ms / node count. v0.6.3 baseline on the user's
   240 Hz box: 240 avg, worst ~5 ms, ~34k nodes.
+- Leaks: `godot_console --headless --path . -- --leakcheck` → deploys into a
+  raid and back to the menu FOUR times, printing nodes/orphans/objects/memory
+  retained each cycle plus a growth verdict. **Read the TREND, not cycle 0**
+  (one-time caches fill on the first pass). v0.6.68 baseline: menu settles to
+  932 nodes / 0 orphans / 3585 objects every cycle, memory flat to 0.06 MB.
+  ORPHANS is the sharpest signal — a node out of the tree and unfreed is a
+  leak with no excuse.
+- **NEVER test "can the player walk through X" with `velocity` +
+  `move_and_slide()`.** move_and_slide scales by the frame delta and headless
+  runs uncapped, so the player advances a fraction of a pixel per call and
+  never reaches the thing — the door test was green for THREE releases
+  without touching a door. Use `Harness._shove(body, dir, distance)`, which
+  steps `move_and_collide` 1 px at a time (with sliding) and is frame-rate
+  independent.
+- A parse error in `harness.gd` makes the autoload fail to load, so `--smoke`
+  silently does NOTHING and the game sits on the menu forever with flat CPU —
+  it looks exactly like a hang. **Check the HEAD of the log for "Parse Error"
+  before assuming anything is slow**; the verdict only ever prints at the end,
+  so a tail tells you nothing.
 - Godot: `D:\Godot\Godot_v4.7.1-stable_win64_console.exe` (CLI) / non-console
   exe in Play.bat. Console exe for everything scripted.
 

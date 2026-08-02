@@ -3019,63 +3019,118 @@ def make_sniper_round() -> Image.Image:
 DOOR_FRAMES = 4
 DOOR_LEAF = 20      # leaf length along the edge, px
 DOOR_H = 34         # leaf height
+DOOR_HINGE = (23, 50)       # hinge inside a frame; sized so no swing clips
+DOOR_FRAME_SIZE = (54, 66)
+
+# the open-state colliders, keyed by prop name. The GENERATOR knows where the
+# swung leaf ends up, so it says so — the game must never re-derive it (a
+# hand-rolled guess put the panel on the wrong side of x doors for a whole
+# release, and you could stroll through every open south door).
+DOOR_COLLIDERS: dict[str, dict] = {}
+
+# closed / open unit step per axis, in screen px per px of leaf run. 'x' fits
+# south (yp) walls and swings toward -y cells; 'y' fits east (xp) walls and
+# swings toward -x cells. Both open INTO the room.
+_DOOR_DIRS = {
+    "x": ((1.0, 0.5), (1.0, -0.5)),
+    "y": ((1.0, -0.5), (-1.0, -0.5)),
+}
+
+
+def _door_leaf_vec(axis: str, t: float) -> tuple[float, float]:
+    """Screen offset from hinge to the leaf's free end, t = 0 shut, 1 open.
+    The panel turns 90 degrees in the GROUND plane, so this is NOT a lerp of
+    the two end states: projected into iso a door standing at 45 degrees is
+    WIDER on screen than either the shut or the fully open one. Lerping the
+    step (what the first cut did) under-samples the middle frames — the east
+    doors lost most of their leaf and all of their handle."""
+    closed, opened = _DOOR_DIRS[axis]
+    ang = math.radians(90.0 * t)
+    cs, sn = math.cos(ang), math.sin(ang)
+    return (DOOR_LEAF * (cs * closed[0] + sn * opened[0]),
+            DOOR_LEAF * (cs * closed[1] + sn * opened[1]))
+
 
 def make_door_strip(kind: str, axis: str) -> tuple[Canvas, tuple, list]:
     """Interactive door: a DOOR_FRAMES-frame swing strip. Frame 0 = closed,
     flush IN the wall plane (nothing pokes through the wall any more); last
-    frame = swung fully inward. Static jamb boards fill the edge beside the
-    leaf on every frame. axis 'x' fits south (yp) walls, 'y' fits east (xp).
-    Collider = thin quad along the full edge (game disables it while open)."""
+    frame = swung fully inward, a full quarter turn clear of the opening so
+    there is a real gap beside a real panel. Static jamb boards fill the edge
+    beside the leaf on every frame. axis 'x' fits south (yp) walls, 'y' fits
+    east (xp). Colliders: the shut leaf across the whole edge, the swung leaf
+    where it actually stands, and the two jamb stubs (always solid)."""
     base, dark = (C("7a4841"), C("4d2b32")) if kind == "wood" \
         else (C("577277"), C("394a50"))
-    frame_w, frame_h = 48, 60
+    frame_w, frame_h = DOOR_FRAME_SIZE
+    hx, hy = DOOR_HINGE
     strip = Canvas(frame_w * DOOR_FRAMES, frame_h)
-    # hinge sits 6 edge-px in from the first jamb; edge midpoint is the origin
+    edge_dy = 0.5 if axis == "x" else -0.5
     for f in range(DOOR_FRAMES):
         c = Canvas(frame_w, frame_h)
-        hx, hy = 14, 46
-        edge_dy = 0.5 if axis == "x" else -0.5
-        # jamb boards: the fixed 6 px of edge on each side of the leaf
-        for j in list(range(-6, 0)) + list(range(DOOR_LEAF, DOOR_LEAF + 6)):
-            x = hx + j
-            by = hy + round(j * edge_dy)
-            for y in range(by - DOOR_H - 2, by + 1):
-                c.set(x, y, dark if (y - by) % 5 else C("341c27"))
-        # the leaf: swings from along-the-edge to inward-perpendicular
-        t = f / float(DOOR_FRAMES - 1)
-        if axis == "x":   # closed dir (2,1) -> open dir (2,-1)
-            dx_step, dy_step = 1.0, 0.5 - t
-        else:             # closed dir (2,-1) -> open dir (-2,-1)
-            dx_step, dy_step = 1.0 - 2.0 * t, -0.5
-        for i in range(DOOR_LEAF):
-            x = hx + round(i * dx_step)
-            by = hy + round(i * dy_step)
+        # The leaf goes down FIRST: it swings into the room, which is away
+        # from the camera, so the wall it hangs in has to occlude it. Drawn
+        # the other way round the panel swallows its own jamb mid-swing.
+        # Sampled along its SCREEN run, not per leaf-px, so no frame is gappy.
+        ex, ey = _door_leaf_vec(axis, f / float(DOOR_FRAMES - 1))
+        steps = max(int(round(max(abs(ex), abs(ey)))), 1)
+        for i in range(steps + 1):
+            u = i / float(steps)
+            x = hx + round(ex * u)
+            by = hy + round(ey * u)
+            plank = int(u * DOOR_LEAF)      # planks compress as it turns
             for y in range(by - DOOR_H, by + 1):
                 col = base
-                if kind == "wood" and i % 5 == 4:
+                if kind == "wood" and plank % 5 == 4:
                     col = dark
                 if kind == "metal" and (y - (by - DOOR_H)) % 6 == 5:
                     col = dark
                 c.set(x, y, col)
             c.set(x, by - DOOR_H, dark)  # top edge
-        # handle near the free end, fades as the leaf turns edge-on
-        if abs(dx_step) > 0.4:
-            handle_x = hx + round((DOOR_LEAF - 3) * dx_step)
-            handle_y = hy + round((DOOR_LEAF - 3) * dy_step) - DOOR_H // 2
-            c.set(handle_x, handle_y, C("10141f"))
+        # handle near the free end. The panel is never edge-on now, so this
+        # never lands on nothing; mid-swing the far jamb paints over it,
+        # which is right — that part of the leaf is behind the wall.
+        c.set(hx + round(ex * 0.85), hy + round(ey * 0.85) - DOOR_H // 2,
+              C("10141f"))
+        # jamb boards: the fixed 6 px of edge on each side of the leaf, drawn
+        # over it so the wall reads as being in front of the swung panel
+        for j in list(range(-6, 0)) + list(range(DOOR_LEAF, DOOR_LEAF + 6)):
+            x = hx + j
+            by = hy + round(j * edge_dy)
+            for y in range(by - DOOR_H - 2, by + 1):
+                c.set(x, y, dark if (y - by) % 5 else C("341c27"))
         c.outline_auto()
         _paste_canvas(strip, c, f * frame_w, 0)
     # origin: edge midpoint at the leaf base (matches wall-segment anchoring)
-    origin = (14 + 10, 46 + (5 if axis == "x" else -5))
+    sx, sy = _door_leaf_vec(axis, 0.0)
+    origin = (hx + round(sx * 0.5), hy + round(sy * 0.5))
+    # n is WALL thickness (the shut leaf is part of the wall line); n_open is
+    # a door PANEL, which is thinner. It matters: at wall thickness the swung
+    # leaf reaches across its own doorway and seals the middle of the opening,
+    # leaving a 4 px corridor to squeeze through.
     if axis == "x":
         a, b = (-16.0, -8.0), (16.0, 8.0)
         n = (-2.4, 4.8)
+        n_open = (1.2, 2.4)
     else:
         a, b = (-16.0, 8.0), (16.0, -8.0)
         n = (2.4, 4.8)
-    poly = [a[0] - n[0], a[1] - n[1], b[0] - n[0], b[1] - n[1],
-            b[0] + n[0], b[1] + n[1], a[0] + n[0], a[1] + n[1]]
-    return strip, origin, ["poly", poly]
+        n_open = (1.2, -2.4)
+
+    def quad(p, q, nrm):
+        return [p[0] - nrm[0], p[1] - nrm[1], q[0] - nrm[0], q[1] - nrm[1],
+                q[0] + nrm[0], q[1] + nrm[1], p[0] + nrm[0], p[1] + nrm[1]]
+
+    # everything below is relative to the origin, same as the sprite offset
+    hinge = (-sx * 0.5, -sy * 0.5)
+    shut_end = (hinge[0] + sx, hinge[1] + sy)
+    ox, oy = _door_leaf_vec(axis, 1.0)
+    DOOR_COLLIDERS[f"door_{kind}_{axis}"] = {
+        "open": ["poly", quad(hinge, (hinge[0] + ox, hinge[1] + oy), n_open)],
+        # the jambs are drawn solid, so they ARE solid — otherwise an open
+        # door lets you walk through the boards beside the opening
+        "jambs": [["poly", quad(a, hinge, n)], ["poly", quad(shut_end, b, n)]],
+    }
+    return strip, origin, ["poly", quad(a, b, n)]
 
 def draw_stick(rng: random.Random, variant: int) -> tuple[Canvas, tuple, list | None]:
     """Fallen branch litter for the woods and grove floors."""
@@ -6502,8 +6557,10 @@ def main() -> None:
     # clip audit: opaque pixels on a canvas border mean the draw ran off the
     # canvas and got silently cut (tv stand, crate stacks... never again).
     # Grid modules that abut by design are exempt.
+    # NOTE: door_ used to sit here, and hid a real clip for months — the east
+    # door's leaf swung straight off the left of its canvas. Doors are audited.
     _EDGE_OK = ("roof_tile_", "roof_fascia_", "roof_eave_", "roof_corner_",
-                "seg_", "seg2_", "post_", "post2_", "door_", "ui_grabber",
+                "seg_", "seg2_", "post_", "post2_", "ui_grabber",
                 "floor_edge_",
                 # UI art, not world sprites: a portrait plate is meant to
                 # fill its frame edge to edge
@@ -6530,6 +6587,9 @@ def main() -> None:
             "size": [canvas.w, canvas.h], "origin": list(origin), "collider": collider}
         if len(entry) > 3:
             manifest["props"][name]["lights"] = entry[3]
+    for name, extra in DOOR_COLLIDERS.items():
+        manifest["props"][name]["collider_open"] = extra["open"]
+        manifest["props"][name]["collider_jambs"] = extra["jambs"]
     manifest["families"] = families
 
     sheet = make_char_sheet()

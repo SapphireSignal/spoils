@@ -6,6 +6,8 @@ extends Node
 ##   --menu=pause|settings  open that UI before the shot
 ##   --at=X,Y         teleport the player to tile X,Y before the shot
 ##   --probe-exclusive  report display mode capabilities and quit
+##   --leakcheck      raid -> menu, four times; prints node/orphan/object/
+##                    memory retention per cycle and a growth verdict
 
 var world_seed := ""  # --seed=<text>: pin the district layout (shots/probes)
 # the smoke needs a LIVING world to probe: dying ends the raid and pauses
@@ -85,6 +87,8 @@ func _ready() -> void:
 			_shot_splash.call_deferred(arg.trim_prefix("--shot-splash="))
 		elif arg == "--probe-exclusive":
 			_probe_exclusive.call_deferred()
+		elif arg == "--leakcheck":
+			_leakcheck.call_deferred()
 
 
 func _ensure_game_scene() -> void:
@@ -225,28 +229,35 @@ func _smoke() -> void:
 		player.respawn(info["spawn"])
 		await get_tree().process_frame
 
-	# a CLOSED door has to be a wall: walk straight at one and stay put
+	# a CLOSED door has to be a wall: shove straight at one and stay put.
+	# Sweep along the leaf as well as dead centre — a collider that is too
+	# SHORT lets you round its ends, which reads as walking through the door.
 	var block_doors := get_tree().get_nodes_in_group("doors")
+	var gap_offsets := [-8.0, -4.0, 0.0, 4.0, 8.0]
 	if player != null and not block_doors.is_empty():
 		var blocker := block_doors[0] as Door
 		if blocker != null and not blocker.is_open():
-			# sweep along the leaf as well as dead centre: a collider that
-			# is too SHORT lets you round its ends, which reads as walking
-			# through the door
-			for lateral in [-14.0, -7.0, 0.0, 7.0, 14.0]:
-				player.position = blocker.global_position \
-					+ Vector2(lateral, -26.0)
+			var shut_mid := blocker.doorway_center()
+			var shut_thru := blocker.doorway_through()
+			var shut_along := blocker.doorway_along()
+			var shut_norm := blocker.doorway_normal()
+			for lateral in gap_offsets:
+				var at: Vector2 = shut_mid + shut_along * float(lateral)
+				player.position = at - shut_thru * 20.0
 				await get_tree().process_frame
-				player.velocity = Vector2(0.0, 100.0)
-				for i in 22:
-					player.move_and_slide()
-					await get_tree().process_frame
-				if player.position.y > blocker.global_position.y + 2.0:
+				# which side of the wall PLANE we set off from — crossing it
+				# is the only thing that counts as walking through
+				var side_before: float = signf(
+					(player.position - at).dot(shut_norm))
+				_shove(player, shut_thru, 34.0)
+				await get_tree().process_frame
+				if (player.position - at).dot(shut_norm) * side_before < -1.0:
 					failures.append("walked through a closed door (offset %d)"
 						% int(lateral))
 					break
 
-	# an OPEN door's leaf is still solid — it just stands somewhere else
+	# an OPEN door's leaf is still solid — it just stands somewhere else.
+	# Not a flag check: SHOVE INTO the swung panel where the art draws it.
 	if player != null and not block_doors.is_empty():
 		var swung := block_doors[0] as Door
 		if swung != null:
@@ -254,9 +265,61 @@ func _smoke() -> void:
 			# frame count (at 240 fps twelve frames is a twentieth of it,
 			# and the door was still open when the next check ran)
 			swung.toggle()
+			# MID-SWING the doorway is still shut. _shove takes no frames, so
+			# this lands inside the 0.24s animation: a door that still looks
+			# closed must not be walkable.
+			await get_tree().process_frame
+			await get_tree().process_frame      # let set_deferred land
+			var mid := swung.doorway_center()
+			var mid_thru := swung.doorway_through()
+			var mid_norm := swung.doorway_normal()
+			player.position = mid - mid_thru * 20.0
+			await get_tree().process_frame
+			var mid_side: float = signf((player.position - mid).dot(mid_norm))
+			_shove(player, mid_thru, 34.0)
+			if (player.position - mid).dot(mid_norm) * mid_side < -1.0:
+				failures.append("walked through a door that was still swinging")
 			await get_tree().create_timer(0.45).timeout
 			if swung.is_open() and not swung.leaf_is_solid():
 				failures.append("an open door's leaf lost its collision")
+			if swung.is_open():
+				var leaf_at := swung.leaf_center()
+				var into := swung.leaf_normal()
+				for side in [1.0, -1.0]:
+					player.position = leaf_at + into * 20.0 * float(side)
+					await get_tree().process_frame
+					_shove(player, -into * float(side), 34.0)
+					await get_tree().process_frame
+					# crossing the panel line means the swung leaf is a ghost
+					if (player.position - leaf_at).dot(into) * float(side) < 1.0:
+						failures.append(
+							"walked through an open door's leaf (side %d)"
+								% int(side))
+						break
+				# ...and the OPENING itself must still let you in, or the
+				# door is just a wall with extra steps. A player walks round
+				# a swung leaf, so sweep across the gap and require that SOME
+				# line through it works.
+				var gap := swung.doorway_center()
+				var thru := swung.doorway_through()
+				var side_step := swung.doorway_along()
+				var gap_norm := swung.doorway_normal()
+				var got_in := false
+				for lateral in gap_offsets:
+					# float(): the loop var is a Variant out of an untyped
+					# array literal, so := cannot infer the sum's type
+					var aim: Vector2 = gap + side_step * float(lateral)
+					player.position = aim - thru * 20.0
+					await get_tree().process_frame
+					var was: float = signf((player.position - aim).dot(gap_norm))
+					_shove(player, thru, 40.0)
+					await get_tree().process_frame
+					# got in == crossed the wall plane, not merely slid along it
+					if (player.position - aim).dot(gap_norm) * was < -1.0:
+						got_in = true
+						break
+				if not got_in:
+					failures.append("an open doorway was not passable")
 			swung.toggle()
 			await get_tree().create_timer(0.45).timeout
 
@@ -404,6 +467,75 @@ func _tap_action(action: String) -> void:
 	release.action = action
 	release.pressed = false
 	Input.parse_input_event(release)
+
+
+func _leakcheck() -> void:
+	## --leakcheck: deploy into a raid and back out to the menu, over and
+	## over, printing what the process is still holding each time.
+	##
+	## Code review is weak at finding leaks; this measures them. What matters
+	## is the TREND across cycles, not the absolute numbers — the first cycle
+	## always looks worse because caches and autoload buffers fill once.
+	## ORPHANS is the sharpest signal: a node that left the tree without being
+	## freed is a leak with no excuse.
+	suppress_debrief = true
+	var rows: Array[Dictionary] = []
+	for cycle in 4:
+		await _ensure_game_scene()
+		await get_tree().create_timer(1.5).timeout
+		var in_raid := {
+			"nodes": Performance.get_monitor(Performance.OBJECT_NODE_COUNT),
+			"orphans": Performance.get_monitor(
+				Performance.OBJECT_ORPHAN_NODE_COUNT),
+			"objects": Performance.get_monitor(Performance.OBJECT_COUNT),
+			"mem": Performance.get_monitor(Performance.MEMORY_STATIC),
+		}
+		get_tree().change_scene_to_file("res://scenes/menu.tscn")
+		# a scene swap frees the old tree over the following frames; give it
+		# real time or every cycle reads as a leak
+		await get_tree().create_timer(2.0).timeout
+		var at_menu := {
+			"nodes": Performance.get_monitor(Performance.OBJECT_NODE_COUNT),
+			"orphans": Performance.get_monitor(
+				Performance.OBJECT_ORPHAN_NODE_COUNT),
+			"objects": Performance.get_monitor(Performance.OBJECT_COUNT),
+			"mem": Performance.get_monitor(Performance.MEMORY_STATIC),
+		}
+		rows.append(at_menu)
+		print("LEAK cycle=%d raid_nodes=%d | menu nodes=%d orphans=%d objects=%d mem=%.2fMB"
+			% [cycle, int(in_raid["nodes"]), int(at_menu["nodes"]),
+				int(at_menu["orphans"]), int(at_menu["objects"]),
+				float(at_menu["mem"]) / 1048576.0])
+	# verdict off the settled cycles: cycle 0 pays for one-time caches
+	if rows.size() >= 3:
+		var first: Dictionary = rows[1]
+		var last: Dictionary = rows[rows.size() - 1]
+		var node_growth := int(last["nodes"]) - int(first["nodes"])
+		var obj_growth := int(last["objects"]) - int(first["objects"])
+		var mem_growth := (float(last["mem"]) - float(first["mem"])) / 1048576.0
+		print("LEAK VERDICT nodes+%d objects+%d mem+%.2fMB orphans=%d" % [
+			node_growth, obj_growth, mem_growth, int(last["orphans"])])
+	get_tree().quit(0)
+
+
+func _shove(body: CharacterBody2D, dir: Vector2, distance: float) -> void:
+	## Push a body along dir in fixed 1 px steps until it has tried to cover
+	## `distance`, stopping dead on whatever it hits.
+	##
+	## NOT velocity + move_and_slide. move_and_slide scales by the frame
+	## delta, and a headless run is uncapped — each call advanced the player
+	## a fraction of a pixel, so every "did it walk through?" assertion passed
+	## without the player ever reaching the thing it was meant to hit. The
+	## closed-door test was green for that reason alone. move_and_collide
+	## takes the motion outright, so this is frame-rate independent.
+	var step := dir.normalized()
+	for i in int(ceil(distance)):
+		var hit := body.move_and_collide(step)
+		if hit != null:
+			# spend what is left of the step sliding along the surface, the
+			# way move_and_slide would. Without this a graze reads as a wall,
+			# and a door you can actually slide around would test as solid.
+			body.move_and_collide(hit.get_remainder().slide(hit.get_normal()))
 
 
 func _finish_smoke(failures: Array[String]) -> void:
@@ -717,6 +849,21 @@ func _probe_world() -> void:
 	for s in get_tree().get_nodes_in_group("stairs"):
 		stairs_cells.append(floor_layer.local_to_map((s as Node2D).global_position))
 	print("STAIRS total=%d cells=%s" % [stairs_cells.size(), stairs_cells.slice(0, 8)])
+	# second floors: every flight of stairs must have an upper registry, and
+	# every registry must have actually painted a floor. A building whose
+	# furniture shows with no slab under it lands here.
+	var uppers: Array = info.get("uppers", []) as Array
+	var floorless := 0
+	var propless := 0
+	for u in uppers:
+		var reg := u as Dictionary
+		var container := reg["container"] as Node2D
+		if container == null or container.get_child_count() == 0:
+			floorless += 1
+		if (reg["upper_props"] as Array).is_empty():
+			propless += 1
+	print("UPPERS total=%d floorless=%d propless=%d stairs=%d" % [
+		uppers.size(), floorless, propless, stairs_cells.size()])
 	var car_cells: Array[Vector2i] = []
 	for car in get_tree().get_nodes_in_group("cars"):
 		car_cells.append(floor_layer.local_to_map((car as Node2D).global_position))

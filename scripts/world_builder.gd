@@ -1459,19 +1459,27 @@ func _maybe_arm_car(variant: String, node: Node2D) -> void:
 		_alarm_cars.append({"node": node, "lights": info.get("lights", [])})
 
 
-func _add_door(door_name: String, pos: Vector2) -> void:
-	var info: Dictionary = _manifest["props"][door_name]
-	var origin: Array = info["origin"]
-	var spec: Array = info["collider"]
+func _door_points(spec: Array) -> PackedVector2Array:
 	var flat: Array = spec[1]
 	var points := PackedVector2Array()
 	for i in range(0, flat.size(), 2):
 		points.append(Vector2(float(flat[i]), float(flat[i + 1])))
+	return points
+
+
+func _add_door(door_name: String, pos: Vector2) -> void:
+	var info: Dictionary = _manifest["props"][door_name]
+	var origin: Array = info["origin"]
+	var jambs: Array = []
+	for spec in info.get("collider_jambs", []) as Array:
+		jambs.append(_door_points(spec as Array))
 	var door := Door.new()
 	door.position = pos.round()
 	_ysort.add_child(door)
 	door.setup(load("res://art/gen/%s.png" % door_name),
-		Vector2(float(origin[0]), float(origin[1])), points)
+		Vector2(float(origin[0]), float(origin[1])),
+		_door_points(info["collider"] as Array),
+		_door_points(info["collider_open"] as Array), jambs)
 
 
 func _pick_variant(family: String) -> String:

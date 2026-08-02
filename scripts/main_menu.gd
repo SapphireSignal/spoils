@@ -72,6 +72,14 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.68", [
+		"doors are solid in every state now - shut, open, and while theyre still swinging. the open leaf stands where the art actually draws it, a quarter turn into the room",
+		"south facing doors were the ghost ones. their open collider was being placed a whole cell away on the wrong side of the doorway, so you walked straight through the panel",
+		"east facing doors had half their leaf cut off the edge of the sprite and nobody noticed, because doors were the one thing the art build was told not to check",
+		"the door frame beside the opening is solid too, so you cant slip through the boards next to an open door",
+		"opening a door no longer clears the doorway on the first frame - for a quarter of a second you could walk through a door that still looked shut",
+		"the test that was meant to catch all of this was moving the player a fraction of a pixel per step and never actually reached the door. it walks into them properly now",
+	]],
 	["v0.6.67", [
 		"the warden gets a prompt while youre in a car, because thats how youll always arrive at his window",
 		"doors carry a second collider for the open leaf - though the open frames still need redrawing before that lands properly",

@@ -3,6 +3,54 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.68] — 2026-08-02 — the door is solid, for real this time
+
+### Fixed
+- **Doors are solid in every state.** v0.6.67 added a second collider
+  for the open leaf but put it in the wrong place, so the problem
+  survived. Three separate bugs, all measured rather than reasoned:
+  the swung collider was mirrored **180° for south-facing doors** (the
+  common kind) so it sat a whole cell away from the visible panel;
+  the east door's open frames **ran off the edge of their canvas** and
+  were silently cut in half; and the open leaf used *wall* thickness,
+  which made the swung panel reach back across its own doorway and
+  seal the middle of the opening.
+- The earlier diagnosis — "the leaf opens in place, it doesn't swing
+  aside" — was **wrong**, and it came from measuring the sprite's
+  centroid. In an isometric view both ground axes point right, so a
+  correct 90° turn barely moves a centroid sideways. Measuring the
+  leaf's free end shows the art always did swing a full quarter turn
+  into the room.
+- **Mid-swing the doorway stays shut.** Opening a door used to clear
+  the doorway on the first frame, so for the whole 0.24 s animation
+  you could walk through a door that still looked closed.
+- **The jamb boards beside the opening are solid**, so an open door no
+  longer lets you walk through the timber next to it.
+- The open frames are sampled along their screen run instead of
+  lerping the step vector, which had been under-sampling the middle
+  frames — east doors lost most of their leaf and all of their handle.
+  Doors were also removed from the clip-audit exemption list, which is
+  what had hidden the canvas overrun.
+
+### Changed
+- The open and jamb colliders now come from the generator through the
+  manifest (`collider_open`, `collider_jambs`). `Door` derives no
+  geometry of its own — deriving it is what caused the mirrored panel.
+
+### Fixed (test infrastructure)
+- **The door smoke test was vacuous and had been for three releases.**
+  It set `velocity` and called `move_and_slide()` in a loop, which
+  scales motion by the frame delta; a headless run is uncapped, so the
+  player advanced a fraction of a pixel per step and never travelled
+  the 26 px to reach the door. Every "did it walk through?" assertion
+  passed without anything being touched — which is why v0.6.65 could
+  not reproduce the user's report. Pushes now use `move_and_collide`
+  in fixed 1 px steps with proper sliding, so they are frame-rate
+  independent. The closed door, the swung leaf (from both sides), the
+  mid-swing panel, and the opening's passability are all covered.
+- `--probe-world` reports second floors:
+  `UPPERS total=6 floorless=0 propless=0 stairs=6`.
+
 ## [0.6.67] — 2026-08-01 — the door is solid either way
 
 ### Fixed

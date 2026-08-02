@@ -10,66 +10,80 @@ already known so nothing gets re-derived.
 
 ---
 
-## 1. Doors: solid at all times — NEEDS AN ART REDRAW
+## 1. Doors: solid at all times — SHIPPED v0.6.68, awaiting the user's eye
 
-The user has asked for this four times; it is the top priority.
+Asked four times. Fixed; the user has not seen it in a playtest yet.
 
-**What they want:** the door panel is never a ghost. You walk through
-the *opening*, never through the door.
+**The old diagnosis in this file was WRONG — do not resurrect it.** It
+claimed the leaf "opens roughly in place" because the sprite centroid
+only moved cx 23.5 → 23.8 across the four frames. That reading is a
+trap: in iso *both* ground axes point +x, so a correct 90° turn barely
+moves the centroid sideways. Measuring the leaf's free end instead
+shows it always went from `(+20,+10)` to `(+20,-10)` off the hinge — a
+proper quarter turn into the room. The art was never the problem.
 
-**Measured fact (do not re-derive):** the door sprite's four frames
-barely move sideways. Opaque-pixel centroids across frames 0..3 are
-cx 23.5 / 23.6 / 23.7 / 23.8 and cy 33.3 / 31.5 / 29.8 / 27.9, with
-frame 3 reaching y=1. **The leaf opens roughly in place** — it leans
-and rises, it does not swing aside.
+**The three real bugs, all measured:**
+1. `Door._swung_points` derived the open collider as `(-along.x,
+   along.y)`. Correct for east (`y`) doors, **180° wrong for south
+   (`x`) doors** — the panel sat a full cell on the opposite side, so
+   south doors were ghosts. Most doors are south doors.
+2. The east door's open frames **ran off the left of their canvas** and
+   were silently cut. `door_` was on the clip-audit exemption list, so
+   the build never complained.
+3. The open leaf used **wall** thickness. At that thickness the swung
+   panel reached back across its own doorway and sealed the middle,
+   leaving a 4.4 px corridor — narrower than the player.
 
-**Why the current attempt fails:** v0.6.67 added a second collider
-(`Door._swung_points`) offset a whole cell along the perpendicular iso
-axis. There is no art there, so the player walks through the visible
-leaf and can bump an invisible one beside it.
+**What shipped:** the leaf now rotates in the ground plane and is
+sampled along its screen run (the old code lerped the step vector,
+which under-sampled the middle frames — east doors lost most of their
+leaf and their handle). Canvas 48×60 → 54×66. `door_` removed from the
+clip-audit exemption. The panel is door-thickness. The jamb boards got
+real colliders, so an open door no longer lets you walk through the
+boards beside the opening. Mid-swing **both** panels are solid, so a
+door that still looks shut cannot be walked through. Every polygon now
+comes from the generator via `manifest.collider_open` /
+`collider_jambs`; `Door` derives nothing.
 
-**Two options — the user chose neither yet, but the reasoning is
-settled:**
-- **A. Collider always on.** Exactly "collision at all times", but the
-  doorway and the panel are the same square, so the entrance is sealed
-  in both states — you'd open the door and still not get in. Explained
-  to the user; they questioned it and the answer is that the art never
-  moves the panel out of the opening.
-- **B. RECOMMENDED. Redraw the open frames** so the leaf visibly turns
-  ~90° (flat to the wall, or into the room), leaving a real gap beside
-  a real panel. Then set the open-state collider to exactly where that
-  panel now stands. Both things become true: the door is never a
-  ghost, and you can still get inside.
-
-**Work:** `make_door` open frames in `tools/gen_art.py`; a matching
-collider in the manifest; rewrite or delete `Door._swung_points`. The
-smoke already asserts a closed door blocks from five lateral offsets
-and that an open door reports a solid leaf — extend it to walk *into*
-the swung panel once the art exists.
+**If the user still reports walk-through:** ask which door and whether
+it was open, shut, or mid-swing, and get a zoomed screenshot. The smoke
+now covers all three states for real (see below).
 
 ---
 
-## 2. Second floors missing; all interior furniture audit
+## 2. Second floors: furniture floats with no slab — LEADS ELIMINATED
 
 **Repro:** a two-story house **at the courtyard** — climbing the stairs
-shows the upper *furniture* but no upper *floor*, so it floats in the
-air. Must hold for every two-story building.
+shows the upper *furniture* but no upper *floor*.
 
-**Strongest lead, check first:** `_plan_plots` (v0.6.23) force-upgrades
-some houses to `stories = 2` **after** the plots are made, to guarantee
-a quota. If `_build_shell` already decided that plot's floor plan, the
-upper never gets built while its furniture still does. Verify the
-upgrade happens before `_build_shell` runs.
+**Both of the old leads are DEAD. Measured on transit-01, do not
+re-derive:**
+- `--probe-world` now prints
+  `UPPERS total=6 floorless=0 propless=0 stairs=6`. Six flights, six
+  registries, and **every** upper container has its floor sprites. So
+  there is no index mismatch and no unbuilt upper.
+- The "`_plan_plots` upgrades stories after the shell is built" lead is
+  false: `build()` awaits `_plan_plots()` *before* the `_build_shell`
+  loop, so the quota upgrade always lands first.
+- An index mismatch is structurally impossible anyway —
+  `main.gd` connects `used` with `_on_stairs_used.bind(i)` where the
+  stairs node is read out of `_uppers[i]` itself.
+- `_build_upper` paints **every** cell unconditionally, and the tile
+  maths is correct: a tile's global position works out to
+  `map_to_local(cell) + (0, -story_h)`.
 
-**Second lead:** an index mismatch between `Stairs.upper_index` and the
-`_uppers` registry — one building registering stairs without an upper
-shifts every later index. Cheapest measurement: compare `_uppers.size()`
-with the number of nodes in group `stairs` in a probe.
-
-The tile maths inside `_build_upper` looks correct on paper (container
-at `map_to_local(interior.position) + (0, -24 - story_h)`, each tile at
-`map_to_local(cell) - upper.position + (0, -story_h)`) — **measure
-before touching it**.
+**So the slab is built and it is not being seen — this is DRAW ORDER
+or visibility, not construction.** The strongest remaining lead: the
+upper container is anchored NORTH of the whole footprint
+(`map_to_local(interior.position) + (0, -24 - story_h)`) so that it
+y-sorts under the player. But it sorts as ONE unit at that far-north
+position, which puts it *behind* every ground-floor wall segment of the
+same building — and those walls are drawn at their own, much larger y.
+The upper furniture keeps its TRUE cell position, so it sorts late and
+stays visible. That is exactly the reported symptom: furniture visible,
+slab hidden behind the ground floor's own walls. Test by temporarily
+hiding the ground-floor walls while upstairs, or by giving the slab its
+own sort position south of the walls.
 
 **Also asked:** sweep every interior — houses, warehouses, school,
 safehouse — for furniture that floats, sits in a wrong spot, or
@@ -287,6 +301,15 @@ milestone lands; everything else is a patch (0.6.x).
 - **M6 → v1.1 — quests.** The safehouse power box repair (item 4 above)
   is the first one and is deliberately built to be quest fodder.
 
-- **M7 → v1.2 — a second map.** The district system is already zoned
-  and seeded for it; `map_vec` carries a `water` slot the mills map
-  will want.
+- **M7 → v1.2 — a second map.** **DO NOT reuse the transit district
+  system for this.** DESIGN.md §8.7 carries a HARD RULE (user call,
+  2026-08-01): every map is structurally *nothing* like transit — no
+  reruns of roads, houses, warehouses or tunnels — and each is built
+  for massive scale and depth. The mills = one colossal continuous
+  interior (halls, catwalks, furnaces); the harbor = water *as* the
+  map (piers, container canyons, ships, rowboat crossings); the old
+  ward = an alley warren with courtyards and a rooftop road. The
+  spires are end-game and unnumbered. The next district is the one off
+  mara's board; LORE.md §3 has the map canon. The only transit
+  machinery that carries over is generic plumbing (the seeded builder,
+  `map_vec` including its unused `water` slot) — not the zone layout.
