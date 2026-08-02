@@ -74,6 +74,38 @@ talking about."  FIXED, and it is the only edit in this revision:
   * the downpipe was NOT touched.  an earlier instruction to delete it was
     withdrawn; it is the wrong object and it stays.
 
+REVISION 4 — ONE thing was complained about and only the CAR changed.  the user:
+"The front of the car seems cut off".  they were right, and the reason is worth
+keeping: everything forward of the a-pillar was ONE dead-straight 32px diagonal
+running from the shoulder to a bare point at the water.  no bonnet top surface,
+no wing, no lamp, no bumper — and a long straight edge meeting a flood cannot
+read as a waterline, because a waterline is horizontal everywhere.  the eye read
+a knife cut.  FIXED in two halves, and it needs both:
+  1. ABOVE the water.  the nose drop is 26px on a crowned curve instead of 40px
+     on a straight line, so there is a front end left to see: a bonnet TOP PLANE
+     four pixels deep whose far edge carries the windscreen base out over the
+     nose, a COWL STEP so the bonnet starts below the scuttle instead of flowing
+     off it, the near wing with an arch eyebrow, a headlamp and a wrapped front
+     bumper — and the waterline cuts all of it DEAD LEVEL at WY, the same line
+     the rest of the car is cut on.
+  2. BELOW it.  the nose keeps going: a submerged silhouette ahead of and under
+     the waterline, no highlight value anywhere in it, holding 202e37 while
+     there is still a body to see and then dissolving into the flood's own
+     tones, with the surface's LIFT chop running back over the top of it and the
+     same broken ring the crate and the drum get where it breaks through.
+  three things this took four bakes to learn.  a tapered band above the shoulder
+  bulges the silhouette over the scuttle and the whole front reads as a BUBBLE.
+  a lamp or a bumper laid parallel to the bonnet is just another rail — they have
+  to be LEVEL and cross it.  and a submerged mass painted on the flood's own
+  151d28/10141f is drawn and invisible; it has to hold a step above the water it
+  is lying in or there is nothing to see.
+  the wing mirror moved with it: it used to hang over open water on a long arm
+  because the bonnet was under the flood.  the bonnet is not under the flood any
+  more, so it is back on the a-pillar, over the wing it is named after.
+  every roll in the submerged half happens AFTER the last float_wake(), so
+  nothing already on the canvas re-rolls.  a pixel diff against the previous
+  render is empty outside x 4-135, y 426-498 — the car, its nose and its wake.
+
 CRITIC'S CORRECTIONS APPLIED (see the brief):
   1. the real button box is x 395-565 / y 237-307, ~55px higher than the
      brief planned.  the painted dado moved OFF the buttons entirely, the
@@ -1262,9 +1294,23 @@ def paint() -> Canvas:
     def sink(u):
         return 12.0 * u
 
+    # REVISION 4.  the nose drop used to be LINEAR at 40px, which laid the whole
+    # front on ONE dead-straight 32px diagonal running to a point at the water.
+    # a straight edge meeting a flood cannot read as a waterline — a waterline is
+    # horizontal everywhere — so the eye read a knife cut instead of a car going
+    # under.  the bonnet is CROWNED now: level off the cowl, breaking over about
+    # a third of the way along, then diving.  31px at the tip instead of 40 also
+    # leaves a real front end standing 12px above the LEVEL waterline, which is
+    # what there is to cut.
+    # the 4.0 is a COWL STEP, and it is the single thing that stops the front
+    # reading as one continuous arc off the windscreen: a real bonnet's near
+    # shoulder starts a plane's-thickness BELOW the scuttle, so the silhouette
+    # notches there and the top surface has somewhere to be.
     def belt_h(u):
-        drop = 0.0 if u <= WSC else 40.0 * (u - WSC) / (1.0 - WSC)
-        return HB - sink(u) - drop
+        if u <= WSC:
+            return HB - sink(u)
+        t = (u - WSC) / (1.0 - WSC)
+        return HB - sink(u) - 4.0 - 22.0 * t ** 1.5
 
     def roof_h(u):
         if u <= BOOT or u >= WSC:
@@ -1355,6 +1401,58 @@ def paint() -> Canvas:
     car.vline(X0, WY - HB, WY - 7, RERD)                    # lit flank against
     car.set(X0 - 1, WY - HB - 1, TOPE)                      # the shaded rear
 
+    # -------------------------------------------------------- the front end --
+    # REVISION 4 (user: "the front of the car seems cut off").  they were right.
+    # everything forward of the a-pillar was a bare triangular wedge: no bonnet
+    # top surface, no wing, no lamp, one long straight diagonal ending in a
+    # point.  the front now carries the three things that say "front of a car"
+    # from behind — a bonnet TOP PLANE in its own lighter value, the near wing
+    # with a shoulder line running forward out of the door, and a lamp — and all
+    # of it is cut DEAD LEVEL at WY, the same waterline as the rest of the car.
+    # the other half of the fix is at the very end of paint(), under the flood.
+    def sh_at(x):                           # the shoulder / bonnet near edge
+        u = (x - X0) / LUX
+        return WY + u * LUY - roof_h(u)
+
+    nose_x = int(X0 + LUX)
+    while sh_at(nose_x) > WY:               # where the bonnet enters the water
+        nose_x += 1
+    # the bonnet's TOP PLANE.  it is the cowl step's worth of surface, held at a
+    # constant 4px so its far edge carries the windscreen base straight on out
+    # over the nose, and closed to nothing over the last few px where the plane
+    # has turned away and gone under.  a tapered band bulged the silhouette
+    # above the scuttle and the whole front read as a bubble.
+    for x in range(nose_x, 54):
+        th = min(4.0, (x - nose_x) * 1.1)
+        if th < 1.0:
+            continue
+        s = rnd(sh_at(x))
+        top = s - int(th)
+        car.rect(x, top, x, s, TOPF)
+        if th >= 3.0:
+            car.set(x, top, TOPE)                           # ONE lit edge only:
+        car.set(x, s + 1, TOPF)                             # the far one.  a lit
+        # shoulder as WELL as a lit far edge put two bright rails 4px apart down
+        # the whole nose and the plane between them read as a stripe.
+    # EVERYTHING BELOW HERE IS DELIBERATELY HORIZONTAL.  the bonnet, its top
+    # plane and the shoulder all run down-left together, and a lamp or a bumper
+    # laid parallel to them just adds another rail — two cuts of this read as
+    # whiskers drawn on a wedge.  the lamp and the bumper are level, the way the
+    # rear bumper across the back of this same car is level, and crossing the
+    # diagonal is what makes the front stop being a wedge.
+    car.hline(nose_x, nose_x + 12, WY - 7, TOPF)            # the front bumper,
+    car.rect(nose_x, WY - 6, nose_x + 12, WY - 3, FLK)      # wrapped round the
+    car.rect(nose_x, WY - 2, nose_x + 12, WY, SIL)          # corner onto the wing
+    car.vline(nose_x + 12, WY - 7, WY - 2, FLKD)
+    LAMP0, LAMPN = nose_x + 1, nose_x + 10                  # the near headlamp
+    LTOP = rnd(sh_at(LAMP0)) + 2
+    car.rect(LAMP0, LTOP, LAMPN, LTOP + 6, RERD)            # its recess
+    car.rect(LAMP0, LTOP + 1, LAMPN - 1, LTOP + 5, C("394a50"))
+    car.hline(LAMP0, LAMPN, LTOP, TOPE)                     # the surround, lit
+    car.rect(LAMP0 + 6, LTOP + 1, LAMPN - 1, LTOP + 4, FLKD)   # smashed at the
+    car.set(LAMP0 + 6, LTOP + 2, C("577277"))                  # outer corner,
+    car.set(LAMP0 + 2, LTOP + 3, C("577277"))                  # one shard left
+
     for u_ in (0.34, 0.58):                                 # door shut lines
         x = rnd(X0 + u_ * LUX)
         yb = WY + u_ * LUY
@@ -1372,6 +1470,10 @@ def paint() -> Canvas:
             dy = rnd(((1.0 - (dx / float(arx)) ** 2) ** 0.5) * ary)
             car.rect(cx_ + dx, WY - dy, cx_ + dx, WY, SIL)
             car.set(cx_ + dx, WY - dy, RERD)
+            if uc > 0.5 and dy > 1:             # the FRONT arch gets an eyebrow.
+                car.set(cx_ + dx, WY - dy - 1, TOPF)        # the wing was 20px
+                # of empty grey and every line on it so far had run parallel to
+                # the bonnet; an arch curve is the one crease that cannot.
     car.rect(118, WY - 6, 208, WY - 6, TOPF)                # the rear bumper,
     car.rect(118, WY - 5, 208, WY - 2, FLK)                 # standing proud and
     car.rect(118, WY - 1, 208, WY, SIL)                     # shadowed underneath
@@ -1397,16 +1499,89 @@ def paint() -> Canvas:
                 q = car.get(xx, py_ + k)
                 if q[3] and q[:3] not in (GLS[:3], SIL[:3]):
                     car.set(xx, py_ + k, rc)
-    car.rect(44, 35, 53, 39, SIL)                           # the wing mirror.
-    car.rect(45, 36, 52, 38, FLKD)                          # the bonnet is under
-    car.rect(33, 31, 45, 40, SIL)                           # the flood, so the
-    car.rect(34, 32, 44, 39, FLKD)                          # head stands over
-    car.hline(34, 44, 32, TOPF)                             # open water on an
-    car.set(34, 39, TOPF)                                   # arm reaching back
+    car.rect(50, 29, 57, 33, SIL)                           # the wing mirror,
+    car.rect(51, 30, 56, 32, FLKD)                          # pulled back onto the
+    car.rect(40, 23, 51, 33, SIL)                           # a-pillar and shrunk:
+    car.rect(41, 24, 50, 32, FLKD)                          # the bonnet used to
+    car.hline(41, 50, 24, TOPF)                             # be under the flood,
+    car.set(41, 32, TOPF)                                   # so the head hung out
+    # over open water on a long arm and now reads as a box loose in the frame.
     car.outline_auto(SIL)
     c.img.alpha_composite(car.img, (6, 404))
     c.px = c.img.load()
     float_wake(25, 213, 478, False, 26)
+
+    # ---------------------------------------------- the nose under the flood --
+    # PART TWO of REVISION 4, and the half that actually kills the "cut off"
+    # read: the front does not STOP at the waterline, it keeps going down.  what
+    # is below is seen THROUGH the flood, so it carries no highlight value at
+    # all, it is a step dimmer and much flatter than the dry bodywork, and it
+    # dissolves with depth instead of ending on an outline.  the surface's own
+    # runs then cross back over the top of it — same vocabulary as float_wake()
+    # and the mirror, which is what keeps it in the same water as everything
+    # else down here.  every roll in this section is AFTER the last float_wake,
+    # so nothing already on the canvas re-rolls.
+    # the form is drawn SOLID first — a broken-up mass has no shape to read and
+    # the first cut of this was invisible.  it is the value that says "under":
+    # nothing above 202e37 anywhere in it, and it steps down to the flood's own
+    # tone with depth so the far end of the nose fades out instead of ending.
+    SUBC = (C("202e37"), C("151d28"), C("10141f"))
+
+    def sub_top(cx):                            # the nose, still going down
+        return 479.0 + max(0.0, 26.0 - cx) * 0.80
+
+    def sub_bot(cx):                            # the valance, then the underbody
+        if cx <= 30:                            # it has to STAY in the readable
+            base = 492.0 + (30 - cx) * 0.10     # half of the ramp: the first cut
+        elif cx <= 54:                          # went 20px deep and turned black
+            base = 492.0 - (cx - 30) * 0.30
+        else:
+            base = 484.8 - (cx - 54) * 0.42
+        # the front wheel, as a LOBE of the hull and not a shape of its own.  a
+        # separate dark ellipse read as one more sunk tyre floating loose in the
+        # flood, which this picture already has one of, thirty pixels away.
+        return base + 7.0 * max(0.0, 1.0 - ((cx - 50) / 16.0) ** 2) ** 0.6
+
+    for cx in range(12, 70):
+        t0 = int(sub_top(cx) + 0.8 * math.sin(cx / 6.0) + 0.6 * math.sin(cx / 13.0))
+        b0 = int(sub_bot(cx) + 1.2 * math.sin(cx / 8.0 + 2.0))
+        if b0 - t0 < 1:
+            continue
+        for y in range(max(479, t0), b0 + 1):   # never above 479: 477 and 478
+            d = y - 478                         # still belong to the DRY car
+            c.set(cx, y, SUBC[0] if d < 9 else (SUBC[1] if d < 15 else SUBC[2]))
+        # the ramp used to step down every three rows and the whole forward half
+        # of the nose landed on 151d28 and 10141f — which is what the FLOOD is
+        # made of, so it was drawn and invisible.  the body holds 202e37 while
+        # there is still a body to see, and only then dissolves into the water.
+        if t0 > 480:                            # the plane, still catching what
+            c.set(cx, t0, SUBC[0])              # little light gets down there
+        c.set(cx, b0, SUBC[2])                  # and the dark under the sill
+    for i in range(18):                         # and the chop running over it —
+        ry = 479 + rng.randrange(0, 21)         # the same LIFT the flood's own
+        rx = 4 + rng.randrange(0, 56)           # surface texture is built from,
+        ln = rng.randint(9, 32)                 # so the two agree
+        x = rx
+        while x < rx + ln:
+            run = rng.randint(4, 12)
+            if rng.random() < 0.72:
+                for xx in range(x, min(x + run, rx + ln)):
+                    yy = ry + int(1.2 * math.sin(xx / 11.0 + i))
+                    col = LIFT.get(c.get(xx, yy)[:3])
+                    if col is not None:
+                        c.set(xx, yy, col)
+            x += run + rng.randint(2, 7)
+    x = 4                                       # and the ring it pushes up,
+    while x < 46:                               # broken into runs like the
+        run = rng.randint(3, 10)                # crate's and the drum's
+        if rng.random() < 0.62:
+            for xx in range(x, min(46, x + run)):
+                t = (xx - 4) / 42.0
+                yy = 478 + int(2.4 * math.sin(t * math.pi)
+                               + 0.9 * math.sin(t * 8.0))
+                c.set(xx, yy, C("394a50"))
+                c.set(xx, yy + 1, C("202e37"))
+        x += run + rng.randint(1, 6)
 
     return c
 
