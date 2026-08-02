@@ -127,8 +127,9 @@ follow on from what was just said — topic threads, not a random ramble.
 ## B3. The scrapyard building *(user)*
 
 - **Recolour to red/orange.** Walls have only two styles today: `brick_a`
-  (red brick) and `brick_b` (grey masonry), both in `WALL_STYLES` in
-  gen_art.py. Add a **rust** style so it reads as a different building
+  (red brick) and `brick_b` (grey masonry), both in `BRICK_STYLES` in
+  gen_art.py (~line 621; there is no `WALL_STYLES` — this task said so for
+  weeks and sent a grep to nothing). Add a **rust** style so it reads as a different building
   from the warehouse POI, not a redder copy of it.
 - **Strip every box and shelf, inside and out.** Root cause found: the
   hall is created in `_plan_scrap_hall` with `"kind": "warehouse"`, so

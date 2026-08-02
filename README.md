@@ -124,11 +124,12 @@ and VSync live in settings too.
   [`tools/gen_art.py`](tools/gen_art.py) from the
   [Apollo palette](art/palettes/apollo.gpl) — no hand-drawn files, no external
   assets. If an asset looks wrong, the generator gets fixed and everything
-  regenerates. Mechanical sounds are synthesized at runtime the same way;
-  organic audio (menu music, footsteps, thunder) is licensed recordings —
-  music by davidkbd (cc-by 4.0), footsteps by congusbongus and freesound
-  contributors swuing, ceberation, ali_6868 (cc-by 3.0), thunder by gregor
-  quendel (cc-by 4.0); see [assets/audio/LICENSES.md](assets/audio/LICENSES.md).
+  regenerates. Most mechanical sounds are synthesized at runtime the same way;
+  organic audio (menu music, footsteps, thunder) and the car doors and engine
+  are licensed recordings — music by davidkbd (cc-by 4.0), footsteps by
+  congusbongus and freesound contributors swuing, ceberation, ali_6868
+  (cc-by 3.0), thunder by gregor quendel (cc-by 4.0), car sounds by ggbotnet
+  (cc0); see [assets/audio/LICENSES.md](assets/audio/LICENSES.md).
 - **Self-verifying builds.** A headless smoke test
   (`godot --headless --path . -- --smoke`) checks that the world builds, the
   player moves, collision holds, doors toggle, the edge sniper fires, and the

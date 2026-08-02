@@ -9,9 +9,16 @@
 > word of them:
 >
 > ```
-> godot_console --headless --path . -- --checksec
-> godot_console --headless --path . -- --checkdocs
+> D:\Godot\Godot_v4.7.1-stable_win64_console.exe --headless --path . -- --checksec
+> D:\Godot\Godot_v4.7.1-stable_win64_console.exe --headless --path . -- --checkdocs
 > ```
+>
+> **`godot_console` further down this file means that exe.** It is NOT on
+> PATH and there is no alias — type the path. PowerShell wants the
+> backslash form above; the Bash tool wants
+> `D:/Godot/Godot_v4.7.1-stable_win64_console.exe`. Both are pre-approved in
+> `.claude/settings.json`, so the wrong slash for the shell costs a
+> permission prompt.
 >
 > Nothing about a chat survives except what is committed. `HANDOFF.md` is
 > the memory, `TASKS.md` is the work, `CHANGELOG.md` is what shipped, this
@@ -182,6 +189,36 @@ acted on it — the door "opens roughly in place", and the two second-floor
 "check this first" leads. No adversary in either case. If confident-and-wrong
 happens with nothing pushing, it happens with something pushing.
 
+### DOCS THAT LIE ARE THE LIVE RISK (user asked this be permanent, 2026-08-02)
+
+**On this project the realistic danger is not an attacker. It is a document
+that confidently says something false, which the next session then acts on.**
+Same shape as an injection — text that reads as authoritative, isn't, and gets
+believed — but with nobody pushing. It has already happened repeatedly.
+
+The sharpest proof: `DESIGN.md` told every session that smoke runs "pollute
+the persisted stash file" under `%APPDATA%\Godot\app_userdata\` and to "clean
+up after test batches". **There is no stash file.** That folder holds the
+user's real keybinds, resolution and volumes. Following that instruction would
+have silently wiped their settings. No adversary required.
+
+A migration audit on 2026-08-02 found **fourteen** such defects while BOTH
+gates printed PASS — including that the very first command at the top of this
+file (`godot_console …`) resolved to nothing on this machine.
+
+**A CHECK CANNOT VERIFY PROSE.** This is the permanent limit, so do not
+mistake a green gate for a true document. `--checkdocs` can only test
+mechanically checkable facts — versions agree, paths exist, commands resolve.
+It can never test that a SENTENCE is true. "3 rotating backdrops" when there
+are 2, "the boot scene is the menu" when it is the splash, "a 320×320 map"
+when it is 256×256 — every one of those passed every gate, because they are
+claims, not facts a script can evaluate.
+
+**So the only defence is to periodically re-audit what the docs CLAIM against
+what the code DOES.** Not a script — a real read of both. Do it when
+migrating, and any time a doc statement is load-bearing for what you are about
+to build. When you find one, fix it and say in `HANDOFF.md` that it was wrong.
+
 ### Reversibility protects the user more than detection does
 
 Most damage is not instant. Code is recoverable: it is in git, and ALL art
@@ -351,11 +388,13 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   welded to the character, snapped to SCREEN pixels (see rule 1).
 - `scripts/main.gd` — deploy screen ("deploying to transit", animated
   dots) → texture prewarm → awaited async world build → environment → edge
-  guard → pause menu; death fade → respawn. `scripts/main_menu.gd` — 3
-  rotating LIVING backdrops (0=den w/ the traders + job board, 1=drain,
-  2=storm; painting coords via the PC offset const; per-scene ticks drive
-  candle/needles/LEDs/smoke, ray/motes/drips, rain/strikes/bolts/thunder
-  + window-flicker state machines), title shine, changelog viewer.
+  guard → pause menu; death fade → respawn. `scripts/main_menu.gd` — 2
+  rotating LIVING backdrops (0=den w/ the traders + job board, 1=drain;
+  the storm scene was RETIRED 2026-08-01, user call; painting coords via
+  the PC offset const; per-scene ticks drive candle/needles/LEDs/smoke and
+  ray/motes/drips), title shine, changelog viewer. `--backdrop=N` is valid
+  for 0-1 and `show_backdrop` CLAMPS above that, so a bad index silently
+  re-shoots the drain instead of erroring.
   `scripts/settings.gd` —
   display/res/quality/fps/vsync/show-fps + rebindable keys + pixel_scale (the
   integer window scale) + 0.2s-window fps counter. `scripts/keybinds_panel.gd`,
@@ -429,8 +468,16 @@ passes is decoration.
 It proves the handoff still matches the repo — every version claim in
 `CLAUDE.md`, `TASKS.md`, `CHANGELOG.md`, the in-game list and the newest git
 tag agree; all 90 renumbered tags still sit on the commits
-`docs/version_renumber_2026-08-02/tag_commits.json` pins them to; and no doc
-names a file that does not exist. It runs inside `--smoke` too, first and
+`docs/version_renumber_2026-08-02/tag_commits.json` pins them to; and no
+backticked `scripts/…`-style repo path names a file that does not exist.
+**Read that last one narrowly, it is the check's weak leg:** it scans only
+`CLAUDE.md`, `TASKS.md` and `HANDOFF.md` — never `DESIGN.md`, `README.md`,
+`LORE.md` or `CHANGELOG.md` — it only recognises a backticked path starting
+`scripts/ tools/ docs/ art/ assets/ scenes/`, so bare and root-level names
+(`HANDOFF.md`, `Play.bat`) are invisible to it, and it checks nothing about
+whether a documented COMMAND resolves. That last gap is how the migration
+block at the top of this file sat unrunnable while `--checkdocs` stayed
+green. It runs inside `--smoke` too, first and
 before the world builds, so a stale handoff is a red build rather than
 something the next session discovers hours in. **If it fails, fix the docs
 before writing code** — that is the whole point of it.

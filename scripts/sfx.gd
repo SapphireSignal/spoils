@@ -3,7 +3,9 @@ extends Node
 ## Since v0.2.11 the organic sounds are licensed recordings (per-surface
 ## footsteps, thunder — see assets/audio/LICENSES.md); the mechanical ones
 ## stay synthesized (UI blips, door thunks, sniper crack, flashlight click,
-## splash ping, rain bed, car alarm). UI blips auto-wire to every Button.
+## splash ping, rain bed, car alarm). THE ONE EXCEPTION is the car doors and
+## engine, which are recordings too (ggbotnet, cc0 — see _car_* below); this
+## comment used to omit them. UI blips auto-wire to every Button.
 ## Heavy synth streams (rain, alarm) render on a background thread.
 
 const RATE := 44100

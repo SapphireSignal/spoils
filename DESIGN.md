@@ -64,8 +64,11 @@ threat is human; see LORE.md hard rule 1.)
    trader unlocks. Persist to a local config file.
 
 ### v1 scope (defaults — adjustable by the user, not by Claude)
-- **1 map**: "transit" — a 320×320 ruined industrial/urban district with interiors,
-  chokepoints, 3–4 extraction points. The layout is **FIXED** (user call 2026-08-01:
+- **1 map**: "transit" — a 256×256 ruined industrial/urban district with interiors,
+  chokepoints, and 3 extraction points, all shipped (the lift, the toll gate, the
+  night freight). This line said 320×320 and "3–4 extractions" as planned scope;
+  `world_builder.gd` `MAP_W`/`MAP_H` are the real numbers.
+  The layout is **FIXED** (user call 2026-08-01:
   no procedural rerolls, ever — quests will point at real addresses and players must
   be able to learn the district). The deterministic generator plus the pinned
   `DISTRICT_SEED` in world_builder.gd ARE the map file; changing that seed is a
@@ -141,12 +144,14 @@ than being scattered through UI/input code — so a server can own them later. N
   car alarm — and gun sounds in M2: shaped noise bursts with per-class character).
   **Organic sounds are licensed recordings** committed under `assets/audio/` with
   attribution tracked in `assets/audio/LICENSES.md`: per-surface footsteps, thunder,
-  and the menu music (DavidKBD's "The Last" pack — more tracks available there for
-  later milestones). Game-safe licenses only (CC0 / CC-BY / Pixabay-style).
+  the menu music (DavidKBD's "The Last" pack — more tracks available there for
+  later milestones), **and the car doors and engine** (ggbotnet, cc0 — the one
+  MECHANICAL family that is a recording, not synth; this line used to omit them).
+  Game-safe licenses only (CC0 / CC-BY / Pixabay-style).
 - **SUBTLE always** — every sound mixed quiet; the user is sensitive to loud or
   obnoxious audio. Distant gunfire stays a *gameplay tell*.
 
-## 6. Machine & toolchain facts (verified 2026-07-31)
+## 6. Machine & toolchain facts (verified 2026-08-02)
 
 - **OS:** Windows 11. Shell: PowerShell 5.1. Beefy CPU (i9-14900KF, 32 threads).
 - **Display: 240 Hz monitor, desktop at 1680x1080 (a stretched/non-native mode).**
@@ -158,12 +163,16 @@ than being scattered through UI/input code — so a server can own them later. N
 - **Engine:** `D:\Godot\Godot_v4.7.1-stable_win64_console.exe` (console build — use for all
   CLI/headless work; there is also a windowed exe without `_console` for Play shortcuts).
 - **Python 3.14 + Pillow 12.3** on PATH — the art pipeline.
-- **Git** installed. No repo in `D:\Games\Spoils` yet — `git init` on first build.
-  Commit at milestones.
+- **Git** installed; the repo is initialized here and pushed to the GitHub remote
+  named below. Commit at milestones. (This line used to say "no repo yet — `git
+  init` on first build"; that has been false since day one of the project.)
 - **Godot 4.7.1 Windows export templates already installed** (`%APPDATA%\Godot\export_templates\4.7.1.stable\`)
   — shipping a standalone .exe needs no downloads.
 - **Deliberately absent:** Aseprite, Tiled, Audacity (removed at user request — do not reinstall).
-- Current project state: **v0.6.6** — Milestone 1 complete, plus a long
+- Current project state: **do not hardcode a version here.** This line read
+  **v0.6.6** for nineteen releases because nothing enforces it — `--checkdocs`
+  deliberately does not read this file. The live answer is CLAUDE.md's "Where
+  we are" plus `git describe --tags --abbrev=0`. Milestone 1 complete, plus a long
   run of user-feedback and content passes (the fixed transit district,
   weather/day-night, driveable cars, interiors with second floors, the map
   screen, three working extractions and the debrief; see CHANGELOG.md,
@@ -186,26 +195,52 @@ than being scattered through UI/input code — so a server can own them later. N
     to import, delete its .import + .godot/imported cache and reimport —
     Godot caches import failures for unchanged files (cost us a whole "blurry
     text" investigation).
-  - Boot scene is the main menu (`scenes/menu.tscn`): four generated backdrop
-    scenes rotate with crossfades (hoard / neon scrapyard / safehouse /
-    overlook), each with an animated layer. Harness: `--scene=menu` stays on
-    the menu, `--backdrop=N` picks a scene, `--at=X,Y` teleports the player.
+  - Boot scene is the SapphireSignal studio card (`scenes/splash.tscn`), which
+    hands off to the main menu (`scenes/menu.tscn`); harness args skip it
+    instantly. The menu rotates TWO generated backdrop scenes with crossfades —
+    0 = the den (the traders at home, with the job board), 1 = the drain (the
+    tunnel under the district) — each with an animated layer. A third, the
+    storm, was retired 2026-08-01 on the user's call; the five further
+    backdrops in TASKS.md are pitches and are NOT wired in. Harness:
+    `--scene=menu` stays on the menu, `--backdrop=N` picks a scene (valid 0-1,
+    and it CLAMPS rather than erroring, so a bad index silently re-shoots the
+    drain), `--at=X,Y` teleports the player.
 
 ## 7. Self-verification requirements (non-negotiable)
 
 Claude must prove its own work without the user:
 
+**`godot_console` below is shorthand for `D:\Godot\Godot_v4.7.1-stable_win64_console.exe`.
+It is NOT on PATH and there is no alias — type the path.** PowerShell wants
+backslashes, the Bash tool wants forward slashes; both are pre-approved in
+`.claude/settings.json`. See the top of CLAUDE.md.
+
+- **Start with `--checksec` and `--checkdocs`** (a second each) — the security
+  invariants and the docs-match-the-repo gate. Both are also the first thing
+  `--smoke` runs.
 - **Smoke harness:** `godot_console --headless --path . -- --smoke` runs scripted checks
-  (scene builds, player spawns/moves, a raid can start/extract) and must end by printing
-  `SMOKE PASS`. Run it before claiming anything works.
+  (scene builds, player spawns/moves, and death ends the raid into the debrief) and must
+  end by printing `SMOKE PASS`. Run it before claiming anything works.
+  `harness.gd`'s `_smoke()` is the single source of truth for what is covered —
+  do not keep a hand-copied inventory here, it will drift.
+- **The three extractions are NOT in smoke.** Check them as shots: `--toll`,
+  `--freight`, `--extract=<kind>`. All three are MODIFIERS — passed without a
+  `--shot=<name>` the harness errors and exits.
 - **Screenshot harness:** `godot_console --path . -- --shot=<name>` boots the game,
   captures to `shots/<name>.png`, quits. Claude reads the PNG itself, judges it visually,
   iterates, and sends the user the good one.
 - After adding any new `class_name` script or new art files, run
   `godot_console --headless --path . --import` (skipping this causes phantom
   "Identifier not declared" parse errors).
-- Smoke runs pollute the persisted stash file under `%APPDATA%\Godot\app_userdata\` —
-  use a separate test profile or clean up after test batches.
+- **There is no stash file — do not "clean up" `%APPDATA%\Godot\app_userdata\SPOILS\`.**
+  This line used to claim smoke runs pollute a stash; the stash does not exist yet
+  (it lands in M4). What is actually in that folder is `settings.cfg` — the user's
+  REAL keybinds, display mode, resolution and volumes — plus `shader_stamp.txt`,
+  the shader warm-up fingerprint. Deleting them resets the user's settings and
+  forces a cold shader warm. Every launch re-saves `settings.cfg` as a lossless
+  round-trip (`_ready` loads, `apply_all` writes the same values back), so test
+  runs do not dirty it and there is nothing to undo. Revisit when stash
+  persistence lands in M4.
 - GDScript 4.7 gotcha: `var x := dict.key` fails to infer (Variant) — always type-annotate
   when reading from Dictionary/Array.
 

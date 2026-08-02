@@ -41,6 +41,63 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-02 — the migration was broken and both gates said PASS
+
+**Shipped:** No game changes. A migration session that turned into a docs
+audit. Fixed **14 confirmed defects** across `CLAUDE.md`, `DESIGN.md`,
+`TASKS.md`, `README.md` and the `sfx.gd` header, plus a new **DOCS THAT LIE
+ARE THE LIVE RISK** section in CLAUDE.md's SAFETY & TRUST block. No version
+bump — nothing in the game changed, so all five version sources still agree
+at v0.6.25.
+
+**The user's words:** *"i want my game to be secure, and the migrations to
+work"*. On persisting it: *"ok, so make sure thats saved somewhere"*, then
+the autosave idea — *"cant we just save everything in real time in the repo
+so we will always have it? like this message i send you right now cant it be
+instantly logged somewhere in the repo, its like an auto save"*. On the
+hardening: *"yes go, make it fail"*. Finally *"yes just do whatever you think
+is best"*.
+
+**Learned:**
+- **`godot_console` RESOLVES TO NOTHING on this machine.** Not on PATH, no
+  alias, no shim, no shell profile exists. It appeared 12x, including as the
+  **first two commands at the top of `CLAUDE.md`** — so the documented
+  migration was unrunnable, and had been for a long time. The top block is
+  now the full exe path; the shorthand is defined once beneath it. PowerShell
+  needs backslashes and the Bash tool needs forward slashes, because
+  `.claude/settings.json` allowlists them as two separate rules.
+- **BOTH GATES PRINTED PASS THROUGHOUT.** That is the headline. A green
+  `--checkdocs` never meant the docs were true.
+- **A check cannot verify prose, ever.** `DESIGN.md` said the boot scene is
+  the menu (it is the splash), said the map is 320×320 (it is 256×256), said
+  4 menu backdrops and `CLAUDE.md` said 3 (there are **2**; the storm was
+  retired 2026-08-01). All claims, none testable by a script.
+- **One doc instruction would have destroyed user data.** `DESIGN.md` told
+  every session that smoke runs "pollute the persisted stash file" under
+  `%APPDATA%\Godot\app_userdata\` and to clean up after test batches. **There
+  is no stash file** — that folder holds the user's real keybinds, resolution
+  and volumes. No adversary needed.
+- `TASKS.md` B3 sent a grep to `WALL_STYLES`, which does not exist. It is
+  `BRICK_STYLES` (gen_art.py ~621).
+- **The last session's open permissions question is ANSWERED: `git tag -f`
+  works now.** Tested on a throwaway local tag, then deleted. Project
+  allowlist covers force ops; no need for `bypassPermissions`.
+- **`--checkdocs` has a real hole, now written down honestly in CLAUDE.md:**
+  it scans only 3 of 7 docs for bad paths, only sees backticked paths
+  starting `scripts/ tools/ docs/ art/ assets/ scenes/`, and tests nothing
+  about whether a documented COMMAND resolves.
+
+**Picked up at:** Hardening `--checkdocs` (fail on a hardcoded version in
+DESIGN.md; assert documented commands resolve; widen the path scan) — each
+one to be **fire-tested by planting a violation** before it ships. Then the
+user's autosave: a prompt-submit hook appending their messages verbatim to a
+docs/sessions/ folder (unbackticked deliberately — it does not exist yet, and
+`--checkdocs` fired on the backticked form while this entry was being written,
+which is the check doing its job). Kept **inside** `--checksec`'s scan — their
+call and mine, a noisy gate beats a blind one. Then the smoker (TASKS.md B4).
+
+---
+
 ## 2026-08-02 — migration hardening
 
 **Shipped:** No game changes. A docs-and-memory session. Built this file.
