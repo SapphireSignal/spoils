@@ -3,6 +3,32 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.59] — 2026-08-01 — every place has its own things in it
+
+### Added
+- **A dressing pass for the rest of the POIs** (user: "liven up the map
+  a bit. but not too many objects or else it will look odd"). Each
+  place gets a handful — four to seven pieces — of things that belong
+  to it and nowhere else:
+  - **courtyard** — planters, benches, a vending machine, a news box
+    and what people left behind around the dry fountain
+  - **bus depot** — fare boxes, a mechanic's leavings, tyres and drums
+    among the buses
+  - **playground** — tyres to climb on, a bench for whoever watched,
+    litter in the grass
+  - **gallery** — more cans, pallets, a dumpster: what the painters
+    brought and never took home
+  - **comms relay** — cable drums, a toolbox, the crate the dish came in
+  - **the lift** — fuel and freight stacked at the rim of the clearing
+    (the clearing itself is claimed ground, so it stays clear to land in)
+  - **toll gate** — the warden's own chair, brazier and crates, just
+    off his booth
+  - **trainyard** — sleepers, drums and gear beside the running line
+- Unknown families are skipped rather than crashing the build, so the
+  per-place lists can name props a future map might not have.
+
+The scrapyard keeps its hall (user confirmed) — only its stock moved.
+
 ## [0.6.58] — 2026-08-01 — freight belongs to the warehouses
 
 ### Changed

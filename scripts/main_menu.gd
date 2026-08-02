@@ -70,6 +70,15 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.59", ["every place has its own things in it now. benches,",
+		"planters and a vending machine round the courtyard",
+		"fountain. fare boxes and a mechanics leavings at the",
+		"bus depot. tyres and a bench at the playground. paint",
+		"and pallets at the gallery. cable drums and a toolbox",
+		"at the relay. fuel and freight stacked at the lift.",
+		"the wardens own chair and brazier by his booth. drums",
+		"and sleepers along the yard. a handful each - enough",
+		"to know where you are without the place looking dumped"]],
 	["v0.6.58", ["freight moved to where freight belongs: the crates and",
 		"shelves are out of the scrapyard and piled around the",
 		"warehouses instead - stacks in the yard, loaded racks",

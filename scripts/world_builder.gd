@@ -189,6 +189,7 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 	await _place_lamps()
 	await _place_traffic_lights()
 	await _place_street_furniture()
+	await _dress_pois()
 	await _place_barricades()
 	await _place_trees()
 	await _place_lone_trees()
@@ -2555,6 +2556,66 @@ func _place_power_boxes() -> void:
 		# the flex running back to the wall the box is bolted to (standing
 		# rule — a powered thing must SHOW where its power comes from)
 		_place_room_light(interior, box_cell, broken)
+
+
+func _dress_spot(area: Rect2i, families: Array, count: int) -> void:
+	## a handful of pieces in and around one place. Unknown families are
+	## skipped rather than crashing the build, so this list can name things
+	## that only some maps have.
+	if area.size.x <= 0 or area.size.y <= 0 or families.is_empty():
+		return
+	var placed := 0
+	var attempts := 0
+	while placed < count and attempts < count * 14:
+		attempts += 1
+		await _tick()
+		var cell := Vector2i(
+			_rng.randi_range(area.position.x - 1, area.end.x),
+			_rng.randi_range(area.position.y - 1, area.end.y))
+		if _occupied.has(cell) or _on_road(cell) or _near_a_door(cell) \
+				or _rail_cells.has(cell) or _ballast.has(cell) \
+				or _forest.has(cell) or _sidewalk.has(cell) \
+				or _cell_inset(cell) < BARRIER_INSET:
+			continue
+		var family: String = families[_rng.randi_range(0, families.size() - 1)]
+		if not _families.has(family):
+			continue
+		_add_prop_at_cell(_pick_variant_varied(family), cell, Vector2(9, 4))
+		placed += 1
+
+
+func _dress_pois() -> void:
+	## Every place gets a HANDFUL of things that belong to it and nowhere
+	## else — what tells you where you are before you read the map (user:
+	## "liven up the map a bit. but not too many objects or else it will
+	## look odd"). The counts stay small on purpose; the warehouses and
+	## the scrapyard are dressed by their own passes.
+	# the town square: planters, seating, and what people left behind
+	await _dress_spot(_court_rect, ["planter", "bench_x", "bench_y",
+		"trash", "newsbox", "vending"], 5)
+	# the depot: fare boxes and a mechanic's leavings among the buses
+	await _dress_spot(_depot_rect, ["newsbox", "vending", "trash", "tires",
+		"toolbox", "barrel"], 5)
+	# the playground: tyres to climb, a bench for whoever watched
+	await _dress_spot(_playground, ["tires", "bench_x", "trash", "bush"], 4)
+	# the gallery: what the painters brought and never took home
+	await _dress_spot(_gallery_rect, ["spray_cans", "pallet", "crate",
+		"dumpster", "tires"], 4)
+	# the relay: cable drums, a toolbox, the crate the dish came in
+	await _dress_spot(_comms_rect, ["cylinder", "toolbox", "crate",
+		"barrel"], 4)
+	# the lz: fuel and freight stacked at the rim of the clearing (the
+	# clearing itself is claimed ground, so these land around it)
+	await _dress_spot(_lz_rect, ["barrel", "crate", "crate_stack",
+		"tires"], 4)
+	# the warden's own clutter, just off his booth
+	await _dress_spot(Rect2i(_toll_cell - Vector2i(2, 2), Vector2i(5, 4)),
+		["barrel", "crate", "chair", "toolbox"], 4)
+	# the yard: sleepers, drums and gear beside the running line
+	for b in _zones:
+		if str(_zones[b]) == "trainyard":
+			await _dress_spot(_block_rects[b], ["pallet", "barrel", "toolbox",
+				"cylinder", "rubble"], 7)
 
 
 func _place_room_light(interior: Rect2i, box_cell: Vector2i,
