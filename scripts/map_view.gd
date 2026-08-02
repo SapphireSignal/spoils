@@ -27,6 +27,8 @@ const BUILDING_WARM := Color(0.565, 0.373, 0.271)
 const RAIL := Color(0.294, 0.212, 0.208)
 const RING := Color(0.694, 0.259, 0.180)
 const ME := Color(0.976, 0.910, 0.702)
+const CAR_DOT := Color(0.871, 0.620, 0.255)      # amber
+const TRUCK_DOT := Color(0.310, 0.494, 0.827)    # blue, so the two read apart
 const LABEL := Color(0.804, 0.851, 0.839)
 
 var _player: Player
@@ -670,12 +672,25 @@ func _draw_poi_labels(on: Control) -> void:
 func _draw_markers() -> void:
 	if _vec.is_empty() and _map_tex == null:
 		return
-	# live car dots
+	# live vehicle dots: SMALLER than they were, coloured by what they are,
+	# and named. Trucks read blue, cars amber (user).
 	for node in get_tree().get_nodes_in_group("cars"):
+		var car := node as DriveableCar
 		var car_cell := Vector2(_floor_layer.local_to_map(
 			(node as Node2D).global_position)) + Vector2(0.5, 0.5)
-		_markers.draw_circle(_cell_to_screen(car_cell), maxf(2.0, _zoom * 0.9),
-			Color("de9e41"), true, -1.0, true)
+		var at := _cell_to_screen(car_cell)
+		var truck := car != null and car.kind == "truck"
+		_markers.draw_circle(at, maxf(1.5, _zoom * 0.45),
+			TRUCK_DOT if truck else CAR_DOT, true, -1.0, true)
+		# the name only when the map is zoomed in far enough to read it —
+		# at a whole-district zoom every label would land on its neighbour
+		# and the whole thing turns to soup
+		if _zoom >= 3.0:
+			var word := "truck" if truck else "car"
+			var tw := _font.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT,
+				-1, _font_size).x
+			_halo_text(_markers, (at + Vector2(-tw * 0.5, -4.0)).round(), word,
+				TRUCK_DOT if truck else CAR_DOT)
 	# ME: impossible to lose (user: "alot more noticable"). A pulsing ring,
 	# a bright core, cross ticks, and the label riding above it.
 	var cell := Vector2(_floor_layer.local_to_map(_player.global_position)) \

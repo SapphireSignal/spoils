@@ -32,6 +32,7 @@ const EXIT_OFFSET := {
 
 var heading := "nw"
 var index := 0                  # family variant index (intact ones drive)
+var kind := "car"               # "car" or "truck", published by the generator
 var driven := false
 var engine_on := false          # true the whole time you're seated
 var speed := 0.0
@@ -72,6 +73,10 @@ func setup(start_variant: String, start_heading: String, manifest: Dictionary) -
 	_manifest = manifest
 	heading = start_heading
 	index = int(start_variant.get_slice("_", 2))
+	# car or truck, straight from the generator — the map labels its dots
+	# off this instead of keeping its own list of which indexes are trucks
+	kind = str((manifest["props"][start_variant] as Dictionary).get(
+		"vehicle_kind", "car"))
 	_sprite = Sprite2D.new()
 	_sprite.centered = false
 	add_child(_sprite)

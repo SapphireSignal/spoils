@@ -3,6 +3,37 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.23] — 2026-08-02 — five things from a playtest
+
+### Fixed
+- **You could walk away from the lift and still extract** (user: "it kept
+  letting me extract when i was nowhere near"). My own regression: the
+  two-second grace added in v0.6.12 so a car clipping the toll zone would
+  not reset its countdown was applied to EVERY zone. The toll is
+  something you cross at 190 px/s; the lift is somewhere you stand.
+  Grace is now driving-exits only, and stepping off the pad cancels at
+  once.
+- **You could walk through the front of the extraction train** (user).
+  The hull was one quad per car, each starting at that car's origin — but
+  the locomotive's art reaches about 46 px PAST its origin, so the nose
+  was uncovered, and the cars sit 104 apart while each quad was only 96
+  long, leaving a slot between every pair. It is one continuous hull now,
+  nose to tail. A train is one solid object.
+
+### Changed
+- **Vehicle dots on the map are smaller, named, and told apart.** Trucks
+  read blue, cars amber, and each dot carries its word. The label only
+  draws when the map is zoomed in far enough to read it — at
+  whole-district zoom every label lands on its neighbour.
+- **Which leaves a tree drops is read off the variant it was drawn with.**
+  It used to be a separate flag passed in alongside the variant, so the
+  two could disagree — and a green tree shedding autumn leaves is exactly
+  the mismatch nobody catches in review (user reported seeing it). One
+  source of truth now; art and leaves cannot diverge.
+- **A few turned trees out on the perimeter** (user). Rolled from the side
+  rng, so the layout stream is untouched and every building, road and POI
+  is exactly where it was — verified identical.
+
 ## [0.6.22] — 2026-08-02 — the sun gets in
 
 ### Added

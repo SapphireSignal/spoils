@@ -73,6 +73,13 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.23", [
+		"walking away from the lift no longer lets you extract from halfway across the district. that was my fault - a grace period meant for driving out through the toll gate had been applied to the lift as well",
+		"you cant walk through the front of the extraction train any more. the engine sticks out further than its collision did, and there were gaps between the carriages too",
+		"vehicles on the map are smaller dots now, and each one says whether its a car or a truck. trucks are blue, cars are amber",
+		"trees drop the right leaves. which leaves a tree sheds is read straight off the tree itself now, so a green one cant drop autumn leaves",
+		"a few turned trees out around the edges of the district",
+	]],
 	["v0.6.22", [
 		"the sun gets into the district now. light rakes across the ground when its low - mid morning and late afternoon - and comes from a different side depending on which. nothing at noon when its overhead, nothing at night, and it shuts off when you step under a roof or when the weather turns",
 	]],

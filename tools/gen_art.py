@@ -3173,6 +3173,9 @@ DOOR_FRAME_SIZE = (54, 68)
 # release, and you could stroll through every open south door).
 DOOR_COLLIDERS: dict[str, dict] = {}
 
+# prop name -> "car" | "truck", published so the map can label its dots
+VEHICLE_KINDS: dict[str, str] = {}
+
 # closed / open-inward / open-outward unit step per axis, in screen px per px
 # of leaf run. 'x' fits south (yp) walls, 'y' fits east (xp) walls. A door
 # swings AWAY from whoever opens it (user call), so every door needs BOTH
@@ -4798,6 +4801,13 @@ def prop_inventory() -> tuple[dict, dict]:
                  ("pickup", 2, False), ("car", 1, False),
                  ("car", 3, True), ("pickup", 1, True)]
     for i, (kind, scheme, broken) in enumerate(veh_specs):
+        # the GENERATOR knows whether this is a car or a truck, so it says
+        # so — the map screen labels the dots off this rather than
+        # hardcoding a list of indexes that would rot the moment the fleet
+        # changes (the door collider taught us this one)
+        for _side in ("n", "s", "e", "w", "ne", "nw", "se", "sw"):
+            VEHICLE_KINDS["vehicle_%s_%d" % (_side, i)] = (
+                "truck" if kind == "pickup" else "car")
         art_nw = make_vehicle(kind, scheme, rev=False, broken=broken)
         art_se = make_vehicle(kind, scheme, rev=True, broken=broken)
         fam("vehicle_nw", i, art_nw)
@@ -6993,6 +7003,9 @@ def main() -> None:
             "size": [canvas.w, canvas.h], "origin": list(origin), "collider": collider}
         if len(entry) > 3:
             manifest["props"][name]["lights"] = entry[3]
+    for name, kind in VEHICLE_KINDS.items():
+        if name in manifest["props"]:
+            manifest["props"][name]["vehicle_kind"] = kind
     for name, extra in DOOR_COLLIDERS.items():
         manifest["props"][name]["collider_open"] = extra["open"]
         manifest["props"][name]["collider_open_out"] = extra["open_out"]

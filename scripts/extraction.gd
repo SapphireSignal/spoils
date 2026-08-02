@@ -93,6 +93,16 @@ func _process(delta: float) -> void:
 	if inside == -1:
 		if _active == -1:
 			return
+		# The grace is for DRIVING exits only. The toll zone is something
+		# you cross at 190 px/s, where clipping the edge must not reset a
+		# five second count. The lift is somewhere you STAND, and walking
+		# off it has to cancel at once — with the grace applied to every
+		# zone you could stroll away from the pad and still get extracted
+		# (user: "it kept letting me extract when i was nowhere near").
+		if bool((_zones[_active] as Dictionary)["auto"]):
+			_active = -1
+			_label.visible = false
+			return
 		_grace -= delta
 		if _grace <= 0.0:
 			_active = -1

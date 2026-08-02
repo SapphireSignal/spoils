@@ -3322,7 +3322,7 @@ func _place_trees() -> void:
 			var autumn := _autumn_rect.has_point(cell as Vector2i)
 			var variant := _pick_variant("tree_autumn" if autumn else "tree")
 			var node := _add_prop_at_cell(variant, cell as Vector2i, Vector2(12, 6))
-			_maybe_shed_leaves(variant, node, autumn)
+			_maybe_shed_leaves(variant, node)
 			_map_trees.append(Vector3i((cell as Vector2i).x, (cell as Vector2i).y,
 				1 if autumn else 0))
 		elif roll < 0.33:
@@ -3330,7 +3330,13 @@ func _place_trees() -> void:
 		await _tick()
 
 
-func _maybe_shed_leaves(variant: String, node: Node2D, red: bool = false) -> void:
+func _maybe_shed_leaves(variant: String, node: Node2D) -> void:
+	# WHICH LEAVES a tree drops is read straight off the variant it was
+	# drawn with. It used to be a separate flag passed in beside the
+	# variant, which meant the two could disagree — and a green tree
+	# shedding autumn leaves is exactly the kind of mismatch nobody spots
+	# in code review (user reported seeing it). One source of truth.
+	var red := variant.begins_with("tree_autumn")
 	# EVERY broadleaf tree sheds, and only broadleaf trees do.
 	# The old flat 50% roll had two faults the user caught between them:
 	# a lone oak could lose the coin flip and sit there inert forever
@@ -3401,9 +3407,15 @@ func _place_lone_trees() -> void:
 				if not _forest.has(ncell) and not _dirt_path.has(ncell) \
 						and not _on_road(ncell) and not _occupied.has(ncell):
 					_set_tile(ncell, "grass_blend_%d" % _rng.randi_range(0, 1))
-		var lone_variant := _pick_variant("tree")
+		# a few turned trees out on the edges of the district (user). Rolled
+		# from the SIDE rng so it costs the layout stream nothing and every
+		# building, road and poi stays exactly where it was.
+		var edge := mini(mini(cell.x - BARRIER_INSET, MAP_W - BARRIER_INSET - cell.x),
+			mini(cell.y - BARRIER_INSET, MAP_H - BARRIER_INSET - cell.y))
+		var lone_autumn := edge < 16 and _side_rng.randf() < 0.22
+		var lone_variant := _pick_variant("tree_autumn" if lone_autumn else "tree")
 		_maybe_shed_leaves(lone_variant, _add_prop_at_cell(lone_variant, cell, Vector2(10, 5)))
-		_map_trees.append(Vector3i(cell.x, cell.y, 0))
+		_map_trees.append(Vector3i(cell.x, cell.y, 1 if lone_autumn else 0))
 		if _rng.randf() < 0.5:
 			var scell := cell + Vector2i(_rng.randi_range(-1, 1), _rng.randi_range(-1, 1))
 			if not _occupied.has(scell) and not _on_road(scell):

@@ -97,16 +97,25 @@ func setup(stop_pos: Vector2, player: Player, radio: Radio,
 	_hull = StaticBody2D.new()
 	_hull.name = "Hull"
 	add_child(_hull)
+	# ONE continuous hull, nose to tail, instead of a quad per car.
+	#
+	# Per-car quads left two kinds of gap and the user found both: they
+	# started at each car's ORIGIN, but the locomotive's art reaches ~46 px
+	# PAST its origin, so you could walk straight through the front of the
+	# engine; and the cars sit 104 apart while each quad was only 96 long,
+	# leaving a slot between every pair. A train is one solid object —
+	# model it as one.
 	var across := Vector2(RAIL_DIR.x, -RAIL_DIR.y) * 16.0
-	var along := 0.0
-	for _car in rake:
-		var head := -RAIL_DIR * along
-		var tail := head - RAIL_DIR * 96.0
-		var poly := CollisionPolygon2D.new()
-		poly.polygon = PackedVector2Array([head - across, tail - across,
-			tail + across, head + across])
-		_hull.add_child(poly)
-		along += 104.0
+	# extents measured off the manifest art, converted from screen px to
+	# distance along the rail (RAIL_DIR.x is 0.894, not 1)
+	var nose := 46.0 / RAIL_DIR.x
+	var tail_len := (104.0 * float(rake.size() - 1)) + (42.0 / RAIL_DIR.x)
+	var head := RAIL_DIR * nose
+	var tail := -RAIL_DIR * tail_len
+	var poly := CollisionPolygon2D.new()
+	poly.polygon = PackedVector2Array([head - across, tail - across,
+		tail + across, head + across])
+	_hull.add_child(poly)
 
 	# it runs at night, so it has to carry its own light: a headlamp
 	# throwing down the rails, and a warm spill out of the cab windows
