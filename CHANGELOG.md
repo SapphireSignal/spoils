@@ -3,6 +3,16 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.72] — 2026-08-02 — you can see the whole door
+
+### Fixed
+- **A door opened from inside was cut in half by the board beside it**
+  (user). v0.6.68 made the jamb boards draw *over* the leaf so the wall
+  correctly hides a door swinging into the room. When the outward swing
+  arrived in v0.6.71 that order was left alone — but an outward door
+  swings *toward* the camera and has to cover the jamb, not hide behind
+  it. The draw order now flips with the swing.
+
 ## [0.6.71] — 2026-08-02 — doors get out of your way
 
 ### Changed

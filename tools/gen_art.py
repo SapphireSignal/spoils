@@ -3172,38 +3172,50 @@ def make_door_strip(kind: str, axis: str) -> tuple[Canvas, tuple, list]:
     for f in range(DOOR_FRAMES * 2):
         outward = f >= DOOR_FRAMES
         c = Canvas(frame_w, frame_h)
-        # The leaf goes down FIRST: it swings into the room, which is away
-        # from the camera, so the wall it hangs in has to occlude it. Drawn
-        # the other way round the panel swallows its own jamb mid-swing.
-        # Sampled along its SCREEN run, not per leaf-px, so no frame is gappy.
         ex, ey = _door_leaf_vec(axis,
             float(f % DOOR_FRAMES) / float(DOOR_FRAMES - 1), outward)
-        steps = max(int(round(max(abs(ex), abs(ey)))), 1)
-        for i in range(steps + 1):
-            u = i / float(steps)
-            x = hx + round(ex * u)
-            by = hy + round(ey * u)
-            plank = int(u * DOOR_LEAF)      # planks compress as it turns
-            for y in range(by - DOOR_H, by + 1):
-                col = base
-                if kind == "wood" and plank % 5 == 4:
-                    col = dark
-                if kind == "metal" and (y - (by - DOOR_H)) % 6 == 5:
-                    col = dark
-                c.set(x, y, col)
-            c.set(x, by - DOOR_H, dark)  # top edge
-        # handle near the free end. The panel is never edge-on now, so this
-        # never lands on nothing; mid-swing the far jamb paints over it,
-        # which is right — that part of the leaf is behind the wall.
-        c.set(hx + round(ex * 0.85), hy + round(ey * 0.85) - DOOR_H // 2,
-              C("10141f"))
-        # jamb boards: the fixed 6 px of edge on each side of the leaf, drawn
-        # over it so the wall reads as being in front of the swung panel
-        for j in list(range(-6, 0)) + list(range(DOOR_LEAF, DOOR_LEAF + 6)):
-            x = hx + j
-            by = hy + round(j * edge_dy)
-            for y in range(by - DOOR_H - 2, by + 1):
-                c.set(x, y, dark if (y - by) % 5 else C("341c27"))
+
+        def draw_leaf() -> None:
+            # sampled along its SCREEN run, not per leaf-px, so no frame
+            # comes out gappy when the panel foreshortens
+            steps = max(int(round(max(abs(ex), abs(ey)))), 1)
+            for i in range(steps + 1):
+                u = i / float(steps)
+                x = hx + round(ex * u)
+                by = hy + round(ey * u)
+                plank = int(u * DOOR_LEAF)      # planks compress as it turns
+                for y in range(by - DOOR_H, by + 1):
+                    col = base
+                    if kind == "wood" and plank % 5 == 4:
+                        col = dark
+                    if kind == "metal" and (y - (by - DOOR_H)) % 6 == 5:
+                        col = dark
+                    c.set(x, y, col)
+                c.set(x, by - DOOR_H, dark)  # top edge
+            # handle near the free end; the panel is never edge-on, so this
+            # never lands on nothing
+            c.set(hx + round(ex * 0.85), hy + round(ey * 0.85) - DOOR_H // 2,
+                  C("10141f"))
+
+        def draw_jambs() -> None:
+            # the fixed 6 px of edge either side of the leaf
+            for j in list(range(-6, 0)) + list(range(DOOR_LEAF, DOOR_LEAF + 6)):
+                x = hx + j
+                by = hy + round(j * edge_dy)
+                for y in range(by - DOOR_H - 2, by + 1):
+                    c.set(x, y, dark if (y - by) % 5 else C("341c27"))
+
+        # WHO OCCLUDES WHO depends on which way it swings. Inward, the leaf
+        # travels away from the camera and the wall stands in front of it.
+        # Outward, it swings toward the camera and must cover the jamb —
+        # drawn the wrong way round the open door looks cut in half by the
+        # board beside it (user report on the first cut of the two-way swing).
+        if outward:
+            draw_jambs()
+            draw_leaf()
+        else:
+            draw_leaf()
+            draw_jambs()
         c.outline_auto()
         _paste_canvas(strip, c, f * frame_w, 0)
     # origin: edge midpoint at the leaf base (matches wall-segment anchoring)
