@@ -73,6 +73,9 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.20", [
+		"the new grade was making everything darker, your character most of all, because the cold shadow colour it was blending in is itself dark. it shifts the colour now without touching the brightness, and dark sprites keep their detail instead of going flat",
+	]],
 	["v0.6.19", [
 		"the whole picture is graded now - more contrast, cold shadows against warm light, a glow on lamps and windows, and the corners pulled down. it shifts with the clock, so night doesnt look like day with the brightness turned off",
 		"theres dust in the air. faint on purpose - its there to stop the space between you and the buildings looking like flat empty colour",

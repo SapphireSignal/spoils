@@ -18,7 +18,10 @@ shader_type canvas_item;
 
 uniform sampler2D screen_tex : hint_screen_texture, filter_nearest;
 
-uniform float contrast : hint_range(0.0, 0.5) = 0.17;
+uniform float contrast : hint_range(0.0, 0.5) = 0.13;
+// holds the black floor up so dark sprites keep their internal detail
+// instead of collapsing into one flat silhouette
+uniform float shadow_lift : hint_range(0.0, 0.2) = 0.035;
 uniform float lift : hint_range(0.0, 0.5) = 0.10;      // highlight bloom-ish
 uniform float vignette : hint_range(0.0, 1.0) = 0.30;
 uniform float night : hint_range(0.0, 1.0) = 0.0;
@@ -38,9 +41,24 @@ void fragment() {
 
     // split tone: shadows toward cold, highlights toward warm. Stronger at
     // night, because that is when a flat grey street looks most like paper.
+    //
+    // BRIGHTNESS-NEUTRAL. Both tints are normalised to luminance 1 first,
+    // so they shift HUE and nothing else. The raw shadow tint had a
+    // luminance of 0.384 — multiplying by it dimmed every shadowed pixel
+    // to a third of its value, and since the raider is mostly dark pixels
+    // the character visibly darkened (user reported it immediately). A
+    // colour grade may recolour the picture; it must not quietly turn the
+    // lights down.
+    vec3 lw = vec3(0.2126, 0.7152, 0.0722);
+    vec3 sh = shadow_tint / max(dot(shadow_tint, lw), 0.001);
+    vec3 li = light_tint / max(dot(light_tint, lw), 0.001);
     float amt = 0.15 + 0.22 * night;
-    vec3 cool = mix(c, c * shadow_tint * 3.0, amt * (1.0 - l));
-    c = mix(cool, cool * light_tint, amt * l);
+    vec3 cool = mix(c, c * sh, amt * (1.0 - l));
+    c = mix(cool, cool * li, amt * l);
+
+    // ...and hold the floor up, so the S-curve cannot crush a dark sprite
+    // into a silhouette
+    c += shadow_lift * (1.0 - smoothstep(0.0, 0.34, l));
 
     // highlight lift: only the brightest pixels, so lamps, windows, sparks
     // and the muzzle flash carry a little glow without a blur pass

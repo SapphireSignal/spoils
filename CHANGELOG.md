@@ -3,6 +3,25 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.20] — 2026-08-02 — the grade stopped turning the lights down
+
+### Fixed
+- **Everything had got darker, the character worst of all** (user spotted
+  it immediately). The grade's split tone was multiplying by the shadow
+  colour directly, and that colour has a luminance of 0.384 — so at full
+  blend it dimmed shadowed pixels to a third of their value. Anything
+  made mostly of dark pixels, like the raider, took the brunt.
+- Both tints are now **normalised to luminance 1** before they are
+  applied, so they shift hue and nothing else. A colour grade may
+  recolour the picture; it must not quietly turn the lights down.
+- Added a **shadow lift** that holds the black floor up, so dark sprites
+  keep their internal detail instead of collapsing into a flat
+  silhouette, and eased the contrast from 0.17 to 0.13.
+- Measured on the raider: ungraded 93.0 mean brightness, v0.6.19 82.1,
+  now 90.4. Across the whole centre frame the share of pixels below 60
+  went 26.2% -> 36.6% -> back to 26.2%. The remaining full-frame drop is
+  the vignette, which is meant to be there.
+
 ## [0.6.19] — 2026-08-02 — atmosphere
 
 More of the polish pass, still without redrawing anything.
