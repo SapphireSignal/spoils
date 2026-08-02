@@ -21,6 +21,35 @@ ROOM LEFT FOR THE LIVING LAYER (not built here, per the brief):
   * the water's dashes are baked at rest.  three (not five) surface strips
     would re-sort the bands under the mouth and under the lamp.
 
+REVISION 2 — WHAT THE USER SAID AFTER LOOKING AT IT, and what was done.  each
+of these is FIXED and verified in the render, not planned:
+  1. "what is that thing to the right of the door?"  it was a louvred scupper
+     with two black stains hanging off it and it read as a smudge.  DELETED.
+     in its place: the deck's rainwater downpipe — a stack coming out of the
+     soffit, a swan neck, a hopper head, a round pipe with brackets and socket
+     collars, and a burst joint that shoves the lower half sideways.  the
+     stack above the hopper is load-bearing: without it the cone read as a
+     lamp shade on a post.
+  2. "the water just looks flat at the doorway."  the flat slab with the
+     column of white dashes is gone.  the water in the mouth is a true 1:1
+     screen-space mirror about the far waterline at y=262, so the skyline
+     lands in its own columns; the tone steps darker forward on wavy seams;
+     and each ripple facet is a stroke that grows from 1px tall and tightly
+     packed at the far end to 4px tall and widely broken at the near.
+  3. "a couple things on top of the water that shouldn't be there."  the
+     crate, the drum AND the pallet now float: the waterline cuts each one,
+     each leans differently, each pushes a broken ring into the surface and
+     drops a broken reflection under itself.  see float_wake().
+  4. the flood was a flat 090a14 slab that gave nothing back.  it now carries
+     the room's own light, and the tube and the mouth throw specular columns
+     down through it — a 1:1 mirror cannot reach either of them.
+  5. the sodium halo's concentric rings are broken by a PANEL FIELD: the wall
+     is precast, so every panel carries its own tone offset.
+  6. the sandbags read as loaves.  rebuilt off a thickness profile pinched at
+     both ends, with a real top face and a tied ear.
+  7. the top 108px was flat black.  it is a soffit now — girder flanges,
+     bracing, one torn brace, leak runs.  still the darkest band in the frame.
+
 CRITIC'S CORRECTIONS APPLIED (see the brief):
   1. the real button box is x 395-565 / y 237-307, ~55px higher than the
      brief planned.  the painted dado moved OFF the buttons entirely, the
@@ -65,15 +94,18 @@ WARM = [C("10141f"), C("151d28"), C("341c27"), C("4d2b32"), C("602c2c"),
 # that is deliberate: the sunken car is all near-black, so it prints as a
 # hole in the mirror instead of as mush.
 REFLECT = {
+    C("151d28")[:3]: C("10141f"), C("202e37")[:3]: C("151d28"),
     C("394a50")[:3]: C("202e37"), C("577277")[:3]: C("394a50"),
     C("819796")[:3]: C("577277"), C("a8b5b2")[:3]: C("577277"),
     C("c7cfcc")[:3]: C("819796"), C("ebede9")[:3]: C("a8b5b2"),
+    C("341c27")[:3]: C("241527"), C("4d2b32")[:3]: C("341c27"),
     C("602c2c")[:3]: C("341c27"), C("884b2b")[:3]: C("602c2c"),
     C("be772b")[:3]: C("884b2b"), C("de9e41")[:3]: C("be772b"),
     C("e8c170")[:3]: C("be772b"), C("e7d5b3")[:3]: C("de9e41"),
-    C("ad7757")[:3]: C("884b2b"),
+    C("7a4841")[:3]: C("4d2b32"), C("ad7757")[:3]: C("884b2b"),
     C("a53030")[:3]: C("752438"), C("cf573c")[:3]: C("a53030"),
     C("3c5e8b")[:3]: C("253a5e"), C("25562e")[:3]: C("19332d"),
+    C("19332d")[:3]: C("19332d"),
 }
 
 
@@ -104,19 +136,68 @@ def paint() -> Canvas:
              + 0.008 * math.sin(y / 9.0 - x / 23.0))
         # THE TROUGH CLAMP: kills both sources across a wobbled box centred on
         # the real button rect, fading out over ~60px so it is never an edge
-        q = max(0.0, 1.0 - max(abs(x - 480) / 168.0,
-                               abs(y - 300 + 4.0 * math.sin(y / 23.0)) / 122.0))
+        q = trough(x, y)
         f = 1.0 - 0.85 * q
         return max(0.0, lm + w) * f, max(0.0, ll + w) * f
 
-    def wall_col(x: int, y: int, bias: float = 0.0, cold_only: bool = False):
-        lm, ll = levels(x, y)
-        if ll > lm and not cold_only:
-            return WARM[max(0, min(6, int(1.0 + ll * 5.6 + bias + 0.5)))]
-        return COLD[max(0, min(3, int(1.0 + lm * 2.4 + bias + 0.5)))]
+    def trough(x: int, y: int) -> float:
+        return max(0.0, 1.0 - max(abs(x - 480) / 168.0,
+                                  abs(y - 300 + 4.0 * math.sin(y / 23.0)) / 122.0))
 
     def wob(x: int, a1: float, p1: float, a2: float, p2: float, ph: float = 0.0):
         return a1 * math.sin(x / p1 + ph) + a2 * math.sin(x / p2 + ph * 1.7)
+
+    # ------------------------------------------------------- the panel field --
+    # CRITIC FIX 5: banded radial light on a smooth wall reads as concentric
+    # rings, and the wet streaks were never going to be enough on their own.
+    # the wall is PRECAST PANELS, so every panel gets its own small tone offset
+    # and the ring contours are chopped into a mosaic that reads as concrete
+    # instead of as a bullseye.  the offsets have to exist before the fill, so
+    # the joint and seam positions are rolled up here rather than at the draw.
+    joints = []
+    jx = -rng.randint(0, 40)
+    while jx < SCENE_W:
+        step = rng.randint(96, 140) if PANEL_L - 30 < jx < PANEL_R else rng.randint(44, 68)
+        jx += step
+        if 0 < jx < SCENE_W:
+            joints.append(jx)
+    seams = []
+    fy = WALL_TOP + rng.randint(18, 30)
+    while fy < WATER_Y - 6:
+        seams.append((fy, rng.uniform(0.0, 6.0)))
+        fy += rng.randint(62, 98)
+
+    col_of = [0] * (SCENE_W + 2)
+    ci = 0
+    for x in range(SCENE_W + 2):
+        while ci < len(joints) and x >= joints[ci]:
+            ci += 1
+        col_of[x] = ci
+    row_of = [0] * (SCENE_H + 2)
+    ri = 0
+    for y in range(SCENE_H + 2):
+        while ri < len(seams) and y >= seams[ri][0]:
+            ri += 1
+        row_of[y] = ri
+    # no two neighbouring panels share an offset, and no offset repeats twice
+    # running down a column — a mosaic with duplicates lines up into stripes.
+    STEPS = (-0.62, -0.36, -0.14, 0.0, 0.20, 0.44)
+    cells = []
+    for a in range(len(joints) + 2):
+        colv = []
+        for b in range(len(seams) + 2):
+            ban = {colv[-1] if colv else None,
+                   cells[a - 1][b] if a and b < len(cells[a - 1]) else None}
+            colv.append(rng.choice([s for s in STEPS if s not in ban]))
+        cells.append(colv)
+
+    def wall_col(x: int, y: int, bias: float = 0.0, cold_only: bool = False):
+        lm, ll = levels(x, y)
+        cb = cells[col_of[max(0, min(SCENE_W + 1, x))]][
+            row_of[max(0, min(SCENE_H + 1, y))]] * (1.0 - trough(x, y))
+        if ll > lm and not cold_only:
+            return WARM[max(0, min(6, int(1.0 + ll * 5.6 + bias + cb + 0.5)))]
+        return COLD[max(0, min(3, int(1.0 + lm * 2.4 + bias + cb * 0.55 + 0.5)))]
 
     # ----------------------------------------------------------- the wall ----
     # the panel is NOT drawn as an object.  a bracketed slab was tried and it
@@ -131,12 +212,7 @@ def paint() -> Canvas:
     # vertical panel joints: rolled 44-68px, but 96-140px inside the panel so
     # only two land behind the buttons, and drawn one step down there instead
     # of two.
-    jx = -rng.randint(0, 40)
-    while jx < SCENE_W:
-        step = rng.randint(96, 140) if PANEL_L - 30 < jx < PANEL_R else rng.randint(44, 68)
-        jx += step
-        if not (0 < jx < SCENE_W):
-            continue
+    for jx in joints:
         inside = PANEL_L < jx < PANEL_R
         top = WALL_TOP + rng.randint(4, 14)
         bot = WATER_Y - rng.randint(0, 40)
@@ -148,15 +224,12 @@ def paint() -> Canvas:
             c.set(wx, y, wall_col(wx, y, -0.9 if inside else -2.1, inside))
 
     # horizontal form-board seams, wavy, stopping dead at the panel joints
-    fy = WALL_TOP + rng.randint(18, 30)
-    while fy < WATER_Y - 6:
-        ph = rng.uniform(0.0, 6.0)
+    for (fy, ph) in seams:
         for x in range(SCENE_W):
             inp = PANEL_L <= x <= PANEL_R
             sy = fy + int(wob(x, 2.4, 47.0, 1.7, 113.0, ph))
             c.set(x, sy, wall_col(x, sy, -0.9 if inp else -1.7, inp))
             c.set(x, sy + 1, wall_col(x, sy + 1, 0.5 if inp else 0.6, inp))
-        fy += rng.randint(62, 98)
 
     # recessed form-tie marks, only in the lit right third where they read
     for i in range(6):
@@ -168,15 +241,18 @@ def paint() -> Canvas:
     # wet streaks running down off the deck line — solid runs, never dots.
     # the extra ones on the right are load-bearing: banded radial light on
     # smooth concrete reads as a bullseye until something keeps crossing it.
-    for i in range(28):
-        wx = rng.randrange(8, SCENE_W - 8) if i < 15 else rng.randrange(600, 950)
+    for i in range(34):
+        wx = rng.randrange(8, SCENE_W - 8) if i < 15 else rng.randrange(596, 952)
         if PANEL_L - 6 < wx < PANEL_R + 6 or 84 < wx < 300:
             continue
-        wy = WALL_TOP + rng.randint(2, 26)
-        ln = rng.randint(22, 96)
-        for y in range(wy, min(WATER_Y - 4, wy + ln)):
-            sx = wx + (1 if (y - wy) > ln * 0.7 else 0)
-            c.set(sx, y, wall_col(sx, y, -1.6))
+        wy = WALL_TOP + rng.randint(2, 62)
+        ln = rng.randint(22, 132)
+        wide = ln > 90                    # the long ones run WIDE.  a wall of
+        for y in range(wy, min(WATER_Y - 4, wy + ln)):     # 1px lines reads as
+            sx = wx + (1 if (y - wy) > ln * 0.7 else 0)    # scratches, which is
+            c.set(sx, y, wall_col(sx, y, -1.6))            # a note this file
+            if wide and (y - wy) > ln * 0.22:              # has taken before
+                c.set(sx + 1, y, wall_col(sx + 1, y, -0.9))
         c.set(wx, min(WATER_Y - 3, wy + ln), C("19332d"))
 
     # ---------------------------------------------------- the painted dado ---
@@ -257,33 +333,96 @@ def paint() -> Canvas:
     c.rect(918, 162, 923, 182, C("151d28"))          # its conduit stub
     c.vline(918, 162, 182, C("341c27"))
 
-    # the empty stretch between the portal and the trough gets a wall scupper
-    # and the salt stain running out of it — structure, not filler, and it is
-    # the only thing left of the buttons that carries any detail.
-    c.rect(316, 214, 344, 226, C("151d28"))
-    c.rect(318, 216, 342, 224, C("090a14"))
-    for k in range(4):
-        c.vline(321 + k * 6, 216, 224, C("202e37"))
-    c.hline(315, 345, 213, wall_col(330, 213, 1.5))
-    # a SOLID widening smear, not scattered patches: blob() wanders into thin
-    # trails at this scale and the first cut read as scratches on the wall.
-    for y in range(228, 352):
-        t = (y - 228) / 124.0
-        half = int(4 + 17 * t)
-        sc = 330 + int(2.5 * math.sin(y / 19.0) + 1.8 * math.sin(y / 41.0))
+    # ------------------------------------------------------ the downpipe -----
+    # CRITIC FIX 1 (user: "what is that thing to the right of the door?").  a
+    # louvred scupper with two black stains hanging off it read as nothing at
+    # all — a smudge.  it is now the deck's rainwater downpipe: a hopper head,
+    # a ROUND pipe (lit column, body, shade column, so it reads as a cylinder
+    # and not as a stripe), brackets at uneven heights, and a burst joint that
+    # explains the stain instead of the stain explaining itself.
+    # the light in this bay comes from the mouth on the LEFT, so the pipe's lit
+    # side is its left one and every bracket is lit along its top.
+    PX = 330
+    for y in range(108, 193):                        # the stack up to the deck.
+        p = PX + 6                                   # WITHOUT this the hopper
+        c.set(p - 3, y, C("090a14"))                 # read as a lamp shade on a
+        c.set(p - 2, y, C("394a50"))                 # post — a cone with
+        c.set(p - 1, y, C("202e37"))                 # nothing above it is a
+        c.set(p, y, C("151d28"))                     # light fitting, a cone fed
+        c.set(p + 1, y, C("10141f"))                 # from the deck is a drain
+        c.set(p + 2, y, C("090a14"))
+    for k in range(9):                               # the swan neck into it
+        c.hline(PX + 3 - k, PX + 8, 184 + k, C("151d28"))
+        c.set(PX + 3 - k, 184 + k, C("090a14"))
+        c.set(PX + 4 - k, 183 + k, C("394a50"))
+    c.rect(PX - 1, 190, PX + 8, 195, C("151d28"))
+    c.hline(PX - 1, PX + 8, 190, C("394a50"))
+    c.rect(PX + 1, 146, PX + 11, 148, C("151d28"))   # its one bracket up there
+    c.hline(PX + 1, PX + 11, 146, C("394a50"))
+    c.hline(PX + 1, PX + 11, 149, C("090a14"))
+    for y in range(196, 234):                        # the hopper head, tapered
+        t = max(0.0, (y - 200) / 33.0)
+        half = int(19 - 13 * t)
+        # a step DARKER than the wall behind it on purpose: at this end of the
+        # tunnel the wall is 202e37/394a50, and a hopper painted in those read
+        # as an outline with nothing inside it.
+        c.hline(PX - half, PX + half, y, C("151d28"))         # front, mid tone
+        c.hline(PX - half, PX - half + 2, y, C("394a50"))     # the lit cheek
+        c.hline(PX + half - 5, PX + half, y, C("10141f"))     # the shade cheek
+        c.set(PX - half - 1, y, C("090a14"))                  # hard silhouette
+        c.set(PX + half + 1, y, C("090a14"))
+    c.rect(PX - 22, 192, PX + 22, 195, C("151d28"))  # the rim, seen edge on
+    c.hline(PX - 22, PX + 22, 192, C("394a50"))
+    c.hline(PX - 22, PX + 22, 196, C("090a14"))
+    c.vline(PX - 23, 192, 196, C("090a14"))
+    c.vline(PX + 23, 192, 196, C("090a14"))
+    c.hline(PX - 16, PX + 16, 206, C("151d28"))      # the strap round the head
+    c.hline(PX - 16, PX + 16, 207, C("090a14"))
+    c.hline(PX - 15, PX + 15, 205, C("394a50"))
+    BREAK_T, BREAK_B = 268, 277                      # the burst joint
+
+    def pipe_col(y: int) -> int:                     # the lower half is shoved
+        return PX + (3 if y > BREAK_B else 0)        # sideways off its brackets
+
+    # the wet fan below the break, painted on the wall BEFORE the pipe so the
+    # pipe stands in front of its own stain.  SOLID and narrow — the old smear
+    # was a 40px black cloud that swallowed the whole bay.
+    for y in range(BREAK_B, 396):
+        t = (y - BREAK_B) / 119.0
+        half = int(3 + 11 * t)
+        sc = PX + 3 + int(2.0 * math.sin(y / 21.0) + 1.4 * math.sin(y / 47.0))
         for x in range(sc - half, sc + half + 1):
             e = abs(x - sc) / float(half)
-            if e < 0.56:
-                c.set(x, y, wall_col(x, y, -1.5))
-            elif e < 0.92:
-                c.set(x, y, wall_col(x, y, -0.7))
-    for k in range(3):
-        sx = 323 + k * 6
-        for y in range(227, 227 + rng.randint(70, 116)):
-            c.set(sx + (y - 227) // 34, y, wall_col(sx, y, -2.2))
-    for y in range(330, 352):                        # algae where it pools
-        sc = 330 + int(2.5 * math.sin(y / 19.0))
-        c.hline(sc - 8 - (y - 330) // 3, sc + 7 + (y - 330) // 4, y, C("19332d"))
+            c.set(x, y, wall_col(x, y, -1.4 if e < 0.5 else -0.7))
+    for y in range(372, 398):                        # algae where it lands
+        sc = PX + 3 + int(2.0 * math.sin(y / 21.0))
+        c.hline(sc - 7 - (y - 372) // 3, sc + 6 + (y - 372) // 4, y, C("19332d"))
+
+    for y in range(230, 398):
+        if BREAK_T <= y <= BREAK_B:
+            continue
+        p = pipe_col(y)
+        c.set(p - 3, y, C("090a14"))
+        c.set(p - 2, y, C("394a50"))
+        c.set(p - 1, y, C("202e37"))
+        c.set(p, y, C("151d28"))
+        c.set(p + 1, y, C("10141f"))
+        c.set(p + 2, y, C("090a14"))
+    for (by, bw) in ((243, 6), (296, 5), (349, 6), (385, 5)):   # uneven brackets
+        p = pipe_col(by)
+        c.rect(p - 3 - bw, by, p + 2 + bw, by + 2, C("151d28"))
+        c.hline(p - 3 - bw, p + 2 + bw, by, C("394a50"))
+        c.hline(p - 3 - bw, p + 2 + bw, by + 3, C("090a14"))
+    for cy_ in (315, 366):                           # socket collars
+        p = pipe_col(cy_)
+        c.rect(p - 4, cy_, p + 3, cy_ + 5, C("202e37"))
+        c.hline(p - 4, p + 3, cy_, C("394a50"))
+        c.vline(p + 3, cy_, cy_ + 5, C("090a14"))
+        c.hline(p - 4, p + 3, cy_ + 5, C("090a14"))
+    c.hline(PX - 3, PX + 2, BREAK_T, C("090a14"))    # the torn ends
+    c.set(PX - 2, BREAK_T - 1, C("394a50"))
+    c.hline(PX, PX + 5, BREAK_B, C("090a14"))
+    c.set(PX + 1, BREAK_B + 1, C("394a50"))
 
     dx0, dx1 = 826, 898                              # bricked-up service door
     c.rect(dx0, 232, dx1, 386, C("341c27"))
@@ -323,6 +462,21 @@ def paint() -> Canvas:
         for y in range(0, db + 1):
             c.set(x, y, C("090a14"))
         c.set(x, db, C("10141f"))
+    # CRITIC FIX 7: the top 108px was a flat black bar.  it is the SOFFIT of a
+    # rail deck, so it gets the structure a soffit has — three main girder
+    # flanges running the length of the frame, the cross-bracing hanging off
+    # them, and the leaks staining down between.  every value in here is
+    # 090a14/10141f with one 151d28 lip where the tube reaches: the band stays
+    # the darkest in the picture, it just stops being empty.
+    for (gy, amp, ph, lip) in ((21, 2.2, 0.4, False), (50, 1.8, 2.9, True),
+                               (77, 2.6, 5.1, True)):
+        for x in range(SCENE_W):
+            yy = gy + int(wob(x, amp, 61.0, amp * 0.7, 137.0, ph))
+            c.rect(x, yy - 6, x, yy, C("090a14"))          # the web, in shade
+            c.set(x, yy, C("10141f"))                      # lit lower flange
+            if lip and x > 552:
+                c.set(x, yy, C("151d28"))
+                c.set(x, yy - 1, C("10141f"))
     gpos = [34, 118, 212, 306, 640, 748, 856, 942]
     for g in gpos:
         g += rng.randint(-9, 9)
@@ -336,6 +490,28 @@ def paint() -> Canvas:
             c.hline(g + 1, g + w - 1, depth - 1, C("202e37"))
         else:
             c.hline(g, g + w, depth, C("10141f"))
+    # one bay's brace has torn loose and hangs at an angle — the odd member is
+    # what stops the bracing reading as a repeated pattern.
+    for k in range(58):
+        c.set(760 + k, 24 + int(k * 0.86), C("10141f"))
+        c.set(760 + k, 25 + int(k * 0.86), C("090a14"))
+    c.rect(816, 72, 820, 80, C("10141f"))
+    # leaks bleeding down off the girder flanges.  the first cut made these
+    # smooth widening cones and they read as stalactites — they are RUNS, so
+    # each one is a cluster of narrow streaks of unequal length with a wobbled
+    # edge, and the wet patch spreads sideways only where it starts.
+    for (lx, ly, ln, wd) in ((146, 22, 40, 4), (398, 51, 27, 3), (452, 23, 55, 5),
+                             (600, 78, 18, 3), (688, 50, 34, 5), (884, 21, 46, 4)):
+        for k in range(9):                                 # the wet patch, solid
+            c.hline(lx - wd - 1 + k // 3, lx + wd + 1 - k // 3, ly + k, C("10141f"))
+        for s in range(rng.randint(3, 5)):
+            sx = lx + rng.randint(-wd, wd)
+            sl = rng.randint(ln // 3, ln)
+            for k in range(sl):
+                xx = sx + int(1.6 * math.sin((ly + k) / 23.0 + s))
+                c.set(xx, ly + k, C("10141f"))
+                if k < sl // 2:
+                    c.set(xx + 1, ly + k, C("10141f"))
     # the near portal beam, full width, only the lamp can catch its underside
     for x in range(SCENE_W):
         bb = 107 + int(wob(x, 2.0, 41.0, 1.5, 97.0, 0.7))
@@ -419,38 +595,107 @@ def paint() -> Canvas:
     c.set(243, 228, C("19332d"))
     c.hline(239, 248, 213, C("202e37"))
 
-    # the flooded road running out — the mouth's only perspective cue, and the
-    # brightest large area in the frame: the three top cold values live here
-    # and NOWHERE else, which is what stops this reading as a second drain.
-    for y in range(262, WATER_Y):
-        c.hline(OX0, OX1, y, C("577277"))
-    t = 0
-    y = WATER_Y - 1
-    while y > 264:
-        depth = (y - 262) / 144.0
-        run = max(2, int(2 + 7 * depth))
-        for k in range(run):
-            yy = y - k
-            half = int(2 + 26 * ((yy - 262) / 144.0))
-            cl = 198 + int((yy - 262) * 0.13)
-            c.hline(max(OX0, cl - 1), min(OX1, cl + 1), yy, C("a8b5b2"))
-            c.hline(max(OX0, cl - half - rng.randint(2, 9)),
-                    max(OX0, cl - half), yy, C("819796"))
-            c.hline(min(OX1, cl + half), min(OX1, cl + half + rng.randint(2, 9)),
-                    yy, C("819796"))
-        y -= run + max(2, int(2 + 6 * depth))
-    for i in range(34):                                        # broken pale water
-        wy = rng.randrange(266, WATER_Y)
-        wx = rng.randrange(OX0, OX1 - 4)
-        c.hline(wx, wx + rng.randint(3, 14), wy, C("819796"))
-    for i in range(30):
-        wy = rng.randrange(266, WATER_Y)
-        wx = rng.randrange(OX0, OX1 - 3)
-        c.hline(wx, wx + rng.randint(3, 12), wy, C("394a50"))
-    for i in range(12):
-        wy = rng.randrange(280, WATER_Y)
-        wx = rng.randrange(OX0, OX1 - 3)
-        c.hline(wx, wx + rng.randint(2, 8), wy, C("202e37"))
+    # ---- the flood running out of the mouth: A MIRROR, not a hem ------------
+    # CRITIC FIX 2 (user: "the water just looks flat at the doorway, like it
+    # doesn't look right").  it was a flat 577277 slab with a column of white
+    # dashes down the middle and it read as a stitched seam in a sheet of
+    # paper.  it is rebuilt as an actual reflecting plane:
+    #   * the FAR WATERLINE is y=262, where the fence stands in the flood.  a
+    #     flat mirror reflects about that line 1:1 IN SCREEN SPACE, so the
+    #     sample is sy = 2*262 - y and every reflected thing lands in the SAME
+    #     COLUMN as the real one.  that is the whole trick — the eye checks the
+    #     columns, and the old version had nothing under anything.
+    #   * the surface tone steps DARKER as it comes forward, on wavy seams.
+    #   * the ripple dashes are short and tightly packed at the far end and get
+    #     longer, sparser, more broken and more sideways-displaced toward the
+    #     viewer.  that, not a vanishing point, is what makes water recede.
+    #   * the three top cold values live in here and NOWHERE else, which is
+    #     what stops this reading as a second drain.
+    MIRROR = 262
+    SURF = ((288, C("819796")), (320, C("577277")), (358, C("394a50")),
+            (386, C("202e37")), (999, C("151d28")))
+    for y in range(MIRROR, WATER_Y):
+        for x in range(OX0, OX1 + 1):
+            b = y + int(wob(x, 3.0, 41.0, 2.1, 103.0, y * 0.017))
+            for (lim, col) in SURF:
+                if b < lim:
+                    c.set(x, y, col)
+                    break
+    # the submerged kerbs, converging — a depth cue that is NOT a centreline
+    for side in (-1, 1):
+        for y in range(266, 348):
+            d = (y - MIRROR) / 144.0
+            kx = 204 + side * int(9 + 62 * d)
+            if OX0 < kx < OX1 and (y // (2 + int(4 * d))) % 2 == 0:
+                c.set(kx, y, C("577277") if y < 300 else C("394a50"))
+                c.set(kx + side, y, C("394a50") if y < 300 else C("202e37"))
+    # what the flood gives back through the mouth.  TWO things are deliberate
+    # here and the render forced both:
+    #   * each dash samples the source ONCE, at its own midpoint, and is then
+    #     filled solid.  a per-pixel sample reproduced the fence's 5px picket
+    #     comb and the far water came out as static — the exact dot noise the
+    #     rules ban.  water throws away fine detail; broad strokes are the
+    #     truthful answer as well as the legible one.
+    #   * a HAZE FLOOR: at the far end nothing may reflect darker than three
+    #     steps up the ramp, and the floor drops as the surface comes forward.
+    #     without it the compressed fence printed as black bars on pale water
+    #     and the far end had more contrast than the near end, which is
+    #     backwards.
+    RAMP = ("090a14", "10141f", "151d28", "202e37", "394a50",
+            "577277", "819796", "a8b5b2", "c7cfcc")
+    RIDX = {C(n)[:3]: i for i, n in enumerate(RAMP)}
+    # each ripple facet is a STROKE, and the strokes grow as the surface comes
+    # forward: one pixel tall and tightly stacked at the far end, up to four
+    # tall and widely broken at the near.  that, and only that, is what makes a
+    # flat plane read as receding — a single stroke size at every depth is the
+    # flat slab this started as.
+    y = MIRROR + 1
+    while y < WATER_Y:
+        d = (y - MIRROR) / float(WATER_Y - MIRROR)
+        th = 1 + int(3.2 * d)
+        sy = 2 * MIRROR - y
+        if sy < HEAD:          # past the portal head there is only black deck
+            y += th
+            continue
+        surv = 0.96 - 0.44 * d
+        floor = max(1, 3 - int(d * 2.4))
+        x = OX0 + rng.randrange(0, 4 + int(12 * d))
+        while x <= OX1:
+            dl = rng.randint(9 + int(9 * d), 24 + int(30 * d))
+            if rng.random() < surv:
+                jit = int(2.5 * d * math.sin(y * 0.83)
+                          + 2.0 * d * math.sin(x * 0.29 + y * 0.11))
+                i = RIDX.get(c.get(min(OX1, x + dl // 2) + jit, sy)[:3])
+                if i is not None:
+                    # capped at 819796: the sky's own top value reflecting
+                    # 1:1 put a near-white slab in the near water that was the
+                    # brightest thing in the frame.  water is never brighter
+                    # than the sky it is copying.
+                    col = C(RAMP[min(6, max(floor, i - 1))])
+                    for xx in range(x, min(OX1 + 1, x + dl)):
+                        for k in range(th):
+                            c.set(xx, y + k, col)
+            x += dl + rng.randint(1 + int(4 * d), 4 + int(20 * d))
+        y += th
+    # calm slicks: solid unbroken runs that cut across the ripple, longest and
+    # nearest the viewer.  without them the near water is all texture, no form.
+    for i in range(16):
+        sy_ = rng.randrange(300, WATER_Y - 2)
+        d = (sy_ - MIRROR) / 144.0
+        sx_ = rng.randrange(OX0, OX1 - 6)
+        ln = rng.randint(8 + int(20 * d), 18 + int(52 * d))
+        col = C("577277") if d < 0.55 else C("394a50")
+        und = C("394a50") if d < 0.55 else C("202e37")
+        for xx in range(sx_, min(OX1 + 1, sx_ + ln)):
+            yy = sy_ + int(1.4 * math.sin(xx / 19.0 + i))
+            c.set(xx, yy, col)
+            for k in range(1, 1 + int(1 + 2 * d)):
+                c.set(xx, yy + k, und)
+    # the waterline itself, broken, where the fence stands in it
+    for x in range(OX0, OX1 + 1):
+        if (x * 5 + 2) % 13 > 4:
+            c.set(x, MIRROR, C("a8b5b2"))
+            c.set(x, MIRROR + 1, C("819796"))
 
     # ---------------------------------------------------- the sunken car -----
     # three-quarter rear view, nose away toward the mouth, sills at the
@@ -616,50 +861,78 @@ def paint() -> Canvas:
             c.set(bx0 + int(k * k * cur * 0.09), 382 - k, C("602c2c"))
             c.set(bx0 + 1 + int(k * k * cur * 0.09), 382 - k, C("341c27"))
 
-    # sandbags: three slumped courses.  BULGED, chamfered and half-lapped —
-    # the first bake stacked squared-off blocks in even courses and the whole
-    # pile read as sawn timber.
-    bag_rows = ((389, 0, 794), (376, 11, 780), (364, 24, 758))
-    for (row_y, shift, stop) in bag_rows:                      # a heap that
-        bx = 698 + shift + rng.randint(-3, 3)                  # tapers, not a
-        while bx < stop:                                       # tidy three-high
-                                                               # wall
-            bw = rng.randint(18, 30)
-            bh = rng.randint(11, 15)
-            lean = rng.choice((-1, 0, 0, 1))
-            drop = rng.randint(-2, 2)
-            burst = rng.random() < 0.34
-            body = C("7a4841") if rng.random() < 0.5 else C("4d2b32")
-            reg = set()
-            for k in range(bh):                                # a LOZENGE, not
-                u = k / float(bh - 1)                          # a block: the
-                inset = 0                                      # squared-off
-                if u < 0.22:                                   # first cut read
-                    inset = 3 - int(u * 13.6)                  # as sawn timber
-                elif u > 0.80:
-                    inset = int((u - 0.80) * 19.0)
-                sx = bx + inset + int(k * 0.22) * lean
-                y = row_y + drop - k
-                c.rect(sx, y, bx + bw - inset + int(k * 0.22) * lean, y, body)
-                for a in range(sx, bx + bw - inset + 1):
-                    reg.add((a, y))
-            top = row_y + drop - bh + 1
-            c.hline(bx + 4, bx + bw - 4, top, C("ad7757"))     # amber on the top
-            c.hline(bx + 3, bx + bw - 3, top + 1, C("884b2b"))
-            c.hline(bx + 2, bx + bw - 2, row_y + drop, C("341c27"))
-            for k in range(4):                                 # slack, and a tie
-                c.set(bx + 5 + k * 5, top + 4 + k, C("341c27"))
-            c.vline(bx + 1, top + 3, top + 7, C("341c27"))
-            c.vline(bx + bw - 1, top + 4, top + 9, C("341c27"))
-            if burst:
-                for (qx, qy) in blob(rng, bx + rng.randint(5, max(6, bw - 5)),
-                                     row_y + drop - rng.randint(3, bh - 3),
-                                     rng.randint(10, 22), reg):
-                    c.set(qx, qy, C("25562e"))
-                for k in range(rng.randint(6, 14)):            # spilled sand
-                    c.hline(bx + 3 + k, bx + 6 + k, row_y + drop + 1 + k // 4,
-                            C("341c27"))
-            bx += bw + rng.randint(-3, 1)
+    # sandbags: a heap three courses deep at the wall end, tapering to one.
+    # CRITIC FIX 6: the first bake gave every bag the same rounded capsule and
+    # a bright 2px rim along its top, and the pile read as a rack of loaves.
+    # a bag is now built from a THICKNESS PROFILE pinched at both ends and fat
+    # OFF-CENTRE, it carries a real top face (about a third of its height, lit)
+    # split from the front face by a wavy edge, and the tied end sticks out as
+    # an ear.  those are the three things bread does not have.
+    def sandbag(bx, by, bw, bh, lean, ear_r, body, top, dark, phase):
+        prof = []
+        for i in range(bw):
+            t = i / float(bw - 1)
+            s = math.sin(math.pi * min(1.0, max(0.0, (t - 0.05) / 0.90))) ** 0.42
+            fat = 1.0 - 0.20 * (t if ear_r else 1.0 - t)       # fat off-centre
+            th = max(2, int(bh * (0.26 + 0.74 * s) * fat))
+            base = (by + int(lean * (t - 0.5) * bw * 0.11)
+                    + int(1.2 * math.sin(t * 5.0 + phase)))
+            prof.append((base, th))
+        for i, (base, th) in enumerate(prof):
+            x = bx + i
+            dep = max(1, int(th * 0.34 + 0.9 * math.sin(i / 3.7 + phase)))
+            c.rect(x, base - th, x, base, body)                # front, in shade
+            c.rect(x, base - th, x, base - th + dep, top)      # the top face
+            c.set(x, base, dark)                               # where it sits
+            if i < 2 or i > bw - 3:                            # the tied ends
+                c.rect(x, base - th, x, base, dark)            # sit in shade,
+                                                               # which is what
+                                                               # separates one
+                                                               # bag from the
+                                                               # next in a heap
+        ex = bx + bw - 1 if ear_r else bx                      # the tied ear
+        eb, eth = prof[-1 if ear_r else 0]
+        for k in range(4):
+            xx = ex + (k + 1) * (1 if ear_r else -1)
+            c.vline(xx, eb - eth // 2 - 2 + k // 2, eb - 1 - k // 3, dark)
+        c.set(ex + (1 if ear_r else -1), eb - eth // 2 - 2, top)
+        for i in range(2, bw - 2):                             # the fabric fold
+            base, th = prof[i]                                 # — ONE solid
+            if th > 4:                                         # seam, never
+                c.set(bx + i, base - int(th * 0.34)            # stitch dots
+                      + int(1.4 * math.sin(i / 6.0 + phase)), dark)
+
+    MATS = ((C("4d2b32"), C("7a4841"), C("341c27")),
+            (C("7a4841"), C("ad7757"), C("4d2b32")),
+            (C("341c27"), C("602c2c"), C("241527")))
+    bag_rows = ((391, 0, 802, 1.00), (379, 8, 788, 0.88), (367, 22, 764, 0.52))
+    for (row_y, shift, stop, dens) in bag_rows:
+        bx = 698 + shift + rng.randint(-5, 2)
+        ear = rng.random() < 0.5
+        while bx < stop:
+            bw = rng.randint(15, 35)
+            bh = rng.randint(8, 15)
+            if rng.random() < dens:
+                # under the tube the sacking bleaches out; away from it the
+                # same cloth goes to the darkest of the three materials
+                near = abs(bx + bw // 2 - 706) < 52
+                mi = rng.choice((1, 1, 0) if near else (0, 2, 0, 1))
+                body, top, dark = MATS[mi]
+                sandbag(bx, row_y + rng.randint(-2, 3), bw, bh,
+                        rng.choice((-1, 0, 0, 1)), ear, body, top, dark,
+                        rng.uniform(0.0, 6.3))
+                if rng.random() < 0.28:                        # burst, spilling
+                    sx = bx + rng.randint(4, max(5, bw - 8))
+                    for k in range(rng.randint(5, 11)):
+                        c.hline(sx - k // 2, sx + 4 + k, row_y + 1 + k // 3,
+                                C("ad7757") if k < 4 else C("884b2b"))
+                if rng.random() < 0.22:                        # weed in a split
+                    c.hline(bx + bw // 2 - 3, bx + bw // 2 + 2,
+                            row_y - bh // 2, C("25562e"))
+            ear = not ear
+            bx += bw + rng.randint(-4, 2)      # they LEAN ON each other; a gap
+                                               # between every bag read as a
+                                               # scatter of rocks, not a bund
 
     # the handrail: rolled post spacing, one post bent, one span gone
     # steel against a sodium wall: a black body with an amber rim on the lamp
@@ -739,51 +1012,161 @@ def paint() -> Canvas:
             return WATER_Y + int(wob(x, 1.6, 31.0, 1.1, 67.0, 3.1))
         return int(wk_wl(x)) + 1
 
+    # CRITIC FIX 4: the flood was a flat 090a14 slab, and a mirror that dark
+    # gives nothing back — its reflections were technically present and
+    # visually absent.  the surface now carries the room's own light, sampled
+    # at the point being MIRRORED (which is where the trough clamp lives, so
+    # the middle stays near-black under the buttons without a second rule).
+    WCOLD = (C("090a14"), C("10141f"), C("151d28"), C("202e37"), C("394a50"))
+    WWARM = (C("090a14"), C("10141f"), C("341c27"), C("4d2b32"), C("602c2c"))
     for y in range(WATER_Y - 4, SCENE_H):
+        u = max(0.0, (y - WATER_Y) / float(SCENE_H - WATER_Y))
+        att = 1.0 - 0.34 * u
+        syl = max(126, int(WATER_Y - (y - WATER_Y) * 1.25))
+        rip = 1.0 + 0.11 * math.sin(y / 13.0) + 0.07 * math.sin(y / 5.0)
         for x in range(SCENE_W):
-            if y >= water_top(x):
-                c.set(x, y, C("090a14"))
-    # surface chop everywhere, so the middle of the flood is never dead black.
-    # solid dashes on wavy lines, thinning downward — never dots.
-    for i in range(120):
+            if y < water_top(x):
+                continue
+            lm, _ = levels(x, syl)
+            # the tube's own pool ON THE FLOOD is its own term: levels() puts
+            # the tube 250px up, so its wall falloff never reaches the water.
+            wl = 0.0
+            if x > 566:
+                wl = max(0.0, 1.0 - rip * ((((x - 716) / 268.0) ** 2
+                                            + ((y - 414) / 116.0) ** 2) ** 0.5)) ** 1.4
+            if wl * 4.6 > lm * 3.6:
+                c.set(x, y, WWARM[max(0, min(4, int(wl * 4.6 * att + 0.4)))])
+            else:
+                c.set(x, y, WCOLD[max(0, min(4, int(lm * 3.6 * att + 0.4)))])
+
+    # surface chop everywhere, so no part of the flood is dead flat.  solid
+    # dashes on wavy lines, thinning downward — never dots.
+    LIFT = {C("090a14")[:3]: C("10141f"), C("10141f")[:3]: C("151d28"),
+            C("151d28")[:3]: C("202e37"), C("202e37")[:3]: C("394a50"),
+            C("394a50")[:3]: C("577277"), C("341c27")[:3]: C("4d2b32"),
+            C("4d2b32")[:3]: C("602c2c"), C("602c2c")[:3]: C("884b2b")}
+    DROP = {v[:3]: C(k) for k, v in
+            (("090a14", C("10141f")), ("10141f", C("151d28")),
+             ("151d28", C("202e37")), ("202e37", C("394a50")),
+             ("10141f", C("341c27")), ("341c27", C("4d2b32")),
+             ("4d2b32", C("602c2c")))}
+    for i in range(150):
         dy = rng.randrange(WATER_Y + 3, SCENE_H)
         u = (dy - WATER_Y) / float(SCENE_H - WATER_Y)
         dx = rng.randrange(0, SCENE_W - 40)
-        ln = rng.randint(16, 150)
-        tone = C("10141f") if rng.random() < 0.62 else C("151d28")
+        ln = rng.randint(16, 160)
+        up = rng.random() < 0.45
+        th = 1 + int(2.6 * u)
         x = dx
         while x < min(SCENE_W, dx + ln):
-            run = rng.randint(4, 13)
-            if rng.random() > 0.30 + u * 0.30:
+            run = rng.randint(5, 15 + int(20 * u))
+            if rng.random() > 0.26 + u * 0.26:
                 for xx in range(x, min(SCENE_W, x + run)):
                     yy = dy + int(wob(xx, 1.5, 57.0, 1.1, 131.0, i * 0.9))
-                    if yy >= water_top(xx):
-                        c.set(xx, yy, tone)
-            x += run + rng.randint(3, 12)
+                    for k in range(th):
+                        if yy + k >= water_top(xx):
+                            src = c.get(xx, yy + k)[:3]
+                            col = (LIFT if up else DROP).get(src)
+                            if col is not None:
+                                c.set(xx, yy + k, col)
+            x += run + rng.randint(3, 14)
 
-    # CRITIC FIX 3: the reflection samples with a factor ABOVE 1.0, so the
-    # sky slot, the warm wall and the tube itself all land inside the flood.
-    # every mark in here is a 4-14px SOLID dash — no dots, no dither.
-    for y in range(WATER_Y, SCENE_H):
+    # the flood is a TRUE 1:1 MIRROR about its own near shore (y = 406): the
+    # wall foot, the car, the walkway and the bags all land in their own
+    # columns.  the facets grow and break up as they come forward, the same
+    # rule the water in the mouth uses, so the two surfaces agree.
+    y = WATER_Y + 1
+    while y < SCENE_H:
         u = (y - WATER_Y) / float(SCENE_H - WATER_Y)
-        surv = 0.85 + u * (0.18 - 0.85)
-        sy = int(404 - (y - WATER_Y) * 2.1)
-        wx = int(3 * math.sin(y * 0.7) + 2 * math.sin(y * 0.23))
-        x = rng.randrange(0, 26)
+        th = 1 + int(3.4 * u)
+        sy = 2 * WATER_Y - y
+        surv = 0.80 - 0.50 * u
+        x = rng.randrange(0, 30)
         while x < SCENE_W:
-            dl = rng.randint(4, 14)
+            dl = rng.randint(7 + int(9 * u), 20 + int(34 * u))
             if rng.random() < surv:
-                for xx in range(x, min(SCENE_W, x + dl)):
-                    if y < water_top(xx):
-                        continue
-                    col = REFLECT.get(c.get(xx + wx, sy)[:3])
-                    if col is not None:
-                        c.set(xx, y, col)
-            x += dl + rng.randint(6, 24)
+                wx = int(3.0 * math.sin(y * 0.61) + 2.5 * math.sin(x * 0.21 + y * 0.09))
+                col = REFLECT.get(c.get(min(SCENE_W - 1, x + dl // 2) + wx, sy)[:3])
+                if col is not None:
+                    for xx in range(x, min(SCENE_W, x + dl)):
+                        for k in range(th):
+                            if y + k >= water_top(xx):
+                                c.set(xx, y + k, col)
+            x += dl + rng.randint(4, 12 + int(26 * u))
+        y += th
+
+    # the tube and the mouth are far too high for that mirror to reach — a 1:1
+    # reflection would put them well off the bottom of the frame.  what water
+    # actually does with a high light is throw a SPECULAR COLUMN straight down
+    # beneath it, in its own columns, widening and breaking as it comes on.
+    # that is these, and it is why the flood finally has the lamp in it.
+    for (gc, ghw, ramp) in (
+            (702, 68, ("e8c170", "de9e41", "be772b", "884b2b", "602c2c", "341c27")),
+            (204, 62, ("a8b5b2", "819796", "577277", "394a50", "202e37", "151d28"))):
+        y = WATER_Y + 1
+        while y < SCENE_H:
+            u = (y - WATER_Y) / float(SCENE_H - WATER_Y)
+            th = 1 + int(3.0 * u)
+            hw = int(ghw * (0.85 + 0.85 * u))
+            x = gc - hw + rng.randrange(0, 12)
+            while x < gc + hw:
+                dl = rng.randint(4 + int(7 * u), 13 + int(26 * u))
+                e = abs(x + dl * 0.5 - gc) / float(hw)
+                idx = min(5, int(u * 3.4 + e * 2.6 + rng.random() * 1.2))
+                if rng.random() < (0.86 - 0.46 * u) * (1.0 - 0.55 * e * e):
+                    col = C(ramp[idx])
+                    for xx in range(max(0, x), min(SCENE_W, x + dl)):
+                        for k in range(th):
+                            if y + k >= water_top(xx):
+                                c.set(xx, y + k, col)
+                x += dl + rng.randint(3, 10 + int(20 * u))
+            y += th
 
     # ------------------------------------------------- foreground debris -----
     # all rooted off the bottom edge, each a solid silhouette with exactly one
     # lit face, no two the same shape, size or lean.
+    # CRITIC FIX 3 (user: "there's a couple things on top of the water that
+    # shouldn't be there ... either make them look like they're floating for
+    # that flooded feel, or just remove it").  the crate and the drum were
+    # drawn whole and sat on the flood as if it were a floor.  everything that
+    # floats now goes through here, because floating is FOUR things and they
+    # had none of them:
+    #   1. the WATERLINE CUTS the object — everything under it is not drawn,
+    #      and the cut is dead level while the object itself leans.
+    #   2. a disturbance ring pushed into the surface where it breaks through.
+    #   3. a broken reflection directly beneath, in the object's own columns.
+    #   4. a lean, and NOT the same lean on any two of them.
+    def float_wake(x0, x1, wl, warm, depth=24):
+        hi = C("884b2b") if warm else C("394a50")
+        lo = C("602c2c") if warm else C("202e37")
+        x = x0 - 10                       # the ring is broken into RUNS: an
+        while x < x1 + 11:                # every-nth-pixel break read as a
+            run = rng.randint(3, 10)      # dotted line, which is dot noise
+            if rng.random() < 0.66:
+                for xx in range(x, min(x1 + 11, x + run)):
+                    t = (xx - (x0 - 10)) / float(x1 - x0 + 20)
+                    yy = wl + int(2.6 * math.sin(t * math.pi)
+                                  + 0.9 * math.sin(t * 9.0))
+                    c.set(xx, yy, hi)
+                    c.set(xx, yy + 1, lo)
+            x += run + rng.randint(1, 7)
+        y = wl + 2
+        while y < wl + depth:
+            k = y - wl
+            x = x0 - 6 + rng.randrange(0, 7)
+            while x < x1 + 6:
+                dl = rng.randint(4, 10 + k)
+                if rng.random() < 0.92 - k * 0.030:
+                    col = REFLECT.get(c.get(min(x + dl // 2, SCENE_W - 1),
+                                            2 * wl - y)[:3])
+                    if col is not None:
+                        for xx in range(x, min(SCENE_W, x + dl)):
+                            c.set(xx, y, col)
+                            if k > 9:
+                                c.set(xx, y + 1, col)
+                x += dl + rng.randint(3, 8 + k)
+            y += 1 + k // 7
+
     # the tyre sits against the mouth's reflection on purpose: a black shape
     # in the one pale part of the flood is the cheapest depth cue in the frame
     TX, TY = 268, 492
@@ -803,17 +1186,21 @@ def paint() -> Canvas:
         a = math.radians(206 + k * 13)
         c.set(TX + int(math.cos(a) * 33), TY + int(math.sin(a) * 26), C("10141f"))
 
-    for k in range(6):                                          # floating pallet
-        sy = 502 + k * 5
-        sx = 398 + k * 4
-        w = rng.randint(56, 72)
+    # the drifting pallet.  its slats used to sit at a dead 5px pitch and it
+    # read as a ladder — even spacing on a repeated shape is the one thing the
+    # standing rule names outright.  the pitch is unequal now, one slat is
+    # missing and one is snapped in two, and it takes a wake like the rest.
+    for (dy, dx, w) in ((0, 0, 68), (6, 3, 63), (14, 8, 71), (19, 13, 25),
+                        (18, 46, 22), (28, 17, 59)):
+        sy, sx = 500 + dy, 396 + dx
         c.rect(sx, sy, sx + w, sy + 2, C("090a14"))
         c.hline(sx, sx + w, sy, C("202e37"))
         c.hline(sx, sx + w, sy + 1, C("151d28"))
-    c.rect(400, 500, 404, 532, C("090a14"))
-    c.rect(458, 504, 462, 534, C("090a14"))
-    c.vline(400, 500, 532, C("151d28"))
-    c.vline(458, 504, 534, C("151d28"))
+    c.rect(399, 499, 403, 529, C("090a14"))                     # the two bearers
+    c.rect(456, 505, 460, 533, C("090a14"))
+    c.vline(399, 499, 529, C("151d28"))
+    c.vline(456, 505, 533, C("151d28"))
+    float_wake(398, 470, 535, False, 8)
 
     for k in range(200):                                        # a drowned cable
         u = k / 199.0
@@ -823,14 +1210,26 @@ def paint() -> Canvas:
             c.set(cx_, cy_, C("151d28"))
             c.set(cx_, cy_ + 1, C("090a14"))
 
-    cx0, cy0 = 738, 480                                         # plastic crate
-    c.rect(cx0, cy0, cx0 + 44, cy0 + 30, C("602c2c"))
-    c.rect(cx0 + 3, cy0 + 4, cx0 + 41, cy0 + 27, C("341c27"))
-    for k in range(4):
-        c.vline(cx0 + 9 + k * 9, cy0 + 5, cy0 + 26, C("602c2c"))
-    c.hline(cx0 - 3, cx0 + 47, cy0 - 3, C("884b2b"))            # lit top, amber
-    c.rect(cx0 - 3, cy0 - 2, cx0 + 47, cy0 - 1, C("602c2c"))
-    c.hline(cx0 - 3, cx0 + 47, cy0, C("341c27"))
+    CX, CWL = 736, 497                              # plastic crate, listing right
+    for i in range(45):
+        x = CX + i
+        sh = int(i * 0.13)                          # the list, baked as a shear
+        top = 470 - sh
+        wl = CWL + int(1.2 * math.sin(i / 7.0))     # but the CUT stays level
+        c.rect(x, top + 5, x, wl, C("602c2c"))      # the side the tube lights
+        c.rect(x, top, x, top + 2, C("884b2b"))     # the top rail
+        c.set(x, top + 3, C("4d2b32"))
+        if 4 < i < 40:                              # you can see down into it
+            c.rect(x, top + 4, x, top + 9, C("341c27"))
+            c.set(x, top + 4, C("241527"))
+    for k in range(4):                              # the moulded ribs, uneven
+        i = 7 + k * 9 + (k % 2) * 2
+        x, sh = CX + i, int(i * 0.13)
+        c.vline(x, 470 - sh + 11, CWL - 1, C("341c27"))
+        c.vline(x + 1, 470 - sh + 11, CWL - 1, C("884b2b"))
+    c.vline(CX, 470, CWL, C("341c27"))              # corner posts
+    c.vline(CX + 44, 470 - 5, CWL, C("884b2b"))
+    float_wake(CX, CX + 44, CWL, True)
 
     for k in range(74):                                         # drifting plank
         px = 566 + k
@@ -839,24 +1238,24 @@ def paint() -> Canvas:
         c.set(px, py, C("202e37"))
     c.vline(640, 534, 540, C("090a14"))
 
-    ox0, oy0 = 862, 496                                         # oil drum, leaning
-    for k in range(40):
-        lean = k // 13
-        half = 21 - abs(k - 26) // 7
-        c.hline(ox0 - half + lean, ox0 + half + lean, oy0 + k, C("341c27"))
-        c.hline(ox0 + half - 5 + lean, ox0 + half + lean, oy0 + k, C("4d2b32"))
-        c.set(ox0 - half + lean, oy0 + k, C("241527"))
-        c.set(ox0 + half + lean, oy0 + k, C("602c2c"))
-    for k in range(-20, 21):                                    # the open top
-        dy = int((1.0 - (k / 20.0) ** 2) ** 0.5 * 6)
-        c.vline(ox0 + k, oy0 - dy, oy0 + dy, C("341c27"))
-        c.set(ox0 + k, oy0 - dy, C("884b2b"))
-        c.set(ox0 + k, oy0 + dy, C("602c2c"))
-    for ry in (oy0 + 12, oy0 + 27):                             # rolling ribs
-        c.hline(ox0 - 19 + (ry - oy0) // 13, ox0 + 19 + (ry - oy0) // 13,
-                ry, C("602c2c"))
-        c.hline(ox0 - 19 + (ry - oy0) // 13, ox0 + 19 + (ry - oy0) // 13,
-                ry + 1, C("341c27"))
+    OX, OWL, ORY = 862, 509, 494                    # oil drum, listing the OTHER
+    for k in range(-21, 22):                        # way and riding much deeper
+        x = OX + k
+        sh = int((21 - k) * 0.10)                   # the list, opposite the crate
+        dy = int((1.0 - (k / 21.0) ** 2) ** 0.5 * 6.5)
+        rt, rb = ORY - dy + sh, ORY + dy + sh
+        wl = OWL + int(1.1 * math.sin(k / 6.0))
+        c.rect(x, rb, x, wl, C("341c27"))           # the body, out of the light
+        c.rect(x, rt + 1, x, rb - 1, C("241527"))   # down into the open drum
+        if k < -6:
+            c.rect(x, rt + 1, x, rb - 1, C("4d2b32"))   # its far inner wall
+        c.set(x, rt, C("884b2b"))                   # the far rim, catching it
+        c.set(x, rb, C("602c2c"))                   # the near rim
+    c.hline(OX - 19, OX + 19, ORY + 12, C("602c2c"))            # one rolling rib
+    c.hline(OX - 19, OX + 19, ORY + 13, C("241527"))
+    for k in range(3):                                          # a rust bloom
+        c.hline(OX - 14 + k, OX - 6 + k * 2, ORY + 17 + k, C("4d2b32"))
+    float_wake(OX - 21, OX + 21, OWL, False, 20)
 
     return c
 

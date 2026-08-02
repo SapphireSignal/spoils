@@ -114,6 +114,7 @@ def paint() -> Canvas:
     # one-step-darker halo out of the tile — the den's baked halo, reversed
     mara = Canvas(SCENE_W, SCENE_H)
     _mara_body(mara, rng)
+    _mara_arms(mara, rng)
     _wall_halo(mara, lvl, far)
     _wall_paint(c, rng, lvl, far)
 
@@ -123,6 +124,7 @@ def paint() -> Canvas:
     _cables(c)
 
     _counter(c, rng, far)
+    _counter_left(c, rng, far)
     _light_box(c, rng)
     _job_sheet(c, rng)
     _mug(c, rng)
@@ -130,7 +132,6 @@ def paint() -> Canvas:
 
     c.img.alpha_composite(mara.img, (0, 0))
     c.px = c.img.load()
-    _mara_arms(c, rng)
     _work_lamp(c, rng)
 
     _magpie(c, rng)                      # foreground last: it occludes all
@@ -190,7 +191,9 @@ def _wall_levels(rng: random.Random, far: list) -> dict:
             y0, y1 = top[x], min(far[x], bot[x])
             for yy in range(y0, y1):
                 t = (yy - CEIL_Y) / float(FAR_Y - CEIL_Y)
-                base = 0.55 + 1.35 * (t ** 1.6) + bias * s
+                # lifted from 0.55: the whole frame came back as "dark and low
+                # in chroma" and most of this wall was sitting on one step
+                base = 0.78 + 1.30 * (t ** 1.6) + bias * s
                 dc = ((x - BOX[0]) ** 2 + ((yy - BOX[1]) * 1.30) ** 2) ** 0.5
                 # the shade throws almost nothing upward: a wider reach than
                 # this built a brown quadrilateral of tile behind her arm that
@@ -225,21 +228,24 @@ def _wall_halo(mara: Canvas, lvl: dict, far: list) -> None:
     this runs the same move backwards."""
     sil = Image.new("L", (SCENE_W, SCENE_H), 0)
     sp = sil.load()
-    for y in range(276, 384):
-        for x in range(596, 796):
+    for y in range(244, 400):
+        for x in range(580, 800):
             if mara.px[x, y][3] > 0:
                 sp[x, y] = 255
     hp = sil.filter(ImageFilter.GaussianBlur(11)).load()
     for y in range(CEIL_Y + 4, FAR_Y + 14):
-        for x in range(586, 806):
+        for x in range(572, 812):
             k = (x, y)
             if k not in lvl or sp[x, y]:
                 continue
             a = hp[x, y]
+            # softened from 1.6/0.85 once she was rescaled: at the old strength
+            # a silhouette this size stamped a dark rounded arch on the tile
+            # that read as a doorway behind her
             if a > 92:
-                lvl[k][0] -= 1.6
+                lvl[k][0] -= 1.05
             elif a > 24:
-                lvl[k][0] -= 0.85
+                lvl[k][0] -= 0.55
 
 
 def _wall_paint(c: Canvas, rng: random.Random, lvl: dict, far: list) -> None:
@@ -314,30 +320,164 @@ def _clock(c: Canvas, rng: random.Random, cx: int, cy: int, r: int) -> None:
     c.hline(cx - 4, cx + 3, cy - r - 10, C("202e37"))
 
 
+# ------------------------------------------------------------------ tally ---
+# THE COUNT IS CANON: EXACTLY 83 MARKS — sixteen gates of five, plus three
+# loose. It is written in LORE.md section 7a ("THE TALLY IS CLOSED") and the
+# warden's wall carries the SAME number, because both walls stopped on the
+# same day. Nobody is dying out there any more; this is a finished ledger, not
+# a running count.
+#
+# So the count is made STRUCTURAL here, not a thing a later edit can nudge:
+# the row plan below is the only place it is stated, every stroke that gets
+# drawn is counted as it is drawn, and _tally ends on an assert. Change a row
+# and the module CRASHES rather than quietly drifting off canon.
+GATE = 5            # the standard tally five: four uprights, one struck through
+LONE = 1            # a single upright — nobody came back to close the gate
+
+# (row y, first x, tokens, gap style per gap). "c" crowded, "n" normal,
+# "w" wide. These are ANCHORS, not a ruling: every row wanders on a random
+# walk, every gap is re-rolled inside its style, and every stroke owns its
+# height, lean, weight and where the chalk lifted. The bottom three rows start
+# far left because they run UNDER the station clock, which owns x 57-127 down
+# to y 211 — that is also why the top three start at x 140 or right of it.
+TALLY_ROWS = [
+    (118, 148, [GATE, GATE],                    ["w"]),
+    (154, 172, [GATE, GATE],                    ["w"]),
+    (192, 138, [GATE, LONE, GATE],              ["n", "w"]),
+    (230,  38, [GATE, GATE, GATE, GATE],        ["n", "c", "w"]),
+    (268,  32, [GATE, GATE, LONE, GATE],        ["c", "w", "n"]),
+    (306,  44, [GATE, LONE, GATE, GATE],        ["w", "n", "c"]),
+]
+GAP = {"c": (13, 18), "n": (23, 30), "w": (36, 46)}
+
+CHALKS = [C("c7cfcc"), C("a8b5b2"), C("819796"), C("577277")]
+
+
+def _chalk(base: float, rng: random.Random):
+    """A stroke's own weight. The wall under the tally only ever runs
+    151d28..202e37, so 394a50 chalk is NOT in the ramp — a mark that cannot be
+    counted is not a mark. Faintness is the 4th step and is used sparingly."""
+    i = int(base + (1 if rng.random() < 0.30 else 0)
+            + (1 if rng.random() < 0.10 else 0))
+    return CHALKS[max(0, min(3, i))]
+
+
+def _stroke(c: Canvas, x: int, y: int, h: int, lean: float, col,
+            fat: bool, rng: random.Random) -> int:
+    """One chalk upright. It can be pressed hard (fat) or lift for a pixel or
+    three, but it never breaks so badly that it stops reading as one stroke.
+    Returns the rightmost pixel it touched."""
+    skip0 = rng.randrange(3, h - 3) if (h > 12 and rng.random() < 0.34) else -1
+    skip1 = skip0 + rng.randint(1, 3)
+    right = x
+    for k in range(h):
+        if skip0 <= k < skip1:
+            continue                                  # the chalk lifted
+        xx = x + int(k * lean)
+        c.set(xx, y + k, col)
+        right = max(right, xx)
+        if fat:
+            c.set(xx + 1, y + k, col)
+            right = max(right, xx + 1)
+    return right
+
+
+def _gate(c: Canvas, rng: random.Random, x: int, y: int, base: float) -> tuple:
+    """Four uprights and one diagonal struck through them: five marks, one
+    hand, one day. Returns (marks drawn, rightmost pixel)."""
+    hgt = rng.randint(13, 22)
+    sp = rng.randint(5, 8)
+    lean = rng.uniform(-0.26, 0.26)
+    if rng.random() < 0.18:                           # struck at a clear angle
+        lean = rng.choice((-1.0, 1.0)) * rng.uniform(0.34, 0.46)
+        sp += 2                                       # or the uprights merge
+    tilt = rng.uniform(-0.28, 0.28)                   # the baseline drifts too
+    marks, right, cx, ups = 0, x, x, []
+    for i in range(4):
+        h = max(11, hgt + rng.randint(-3, 3))
+        yy = y + int(i * sp * tilt)
+        fat = rng.random() < 0.32                     # pressed hard
+        right = max(right, _stroke(c, cx, yy, h,
+                                   lean + rng.uniform(-0.08, 0.08),
+                                   _chalk(base, rng), fat, rng))
+        ups.append((cx, yy, h))
+        marks += 1
+        cx += sp + rng.randint(-1, 1) + (1 if fat else 0)
+
+    # the fifth: struck through all four. Most hands run it up to the right,
+    # some run it down — that difference is most of what makes six years of
+    # different people read as different people.
+    (ax, ay, ah) = ups[0]
+    (bx, by, bh) = ups[3]
+    # the overhang is CLAMPED: a hard-leaning gate used to push the strike out
+    # to 40+ px, and at that length it stopped reading as struck-through and
+    # started reading as a sixth, horizontal stroke
+    x0 = ax - rng.randint(2, 4) + max(-5, int(ah * min(0.0, lean)))
+    x1 = bx + rng.randint(3, 5) + min(5, int(bh * max(0.0, lean)))
+    ylo = ay + int(ah * rng.uniform(0.72, 0.88))
+    yhi = by + int(bh * rng.uniform(0.10, 0.26))
+    if rng.random() < 0.25:
+        ylo, yhi = by + int(bh * rng.uniform(0.10, 0.26)), \
+                   ay + int(ah * rng.uniform(0.72, 0.88))
+        ylo, yhi = yhi, ylo                           # ran it downhill instead
+    span = max(8, x1 - x0)
+    col = _chalk(base, rng)
+    fat = rng.random() < 0.30
+    for k in range(span + 1):
+        xx = x0 + k
+        yy = ylo + int((yhi - ylo) * k / float(span))
+        c.set(xx, yy, col)
+        if fat:
+            c.set(xx, yy + 1, col)
+        right = max(right, xx)
+    marks += 1
+    return marks, right
+
+
 def _tally(c: Canvas, rng: random.Random) -> None:
-    """One chalk mark for every raider who went in and did not come out. It
-    fades to nothing well before the button band begins."""
-    def chalk(x):
-        return C("c7cfcc") if x < 226 else (C("819796") if x < 268 else C("577277"))
-    ty = 158
-    for row in range(6):
-        x = 178 + rng.randint(0, 10)
-        for g in range(8):
-            n = 5 if (row * 7 + g) % 9 else rng.randint(1, 4)
-            lean = rng.uniform(-0.24, 0.24)
-            hgt = rng.randint(12, 18)
-            for s in range(min(4, n)):
-                sx = x + s * rng.randint(4, 6)
-                for k in range(hgt):
-                    c.set(sx + int(k * lean), ty + k, chalk(sx))
-            if n == 5:
-                for k in range(hgt + 2):
-                    c.set(x - 3 + int(k * (23 / float(hgt + 2))),
-                          ty + hgt + 1 - k, chalk(x + 9))
-            x += rng.randint(25, 34)
-            if x > 306:
-                break
-        ty += rng.randint(19, 25)
+    """One chalk mark for every raider who went in and did not come out.
+
+    HERS IS THE ROUGH ONE. Six years of traders, whoever was standing there
+    when someone did not come back — no ruling, no system, many hands. So the
+    rows wander on a random walk, gates crowd in some places and stand apart in
+    others, stroke heights swing, some are pressed hard and some are faint, and
+    a few are struck at a clear angle.
+
+    The tension to hold: rough enough to read as accumulated, ordered enough
+    that a player who zooms in can still walk sixteen gates and three singles.
+    That is why the gates are GROUPED into wandering rows instead of scattered
+    freely — the previous cut was 12 free-floating clusters of 1-5 strokes,
+    which was both the wrong count and too sparse to read as a wall.
+
+    Nothing here crosses x=316, where quiet() starts biting: the reserved
+    button rectangle never sees a chalk pixel.
+    """
+    marks, right = 0, 0
+    for (row_y, x_start, tokens, gaps) in TALLY_ROWS:
+        x, drift = x_start, 0
+        for i, tok in enumerate(tokens):
+            # a random WALK, not independent jitter: that is what makes a row
+            # wander instead of vibrate. Clamped at 6 px so a cluster cannot
+            # sag into the row beneath it and cost the player the count.
+            drift = max(-6, min(6, drift + rng.randint(-4, 5)))
+            y = row_y + drift
+            # ages toward the counter and toward the light on the right; it
+            # never fades so far that a mark stops being countable
+            base = 0.35 + 1.9 * ((x - 30) / 330.0 + (y - 112) / 260.0) * 0.9
+            if tok == GATE:
+                n, r = _gate(c, rng, x, y, base)
+            else:                                      # one lone upright
+                h = rng.randint(12, 21)
+                r = _stroke(c, x, y, h, rng.uniform(-0.30, 0.30),
+                            _chalk(base, rng), rng.random() < 0.35, rng)
+                n = 1
+            marks += n
+            right = max(right, r)
+            x = r + (rng.randint(*GAP[gaps[i]]) if i < len(tokens) - 1 else 0)
+
+    # CANON — LORE.md section 7a. The warden's wall must print the same number.
+    assert marks == 83, "tally must be exactly 83 (canon, LORE.md 7a)"
+    assert right < 316, "tally must not reach the reserved button band"
 
 
 def _hook_rail(c: Canvas, rng: random.Random) -> None:
@@ -460,9 +600,13 @@ def _counter(c: Canvas, rng: random.Random, far: list) -> None:
             t = (y - y0) / float(LIP_Y - y0)
             # the step is pushed to t=0.62 so it falls BELOW the button
             # rectangle's floor at y=412 rather than through the middle of it
-            col = C("341c27") if t < 0.62 else C("4d2b32")
+            # the near strip was lifted a step (4d2b32 -> 602c2c) for the same
+            # "dark and low in chroma" note: it also widens the value gap
+            # between the far and near halves, which is what makes a
+            # horizontal plane read as horizontal
+            col = C("341c27") if t < 0.62 else C("602c2c")
             if (x, y) in grain:
-                col = C("241527") if t < 0.62 else C("341c27")
+                col = C("241527") if t < 0.62 else C("4d2b32")
             c.set(x, y, col)
     # the warm pool: rock steady (in the den the WARM light breathes — here it
     # is the cold one that will, which is the pitch's inversion)
@@ -523,6 +667,152 @@ def _counter(c: Canvas, rng: random.Random, far: list) -> None:
         y = 494 + int(math.sin(k / 17.0) * 3)
         c.set(302 + k, y, C("4d2b32"))
         c.set(302 + k, y + 1, C("090a14"))
+
+
+def _counter_left(c: Canvas, rng: random.Random, far: list) -> None:
+    """Structure for the counter's left third, which rendered as one flat empty
+    plane all the way from x=100 to the button band.
+
+    EVERYTHING HERE STOPS SHORT OF x=316, which is where quiet() starts biting;
+    the button rectangle (x 372-588, y 290-390) gains nothing at all. The
+    drawers sit on the FRONT face's left, nowhere near the version label and
+    the changelog button at bottom right.
+
+    Baked with no light source of its own, because there is none over there:
+    the tray's brightest pixel is one 394a50 lip line and the only chroma is
+    two brass tokens, which is what a dark corner is allowed."""
+    # ---- worn patches where forty years of elbows have polished the top face.
+    # SOLID shapes with wobbled edges, never speckle. One value step only: the
+    # first cut put a 602c2c core inside a 4d2b32 ring and the pair read as two
+    # spilled stains rather than wear.
+    #
+    # THESE RUN ALL THE WAY TO x=576, NOT JUST THE LEFT THIRD. The reserved
+    # button rectangle is y 290-390 and the counter's top face starts at ~383,
+    # so everything below y=392 is under the buttons, not behind them; it is
+    # the one part of that plane structure is allowed into.
+    wear = []
+    for _ in range(600):
+        if len(wear) >= 9:
+            break
+        wx = 64 + rng.random() * 512
+        wy = 396 + rng.random() * 26
+        if any(abs(wx - ox) < 62 for (ox, _oy, _r, _s) in wear):
+            continue
+        wear.append((wx, wy, rng.randint(16, 40), rng.uniform(0, 6.3)))
+    for (fwx, fwy, rx, ph) in wear:
+        wx, wy = int(fwx), int(fwy)
+        ry = max(4, rx // 4)
+        for (dy, hw) in ell_rows(rx, ry):
+            if hw < 0:
+                continue
+            hw += int(round(3.0 * math.sin((wy + dy) / 4.4 + ph)
+                            + 2.0 * math.sin(wx / 7.0 + ph)))
+            y = wy + dy
+            if not (far[wx] + 13 <= y < LIP_Y - 3):
+                continue
+            # ONE tone, which lands a step ABOVE the far half of the top face
+            # and a step BELOW the near half. 884b2b on the near half read as
+            # spilled lamplight in the middle of the frame.
+            c.hline(wx - hw, wx + hw, y, C("4d2b32"))
+    # one inlaid expansion strip running the length of the top face — a long
+    # structural line the empty middle had nothing of
+    for x in range(40, 578):
+        y = 404 + int(round(2.2 * math.sin(x / 121.0) + 1.4 * math.sin(x / 33.0 + 2.0)))
+        c.set(x, y, C("241527"))
+        c.set(x, y + 1, C("602c2c"))
+        c.set(x, y + 2, C("341c27"))
+    # the middle gouge sits at y=418, not 396: at 396 it was six pixels under
+    # the button rectangle's floor and it was the only thing with any contrast
+    # anywhere near it
+    for (gx, gl, gy) in ((196, 46, 418), (466, 38, 418), (330, 27, 424)):
+        for k in range(gl):                              # three solid gouges
+            y = gy + int(math.sin(k / 9.0 + gx) * 2)
+            c.set(gx + k, y, C("090a14"))
+            c.set(gx + k, y + 1, C("602c2c"))
+
+    # ---- the deposit tray, SUNK into the top face. A plate at this angle is a
+    # TRAPEZOID: far edge short, near edge long. Reading it as sunk rather than
+    # as a mat lying on the wood depends entirely on one thing — you see the
+    # FAR inner wall (it faces the room, so it is the lightest surface in the
+    # hole) and you do NOT see the near one, because the near lip hides it.
+    # The first cut had that inverted and the tray read as a black mat.
+    ty0, ty1 = 392, 422
+    tfx0, tfx1 = 120, 190
+    tnx0, tnx1 = 108, 204
+
+    def tspan(y):
+        t = (y - ty0) / float(ty1 - ty0)
+        return int(tfx0 + (tnx0 - tfx0) * t), int(tfx1 + (tnx1 - tfx1) * t)
+
+    a, b = tspan(ty0)
+    c.hline(a - 3, b + 3, ty0 - 2, C("241527"))            # the cut in the wood
+    c.hline(a - 3, b + 3, ty0 - 1, C("090a14"))
+    for y in range(ty0, ty1 + 1):                          # the floor
+        a, b = tspan(y)
+        t = (y - ty0) / float(ty1 - ty0)
+        c.hline(a, b, y, C("151d28") if t > 0.55 else C("10141f"))
+        c.set(a, y, C("090a14"))
+        c.set(b, y, C("090a14"))
+    for k in range(7):                                     # THE FAR INNER WALL
+        a, b = tspan(ty0 + k)
+        c.hline(a + 1, b - 1, ty0 + k,
+                C("394a50") if k < 4 else (C("202e37") if k < 6 else C("151d28")))
+    a, b = tspan(ty0)
+    c.hline(a + 1, b - 1, ty0, C("577277"))                # its top edge, lit
+    a, b = tspan(ty1)
+    c.hline(a - 2, b + 2, ty1, C("241527"))                # the near lip: wood,
+    c.hline(a - 3, b + 3, ty1 + 1, C("4d2b32"))            # not a bright metal
+    c.hline(a - 3, b + 3, ty1 + 2, C("602c2c"))            # line
+    c.hline(a - 1, b + 1, ty1 - 1, C("090a14"))
+    for k in range(2):                                     # two drain slots
+        yy = ty1 - 6 - k * 6
+        a, b = tspan(yy)
+        c.hline(a + 12 + k * 7, b - 16 + k * 5, yy, C("090a14"))
+    # two brass tokens lying in it, and a folded chit — the only chroma this
+    # corner of the frame gets, and it is deliberately small
+    for (bx, by, br) in ((142, 408, 6), (158, 401, 5)):
+        for (dy, hw) in ell_rows(br, max(2, br - 3)):
+            if hw < 0:
+                continue
+            c.hline(bx - hw, bx + hw, by + dy, C("884b2b"))
+            if dy < 0:
+                c.hline(bx - hw + 1, bx + hw - 1, by + dy, C("be772b"))
+        c.set(bx - br + 1, by, C("de9e41"))
+        c.set(bx + br - 1, by + 1, C("602c2c"))
+        c.hline(bx - br + 2, bx + br - 2, by + br + 1, C("090a14"))
+    for k in range(7):                                     # the folded chit,
+        c.hline(170 + k, 188 + k // 2, 404 + k,            # lying flat, not a
+                C("819796") if k < 3 else C("577277"))     # standing cup
+    c.hline(170, 188, 403, C("a8b5b2"))
+    c.hline(177, 190, 411, C("090a14"))
+
+    # ---- two drawer fronts in the counter's left bay. The counter is a built
+    # thing; the front face was one 130 px of unbroken maroon.
+    for (dx0, dy0, dx1, dy1) in ((26, 452, 150, 502), (26, 512, 150, 544)):
+        c.rect(dx0, dy0, dx1, dy1, C("341c27"))
+        c.hline(dx0, dx1, dy0, C("090a14"))
+        c.hline(dx0 + 1, dx1 - 1, dy0 + 1, C("4d2b32"))    # lit top bevel
+        c.vline(dx0, dy0, dy1, C("090a14"))
+        c.vline(dx0 + 1, dy0 + 2, dy1, C("4d2b32"))
+        c.vline(dx1, dy0, dy1, C("241527"))
+        if dy1 < SCENE_H - 1:
+            c.hline(dx0, dx1, dy1, C("090a14"))
+            c.hline(dx0 + 1, dx1 - 1, dy1 - 1, C("241527"))
+        # the recessed finger pull — a real hole with a lit lower lip
+        px0, px1 = dx0 + 38, dx0 + 88
+        py = dy0 + 20
+        c.rect(px0, py, px1, py + 7, C("090a14"))
+        c.hline(px0 + 2, px1 - 2, py + 7, C("4d2b32"))
+        c.hline(px0 + 1, px1 - 1, py + 8, C("602c2c"))
+        c.hline(px0 + 3, px1 - 3, py, C("241527"))
+    for gi in range(3):                                    # grain over the wood
+        gy = 466 + gi * 27
+        for x in range(30, 148):
+            y = gy + int(round(1.9 * math.sin(x / 43.0 + gi * 2.2)
+                               + 1.1 * math.sin(x / 17.0 + gi)))
+            if 470 < y < 480 or 530 < y < 540:
+                continue
+            c.set(x, y, C("241527"))
 
 
 def _pool(c: Canvas, ctr, rx, ry, grain, far, ramp) -> None:
@@ -665,6 +955,11 @@ def _mug(c: Canvas, rng: random.Random) -> None:
         if hw >= 0:
             c.set(328 - hw, 396 + dy, C("4d2b32"))               # cold skin ring
             c.set(328 + hw, 396 + dy, C("4d2b32"))
+    c.rect(x0, 406, x1, 411, C("19332d"))                        # a green
+    c.hline(x0, x1, 406, C("25562e"))                            # enamel band —
+    c.set(x0, 407, C("25562e"))                                  # the dark left
+    c.set(x0 + 1, 408, C("25562e"))                              # third's only
+    c.hline(x0, x1, 411, C("10141f"))                            # chroma
     c.set(319, 392, C("a8b5b2"))                                 # a chip
     c.set(320, 392, C("a8b5b2"))
     c.set(319, 393, C("819796"))
@@ -743,44 +1038,59 @@ def _work_lamp(c: Canvas, rng: random.Random) -> None:
 
 
 # ------------------------------------------------------------------ mara ----
-# Head 42 px wide with hair, face 32x36. The den's heads are 13-15 px and the
-# drain has no people at all: nothing in this menu has ever been close enough
-# to read where somebody is looking.
-FX0, FX1, FY0, FY1 = 668, 693, 306, 340          # the face box, 26x35
+# Face 35 px wide and 45 tall, 62 px across with the hair. She was 26x35 and
+# the note back was that she is "too small and too generic for a pitch whose
+# entire selling point was a face at conversational distance". The whole figure
+# was rescaled about (MCX, 392): her HANDS stay exactly where they were on the
+# light box and everything grows UPWARD out of them, so the counter, the box,
+# the map and the lamp did not have to move an inch.
+FY0, FY1 = 280, 324                              # the face box, 35x45
 MCX = 681                                        # her centre line
 
 
 def _face_hw(y: int) -> int:
     """Half-width of the face at row y — an oval that tapers to the chin, not
-    a box. The first render drew a rectangle and it read as a slab."""
+    a box. The first render drew a rectangle and it read as a slab. The jaw is
+    deliberately NOT symmetric: the left side (screen) carries one extra pixel
+    from the cheekbone down, which is most of what stops a face this size
+    reading as a mannequin."""
     u = (y - FY0) / float(FY1 - FY0)
-    if u < 0.14:
-        return 11
-    if u < 0.66:
-        return 13
-    if u < 0.80:
-        return 12
-    return max(3, int(12 - (u - 0.80) * 46))
+    if u < 0.13:
+        return 14
+    if u < 0.60:
+        return 17
+    if u < 0.76:
+        return 16
+    return max(4, int(16 - (u - 0.76) * 50))
 
 
 def _mara_body(c: Canvas, rng: random.Random) -> None:
-    """Head, hair, the headset pushed OFF her ear, shoulders. Everything below
-    the counter's far edge is occluded, so this stops at y=374.
+    """Head, hair, the headset pushed UP OFF her ears, torso and sleeves.
 
-    She looks DOWN at the map: each eye is one dark line under a brow and
+    She looks DOWN at the map: each eye is one dark lid line under a brow and
     there is no mouth expression to get wrong — the two lights do the
     modelling. UPLIGHT, cold from the light box below-left and warm from the
     lamp below-right, so the forehead and crown stay dark. Both shipped scenes
-    light from at or above figure height; this one does not."""
-    # ---- shoulders, oxblood jacket (identity carried over from the den)
+    light from at or above figure height; this one does not.
+
+    THE HEADSET MOVED ONTO HER CROWN. It used to sit on her neck at y 340-351,
+    which the shoulders then buried — the render showed no headset at all. On
+    top of her head it is visible, it still says off-channel, and it gives the
+    crown (the darkest area on her) one hard light structure.
+
+    THE SLEEVES ARE DRAWN HERE, not with the forearms, because the first render
+    read as one flat red poncho: torso and upper arm were a single silhouette
+    with no seam. They are separate masses now with a shadowed seam between.
+    """
+    # ---- torso, oxblood jacket (identity carried over from the den)
     shoulder_top = {}
-    for y in range(350, 376):
-        t = (y - 350) / 26.0
-        half = int(23 + (t ** 0.42) * 25)               # a ROUND shoulder — a
+    for y in range(336, 373):
+        t = (y - 336) / 37.0
+        half = int(25 + (t ** 0.45) * 21)               # a ROUND shoulder — a
         for x in range(MCX - half, MCX + half + 1):     # near-linear taper
             lit = (x - (MCX - half)) / float(2 * half)  # read as a poncho
             col = C("752438")
-            if lit < 0.17 or lit > 0.85:
+            if lit < 0.15 or lit > 0.86:
                 col = C("411d31")
             c.set(x, y, col)
             shoulder_top.setdefault(x, y)
@@ -789,50 +1099,137 @@ def _mara_body(c: Canvas, rng: random.Random) -> None:
         c.set(MCX + half, y, C("884b2b"))               # warm rim, lamp side
         c.set(MCX + half - 1, y, C("602c2c"))
     for x, y in shoulder_top.items():                   # highlight FOLLOWS the
-        if abs(x - MCX) > 16:                           # shoulder line instead
+        if abs(x - MCX) > 19:                           # shoulder line instead
             c.set(x, y + 1, C("a53030"))                # of two ruled strokes
             c.set(x, y + 2, C("a53030"))
-    c.rect(MCX - 14, 344, MCX + 13, 352, C("411d31"))   # collar
-    c.hline(MCX - 14, MCX + 13, 344, C("752438"))
-    c.rect(MCX - 10, 346, MCX + 9, 353, C("341c27"))    # the neck's own shadow
 
-    # ---- neck, uplit from underneath
-    c.rect(MCX - 8, 336, MCX + 7, 350, C("7a4841"))
-    c.rect(MCX - 5, 340, MCX + 4, 348, C("ad7757"))
-    c.hline(MCX - 7, MCX + 6, 336, C("602c2c"))
+    # ---- the sleeves: their own masses, hung off the shoulder points and
+    # swung out to the elbows, with a seam of jacket shadow between
+    def sleeve(sgn):
+        for k in range(140):
+            t = k / 139.0
+            cx_ = MCX + sgn * (30.0 + 38.0 * t + 6.0 * math.sin(t * 2.2))
+            cy_ = 344.0 + t * 68.0
+            w = 15.0 - 3.0 * t
+            roll = t > 0.86                     # the cuff is PART of the sleeve
+            for dx in range(-int(w), int(w) + 1):
+                x = int(round(cx_ + dx))
+                lit = (dx + w) / (2 * w)
+                col = C("411d31")
+                if 0.24 < lit < 0.78:
+                    col = C("752438")
+                if roll:
+                    col = C("341c27") if 0.18 < lit < 0.82 else C("241527")
+                c.set(x, int(cy_), col)
+            c.set(int(round(cx_ - w)), int(cy_),
+                  C("253a5e") if sgn < 0 else C("341c27"))
+            c.set(int(round(cx_ + w)), int(cy_),
+                  C("341c27") if sgn < 0 else C("884b2b"))
+            if 0.855 < t < 0.875:                          # the roll's lit lip
+                for dx in range(-int(w) + 1, int(w)):
+                    c.set(int(round(cx_ + dx)), int(cy_), C("a53030"))
+        # the seam: a shadow trench where the sleeve head meets the body
+        for k in range(30):
+            t = k / 29.0
+            x = int(MCX + sgn * (28.0 + 5.0 * t))
+            c.set(x, 340 + k, C("341c27"))
+            c.set(x + sgn, 340 + k, C("241527"))
+    sleeve(-1)
+    sleeve(1)
+
+    c.rect(MCX - 18, 330, MCX + 17, 341, C("411d31"))   # collar
+    c.hline(MCX - 18, MCX + 17, 330, C("752438"))
+    c.rect(MCX - 13, 332, MCX + 12, 342, C("341c27"))   # the neck's own shadow
+    c.hline(MCX - 18, MCX - 8, 331, C("a53030"))        # a lit collar point,
+    c.set(MCX - 19, 332, C("752438"))                   # one side only
+    # her enamel district pin, gone green with age — a specific, worn object
+    c.rect(MCX + 9, 333, MCX + 15, 338, C("25562e"))
+    c.hline(MCX + 9, MCX + 15, 333, C("468232"))
+    c.set(MCX + 15, 338, C("19332d"))
+    c.set(MCX + 11, 335, C("19332d"))
+
+    # ---- neck, uplit from underneath. Narrower than the first cut, which put
+    # a 20 px straight-sided column under her chin, and with the jaw's own
+    # shadow laid across the top of it instead of a lone tendon stroke.
+    c.rect(MCX - 8, 318, MCX + 7, 342, C("7a4841"))
+    c.rect(MCX - 5, 326, MCX + 4, 338, C("ad7757"))
+    c.hline(MCX - 8, MCX + 7, 318, C("4d2b32"))
+    c.hline(MCX - 8, MCX + 7, 319, C("602c2c"))
+    c.hline(MCX - 7, MCX + 6, 320, C("602c2c"))
+    c.set(MCX - 8, 321, C("602c2c"))
+    c.set(MCX + 7, 321, C("602c2c"))
 
     # ---- hair. The crown is the darkest thing on her: nothing lights her
-    # from above. Built as a rounded mass — a rectangle read as a helmet.
-    for (dy, hw) in ell_rows(23, 24):
-        if hw < 0 or dy > 6:
+    # from above. Built as a rounded mass — a rectangle read as a helmet, and
+    # the first cut was ONE flat 4d2b32 with no banding at all.
+    for (dy, hw) in ell_rows(30, 31):
+        if hw < 0 or dy > 8:
             continue
-        c.hline(MCX - hw, MCX + hw, 312 + dy, C("4d2b32"))
-        if dy < -13:
-            c.hline(MCX - hw, MCX + hw, 312 + dy, C("341c27"))
-    c.rect(MCX - 23, 314, MCX - 14, 342, C("4d2b32"))
-    c.rect(MCX + 14, 314, MCX + 23, 338, C("4d2b32"))
-    c.vline(MCX - 23, 314, 342, C("341c27"))
-    c.vline(MCX + 23, 314, 336, C("602c2c"))            # the lamp finds this side
-    for k in range(6):                                  # loose strands
-        c.vline(MCX - 25 - rng.randrange(2), 302 + k * 6, 306 + k * 6, C("341c27"))
+        c.hline(MCX - hw, MCX + hw, 288 + dy, C("4d2b32"))
+        if dy < -16:
+            c.hline(MCX - hw, MCX + hw, 288 + dy, C("341c27"))
+        if -6 < dy < 3:                                  # the one lit band, on
+            c.hline(MCX + hw - 6, MCX + hw, 288 + dy, C("602c2c"))   # the lamp
+    # the side masses. Their ends TAPER — a flat cut at a fixed y left two
+    # square corners hanging off her head like the bottom of a cardboard wig.
+    for k in range(13):
+        c.rect(MCX - 30 + k, 290, MCX - 18, 330 - abs(k - 4) * 2, C("4d2b32"))
+        c.rect(MCX + 18, 290, MCX + 30 - k, 324 - abs(k - 5) * 2, C("4d2b32"))
+    c.vline(MCX - 30, 290, 322, C("341c27"))
+    c.vline(MCX + 30, 290, 314, C("602c2c"))            # the lamp finds this side
+    c.vline(MCX + 29, 302, 318, C("884b2b"))            # and the ends catch it
+    for k in range(7):                                  # loose strands
+        c.vline(MCX - 32 - rng.randrange(3), 276 + k * 8, 282 + k * 8, C("341c27"))
     # low ponytail over her right shoulder — a den identity marker
-    for k in range(54):
-        t = k / 54.0
-        px = int(MCX - 26 - t * 8 + math.sin(t * 3.0) * 3)
-        w = int(8 - t * 4)
-        c.rect(px - w, 318 + k, px + w, 319 + k, C("4d2b32"))
-        c.vline(px - w, 318 + k, 319 + k, C("341c27"))
-        c.vline(px + w, 318 + k, 319 + k, C("602c2c") if t < 0.55 else C("4d2b32"))
-    c.rect(MCX - 40, 366, MCX - 30, 374, C("341c27"))   # its tie
+    for k in range(70):
+        t = k / 70.0
+        px = int(MCX - 34 - t * 10 + math.sin(t * 3.0) * 4)
+        w = int(10 - t * 5)
+        c.rect(px - w, 296 + k, px + w, 297 + k, C("4d2b32"))
+        c.vline(px - w, 296 + k, 297 + k, C("341c27"))
+        c.vline(px + w, 296 + k, 297 + k, C("602c2c") if t < 0.55 else C("4d2b32"))
+    c.rect(MCX - 52, 356, MCX - 39, 366, C("341c27"))   # its tie
+    c.hline(MCX - 52, MCX - 39, 356, C("4d2b32"))
+
+    # ---- the headset, pushed up onto her crown: she is off-channel, talking
+    # to you. Baked in its OFF state — no pilot lamp lit on the cup.
+    for k in range(160):
+        t = k / 159.0
+        a = math.radians(191 + t * 158)
+        hx = int(MCX + math.cos(a) * 32)
+        hy = int(290 + math.sin(a) * 31)
+        c.set(hx, hy, C("202e37"))
+        c.set(hx, hy + 1, C("394a50"))
+        c.set(hx, hy + 2, C("151d28"))
+    # BOTH cups, each hung off the band's end by a visible yoke. The first cut
+    # ran the band from 196 to 324 degrees, which ends up at the top-right of
+    # her crown, and then put the cup 20 px below it with nothing joining them:
+    # the render showed a grey box floating beside her temple.
+    for (sgn, yx) in ((-1, MCX - 31), (1, MCX + 31)):
+        c.rect(yx - 1, 280, yx + 1, 296, C("394a50"))            # the yoke
+        c.vline(yx + sgn * 2, 281, 295, C("151d28"))
+        cx0 = yx - 6 if sgn > 0 else yx - 5
+        for k in range(17):                                      # the ear cup,
+            n = 0 if 2 < k < 14 else 1                           # corners eased
+            c.hline(cx0 + n, cx0 + 11 - n, 295 + k, C("202e37"))
+            c.set(cx0 + n, 295 + k, C("394a50"))
+            c.set(cx0 + 11 - n, 295 + k, C("151d28"))
+        c.rect(cx0 + 3, 298, cx0 + 8, 308, C("151d28"))          # the pad
+        c.hline(cx0 + 2, cx0 + 9, 295, C("577277"))
+        c.hline(cx0 + 2, cx0 + 9, 311, C("090a14"))
+        c.set(cx0 + 5, 302, C("341c27"))                         # a dead pilot
+    for k in range(30):                                          # its lead
+        t = k / 30.0
+        c.set(int(MCX + 36 + t * 10), int(310 + t * 32 + math.sin(t * 3.0) * 4),
+              C("090a14"))
+        c.set(int(MCX + 37 + t * 10), int(310 + t * 32 + math.sin(t * 3.0) * 4),
+              C("151d28"))
 
     # ---- the face. UPLIGHT: cold below-left, warm below-right, forehead and
     # crown dark because nothing lights her from above.
-    # A RADIAL ramp off a source below the chin, not horizontal bands: banding
-    # a face in flat rows put a hard value step across the middle of it and the
-    # first two renders both read as a man with a moustache.
     # THE LIGHT IS PLACED BY HAND, NOT RAMPED. A radial ramp was tried and it
-    # failed for a structural reason worth writing down: the face is 26 px
-    # wide and the source is ~44 px below it, so every iso-distance contour
+    # failed for a structural reason worth writing down: the face is 35 px
+    # wide and the source is ~60 px below it, so every iso-distance contour
     # crosses the face almost HORIZONTALLY. Three separate renders produced a
     # full-width value step in the middle of her face and all three read as a
     # man with a moustache. Below the brow the base tone is now CONSTANT, and
@@ -840,255 +1237,382 @@ def _mara_body(c: Canvas, rng: random.Random) -> None:
     for y in range(FY0, FY1 + 1):
         hw = _face_hw(y)
         c.hline(MCX - hw, MCX + hw, y,
-                C("7a4841") if y < FY0 + 11 else C("c09473"))
-    for k in range(6):                                  # forehead, half-lit
-        c.hline(MCX - 10 + k, MCX + 9 - k, FY0 + 9 - k // 2, C("884b2b"))
-    # cheekbones: two separate blobs, deliberately NOT mirrored
-    c.rect(MCX - 12, FY0 + 18, MCX - 5, FY0 + 24, C("d7b594"))
-    c.rect(MCX - 11, FY0 + 17, MCX - 6, FY0 + 17, C("d7b594"))
-    c.rect(MCX + 3, FY0 + 17, MCX + 10, FY0 + 23, C("ad7757"))
-    c.rect(MCX + 4, FY0 + 24, MCX + 9, FY0 + 25, C("ad7757"))
-    # jaw and chin: the uplit underside, a U rather than a band
+                C("7a4841") if y < FY0 + 14 else C("c09473"))
+    # NO LIT FOREHEAD. There used to be an 884b2b patch here and the render
+    # caught it twice over: it contradicts the whole lighting idea (nothing in
+    # this room lights her from above), and its top edge interlocked with the
+    # spikes of the fringe so the pair read as a jagged crown on her head.
+    # cheekbones. THEY WERE RECTANGLES and at 12x that is exactly what they
+    # looked like: two hard-edged squares stuck on her face. They are lozenges
+    # now, leaning with the cheek, and deliberately NOT a mirrored pair — the
+    # near one is bigger, brighter and set lower than the far one.
+    def cheek(cx0, cy0, rx, ry, lean, col):
+        for (dy, hw) in ell_rows(rx, ry):
+            if hw < 0:
+                continue
+            y = cy0 + dy
+            cx = cx0 + int(dy * lean)
+            fhw = _face_hw(y) - 1
+            c.hline(max(MCX - fhw, cx - hw), min(MCX + fhw, cx + hw), y, col)
+    # both are LIT (the lamp is off to her left and the box below her), and the
+    # hollow under the far one is a separate crescent. Painting the far cheek
+    # itself in ad7757 made a round patch DARKER than the skin around it, which
+    # at 12x read as a bruise.
+    cheek(MCX - 10, FY0 + 27, 6, 6, 0.34, C("d7b594"))
+    cheek(MCX + 9, FY0 + 24, 5, 5, -0.28, C("d7b594"))
     for k in range(6):
-        hw = _face_hw(FY1 - 5 + k)
-        c.hline(MCX - hw, MCX + hw, FY1 - 5 + k, C("d7b594"))
-    c.hline(MCX - 4, MCX + 3, FY1 - 1, C("e7d5b3"))
-    c.hline(MCX - 3, MCX + 2, FY1, C("e7d5b3"))
-    c.hline(MCX - 6, MCX + 5, FY1 - 6, C("d7b594"))
-    for y in range(FY0 + 24, FY1 - 3):                  # the cold jaw rim
-        c.set(MCX - _face_hw(y), y, C("253a5e"))
-        if y % 3 == 1:
-            c.set(MCX - _face_hw(y) + 1, y, C("3c5e8b"))
-    for y in range(FY0 + 22, FY1 - 3):                  # the warm one
+        c.hline(MCX + 3 + k // 3, MCX + 7 + k // 2, FY0 + 28 + k // 2,
+                C("ad7757"))
+    # a healed cut across the left cheekbone. Kept SHORT and on one clean
+    # diagonal: the first cut ran it flat for 6 px right beside the brow scar
+    # and the pair read as one smudge down that side of her face.
+    for k in range(5):
+        c.set(MCX - 14 + k, FY0 + 27 + k // 2, C("7a4841"))
+    # jaw and chin: the uplit underside, a U rather than a band
+    for k in range(7):
+        hw = _face_hw(FY1 - 6 + k)
+        c.hline(MCX - hw, MCX + hw, FY1 - 6 + k, C("d7b594"))
+    c.hline(MCX - 5, MCX + 4, FY1 - 1, C("e7d5b3"))
+    c.hline(MCX - 4, MCX + 3, FY1, C("e7d5b3"))
+    c.hline(MCX - 7, MCX + 6, FY1 - 7, C("d7b594"))
+    for y in range(FY0 + 30, FY1 - 3):                  # the cold jaw rim: ONE
+        c.set(MCX - _face_hw(y), y, C("253a5e"))        # solid line. A 3c5e8b
+    for y in range(FY0 + 33, FY0 + 38):                 # pixel every third row
+        c.set(MCX - _face_hw(y) + 1, y, C("3c5e8b"))    # was a dashed smear
+    for y in range(FY0 + 28, FY1 - 3):                  # the warm one
         c.set(MCX + _face_hw(y), y, C("884b2b"))
-    # hairline: a soft uneven fringe. A 1 px alternating edge read as the
-    # teeth of a comb, so it waves on a long period with two locks in it.
-    for k in range(26):
-        x = MCX - 13 + k
-        drop = 4 + int(round(1.6 * math.sin(k * 0.42) + 1.0 * math.sin(k * 0.9)))
-        if 6 <= k <= 8 or 17 <= k <= 19:
-            drop += 3                                   # two locks hanging
-        c.vline(x, FY0 - 2, FY0 + drop, C("4d2b32"))
+    # hairline: a soft uneven fringe with a HARD PART on her left. A 1 px
+    # alternating edge read as the teeth of a comb, so it waves on a long
+    # period and carries two heavy locks.
+    for k in range(34):
+        x = MCX - 17 + k
+        drop = 6 + int(round(1.4 * math.sin(k * 0.29) + 0.9 * math.sin(k * 0.63)))
+        if 6 <= k <= 10:
+            drop += 3                                   # two locks hanging,
+        if 21 <= k <= 24:                               # different weights
+            drop += 2
+        if k == 13:
+            drop -= 3                                   # the part
+        c.vline(x, FY0 - 3, FY0 + drop, C("4d2b32"))
         c.set(x, FY0 + drop + 1, C("341c27"))
-    # brow: TWO segments, not a band. Under uplight the brow shadows upward.
-    c.hline(MCX - 12, MCX - 6, FY0 + 12, C("602c2c"))
-    c.hline(MCX + 4, MCX + 10, FY0 + 12, C("602c2c"))
-    c.hline(MCX - 11, MCX - 7, FY0 + 13, C("884b2b"))
-    c.hline(MCX + 5, MCX + 9, FY0 + 13, C("884b2b"))
-    # the eyes: looking DOWN, so each is one dark line under its lid
-    c.hline(MCX - 11, MCX - 7, FY0 + 16, C("090a14"))
-    c.hline(MCX + 5, MCX + 9, FY0 + 16, C("090a14"))
-    c.hline(MCX - 10, MCX - 8, FY0 + 17, C("884b2b"))
-    c.hline(MCX + 6, MCX + 8, FY0 + 17, C("884b2b"))
-    # nose: the lit plane is VERTICAL, and there is no lit horizontal bar
-    # under it — that bar is what kept reading as a moustache
-    c.vline(MCX - 2, FY0 + 16, FY0 + 23, C("884b2b"))
-    c.vline(MCX, FY0 + 18, FY0 + 23, C("e7d5b3"))
-    c.set(MCX - 1, FY0 + 24, C("884b2b"))
-    # mouth: one short soft line. No expression to get wrong.
-    c.hline(MCX - 4, MCX + 1, FY0 + 27, C("884b2b"))
-    # ---- her ear, and the headset pushed OFF it onto her neck: she is
-    # off-channel, talking to you
-    c.rect(MCX + 13, FY0 + 13, MCX + 16, FY0 + 22, C("c09473"))
-    c.set(MCX + 14, FY0 + 17, C("884b2b"))
-    c.rect(MCX + 13, 340, MCX + 21, 351, C("202e37"))            # the ear cup
-    c.rect(MCX + 15, 342, MCX + 19, 349, C("151d28"))
-    c.hline(MCX + 13, MCX + 21, 340, C("394a50"))
-    c.set(MCX + 17, 345, C("577277"))
-    # the band sits ON HER NECK and sags DOWNWARD. An earlier cut arced it
-    # upward and it crossed her mouth, which is what the render caught.
-    for k in range(30):
-        t = k / 30.0
-        bx_ = int(MCX + 13 - t * 30)
-        by_ = int(345 + math.sin(t * math.pi) * 5 + t * 3)
-        c.set(bx_, by_, C("202e37"))
-        c.set(bx_, by_ + 1, C("151d28"))
-    for k in range(24):                                          # its lead
-        t = k / 24.0
-        c.set(int(MCX + 21 + t * 11), int(350 + t * 22 + math.sin(t * 3.0) * 3),
-              C("090a14"))
+    # A GREYING LOCK, and it must be drawn AFTER the hairline or the hairline
+    # paints over it. THREE cuts of this have now failed and all three failed
+    # the same way — it was drawn as a straight, bright, uniform-width bar, so
+    # it read as a metal rod stuck in her hair (15 px of a8b5b2 down her
+    # temple; a 3 px mark on the crown; a 4 px white bar over the fringe).
+    # It is hair, so it has to do what the hair does: fall down the SIDE mass,
+    # lean as it falls, taper to a point, and stay dim — 577277 into 394a50,
+    # nothing brighter, because nothing lights the top of her head.
+    for k in range(38):
+        t = k / 37.0
+        x = MCX - 27 + int(t * 5 + math.sin(t * 2.4) * 2)
+        w = 2 - int(t * 2)
+        col = C("577277") if t < 0.35 else (C("394a50") if t < 0.75 else C("202e37"))
+        c.hline(x, x + w, 284 + k, col)
+        c.set(x - 1, 284 + k, C("341c27"))
+    for k in range(9):                                  # one thinner strand
+        c.set(MCX - 21 + k // 4, 292 + k, C("394a50") if k < 5 else C("202e37"))
+    # brows: TWO segments, not a band, and not a matched pair. Under uplight a
+    # brow shadows upward. The left one carries a scar notch through it.
+    c.hline(MCX - 16, MCX - 7, FY0 + 16, C("602c2c"))
+    c.hline(MCX - 15, MCX - 8, FY0 + 17, C("341c27"))
+    c.hline(MCX + 5, MCX + 14, FY0 + 15, C("602c2c"))
+    c.hline(MCX + 6, MCX + 13, FY0 + 16, C("341c27"))
+    c.set(MCX - 12, FY0 + 16, C("c09473"))              # THE SCAR: a break in
+    c.set(MCX - 12, FY0 + 17, C("c09473"))              # the brow carried up
+    c.set(MCX - 12, FY0 + 15, C("c09473"))              # through it as one
+    c.set(MCX - 11, FY0 + 14, C("d7b594"))              # UNBROKEN line — two
+    c.set(MCX - 11, FY0 + 13, C("d7b594"))              # loose pale pixels
+    c.set(MCX - 10, FY0 + 12, C("c09473"))              # floating above the
+    c.set(MCX - 12, FY0 + 18, C("7a4841"))              # brow read as noise
+    c.hline(MCX - 14, MCX - 9, FY0 + 18, C("884b2b"))
+    c.hline(MCX + 7, MCX + 12, FY0 + 17, C("884b2b"))
+    # the eyes: looking DOWN, so each is a lid line with lashes under it and a
+    # sliver of catchlight where the box reaches the lower lid
+    c.hline(MCX - 15, MCX - 8, FY0 + 20, C("090a14"))
+    c.hline(MCX - 14, MCX - 9, FY0 + 21, C("090a14"))
+    c.hline(MCX + 6, MCX + 13, FY0 + 19, C("090a14"))
+    c.hline(MCX + 7, MCX + 12, FY0 + 20, C("090a14"))
+    c.hline(MCX - 13, MCX - 10, FY0 + 22, C("d7b594"))
+    c.hline(MCX + 8, MCX + 11, FY0 + 21, C("ad7757"))
+    c.set(MCX - 16, FY0 + 20, C("7a4841"))
+    c.set(MCX + 14, FY0 + 19, C("7a4841"))
+    # nose: a straight bridge with a slight bump and one nostril in shade. The
+    # lit plane is VERTICAL, and there is no lit horizontal bar under it —
+    # that bar is what kept reading as a moustache.
+    # A BRIDGE THAT WIDENS INTO A TIP. The first cut was one 1 px e7d5b3 column
+    # eight rows long and it read as a pale stick laid on her face — a nose has
+    # to change width or it is a line.
+    c.vline(MCX - 3, FY0 + 19, FY0 + 29, C("7a4841"))       # the shade side
+    c.vline(MCX - 2, FY0 + 20, FY0 + 26, C("c09473"))
+    c.vline(MCX - 1, FY0 + 21, FY0 + 27, C("d7b594"))       # the bridge
+    for k in range(4):                                      # the tip, wider
+        c.hline(MCX - 3 + k // 2, MCX + 1 - k // 3, FY0 + 27 + k,
+                C("d7b594") if k < 2 else C("e7d5b3"))
+    c.set(MCX - 1, FY0 + 24, C("e7d5b3"))                   # one catch on the
+    c.set(MCX - 4, FY0 + 30, C("7a4841"))                   # bridge, two
+    c.set(MCX + 1, FY0 + 30, C("7a4841"))                   # nostrils in shade
+    c.hline(MCX - 3, MCX, FY0 + 31, C("ad7757"))
+    # mouth: one short soft line, one corner set lower than the other
+    c.hline(MCX - 6, MCX + 2, FY0 + 35, C("884b2b"))
+    c.set(MCX + 3, FY0 + 36, C("7a4841"))
+    c.hline(MCX - 4, MCX + 1, FY0 + 36, C("c09473"))
 
 
 def _mara_arms(c: Canvas, rng: random.Random) -> None:
-    """Both forearms on the counter, cuffs shoved to the elbows, because her
-    hands are the subject: the near hand flat and splayed on the map, the far
-    hand holding a stub pencil on the sheet she has pushed toward you."""
+    """Both forearms on the counter, cuffs shoved back off the wrists, because
+    her hands are the subject: her left hand flat on the map, her right holding
+    a stub pencil over the sheet she has pushed toward you.
+
+    Drawn onto MARA'S OWN canvas, before the composite — the composite happens
+    after the counter is down, so these still land on top of it, but this way
+    the wall halo sees the arms and does not stop at her shoulders.
+
+    The sleeves end at the elbows in _mara_body; every forearm here STARTS at
+    the point its sleeve stopped and every hand STARTS at the point its forearm
+    stopped, which is the same discipline the foreground arm now follows."""
     def limb(x0, y0, x1, y1, w0, w1, core, up, dn):
-        for k in range(65):
-            t = k / 64.0
+        n = 84
+        for k in range(n + 1):
+            t = k / float(n)
             x, y, w = x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, w0 + (w1 - w0) * t
-            c.rect(int(x - w), int(y - w * 0.6), int(x + w), int(y + w * 0.6), core)
-            c.hline(int(x - w), int(x + w), int(y - w * 0.6), up)
-            c.hline(int(x - w), int(x + w), int(y + w * 0.6), dn)
+            c.rect(int(x - w), int(y - w * 0.62), int(x + w), int(y + w * 0.62),
+                   core)
+            c.hline(int(x - w), int(x + w), int(y - w * 0.62), up)
+            c.hline(int(x - w), int(x + w), int(y + w * 0.62), dn)
 
-    # the upper arms are a STEP DARKER than the torso, or the whole figure
-    # reads as one flat red poncho with no arms in it
-    limb(648, 358, 630, 402, 10, 8, C("411d31"), C("752438"), C("241527"))
-    limb(714, 358, 734, 400, 10, 8, C("411d31"), C("752438"), C("241527"))
-    c.rect(622, 394, 640, 406, C("411d31"))                 # cuff, shoved up
-    c.hline(622, 640, 394, C("752438"))
-    c.rect(724, 392, 744, 404, C("411d31"))
-    c.hline(724, 744, 392, C("a53030"))
-    limb(632, 402, 660, 392, 8, 6, C("c09473"), C("d7b594"), C("7a4841"))
-    limb(734, 400, 708, 390, 8, 6, C("c09473"), C("d7b594"), C("7a4841"))
-    for k in range(28):                                     # cold rim, box side
-        c.set(632 + k, 396 - int(k * 0.36), C("3c5e8b"))
-    for k in range(26):                                     # warm rim, lamp side
-        c.set(734 - k, 394 - int(k * 0.36), C("de9e41"))
+    def hand(cx, ytop, ybot, half, digits, thumb):
+        for y in range(ytop, ybot + 1):
+            u = (y - ytop) / float(ybot - ytop)
+            hw = int(half - abs(u - 0.30) ** 2 * 9)
+            c.hline(cx - hw, cx + hw, y, C("c09473"))
+            c.set(cx - hw, y, C("7a4841"))
+            c.set(cx + hw, y, C("d7b594"))
+        c.hline(cx - half + 4, cx + half - 4, ytop, C("d7b594"))
+        c.hline(cx - half + 3, cx + half - 3, ybot, C("7a4841"))
+        c.hline(cx - half + 2, cx + half - 2, ybot + 1, C("090a14"))
+        for (dx, lg, lean) in digits:                    # fingers point AWAY
+            fx = cx + dx
+            for k in range(lg):
+                xx = fx + int(k * lean)
+                c.hline(xx, xx + 3, ytop - k,
+                        C("c09473") if k < lg - 2 else C("d7b594"))
+                c.set(xx + 4, ytop - k, C("7a4841"))     # 1 px shade between
+            c.hline(fx + int(lg * lean), fx + 3 + int(lg * lean), ytop - lg,
+                    C("d7b594"))
+        (tdx, tlen, tsgn) = thumb
+        for k in range(tlen):
+            xx = cx + tdx + tsgn * k
+            yy = ytop + 3 - int(k * 0.7)
+            c.hline(xx, xx + tsgn * 3, yy, C("c09473") if k < tlen - 2
+                    else C("d7b594"))
+            c.set(xx - tsgn, yy + 1, C("7a4841"))
 
-    # ---- the near hand: flat and splayed on the map
-    c.rect(646, 384, 670, 396, C("c09473"))
-    c.hline(646, 670, 384, C("d7b594"))
-    c.hline(647, 669, 396, C("7a4841"))
-    for i in range(5):
-        fx = 647 + i * 5
-        fl = (7, 10, 11, 9, 6)[i]
-        lean = (-2, -1, 0, 1, 2)[i]
-        for k in range(fl):
-            xx = fx + int(k * lean / float(fl))
-            c.hline(xx, xx + 2, 384 - k, C("c09473") if k < fl - 2 else C("d7b594"))
-            c.set(xx + 3, 384 - k, C("7a4841"))         # 1 px shade between
-        c.hline(fx, fx + 2, 384 - fl, C("d7b594"))
-    c.hline(645, 671, 397, C("090a14"))
+    # THE FOREARMS ARE A STEP DARKER THAN THE HANDS (ad7757 core, not c09473).
+    # The first render made both the same value and forearms plus palms fused
+    # into one pale plank running the whole width of the light box — the hands
+    # are the subject of this pitch and they have to be the brightest skin in
+    # the frame, not part of a band.
+    # ---- her right arm (screen left). Its sleeve ends at (608, 412).
+    limb(608, 410, 646, 392, 11, 8, C("ad7757"), C("c09473"), C("7a4841"))
+    for k in range(30):                                     # cold rim, box side
+        c.set(610 + k, 402 - int(k * 0.46), C("3c5e8b"))
+    hand(651, 386, 400, 18,
+         ((-15, 13, -0.16), (-9, 15, -0.05), (-3, 14, 0.05), (3, 11, 0.16)),
+         (15, 11, 1))
 
-    # ---- the far hand: two fingers on the sheet, a stub pencil in it
-    c.rect(702, 382, 722, 394, C("c09473"))
-    c.hline(702, 722, 382, C("d7b594"))
-    c.hline(703, 721, 394, C("7a4841"))
-    for i in range(2):
-        fx = 704 + i * 7
-        for k in range(9):
-            c.hline(fx, fx + 3, 382 - k, C("c09473") if k < 7 else C("d7b594"))
-            c.set(fx + 4, 382 - k, C("7a4841"))
-    for k in range(20):                                     # the stub pencil
-        x, y = 714 + k, 380 - int(k * 0.6)
+    # ---- her left arm (screen right). Its sleeve ends at (754, 412).
+    limb(754, 410, 718, 390, 11, 8, C("ad7757"), C("c09473"), C("7a4841"))
+    for k in range(28):                                     # warm rim, lamp side
+        c.set(752 - k, 402 - int(k * 0.48), C("de9e41"))
+    hand(714, 384, 397, 17,
+         ((-13, 10, -0.12), (-7, 12, -0.04), (-1, 11, 0.06), (5, 8, 0.14)),
+         (-16, 10, -1))
+    for k in range(26):                                     # the stub pencil
+        x, y = 721 + k, 376 - int(k * 0.58)
         c.set(x, y, C("de9e41"))
         c.set(x, y + 1, C("be772b"))
-        c.set(x, y - 1, C("e8c170") if k > 5 else C("de9e41"))
-    c.set(734, 368, C("341c27"))
-    c.set(735, 367, C("090a14"))
-    c.hline(701, 723, 395, C("090a14"))
+        c.set(x, y + 2, C("884b2b"))
+        c.set(x, y - 1, C("e8c170") if k > 7 else C("de9e41"))
+    c.set(747, 362, C("341c27"))                            # its lead
+    c.set(748, 361, C("090a14"))
     del rng
 
 
 # ------------------------------------------------------------- foreground ---
 def _magpie(c: Canvas, rng: random.Random) -> None:
-    """YOU. Bottom-left, restricted to the palette's two darkest colours plus
-    one top plane — nothing else in the frame at that size uses only those
-    tones, so it separates by VALUE with no keyline. Out-of-focus in pixel art
-    is FLATNESS, not blur: three readable structures on it (strap + brass
-    buckle, the collar's lit lip, the wrist wrap) and nothing else.
+    """YOU — and now ONLY your forearm and your gloved hand, entering from the
+    bottom edge of the frame and resting on the counter.
 
-    No head, no face: you are the shoulder, which also avoids committing to a
-    player model.
+    THE SHOULDER IS CUT (user, on the first render: "who is that black
+    figure?"). It was a dark mass hugging the left edge with a maroon pack
+    strap and a brass slider on it, meant to read as the viewer's own shoulder
+    in an over-the-shoulder framing. It never could: the one thing that would
+    identify a shoulder as YOURS is the head it belongs to, and that is exactly
+    what this framing has to leave out — so it read as a hooded person standing
+    in the room. Four cuts of it failed (hill, landmass, road, hooded man) and
+    the failure is structural, not a matter of more detail. The arm alone is
+    unambiguous: nobody else's arm enters a frame from the bottom edge.
 
-    THREE earlier cuts failed and the failures are instructive. One big mass
-    with a hump read as a hill; one big mass with a notch read as a landmass;
-    one long shallow sweep from the left edge read as a road. The fix was
-    never more detail — it was NEGATIVE SPACE. The shoulder now hugs the left
-    edge, the arm enters from the BOTTOM of the frame (which is where you are
-    standing) and rises to the counter, and the counter shows through the
-    wedge between them. A silhouette with a hole in it cannot read as a
-    pyramid."""
-    # ---- the shoulder: a mass on the left edge, mostly out of frame
-    tpts = [(0, 300), (26, 288), (54, 302), (76, 352), (92, 434), (100, 544)]
-    top = [0.0] * 120
-    for i in range(len(tpts) - 1):
-        (ax, ay), (bx_, by_) = tpts[i], tpts[i + 1]
-        for x in range(ax, bx_ + 1):
-            t = (x - ax) / float(bx_ - ax)
-            t = t * t * (3 - 2 * t)                        # smooth, no corners
-            top[x] = ay + (by_ - ay) * t
-    for x in range(101):
-        cy = int(round(top[x] + 2.0 * math.sin(x / 19.0) + 1.3 * math.sin(x / 7.0 + 1.1)))
-        c.rect(x, cy, x, SCENE_H - 1, C("090a14"))
-        c.set(x, cy, C("253a5e"))                          # THE rim — unbroken
-        c.set(x, cy + 1, C("172038"))
-        if x < 58:                                         # turned-up collar
-            c.rect(x, cy + 2, x, cy + 9, C("10141f"))
-            c.set(x, cy + 10, C("090a14"))
-            c.set(x, cy + 12 + int(math.sin(x / 23.0) * 2), C("172038"))
+    ARM AND HAND ARE ONE LIMB NOW (user: "can we fix his hand placement, it
+    looks off from his arm"). They were two unrelated pieces — a sweep that
+    stopped at (266,438) and a palm rectangle at (212,404)-(272,439) sitting
+    above and to the LEFT of it, with open counter showing through the break.
+    Wrist, palm, fingers and thumb are all derived from the SAME bezier and the
+    SAME tangent at t=1, so the hand cannot leave the arm; and the glove cuff
+    is laid across the join afterwards, overlapping both sides of it.
 
-    # pack strap: swept along its OWN perpendicular. Offsetting horizontally
-    # on a steep diagonal turned it into a ladder of rungs.
-    sx0, sy0, sx1, sy1 = 4, 300, 64, 470
-    dx, dy = sx1 - sx0, sy1 - sy0
-    ln = (dx * dx + dy * dy) ** 0.5
-    px, py = -dy / ln, dx / ln
-    for k in range(int(ln * 3) + 1):
-        t = k / float(int(ln * 3))
-        cx_, cy_ = sx0 + dx * t, sy0 + dy * t
-        for w in range(-7, 8):
-            c.set(int(round(cx_ + px * w)), int(round(cy_ + py * w)), C("341c27"))
-        for (w, col) in ((-7, "4d2b32"), (-8, "602c2c"), (7, "090a14"), (8, "090a14")):
-            c.set(int(round(cx_ + px * w)), int(round(cy_ + py * w)), C(col))
-    bx, by = 24, 356                                       # the brass slider
-    c.rect(bx, by, bx + 14, by + 9, C("be772b"))
-    c.rect(bx + 2, by + 2, bx + 12, by + 6, C("884b2b"))
-    c.hline(bx, bx + 14, by, C("de9e41"))
-    c.vline(bx, by, by + 9, C("de9e41"))
-    c.hline(bx + 1, bx + 13, by + 9, C("602c2c"))
-    c.set(bx + 3, by + 1, C("e8c170"))
+    Out-of-focus in pixel art is FLATNESS, not blur: the limb is the palette's
+    two darkest tones with one lit rim, and it carries exactly two readable
+    structures (the sleeve roll and the glove cuff with its brass keeper)."""
+    DARK, DIM = C("090a14"), C("10141f")
 
-    # ---- the arm: its own limb, rising STEEPLY into frame from where you are
-    # standing, swept along its perpendicular so it keeps a constant thickness
-    # instead of fanning out into a ramp
-    a0, a1 = (146.0, 588.0), (266.0, 438.0)
-    adx, ady = a1[0] - a0[0], a1[1] - a0[1]
-    aln = (adx * adx + ady * ady) ** 0.5
-    apx, apy = -ady / aln, adx / aln
-    steps = int(aln * 3)
-    for k in range(steps + 1):
-        t = k / float(steps)
-        cx_ = a0[0] + adx * t + math.sin(t * 2.4) * 4
-        cy_ = a0[1] + ady * t
-        r = 39.0 - 9.0 * t
-        for w in range(-int(r), int(r) + 1):
-            c.set(int(round(cx_ + apx * w)), int(round(cy_ + apy * w)), C("090a14"))
-        for (w, col) in ((-int(r), "253a5e"), (-int(r) + 1, "172038"),
-                         (-int(r) + 2, "172038"), (int(r), "10141f")):
-            c.set(int(round(cx_ + apx * w)), int(round(cy_ + apy * w)), C(col))
-        if 0.08 < t < 0.24:                                # the sleeve cuff
-            for w in range(-int(r) + 3, -int(r) + 13):
-                c.set(int(round(cx_ + apx * w)), int(round(cy_ + apy * w)),
-                      C("10141f"))
-        if 0.58 < t < 0.73:                                # the wrist wrap —
-            for w in range(-int(r), int(r) - 18):          # verne rebuilt this
-                col = "577277" if w < -int(r) + 2 else (   # arm (lore §8)
-                    "602c2c" if 0.63 < t < 0.68 and -8 < w < 0 else "394a50")
-                c.set(int(round(cx_ + apx * w)), int(round(cy_ + apy * w)), C(col))
+    # the forearm centreline. A cubic bezier so the tangent is continuous all
+    # the way into the wrist — a chain of smoothstepped segments kinked at the
+    # knots, and a kink in a limb reads as a broken bone.
+    P = ((66.0, 572.0), (116.0, 522.0), (176.0, 488.0), (230.0, 448.0))
 
-    # ---- the hand. It rests on the LIT top face with the fingers fanning
-    # away from you, because a hand drawn over the counter's dark front face
-    # is 090a14 on 241527 and simply disappears — the render proved it.
-    def cap(x0, y0, ang, length, half):
+    def bez(t):
+        m = 1.0 - t
+        x = (m ** 3 * P[0][0] + 3 * m * m * t * P[1][0]
+             + 3 * m * t * t * P[2][0] + t ** 3 * P[3][0])
+        y = (m ** 3 * P[0][1] + 3 * m * m * t * P[1][1]
+             + 3 * m * t * t * P[2][1] + t ** 3 * P[3][1])
+        dx = (3 * m * m * (P[1][0] - P[0][0]) + 6 * m * t * (P[2][0] - P[1][0])
+              + 3 * t * t * (P[3][0] - P[2][0]))
+        dy = (3 * m * m * (P[1][1] - P[0][1]) + 6 * m * t * (P[2][1] - P[1][1])
+              + 3 * t * t * (P[3][1] - P[2][1]))
+        ln = (dx * dx + dy * dy) ** 0.5
+        return x, y, dx / ln, dy / ln
+
+    def rib(cx_, cy_, nx_, ny_, hw, lit=True):
+        """One perpendicular slice. The LIT edge is the down-right one: every
+        light in this room (the box at 662,392 and the lamp at 806,404) is off
+        to the right, so the arm's right flank is the one that catches."""
+        h = int(hw)
+        for w in range(-h, h + 1):
+            c.set(int(round(cx_ + nx_ * w)), int(round(cy_ + ny_ * w)), DARK)
+        if lit:
+            c.set(int(round(cx_ + nx_ * h)), int(round(cy_ + ny_ * h)), C("253a5e"))
+            c.set(int(round(cx_ + nx_ * (h - 1))),
+                  int(round(cy_ + ny_ * (h - 1))), C("172038"))
+            c.set(int(round(cx_ - nx_ * h)), int(round(cy_ - ny_ * h)), DIM)
+
+    # ---- forearm
+    N = 560
+    for k in range(N + 1):
+        t = k / float(N)
+        x, y, tx, ty = bez(t)
+        nx_, ny_ = -ty, tx                                 # down-right normal
+        r = 27.0 - 9.0 * t
+        rib(x, y, nx_, ny_, r)
+        if 0.09 < t < 0.23:                                # the sleeve roll
+            for w in range(-int(r) + 2, int(r) - 5):
+                c.set(int(round(x + nx_ * w)), int(round(y + ny_ * w)), DIM)
+        if 0.225 < t < 0.245:
+            for w in range(-int(r) + 1, int(r) - 3):
+                c.set(int(round(x + nx_ * w)), int(round(y + ny_ * w)), C("172038"))
+
+    wx, wy, wtx, wty = bez(1.0)
+    wnx, wny = -wty, wtx
+    ang0 = math.degrees(math.atan2(wty, wtx))
+
+    # ---- the palm, travelling on the tangent the forearm arrives on.
+    # SAMPLED AT 0.4 px. Stepping s by a whole pixel along a rotated axis and
+    # w by a whole pixel along the perpendicular samples a lattice rotated ~33
+    # degrees off the screen grid, and a unit-spaced rotated lattice LEAVES
+    # HOLES — the first render of this stippled the back of the hand into a
+    # checkerboard, which is the one texture this project bans outright.
+    def slab(s0, s1, w0, w1, col, step=0.4):
+        n = int((s1 - s0) / step)
+        m = int((w1 - w0) / step)
+        for i in range(n + 1):
+            s = s0 + i * step
+            for j in range(m + 1):
+                w = w0 + j * step
+                c.set(int(round(wx + wtx * s + wnx * w)),
+                      int(round(wy + wty * s + wny * w)), col)
+
+    def pw(s):                                       # the palm's half-width
+        return 17.0 + 5.0 * math.sin((s / 32.0) * 2.55)
+
+    for i in range(81):
+        s = i * 0.4
+        rib(wx + wtx * s, wy + wty * s, wnx, wny, pw(s))
+    # the back of the hand. It TAPERS WITH THE PALM: a straight-sided slab
+    # here read as a rectangular plate laid on top of the glove, and the two
+    # tendon grooves cut through it read as machined slots.
+    for i in range(46):
+        s = 6.0 + i * 0.4
+        h = pw(s) - 6.0
+        for j in range(int(2 * h / 0.4) + 1):
+            w = -h + j * 0.4
+            c.set(int(round(wx + wtx * s + wnx * w)),
+                  int(round(wy + wty * s + wny * w)), C("172038"))
+        if 9.0 < s < 21.0:                           # two tendons, converging
+            for (f, o) in ((-0.34, 0.0), (0.30, 0.6)):
+                for d in (0.0, 0.4):
+                    c.set(int(round(wx + wtx * s + wnx * (h * f + o + d))),
+                          int(round(wy + wty * s + wny * (h * f + o + d))), DIM)
+
+    def digit(rx_, ry_, ang, length, half):
         dxx, dyy = math.cos(math.radians(ang)), math.sin(math.radians(ang))
         for k in range(int(length * 3) + 1):
             t = k / float(int(length * 3))
-            cx_, cy_ = x0 + dxx * length * t, y0 + dyy * length * t
-            h = half - (1 if t > 0.88 else 0)              # rounded tip
-            for w in range(-h, h + 1):
-                c.set(int(round(cx_ - dyy * w)), int(round(cy_ + dxx * w)),
-                      C("090a14"))
-            c.set(int(round(cx_ - dyy * -h)), int(round(cy_ + dxx * -h)),
-                  C("253a5e"))
-            c.set(int(round(cx_ - dyy * (-h + 1))), int(round(cy_ + dxx * (-h + 1))),
-                  C("172038"))
+            cx_, cy_ = rx_ + dxx * length * t, ry_ + dyy * length * t
+            h = half - (1 if t > 0.86 else 0)              # rounded tip
+            rib(cx_, cy_, -dyy, dxx, h)
 
-    for y in range(404, 439):                              # the palm
-        t = (y - 404) / 34.0
-        pad = int(6 * abs(t - 0.5) ** 2 * 4)
-        c.hline(212 + pad, 272 - pad // 2, y, C("090a14"))
-    c.hline(220, 266, 404, C("253a5e"))
-    c.hline(222, 264, 405, C("172038"))
-    c.rect(224, 406, 262, 411, C("172038"))
-    for i in range(4):                                     # four fanned fingers
-        (rx, ry, ang, lg, hf) = ((242, 406, -52, 26, 6), (254, 410, -42, 28, 6),
-                                 (264, 416, -31, 24, 6), (270, 424, -18, 17, 5))[i]
-        cap(rx, ry, ang, lg + rng.randint(0, 2), hf)
-    cap(220, 424, -104, 18, 6)                             # the thumb
-    for (kx, ky) in ((240, 404), (241, 404), (252, 408), (253, 408), (263, 414)):
-        c.set(kx, ky, C("3c5e8b"))                         # knuckle catches
+    # FOUR FINGERS RESTING, not a fan of bars. The first cut splayed them 15
+    # degrees apart over 30 px and the tips ended 9 px apart with counter
+    # showing between: it read as a claw. They are rooted 11 apart at a
+    # half-width of 5, so they TOUCH at the knuckles and part only toward the
+    # tips, and each one's dark left flank lands against its neighbour's lit
+    # right flank, which is what separates them without a gap.
+    kx, ky = wx + wtx * 25.0, wy + wty * 25.0
+    for (off, da, lg, hf) in ((-16.5, -9, 26, 5), (-5.5, -3, 29, 5),
+                              (5.5, 3, 27, 5), (16.5, 9, 21, 5)):
+        digit(kx + wnx * off, ky + wny * off, ang0 + da,
+              lg + rng.randint(0, 2), hf)
+    # the thumb: SHORTER and FATTER than any finger and rooted further back
+    # down the palm. At the same length and width as the others it was simply
+    # read as a fifth finger and the hand looked like a rake.
+    digit(wx + wtx * 4 + wnx * 15, wy + wty * 4 + wny * 15,
+          ang0 + 64, 17, 7)
+    for kn in (-15.5, -5.0, 5.5, 15.5):                    # knuckle catches —
+        for d in (0.0, 0.4, 0.8, 1.2):                     # short RUNS, because
+            c.set(int(round(kx + wnx * kn + wtx * d)),     # isolated bright
+                  int(round(ky + wny * kn + wty * d)), C("253a5e"))  # pixels
+
+
+    # ---- the glove cuff, laid ACROSS the join last so it overlaps the end of
+    # the forearm and the start of the hand and welds them together. Kept LOW
+    # in value: the first cut ran 577277 and 819796 through it and a bright
+    # bracelet on a silhouette that is meant to be out of focus took the eye
+    # clean off mara.
+    for i in range(46):
+        s = -15.0 + i * 0.4
+        hw = 18.5 - 0.09 * s
+        h = int(hw)
+        for w in range(-h, h + 1):
+            col = C("202e37")
+            if -12 < s < -8:
+                col = C("151d28")                          # a strap shadow
+            if w < -h + 2:
+                col = C("10141f")
+            elif w > h - 3:
+                col = C("394a50")
+            c.set(int(round(wx + wtx * s + wnx * w)),
+                  int(round(wy + wty * s + wny * w)), col)
+    slab(4.6, 5.6, -18.0, 18.0, C("577277"))               # the cuff's mouth
+    slab(5.8, 6.6, -18.0, 18.0, C("151d28"))
+    slab(-15.6, -14.8, -19.0, 19.0, DIM)
+    # the brass keeper. Small and DULL: at be772b over de9e41 it read as a lit
+    # button on the glove, and there is nothing over there to light it.
+    slab(-7.5, -4.0, -3.0, 2.0, C("602c2c"))
+    slab(-7.5, -7.0, -3.0, 2.0, C("884b2b"))
+    slab(-7.5, -4.0, -3.0, -2.6, C("884b2b"))
+    slab(-4.4, -4.0, -3.0, 2.0, C("241527"))
 
 
 if __name__ == "__main__":

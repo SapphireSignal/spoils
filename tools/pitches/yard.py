@@ -31,6 +31,30 @@ CRITIC CORRECTIONS APPLIED
   6. no overlook citation - there is no overlook, it was dropped on a user
      call. the seam wobble here is written from scratch (see wob()).
 
+SECOND PASS, after the user looked at it (they reported no defects; these
+are the honest weaknesses, and none of them touched the sky, the
+perspective or the convergence, which are the strongest things here)
+  1. the right car had no door, no hardware and no wear of its own - it
+     carried its whole side of the frame on value alone. it now has a
+     padlocked replacement door on a track, roof vents and a running
+     board, a brake wheel on the end, a repair plate and a dirt tide. it
+     is NOT the left car mirrored: that one is a plank leaf dragged open
+     on a black gap, this one is shut, steel, and a different paint.
+  2. the sleepers read as a ladder. tone, length, burial, sink, sideways
+     shift, spacing and dropouts are all fought now - see section 4.
+  3. the 394a50 haze at y 267-281 was a constant-height stripe the full
+     width of the frame. its thickness now swings to nothing and its
+     colour dies into the ground away from the glow.
+  4. the 7a367b band read as synthwave. magenta is out of the cooling
+     ladder entirely, so it survives only as a narrow accent near the
+     glow, broken by two cloud bars.
+  5. the button band was a perfectly flat field. one broad hollow, one
+     palette step (measured: the band is 60/40 151d28 / 202e37 and
+     nothing else).
+  6. the nearest telegraph pole's foot was hidden behind the left car.
+     the car ends nearer and the pole steps back; there are 25 px of open
+     ballast between them now.
+
 ROOM LEFT FOR THE LIVING LAYER (do not build it here):
   * signal lens baked UNLIT at 752438, glow sprite goes at SIGNAL_LENS.
     keep the glow <= 40 px radius or it walks into the button band.
@@ -78,7 +102,7 @@ def top_of(h_m: float, d: float) -> float:
 
 
 # landmarks the living layer needs (canvas coords)
-DRIP_SRC = (118, 152)     # left car eave
+DRIP_SRC = (100, 141)     # left car eave
 PUDDLE = (286, 418)       # four-foot, between the rails
 SIGNAL_LENS = (340, 224)
 CAB_LED = (346, 286)
@@ -122,14 +146,24 @@ def paint() -> Canvas:
     # horizontally by distance from the glow so no seam is ever full width.
     SKY = ["090a14", "10141f", "172038", "1e1d39", "402751", "7a367b",
            "411d31", "752438", "884b2b", "be772b", "de9e41"]
-    COOL = ["de9e41", "be772b", "884b2b", "752438", "411d31", "7a367b",
+    # THE COOLING LADDER NO LONGER PASSES THROUGH MAGENTA. it used to, so
+    # every warm band out on the flanks turned into 7a367b and the whole
+    # upper sky became one magenta field - synthwave, not dusk. the warm
+    # bands now cool straight through plum into night, and magenta survives
+    # only in its own thin band near the glow: an accent, not a stripe.
+    COOL = ["de9e41", "be772b", "884b2b", "752438", "411d31",
             "402751", "1e1d39", "172038", "10141f"]
     cool_i = {n: i for i, n in enumerate(COOL)}
+    MAGENTA = ["7a367b", "402751", "1e1d39", "172038", "10141f"]
 
-    seam_y = [50, 88, 122, 152, 179, 193, 214, 231, 245, 255]
+    # band 5 (the magenta) is also NARROWED, and its two seams wobble on
+    # unrelated periods so its thickness swings from ~17 px to nothing - in
+    # places the upper seam overtakes the lower and the band simply is not
+    # there for a stretch.
+    seam_y = [50, 88, 122, 152, 181, 191, 214, 231, 245, 255]
     seam_w = [seam(6.0, 118.0, 3.5, 41.0), seam(5.5, 143.0, 3.0, 37.0),
               seam(5.5, 97.0, 3.0, 29.0), seam(5.0, 131.0, 2.5, 33.0),
-              seam(4.0, 109.0, 2.4, 26.0), seam(3.6, 87.0, 2.0, 23.0),
+              seam(4.0, 109.0, 2.4, 26.0), seam(4.6, 63.0, 2.8, 21.0),
               seam(3.2, 121.0, 1.8, 19.0), seam(2.6, 103.0, 1.6, 31.0),
               seam(2.0, 141.0, 1.3, 22.0), seam(1.6, 79.0, 1.0, 17.0)]
 
@@ -143,9 +177,7 @@ def paint() -> Canvas:
             while b < len(edges) and y >= edges[b]:
                 b += 1
             name = SKY[b]
-            if name in cool_i:
-                # the falloff line itself waves, so the cooling never reads
-                # as a vertical edge either
+            if name in cool_i or name == "7a367b":
                 # the falloff line itself waves in y, two periods, so the
                 # cooling never hardens into a vertical edge
                 dist = abs(x - GLOW_X
@@ -153,7 +185,12 @@ def paint() -> Canvas:
                            + 19.0 * math.sin(y * 0.061 + 2.7))
                 step = int(max(0.0, dist - 96.0) / 96.0)
                 step = min(step, 4)
-                name = COOL[min(cool_i[name] + step, len(COOL) - 1)]
+                if name == "7a367b":
+                    # magenta cools out FAST: one step off the glow and it
+                    # is already plum. that is what keeps it an accent.
+                    name = MAGENTA[min(step, len(MAGENTA) - 1)]
+                else:
+                    name = COOL[min(cool_i[name] + step, len(COOL) - 1)]
             sky_col[y][x] = C(name)
     for y in range(int(HZ)):
         row = sky_col[y]
@@ -185,6 +222,11 @@ def paint() -> Canvas:
     cloud(96, 388, 208, 4.0, "341c27", "752438", 61.0, 1.8)
     cloud(392, 828, 224, 3.0, "411d31", "884b2b", 111.0, 3.4)
     cloud(40, 300, 236, 3.0, "752438", "be772b", 47.0, 0.2)
+    # two bars laid ACROSS what is left of the magenta, so it is broken into
+    # islands rather than a band. one takes its lip FROM the magenta, which
+    # is the only place that hue is allowed to be bright.
+    cloud(104, 556, 184, 7.0, "402751", "7a367b", 89.0, 1.3)
+    cloud(590, 878, 178, 5.0, "402751", "411d31", 53.0, 4.8)
 
     # ==================================================== 2. THE DISTRICT ==
     # flat solid black, drawn UPWARD from the horizon (critic fix 1), with a
@@ -251,22 +293,58 @@ def paint() -> Canvas:
     g1 = seam(4.0, 127.0, 2.0, 31.0)      # haze -> far ballast  (~268)
     g2 = seam(5.0, 151.0, 2.6, 43.0)      # far ballast -> mid   (~282)
     g3 = seam(6.0, 173.0, 3.0, 47.0)      # mid -> near cinder   (~404)
+    # THE HAZE OFF THE FAR YARD IS NOT A STRIPE. it used to be a constant
+    # ~14 px of 394a50 running wall to wall, which made it the second
+    # brightest thing in the frame and very nearly a band of its own. now:
+    # its lower edge is its upper edge PLUS a thickness that swings on three
+    # periods sharing no factor - so it swells past 20 px, pinches to one,
+    # and in places the thickness goes NEGATIVE and the haze is simply not
+    # there. its colour also drops a step away from the glow, so it dies
+    # into the ground colour before it ever reaches a frame edge.
+    hz = [rng.uniform(0.0, 6.28) for _ in range(4)]
+    e1s, e2s, e3s, hz_col = [], [], [], []
+    for x in range(SCENE_W):
+        e1 = 267.0 + wob(x, *g1)
+        thick = (6.5 + 8.0 * math.sin(x / 59.0 + hz[0])
+                 + 4.5 * math.sin(x / 23.0 + hz[1])
+                 + 3.5 * math.sin(x / 151.0 + hz[2]))
+        e1s.append(e1)
+        e2s.append(e1 + thick + wob(x, *g2) * 0.3)
+        e3s.append(404.0 + wob(x, *g3))
+        hd = abs(x - GLOW_X + 46.0 * math.sin(x / 83.0 + hz[3]))
+        hz_col.append(C("394a50") if hd < 196.0 else C("202e37"))
     for y in range(HZI, SCENE_H):
         for x in range(SCENE_W):
-            e1 = 267 + wob(x, *g1)
-            e2 = 281 + wob(x, *g2)
-            e3 = 404 + wob(x, *g3)
-            if y < e1:
+            if y < e1s[x]:
                 dist = abs(x - GLOW_X + 12.0 * math.sin(y * 0.3))
                 step = min(int(max(0.0, dist - 118.0) / 108.0), 2)
                 col = C(("411d31", "402751", "1e1d39")[step])
-            elif y < e2:
-                col = C("394a50")
-            elif y < e3:
+            elif y < e2s[x]:
+                col = hz_col[x]
+            elif y < e3s[x]:
                 col = C("202e37")
             else:
                 col = C("151d28")
             c.set(x, y, col)
+
+    # THE BUTTON BAND MAY NOT HAVE DETAIL - but it was a perfectly flat
+    # field of one colour, and flat reads as unfinished. so: ONE broad
+    # hollow, ONE palette step darker, with a damp core one step off that.
+    # no edge is straight and none of it is smaller than about 40 px, so
+    # there is nothing here for the eye to resolve behind a button.
+    # (a first cut put a 172038 damp core inside this. it read as a river
+    # sweeping across the middle of the frame - loud, and exactly the kind
+    # of shape a button must not sit on. one step, one shape, nothing else.)
+    hol = [rng.uniform(0.0, 6.28) for _ in range(3)]
+    for x in range(196, 892):
+        t = (x - 196) / 696.0
+        env = math.sin(math.pi * t) ** 0.5          # dies out at both ends
+        top = (308.0 + 17.0 * math.sin(x / 143.0 + hol[0])
+               + 7.0 * math.sin(x / 47.0 + hol[1]))
+        bot = top + (14.0 + 44.0 * env) + 10.0 * math.sin(x / 71.0 + hol[2])
+        if bot - top < 5.0:
+            continue
+        c.vline(x, int(top), int(bot), C("151d28"))
 
     # one broad shallow depression in the cinder, kept ENTIRELY BELOW the
     # button band: a single palette step, huge scale, no readable edge.
@@ -300,9 +378,36 @@ def paint() -> Canvas:
         patch(px, py, rng.randint(9, 26), rng.randint(2, 6), C("10141f"))
 
     # ==================================================== 4. THE SLEEPERS ==
+    # TRACK IS A LADDER, and a ladder is exactly the repeating grid this
+    # project bans, so the rungs have to be fought on every axis at once:
+    #   * TONE over a much wider range - rotted black timber next to a
+    #     bleached concrete one next to fresh creosote, never twice running
+    #   * LENGTH - short ones, and ends BURIED so they stop short of where
+    #     the row says they should
+    #   * BALLAST WASHING OVER one end of a sleeper entirely
+    #   * SINKING - some sit low and read half as thick
+    #   * SIDEWAYS SHIFT as well as skew, so the row is not even a line
+    #   * DROPOUTS, sometimes two together, sometimes a long clean run
+    # the convergence itself is untouched: every sleeper is still projected.
+    LIT = {"10141f": "151d28", "151d28": "202e37", "202e37": "394a50",
+           "241527": "341c27", "341c27": "4d2b32", "4d2b32": "602c2c",
+           "411d31": "602c2c", "602c2c": "7a4841"}
+    # weighted: rotten timber dominates, with a couple of concretes and a
+    # couple of near-black ones. THE CONCRETE TONE FLIPS WITH THE GROUND -
+    # 202e37 where the cinder is 151d28, 151d28 where the ballast is
+    # 202e37 - because a sleeper the same colour as the ground under it
+    # does not read as a sleeper at all, it just deletes a rung.
+    NEAR_POOL = (["241527"] * 3 + ["341c27"] * 5 + ["4d2b32"] * 4
+                 + ["602c2c"] * 2 + ["411d31"] * 3 + ["10141f"]
+                 + ["202e37"])
+    FAR_POOL = (["341c27"] * 4 + ["4d2b32"] * 4 + ["241527"] * 3
+                + ["411d31"] * 2 + ["151d28"] * 2 + ["10141f"] * 2
+                + ["602c2c"])
     HALF_MAX = 1.25          # metres. capped so no sleeper end reaches x 400
     d = 3.6
     prev_body = ""
+    prev2 = ""
+    gap_run = 0
     dropped = 0
     far_merge_y = None
     while d < 90.0:
@@ -312,39 +417,77 @@ def paint() -> Canvas:
             far_merge_y = y_near
             break
         if y_far < SCENE_H + 40:
-            half = min(HALF_MAX, rng.uniform(1.12, 1.26))
-            skew = rng.uniform(-1.8, 1.8)
-            xl = gxd(-half, d)
-            xr = gxd(half * rng.uniform(0.95, 1.03), d)
-            pool = (["241527", "341c27", "4d2b32"] if y_near > 470 else
-                    (["241527", "341c27", "4d2b32"] if y_near > 372 else
-                     ["341c27", "4d2b32", "411d31"]))
-            pool = [p for p in pool if p != prev_body] or pool
+            half = min(HALF_MAX, rng.uniform(0.94, 1.26))
+            skew = rng.uniform(-2.9, 2.9)
+            shift = rng.uniform(-0.05, 0.05)        # metres, sideways
+            xl = gxd(-half + shift, d)
+            xr = gxd(half * rng.uniform(0.90, 1.0) + shift, d)
+            pool = NEAR_POOL if y_near > 404 else FAR_POOL
+            pool = [p for p in pool if p != prev_body and p != prev2] or pool
             body = rng.choice(pool)
-            prev_body = body
-            missing = rng.random() < 0.075 and d > 4.6
+            prev2, prev_body = prev_body, body
+            # a dropout, and dropouts cluster: after one, the next is likely.
+            # RARE NEAR THE CAMERA - only about four sleepers fall in the
+            # bottom 90 rows of the frame, so a dropout rate that reads as
+            # pleasant thinning up the line deletes the foreground track
+            # entirely down here. (it did: two passes had bare ground under
+            # the near rails.)
+            near = y_near > 470
+            if gap_run and not near:
+                missing = rng.random() < 0.42
+            else:
+                missing = rng.random() < (0.05 if near else 0.13) and d > 4.4
+            gap_run = gap_run + 1 if missing else 0
             if missing:
                 dropped += 1
-            lit = {"10141f": "241527", "241527": "341c27", "341c27": "4d2b32",
-                   "4d2b32": "602c2c", "411d31": "602c2c"}[body]
+            lit = LIT[body]
+            # sunk sleepers show less of their face
+            sink = rng.uniform(0.0, 0.34) if rng.random() < 0.30 else 0.0
+            y_top = y_far + (y_near - y_far) * sink
+            # ends buried in the ballast - independent per end. capped so a
+            # sleeper never loses more than a third of itself to burial;
+            # the wash below can still eat one end on top of that.
+            bl = rng.uniform(0.0, 0.22) if rng.random() < 0.5 else 0.0
+            br = rng.uniform(0.0, 0.22) if rng.random() < 0.5 else 0.0
+            if bl + br > 0.32:
+                bl, br = bl * 0.5, br * 0.5
             span = max(1.0, xr - xl)
-            for x in range(int(xl), int(xr) + 1):
-                t = (x - xl) / span
-                off = skew * (t - 0.5) * 2.0
-                y0 = int(round(y_far + off))
-                y1 = int(round(y_near + off))
-                if missing:
-                    c.vline(x, y0, y1, C("10141f"))
-                    continue
-                c.vline(x, y0, y1, C(body))
-                c.hline(x, x, y0, C("241527") if y_near > 372 else C("10141f"))
-                if y1 - y0 >= 2:
-                    c.set(x, y1, C(lit))
-            if not missing and y1 - y0 >= 5 and rng.random() < 0.45:
-                # a split / adze mark, structural not noise
-                wx = int(rng.uniform(xl + 12, xr - 12))
-                c.vline(wx, int(y_far + 1), int(y_near - 1), C("241527"))
-        d += 0.62 + rng.uniform(-0.06, 0.06)
+            x0 = int(xl + span * bl)
+            x1 = int(xr - span * br)
+            if not missing and x1 > x0:
+                for x in range(x0, x1 + 1):
+                    t = (x - xl) / span
+                    off = skew * (t - 0.5) * 2.0
+                    y0 = int(round(y_top + off))
+                    y1 = int(round(y_near + off))
+                    c.vline(x, y0, y1, C(body))
+                    c.set(x, y0, C("241527") if y_near > 372 else C("10141f"))
+                    if y1 - y0 >= 2:
+                        c.set(x, y1, C(lit))
+                if y_near - y_top >= 5 and rng.random() < 0.45:
+                    # a split / adze mark, structural not noise
+                    wx = int(rng.uniform(x0 + 6, max(x0 + 7, x1 - 6)))
+                    c.vline(wx, int(y_top + 1), int(y_near - 1), C("241527"))
+                # ballast washed clean over one end: a solid tongue of the
+                # ground colour eating into the sleeper, so the row loses a
+                # rung end without losing the sleeper
+                if rng.random() < 0.34 and span > 26:
+                    bal = C("151d28") if y_near > 404 else C("202e37")
+                    side = rng.choice((-1, 1))
+                    wln = int(span * rng.uniform(0.12, 0.34))
+                    for k in range(wln):
+                        u = k / max(1.0, wln - 1.0)
+                        wx = x0 + k if side < 0 else x1 - k
+                        t = (wx - xl) / span
+                        off = skew * (t - 0.5) * 2.0
+                        hgt = (y_near - y_top) * (1.0 - u ** 0.7)
+                        c.vline(wx, int(y_top + off),
+                                int(y_top + off + hgt), bal)
+        # the pitch itself wanders, and now and then a chair is missing and
+        # the gap doubles
+        d += 0.60 + rng.uniform(-0.13, 0.15)
+        if rng.random() < 0.07:
+            d += rng.uniform(0.22, 0.44)
 
     # beyond the merge point the individual sleepers are sub-pixel: one
     # continuous bed instead of a moire ladder.
@@ -407,8 +550,17 @@ def paint() -> Canvas:
     # ================================================ 7. TELEGRAPH POLES ==
     # collinear with the VP by construction. reverse aerial perspective:
     # near pole has real lit/shade faces, far ones flatten to silhouette.
+    # THE NEAREST POLE NOW SHOWS ITS FOOT. it used to stand at d=30, which
+    # projects to x 120 - inside the left car's screen span, and because the
+    # pole line is FURTHER from the track than the car flank, a pole inside
+    # that span is always the further of the two and always occluded. so the
+    # strongest pole in the frame was a crossarm floating with no base. two
+    # things fixed it together: the car ends nearer (LC_D_FAR, x 116) and the
+    # pole steps back to 34 m (x 141), which puts 25 px of open ballast
+    # between the car's far corner and the pole's foot. the run is also
+    # re-spaced geometrically so the gaps shrink monotonically toward the VP.
     POLE_X = -6.5
-    P_D = [30.0, 42.0, 58.0, 80.0, 110.0, 150.0, 205.0, 280.0, 380.0]
+    P_D = [34.0, 46.0, 62.0, 84.0, 114.0, 154.0, 208.0, 282.0, 382.0]
     LEAN = [0, 1, -1, 1, 0, -1, 1, 0, -1]
     poles = []
     for i, pd in enumerate(P_D):
@@ -670,14 +822,17 @@ def paint() -> Canvas:
         return (lo_x, hi_x)
 
     # LEFT CAR - ochre livery (make_boxcar liveries[0]), door dragged half
-    # open, the deepest black in the frame sitting in that gap.
-    boxcar(flank_x=-4.2, d_near=9.0, d_far=24.0, roof_h=4.25, floor_h=1.15,
+    # open, the deepest black in the frame sitting in that gap. it ends at
+    # LC_D_FAR rather than 24 m so the nearest telegraph pole's foot clears
+    # its far corner - see the pole section.
+    LC_D_FAR = 19.0
+    boxcar(flank_x=-4.2, d_near=9.0, d_far=LC_D_FAR, roof_h=4.25, floor_h=1.15,
            side=-1, pal=("241527", "10141f", "602c2c", "090a14"),
-           door=(13.2, 17.6, True, "4d2b32", "884b2b"), ribs=15, rust=7,
+           door=(12.6, 16.4, True, "4d2b32", "884b2b"), ribs=11, rust=7,
            strake=0.15, mid=0.58)
     # its ONE lit edge: the far corner post facing the ember
-    lc_far_x = int(gxd(-4.2, 24.0))
-    lc_by = gy(24.0)
+    lc_far_x = int(gxd(-4.2, LC_D_FAR))
+    lc_by = gy(LC_D_FAR)
     c.vline(lc_far_x, int(lc_by - 4.25 * ppm(lc_by)), int(lc_by), C("602c2c"))
     c.vline(lc_far_x - 1, int(lc_by - 4.25 * ppm(lc_by)) + 2, int(lc_by) - 2,
             C("be772b"))
@@ -690,7 +845,7 @@ def paint() -> Canvas:
     # bogies
     # bogies stay almost invisible: under a car at dusk everything is black,
     # and a lighter block down there reads as an arch, not a truck.
-    for bd in (10.6, 13.0, 20.2, 22.6):
+    for bd in (10.4, 11.9, 16.3, 17.8):
         bx = int(gxd(-4.2, bd))
         byy = gy(bd)
         pm = ppm(byy)
@@ -712,10 +867,204 @@ def paint() -> Canvas:
     # door state, different distance, different crop, different wear, and a
     # different lit-edge colour. it also shows a RAKING END FACE, so it is
     # not a flat rectangle with a highlight line (critic finding 2).
-    rc = boxcar(flank_x=9.0, d_near=13.0, d_far=20.0, roof_h=4.25,
-                floor_h=1.15, side=1, pal=("10141f", "090a14", "19332d",
-                                           "090a14"),
-                door=None, ribs=9, rust=3, strake=0.17, mid=0.70)
+    # its body is ONE STEP LIGHTER than it used to be (10141f -> 151d28).
+    # at 10141f its ribs, its shade face and its own dirt were all within
+    # two RGB steps of each other, so nothing drawn on it could read and it
+    # carried its whole side of the frame on silhouette alone. it is still
+    # the darkest large mass in the picture; it just has room to hold
+    # detail now. NO rust streaks here on purpose - the left car has those,
+    # and wear that only moves is not wear that differs.
+    RC_X, RC_DN, RC_DF = 9.0, 13.0, 20.0
+    RC_ROOF, RC_FLOOR = 4.25, 1.15
+    rc = boxcar(flank_x=RC_X, d_near=RC_DN, d_far=RC_DF, roof_h=RC_ROOF,
+                floor_h=RC_FLOOR, side=1,
+                pal=("151d28", "10141f", "19332d", "090a14"),
+                door=None, ribs=9, rust=0, strake=0.17, mid=0.70)
+
+    # every span below is CLAMPED to the flank's own screen extent. it was
+    # not, and the first cut hung a roof vent and a repair plate over the
+    # near END face, where they read as windows on the wrong plane.
+    RC_XA, RC_XB = int(gxd(RC_X, RC_DF)), int(gxd(RC_X, RC_DN))
+
+    def rc_col(x):
+        """(ground row, px/metre) for one column of the right car's flank."""
+        yg = gy(RC_X * FOCAL / (x - VPX))
+        return yg, ppm(yg)
+
+    def rc_span(d0, d1):
+        a, b = sorted((gxd(RC_X, d0), gxd(RC_X, d1)))
+        return max(RC_XA, int(a)), min(RC_XB, int(b))
+
+    # --- THE SLIDING DOOR. shut, top-hung, padlocked, and deliberately
+    # nothing like the left car's dragged-open plank leaf.
+    # IT IS A REPLACEMENT DOOR OFF ANOTHER CAR, so it is a different paint
+    # from the flank: warm maroon against the car's cold green-grey. that
+    # is what finally made it read. two earlier cuts painted it in the
+    # car's own values - once flat, once with its light break moved - and
+    # both times it disappeared, because two colours a step apart in the
+    # dark are the same colour. HUE at equal value reads; value alone did
+    # not, and value contrast big enough to read would have made a hole.
+    dxa, dxb = rc_span(15.2, 18.4)
+    for x in range(dxa, dxb + 1):
+        yg, pm = rc_col(x)
+        yt = yg - (RC_ROOF - 0.34) * pm
+        yb = yg - (RC_FLOOR + 0.12) * pm
+        b1 = yt + (yb - yt) * 0.24
+        b2 = yt + (yb - yt) * 0.66
+        for y in range(int(yt), int(yb) + 1):
+            c.set(x, y, C("341c27") if y <= b1
+                  else (C("241527") if y <= b2 else C("10141f")))
+        c.set(x, int(yt), C("4d2b32"))          # the door's own top edge
+        c.set(x, int(yb), C("090a14"))
+    # four pressed battens, uneven, each stopping at a different height
+    for fr, f0, f1 in ((0.17, 0.06, 0.88), (0.36, 0.10, 0.61),
+                       (0.58, 0.05, 0.93), (0.79, 0.14, 0.72)):
+        bx = int(dxa + (dxb - dxa) * fr)
+        yg, pm = rc_col(bx)
+        yt = yg - (RC_ROOF - 0.34) * pm
+        yb = yg - (RC_FLOOR + 0.12) * pm
+        c.vline(bx, int(yt + (yb - yt) * f0), int(yt + (yb - yt) * f1),
+                C("10141f"))
+        c.vline(bx + 1, int(yt + (yb - yt) * f0),
+                int(yt + (yb - yt) * (f0 + (f1 - f0) * 0.8)), C("4d2b32"))
+    # one horizontal press line across it, wobbled so it is not a ruled edge
+    for x in range(dxa + 2, dxb - 1):
+        u = (x - dxa) / float(max(1, dxb - dxa))
+        yg, pm = rc_col(x)
+        yt = yg - (RC_ROOF - 0.34) * pm
+        yb = yg - (RC_FLOOR + 0.12) * pm
+        yc = yt + (yb - yt) * (0.46 + 0.012 * math.sin(u * 9.4))
+        c.set(x, int(yc), C("10141f"))
+        c.set(x, int(yc) - 1, C("4d2b32"))
+    # the leading edge is a lit metal angle - bright only where the light
+    # actually falls, not a rail down the whole car - and the trailing edge
+    # is a recess with the door's own shadow thrown on the flank beside it
+    yg, pm = rc_col(dxb)
+    yt = yg - (RC_ROOF - 0.32) * pm
+    yb = yg - (RC_FLOOR + 0.08) * pm
+    c.vline(dxb, int(yt), int(yb), C("202e37"))
+    c.vline(dxb, int(yt), int(yt + (yb - yt) * 0.34), C("394a50"))
+    c.vline(dxb + 1, int(yt) + 2, int(yb) - 2, C("090a14"))
+    yg, pm = rc_col(dxa)
+    yt = yg - (RC_ROOF - 0.32) * pm
+    yb = yg - (RC_FLOOR + 0.08) * pm
+    c.vline(dxa - 1, int(yt), int(yb), C("090a14"))
+    c.vline(dxa - 2, int(yt) + 1, int(yb) - 1, C("090a14"))
+    c.vline(dxa - 3, int(yt) + 4, int(yb) - 3, C("10141f"))
+    # the track. NOT a bright rail down the whole car - that was the
+    # brightest line in the picture. dull steel, the light caught only at
+    # the hangers.
+    txa, txb = rc_span(14.7, 19.0)
+    for x in range(txa, txb + 1):
+        yg, pm = rc_col(x)
+        yr = yg - (RC_ROOF - 0.24) * pm
+        c.set(x, int(yr), C("202e37"))
+        c.set(x, int(yr) + 1, C("090a14"))
+    for fr in (0.09, 0.37, 0.79):
+        hx = int(dxa + (dxb - dxa) * fr)
+        yg, pm = rc_col(hx)
+        yr = yg - (RC_ROOF - 0.26) * pm
+        c.vline(hx, int(yr), int(yr + 0.15 * pm), C("394a50"))
+        c.vline(hx + 1, int(yr) + 1, int(yr + 0.14 * pm), C("090a14"))
+        c.set(hx, int(yr) - 1, C("577277"))
+    # bottom guide angle
+    gxa, gxb = rc_span(14.9, 18.8)
+    for x in range(gxa, gxb + 1):
+        yg, pm = rc_col(x)
+        yb = yg - (RC_FLOOR + 0.05) * pm
+        c.set(x, int(yb), C("202e37"))
+        c.set(x, int(yb) + 1, C("090a14"))
+    # the hasp and its padlock, on the leading edge
+    hxp = dxb - 12
+    hyg, hpm = rc_col(hxp)
+    hy = int(hyg - (RC_FLOOR + 1.5) * hpm)
+    c.rect(hxp, hy, hxp + 11, hy + 6, C("202e37"))
+    c.hline(hxp, hxp + 11, hy, C("577277"))
+    c.vline(hxp, hy, hy + 6, C("090a14"))
+    c.hline(hxp, hxp + 11, hy + 7, C("090a14"))
+    c.rect(hxp + 7, hy + 7, hxp + 11, hy + 12, C("151d28"))     # the lock
+    c.hline(hxp + 7, hxp + 11, hy + 13, C("090a14"))
+    c.set(hxp + 7, hy + 8, C("394a50"))
+    c.set(hxp + 8, hy + 7, C("577277"))
+
+    # --- ROOF HARDWARE: a running board with a piece torn out of it, two
+    # vents of different size, and a bent grab iron at the near corner.
+    for (fa, fb) in ((0.02, 0.29), (0.34, 0.63), (0.71, 0.97)):
+        for x in range(int(RC_XA + (RC_XB - RC_XA) * fa),
+                       int(RC_XA + (RC_XB - RC_XA) * fb)):
+            yg, pm = rc_col(x)
+            c.set(x, int(yg - RC_ROOF * pm) - 1, C("19332d"))
+    for (d0, d1, vh_m) in ((15.4, 14.6, 0.30), (18.5, 18.1, 0.20)):
+        vx0, vx1 = rc_span(d1, d0)
+        for x in range(vx0, vx1 + 1):
+            yg, pm = rc_col(x)
+            yr = yg - RC_ROOF * pm
+            c.vline(x, int(yr - vh_m * pm), int(yr), C("10141f"))
+            c.set(x, int(yr - vh_m * pm), C("19332d"))
+        yg, pm = rc_col(vx0)
+        c.vline(vx0, int(yg - (RC_ROOF + vh_m) * pm), int(yg - RC_ROOF * pm),
+                C("090a14"))
+    ghx = min(RC_XB - 2, int(gxd(RC_X, 13.4)))
+    gyg, gpm = rc_col(ghx)
+    gyr = int(gyg - RC_ROOF * gpm)
+    c.hline(ghx - 15, ghx, gyr - 9, C("394a50"))
+    c.vline(ghx - 15, gyr - 9, gyr - 2, C("202e37"))
+    c.vline(ghx, gyr - 8, gyr - 1, C("202e37"))
+    # a chunk of the running board gone: carve the silhouette using the sky
+    # that is already sitting above it, so the roofline is genuinely broken
+    nxa, nxb = rc_span(16.8, 17.4)
+    for x in range(nxa, nxb + 1):
+        yg, pm = rc_col(x)
+        yr = int(yg - RC_ROOF * pm)
+        c.vline(x, yr - 1, yr + 1, c.get(x, yr - 7))
+
+    # --- WEAR THAT DIFFERS IN KIND from the left car's rust streaks: a
+    # riveted repair plate, two dents where the light break sags, and the
+    # dirt tide thrown up off the wheels. (a first cut ran a long wobbled
+    # crease the width of the car; it read as a cable hung on the side.)
+    # (sized twice. a 45 px wide 202e37 plate read as a lit WINDOW - the
+    # brightest thing on that side of the frame. it is a dark plate with a
+    # lit lip now, and small.)
+    pxa, pxb = rc_span(13.9, 14.55)
+    for x in range(pxa, pxb + 1):
+        yg, pm = rc_col(x)
+        yt = yg - (RC_FLOOR + 1.82) * pm
+        yb = yg - (RC_FLOOR + 1.36) * pm
+        c.vline(x, int(yt), int(yb), C("10141f"))
+        c.set(x, int(yt), C("394a50"))
+        c.set(x, int(yb) + 1, C("090a14"))
+    yg, pm = rc_col(pxa)
+    c.vline(pxa, int(yg - (RC_FLOOR + 1.82) * pm),
+            int(yg - (RC_FLOOR + 1.36) * pm), C("202e37"))
+    yg, pm = rc_col(pxb)
+    c.vline(pxb + 1, int(yg - (RC_FLOOR + 1.82) * pm) + 1,
+            int(yg - (RC_FLOOR + 1.36) * pm) + 1, C("090a14"))
+    # scuffs: SMALL solid wear patches, nothing more. this spot has now
+    # been through three designs and the lesson is about SIZE, not shape -
+    # a raised band break read as a painted arch, and a 30 px lens read as
+    # a flying saucer stuck to the side of the car. at 10-18 px across the
+    # same shape simply reads as wear. dep stays inside 2.2..3.6 m so every
+    # one of them lands in the BODY band; a patch that lands in the shade
+    # band fills with the shade's own colour and leaves only its lip
+    # floating.
+    for (dc, dw, dh, dep, col) in ((14.85, 0.30, 0.10, 2.46, "10141f"),
+                                   (19.3, 0.26, 0.09, 2.92, "10141f"),
+                                   (13.55, 0.14, 0.06, 3.16, "19332d"),
+                                   (15.05, 0.20, 0.07, 3.44, "10141f")):
+        cx0 = int(gxd(RC_X, dc))
+        if not (RC_XA + 4 <= cx0 <= RC_XB - 4):
+            continue
+        yg, pm = rc_col(cx0)
+        patch(cx0, int(yg - dep * pm), max(4, int(dw * pm * 0.5)),
+              max(2, int(dh * pm * 0.5)), C(col))
+    for x in range(RC_XA, RC_XB + 1):
+        u = (x - RC_XA) / float(max(1, RC_XB - RC_XA))
+        yg, pm = rc_col(x)
+        yb = yg - RC_FLOOR * pm
+        yt = yb - (0.30 + 0.11 * math.sin(u * 9.1) + 0.06
+                   * math.sin(u * 23.0 + 2.2)) * pm
+        c.vline(x, int(yt), int(yb), C("090a14"))
+
     # the end face: same car, different plane, one value darker, and its own
     # ribs + ladder so it reads as an end and not as wallpaper.
     rd = 13.0
@@ -725,25 +1074,61 @@ def paint() -> Canvas:
     ex1 = SCENE_W - 1
     ey0 = int(ry - 4.25 * rpm)
     ey1 = int(ry - 1.15 * rpm)
-    c.rect(ex0, ey0, ex1, ey1, C("090a14"))
-    c.rect(ex0, ey0 + 1, ex1, ey0 + 9, C("10141f"))
+    c.rect(ex0, ey0, ex1, ey1, C("10141f"))
+    c.rect(ex0, ey0 + 1, ex1, ey0 + 9, C("151d28"))
     c.hline(ex0, ex1, ey0 - 1, C("394a50"))             # ONE lit edge: roof lip
     c.hline(ex0, ex1, ey0 + 10, C("090a14"))
     c.vline(ex0, ey0, ey1, C("19332d"))                 # the corner post
     c.vline(ex0 + 1, ey0 + 6, ey1 - 3, C("10141f"))
     c.rect(ex0, ey1 + 1, ex1, int(ry), C("090a14"))
-    for k in range(4):
-        c.vline(ex0 + 24 + k * 29, ey0 + 12, ey1 - 2, C("10141f"))
-        c.vline(ex0 + 25 + k * 29, ey0 + 12, ey0 + 74, C("19332d"))
-    for k in range(8):                                   # end ladder
-        c.hline(ex0 + 8, ex0 + 20, ey1 - 6 - k * 33, C("202e37"))
-    c.vline(ex0 + 8, ey0 + 20, ey1 - 4, C("151d28"))
-    c.vline(ex0 + 20, ey0 + 20, ey1 - 4, C("151d28"))
+    # end ribs. these used to be four at a dead 29 px pitch - a visible
+    # grid, and the last of them fell off the canvas. uneven now, and each
+    # runs a different length.
+    for (rox, rlen) in ((33, 0.97), (52, 0.74), (76, 0.91)):
+        c.vline(ex0 + rox, ey0 + 12, int(ey0 + 12 + (ey1 - ey0 - 14) * rlen),
+                C("090a14"))
+        c.vline(ex0 + rox + 1, ey0 + 12,
+                int(ey0 + 12 + (ey1 - ey0 - 14) * rlen * 0.42), C("19332d"))
+    # end ladder. it used to be pitched at 33 px and its top two rungs were
+    # drawn on the SKY above the car; now it is a real 0.4 m pitch that
+    # stops under the brake wheel.
+    lad_x0, lad_x1 = ex0 + 6, ex0 + 22
+    rung = 0.4 * rpm
+    ry_b, ry_t = ey1 - 8, ey0 + 62
+    k = 0
+    while ry_b - k * rung > ry_t:
+        yy = int(ry_b - k * rung)
+        c.hline(lad_x0, lad_x1, yy, C("202e37"))
+        c.hline(lad_x0, lad_x1, yy + 1, C("090a14"))
+        k += 1
+    c.vline(lad_x0, ry_t, ey1 - 4, C("151d28"))
+    c.vline(lad_x1, ry_t, ey1 - 4, C("202e37"))
+    # THE BRAKE WHEEL - a real hoop, drawn as a ring so it reads round, lit
+    # on the side facing the last of the sky. this is the one shape in the
+    # frame that says ROLLING STOCK at a glance, and the left car has
+    # nothing like it.
+    bw_x, bw_y, bw_r = ex0 + 14, ey0 + 30, 15.0
+    for dy in range(-int(bw_r) - 1, int(bw_r) + 2):
+        for dx in range(-int(bw_r) - 1, int(bw_r) + 2):
+            rr = math.hypot(dx, dy)
+            if bw_r - 2.4 <= rr <= bw_r:
+                c.set(bw_x + dx, bw_y + dy,
+                      C("394a50") if dx + dy < -3 else
+                      (C("202e37") if dx - dy < 4 else C("151d28")))
+            elif rr <= 2.6:
+                c.set(bw_x + dx, bw_y + dy, C("202e37"))
+    for ang in (0.35, 2.45, 4.25):                       # three spokes
+        for t in range(3, int(bw_r) - 1):
+            c.set(bw_x + int(math.cos(ang) * t),
+                  bw_y + int(math.sin(ang) * t), C("151d28"))
+    c.vline(bw_x, bw_y + 2, ey0 + 74, C("202e37"))       # the brake staff
+    c.vline(bw_x + 1, bw_y + 4, ey0 + 72, C("090a14"))
     # a painted-out patch where the reporting marks were. no lettering: the
     # game's font is lowercase-only and stencilled marks would break it.
-    c.rect(ex0 + 38, ey0 + 118, ex0 + 86, ey0 + 143, C("10141f"))
-    c.rect(ex0 + 41, ey0 + 121, ex0 + 83, ey0 + 140, C("090a14"))
+    c.rect(ex0 + 38, ey0 + 118, ex0 + 86, ey0 + 143, C("151d28"))
+    c.rect(ex0 + 41, ey0 + 121, ex0 + 83, ey0 + 140, C("10141f"))
     c.hline(ex0 + 38, ex0 + 86, ey0 + 118, C("19332d"))
+    c.hline(ex0 + 38, ex0 + 86, ey0 + 144, C("090a14"))
     # bogies + shadow
     for bd in (13.9, 15.4, 18.1, 19.4):
         bx = int(gxd(9.0, bd))

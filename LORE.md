@@ -249,6 +249,19 @@ verne's table, in the depot mara knew would still have power. The tally
 wall by the door keeps a chalk mark for every raider who went in and
 didn't come out. Nobody erases it. It's most of a wall now.
 
+**THE TALLY IS CLOSED (user call 2026-08-02).** Nobody is dying out there
+any more — the crews are gone and you are the last one still going in. So
+the wall is a FINISHED ledger, not a running count: **the number never
+changes, and it is the SAME number on the warden's wall.** He did not
+out-count them; they both stopped on the same day, which is the joke he
+will not admit. Your own deaths do not go on it either — the wall is the
+raider age, and the raider age is over.
+
+**CANON COUNT: 83 marks** — sixteen gates of five and three loose. Both
+walls, exactly. It is deliberately not round, and it is small enough to
+actually count, because the player zooms in. Any painting of either wall
+uses this number; if it ever changes it changes in both places and here.
+
 ## 7b. the den — home, and what it becomes
 
 The den is this game's home base: the old transit maintenance depot
@@ -425,7 +438,8 @@ loop era (M4-M5):
 - **kettle's favorite** — sell 1,000 in shine in one visit
 - **verne's least favorite** — get patched three raids running
 - **the third suitcase** — earn kettle's actual smile (hidden condition)
-- **tally dodger** — twenty extracts without a chalk mark
+- **tally dodger** — twenty extracts without dying (the wall itself is
+  closed and never grows; see 7a — so this counts YOUR deaths, not chalk)
 - **packrat** — extract with every slot full
 - **toll paid** — cross the tollman's gate all three ways (pay, detour,
   push through) across your career

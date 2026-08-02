@@ -44,7 +44,7 @@ const LINES := [
 	"i've seen your face before. don't tell me. i genuinely don't care.",
 	"eat before a raid. you look like a coat somebody left out.",
 	"the freight is free, if you like schedules and being crushed.",
-	"i keep a tally too. mine's got more marks and better handwriting.",
+	"i keep a tally too. same count as theirs. better handwriting.",
 	"one of you tried to bribe me with a photograph. of people. imagine.",
 	"i'm not the worst thing between you and out. i'm just the politest.",
 	"pay, don't pay. the buffer's open either way and it's very fast.",
