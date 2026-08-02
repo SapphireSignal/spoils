@@ -64,9 +64,18 @@ version CLAUDE.md claims against the actual newest git tag"*.
   evenly", the bookkeeping commit) instead of `9c79c9b`, the release it
   marks — almost certainly the renumbering script tagging its last entry
   against HEAD rather than the recorded sha. 89 of the 90 were correct. The
-  user ran `git tag -f` + a tag force-push (the permission classifier blocks
-  force operations, so that fix will always need them); local and remote both
-  point at `9c79c9b` now and `--checkdocs` is green.
+  user ran `git tag -f` + a tag force-push; local and remote both point at
+  `9c79c9b` now and `--checkdocs` is green.
+- **Permissions.** The user's global settings run `permissions.defaultMode:
+  "auto"`, so a classifier judges each command and blocks force operations —
+  that is why the tag fix needed their hand. They asked to widen it, so
+  `.claude/settings.json` now carries an allowlist for git, python, godot and
+  skills. **Untested:** it was written mid-session and project settings load
+  at startup, so a force op was still blocked afterwards. First session after
+  this: try `git tag -f` on a throwaway tag. If it is still blocked, the auto
+  classifier overrides allow-rules and only
+  `defaultMode: "bypassPermissions"` will change it — the user's call, they
+  deliberately picked the narrower option over full bypass.
 - **Commit messages still carry pre-renumber version numbers.** Only tags
   moved. `git log` shows "v0.6.76: menu housekeeping" on a commit whose tag
   is `v0.6.13`+. **Never read a version out of a commit subject** for

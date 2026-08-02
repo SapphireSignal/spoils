@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git:*)",
+      "PowerShell(git:*)",
+
+      "Bash(python:*)",
+      "Bash(py:*)",
+      "PowerShell(python:*)",
+      "PowerShell(py:*)",
+
+      "Bash(D:/Godot/Godot_v4.7.1-stable_win64_console.exe:*)",
+      "PowerShell(D:\\Godot\\Godot_v4.7.1-stable_win64_console.exe:*)",
+
+      "Skill"
+    ]
+  }
+}
