@@ -70,6 +70,13 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.63", ["the power lines actually connect tower to tower now.",
+		"they were getting a cell of random jitter like every",
+		"other prop, which knocked each tower off the line so a",
+		"span could never reach the next crossarm. the line is",
+		"dead straight, and damage is rare instead of constant -",
+		"a downed tower still shows the wire arriving and",
+		"dropping, rather than the run just stopping"]],
 	["v0.6.62", ["the grid runs across the district: lattice towers with",
 		"the wires sagging between them, spans missing, whole",
 		"runs snapped and left hanging in the air. it walks to",

@@ -3,6 +3,31 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.63] — 2026-08-01 — the lines actually connect
+
+User photographed the run with red lines drawn where the wires should
+be: connected, tower to tower, all the way along.
+
+### Fixed
+- **The towers were getting a cell of random jitter**, like every
+  other prop in the district. A span is drawn for one exact six-cell
+  step, so a tower nudged diagonally off the line could never meet the
+  next crossarm — the wires left one tower and missed the other. The
+  line is dead straight now, which is also what a transmission line
+  actually is. Verified by composing two towers and a span offline and
+  checking the wire lands on both crossarms.
+- **Only a building or the railway can refuse a tower.** Junk on the
+  ground used to block one, and every skipped tower killed two spans,
+  leaving long gaps that stopped reading as a line at all. A pylon
+  foot standing in the litter is fine.
+- **Damage is the exception now, not the rule.** Roughly one tower in
+  twenty-five comes down and one span in twenty is snapped, instead of
+  a quarter of each — a stretch where most spans were broken just read
+  as disconnected rather than derelict.
+- **A downed tower still gets its incoming span**, drawn as the
+  snapped one: you see the line arrive and drop, which reads far
+  better than the wires simply stopping short of nothing.
+
 ## [0.6.62] — 2026-08-01 — the grid
 
 ### Added

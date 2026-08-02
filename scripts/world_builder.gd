@@ -2602,27 +2602,45 @@ func _place_power_line() -> void:
 	var last_stood := false
 	while x < MAP_W - BARRIER_INSET - 4:
 		await _tick()
-		var cell := Vector2i(x, line_y + _side_rng.randi_range(-1, 1))
-		var blocked := _occupied.has(cell) or _near_a_door(cell) \
-			or _rail_cells.has(cell)
+		# DEAD STRAIGHT, and exactly PYLON_SPAN apart. The towers used to
+		# get a cell of jitter like every other prop, which moved each one
+		# diagonally off the line — so the spans, which are drawn for one
+		# exact 6-cell step, could never reach the next crossarm (user
+		# photographed the gaps). A transmission line runs straight.
+		var cell := Vector2i(x, line_y)
+		# only a BUILDING or the railway can refuse a tower. Junk on the
+		# ground can't — skipping those left long gaps and the run stopped
+		# reading as a line at all (user report). A pylon foot standing in
+		# the litter is exactly right.
+		var blocked := _rail_cells.has(cell) or _near_a_door(cell)
 		for plot in _plots:
 			if (plot["rect"] as Rect2i).grow(1).has_point(cell):
 				blocked = true
 				break
 		var stood := false
+		var snapped_tower := false
 		if not blocked:
-			# 0-1 stand, 2 leans, 3 is snapped off — the odd one is down
-			var pick := 3 if _side_rng.randf() < 0.16 else \
-				(2 if _side_rng.randf() < 0.22 else _side_rng.randi_range(0, 1))
+			# 0-1 stand, 2 leans, 3 is snapped off. The line has to READ as
+			# a line — mostly standing and mostly strung, with damage the
+			# exception, not the rule
+			var pick := 3 if _side_rng.randf() < 0.04 else \
+				(2 if _side_rng.randf() < 0.15 else _side_rng.randi_range(0, 1))
 			_add_prop_at_cell("pylon_%d" % pick, cell, Vector2.ZERO)
 			stood = pick != 3
-		# the span back to the tower behind this one
-		if stood and last_stood and _side_rng.randf() > 0.18:
-			var snapped := 1 if _side_rng.randf() < 0.28 else 0
-			var wire := _add_prop("power_wire_%d" % snapped,
-				_floor_layer.map_to_local(cell - Vector2i(PYLON_SPAN, 0))
-				+ Vector2(0.0, PYLON_ARM_Y))
-			wire.z_index = 5          # overhead: it hangs above everything
+			snapped_tower = pick == 3
+		# the span back to the tower behind this one, hung off both
+		# crossarms. A tower that came down still gets its INCOMING span,
+		# drawn as the snapped one — you see the line arrive and drop,
+		# which reads far better than the wires simply stopping.
+		if last_stood and (stood or snapped_tower):
+			var use_snapped := snapped_tower or _side_rng.randf() < 0.05
+			if stood and _side_rng.randf() < 0.03:
+				pass              # the occasional bare span between towers
+			else:
+				var wire := _add_prop("power_wire_%d" % (1 if use_snapped else 0),
+					_floor_layer.map_to_local(Vector2i(x - PYLON_SPAN, line_y))
+					+ Vector2(0.0, PYLON_ARM_Y))
+				wire.z_index = 5      # overhead: it hangs above everything
 		last_stood = stood
 		x += PYLON_SPAN
 	_place_utility_spot(line_y)
