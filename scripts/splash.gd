@@ -32,6 +32,13 @@ var _shards: Array[Dictionary] = []
 
 
 func _ready() -> void:
+	# The autoloads outlive every scene, so each scene ROOT starts from a
+	# known state rather than trusting whoever ran last to have tidied up.
+	# The splash boots into an empty stack today, so this asserts rather
+	# than fixes — but it is the same three-line contract main.gd and
+	# main_menu.gd keep, and it costs nothing (both calls are idempotent).
+	Ui.clear()
+	Juice.reset()
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--shot=") or arg == "--smoke" or arg.begins_with("--perf") \
 				or arg.begins_with("--probe") or arg.begins_with("--scene"):

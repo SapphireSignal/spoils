@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.25.** The release history was renumbered evenly on
+**Current version: v0.6.26.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -296,28 +296,28 @@ to need matching work. Do it sample → sign-off → fleet.
   crane/sandbox. The deeper fix is parameterising the builders so
   **shapes** differ, not just wear.
 
-## C5. The autoload-reset rule is only half-obeyed
+## C5. The autoload-reset rule is only half-obeyed — **DONE in v0.6.26**
 
-Found by the 2026-08-02 docs audit, and it is a **latent** gap rather than
-a live bug — worth closing before M2 adds more scene roots.
+Found by the 2026-08-02 docs audit. It was a **latent** gap, never a live
+bug: `Juice._process` runs `PROCESS_MODE_ALWAYS` and unscales its own delta,
+so a hit-stop always expired on its own within ~50 ms, and `main.gd`
+cleared it on `_exit_tree` anyway.
 
-CLAUDE.md's standing rule is that every scene root calls `Ui.clear()` and
-`Juice.reset()` in `_ready`, because those autoloads outlive the scene and a
-leftover entry bricks the next raid (input dead) or leaves the world at 4%
-speed. **Only `main.gd` does both** (`_ready` and `_exit_tree`).
-`main_menu.gd` calls `Ui.clear()` and never `Juice.reset()`; `splash.gd`
-calls neither.
+Closed regardless, because M2's guns lean on hit-stop constantly and the
+protection ran through a single path. `main_menu.gd` and `splash.gd` now
+call `Ui.clear()` and `Juice.reset()` themselves, so every scene root starts
+from a known state instead of trusting whoever ran last.
 
-Nothing is broken today *because* `main.gd` resets on `_exit_tree`, so the
-menu is cleaned up on the way out of a raid rather than on the way in. That
-is one point of failure instead of defence in depth: any future path that
-reaches the menu or the splash without passing through `main.gd`'s exit —
-a crash-to-menu, a new scene, a harness jump — inherits a hit-stop time
-scale with nothing to clear it.
+**Audited at the same time, all clean:** `Raid.begin()` resets the per-raid
+ledger on deploy; `Sfx.silence_world()` and `Music.play_menu()` run on menu
+entry; `Ui.clear()` already ran in both directions. `Authority` and
+`Settings` hold nothing per-raid by design.
 
-**Fix:** add both calls to `main_menu.gd._ready` and `splash.gd._ready`.
-They are idempotent, so this costs nothing when the state is already clean.
-Then re-verify with `--leakcheck` (four deploy/return cycles) and `--smoke`.
+Also fixed in the same pass: `player.gd` floored its hit-stop divisor at
+**0.05** while `Juice.hit_stop` sets exactly **0.04**, so the floor clamped
+a legitimate value instead of guarding division by zero, and the camera kick
+and hit flash decayed 20% slow through every hit-stop. Now `0.001`, matching
+Juice.
 
 # WAITING ON THE USER
 

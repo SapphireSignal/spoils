@@ -248,10 +248,14 @@ func _process(delta: float) -> void:
 		_hurt_left -= delta
 		_hurt_rect.color.a = maxf(0.0, 0.30 * (_hurt_left / HURT_FLASH_TIME))
 	if _shake_left > 0.0:
-		# unscaled: a hit-stop slows the world, but the kick still snaps
-		_shake_left -= delta / maxf(Engine.time_scale, 0.05)
+		# unscaled: a hit-stop slows the world, but the kick still snaps.
+		# The floor is a divide-by-zero guard ONLY, so it must sit BELOW any
+		# real time_scale — it used to be 0.05 while Juice.hit_stop sets
+		# exactly 0.04, so it clamped a legitimate value and the kick decayed
+		# 20% slow through every hit-stop. Matches Juice's own 0.001 now.
+		_shake_left -= delta / maxf(Engine.time_scale, 0.001)
 	if _flash > 0.0:
-		_flash = maxf(0.0, _flash - (delta / maxf(Engine.time_scale, 0.05))
+		_flash = maxf(0.0, _flash - (delta / maxf(Engine.time_scale, 0.001))
 			/ FLASH_TIME)
 		_flash_mat.set_shader_parameter("flash", _flash)
 

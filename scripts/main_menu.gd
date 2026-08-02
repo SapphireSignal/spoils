@@ -73,6 +73,10 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.26", [
+		"the menu and the studio card now reset the effects clock themselves instead of relying on the raid to tidy up on its way out. nothing was broken, but it meant one path was holding the whole thing up - and the guns coming in the next milestone lean on it constantly",
+		"the camera kick and the hit flash were fading about a fifth too slowly during the freeze-frame on impact. a safety limit had been set just above the value it was meant to protect, so it was clamping the real number rather than guarding it",
+	]],
 	["v0.6.25", [
 		"grey days. it can be dry without being sunny now - overcast is its own weather, flat and a little cold, and the sun doesnt break through it. before this, every day that wasnt raining was a sunny one",
 	]],
@@ -736,8 +740,13 @@ func _process(delta: float) -> void:
 
 func _menu_reset_windows() -> void:
 	## belt and braces with main.gd: whichever scene we arrive from, the
-	## menu starts with no windows claimed (see the Ui.clear note there)
+	## menu starts with no windows claimed (see the Ui.clear note there) and
+	## at full speed. Both calls are idempotent, so this costs nothing when
+	## main.gd's _exit_tree already did it — and it holds if some future
+	## path reaches the menu WITHOUT passing through that exit (a crash to
+	## menu, a new scene, a harness jump). Every scene root defends itself.
 	Ui.clear()
+	Juice.reset()
 
 
 func _unhandled_input(event: InputEvent) -> void:

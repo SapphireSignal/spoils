@@ -3,6 +3,35 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.26] — 2026-08-02 — every scene root defends itself
+
+### Fixed
+- **The camera kick and hit flash decayed ~20% slow through every
+  hit-stop.** `player.gd` floored its unscale divisor at `0.05` while
+  `Juice.hit_stop` sets `Engine.time_scale` to exactly `0.04` — so the
+  "divide-by-zero guard" was clamping a legitimate value instead of
+  guarding anything. Now `0.001`, matching `juice.gd`'s own floor.
+  Sub-perceptual over a 40–70 ms window today; it stops being
+  sub-perceptual once M2's guns lean on hit-stop.
+
+### Changed
+- **`main_menu.gd` and `splash.gd` now call `Ui.clear()` and
+  `Juice.reset()` themselves**, so every scene root starts from a known
+  state rather than trusting whoever ran last to have tidied up. Both
+  calls are idempotent, so the overlap with `main.gd` costs nothing.
+  **This was never a live bug** — `Juice._process` runs
+  `PROCESS_MODE_ALWAYS` and unscales its own delta, so a hit-stop always
+  expired within ~50 ms, and `main.gd._exit_tree` cleared it besides. It
+  was closed because the protection ran through a single path, and any
+  future route to the menu that skips that exit would have inherited a
+  slowed clock with nothing to clear it.
+
+### Notes
+- The other autoloads were audited at the same time and are all clean:
+  `Raid.begin()` resets the per-raid ledger on deploy, `Sfx.silence_world()`
+  and `Music.play_menu()` run on menu entry, and `Ui.clear()` already ran in
+  both directions. `Authority` and `Settings` hold nothing per-raid.
+
 ## [0.6.25] — 2026-08-02 — grey days
 
 ### Added

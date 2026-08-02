@@ -33,7 +33,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
      form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.25 shipped, 2026-08-02.** Milestone 1 (a walkable world) is DONE.
+**v0.6.26 shipped, 2026-08-02.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 
@@ -138,26 +138,30 @@ light spill.
   the afternoon, dusk 21:00, deep night 22:15–05:00.
 - **Autoloads:** `Authority`, `Settings`, `Sfx`, `Music`, `Ui`, `Raid`,
   `Juice`, `Harness`. They OUTLIVE the scene, so a leftover entry bricks the
-  next raid (input dead) or hands it a world running at 4% speed. The rule
-  is that a scene root calls `Ui.clear()` and `Juice.reset()` — **but as of
-  2026-08-02 only `main.gd` actually does both** (in `_ready` AND
-  `_exit_tree`, which is what really protects the menu). `main_menu.gd`
-  calls `Ui.clear()` only, never `Juice.reset()`; `splash.gd` calls
-  neither. This line used to assert every scene root does both. Today the
-  safety comes from main.gd's exit reset rather than from each root
-  defending itself — see TASKS.md C5 before relying on it.
+  next raid (input dead) or hands it a world running at 4% speed. **Every
+  scene root calls `Ui.clear()` and `Juice.reset()` in `_ready`** — `main.gd`
+  (also in `_exit_tree`), `main_menu.gd` and `splash.gd`. Both calls are
+  idempotent, so the overlap costs nothing and each root defends itself
+  rather than trusting whoever ran last. Closed in v0.6.26; before that only
+  main.gd did both, and the menu was protected solely by main.gd's exit
+  reset. **Per-raid state resets too:** `Raid.begin()` on deploy (main.gd),
+  `Sfx.silence_world()` and `Music.play_menu()` on menu entry.
 - **Two fonts now.** `spoils_font` (5px x-height in 9) for everything, and
   `spoils_tiny` (3 in 6) for map dot labels. Both are BITMAP fonts — asking
   either for a different size resamples and blurs it. If text must be
   smaller, draw a new cut in `tools/gen_font.py`.
 - **Perf baseline:** 240 fps, ~4.5 ms worst frame, ~7.9k nodes in a raid,
-  day and storm-night alike. **Leaks: none** — re-measured 2026-08-02:
-  `--leakcheck` settles to **814 menu nodes, 0 orphans, 3354 objects**
-  every cycle, memory flat to 0.06 MB, verdict `nodes+0 objects+0`.
-  (This line said 932 nodes / 3585 objects — stale since the v0.6.17-0.6.25
-  polish layer changed the menu scene. The no-leak conclusion held; only the
-  absolute figures drifted, which is exactly what keeping them in ONE place
-  is supposed to prevent.)
+  day and storm-night alike. **Leaks: none.**
+  **THE INVARIANT IS THE TREND, NOT THE ABSOLUTE COUNT** — `--leakcheck`
+  must print `nodes+0 objects+0 orphans=0` with memory flat to ~0.06 MB.
+  That is the thing to assert. The absolute menu count is **~818 nodes /
+  3362 objects at v0.6.26** and it legitimately creeps: the changelog
+  viewer builds a label per bullet, so **every release adds a few nodes**.
+  Do not treat a small rise as a leak, and do not bother re-pinning the
+  number every version — re-pin it when it is convenient and always quote
+  the version you measured at. (It sat at "932 / 3585" for nineteen
+  releases, which is how a figure nobody could reproduce ended up in the
+  one place the file swears numbers cannot drift.)
 
 ## PROCESS (learned the hard way this session)
 
