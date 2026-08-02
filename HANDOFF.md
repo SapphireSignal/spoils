@@ -49,7 +49,9 @@ handoff is a red build instead of something the next session discovers
 hours in. Fixed three stale claims in `CLAUDE.md`: a GitHub tag range frozen
 at "v0.1.0…v0.2.0" for twenty-odd releases, a perf baseline claiming ~34k
 nodes against the real ~7.9k, and a missing mention of `scripts/ui_state.gd`
-(the `Ui` autoload).
+(the `Ui` autoload). Also added a **SAFETY & TRUST** section to `CLAUDE.md`
+at the user's request — prompt injection, reversibility, and why the
+permission classifier is kept.
 
 **The user's words:** *"im scared something might get lost or break because
 we just did a whole renumbering thing"* — and they asked for migration to be
@@ -57,6 +59,16 @@ we just did a whole renumbering thing"* — and they asked for migration to be
 well-placed; see below. Also confirmed they want the smoke-test version
 check: *"yes i do want to add a check to the smoke test that compares the
 version CLAUDE.md claims against the actual newest git tag"*.
+
+They then asked, carefully and in sequence, whether the commands they were
+being handed were *"arbitrary, risky and can result in data loss, system
+corruption, or data exfiltration"*, then *"can someone do that to me?"*, then
+*"couldnt you tell if something like that was going on before anything
+becomes bad?"* — and finished with *"add this to .md make sure every chat
+will always know that"*. They are security-aware and they audit what they
+run. **Hand them short, legible commands and explain the undo.** On
+permissions they declined full bypass: *"auto is fine, i can run a couple
+commands whenever you need me to."*
 
 **Learned:**
 - **The renumbering left one tag on the wrong commit — now FIXED.**
