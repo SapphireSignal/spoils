@@ -59,8 +59,8 @@ remapped. Trust this repo, not a transcript.
 
 ### The current visual direction (user call, 2026-08-02)
 
-> "keep the base art as-is, just use godot's visual toolkit to turn up the
-> atmosphere"
+The user's words: **"keep the base art as-is, just use godot's visual
+toolkit to turn up the atmosphere"**
 
 **Do not redraw sprites for polish.** The lift comes from engine-side
 work — lighting, shaders, particles, camera — which improves everything at
