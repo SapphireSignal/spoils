@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.15.** The release history was renumbered evenly on
+**Current version: v0.6.25.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -28,7 +28,32 @@ saved the 8-direction vehicles. Reverting is exact: all art is generated
 from code, so `git revert <tag>` restores the old sprites byte for byte,
 and each family ships separately so disliking one does not cost the rest.
 
-Agreed order:
+**ALREADY SHIPPED from this pass** (v0.6.17-v0.6.25): camera kick,
+hit-stop and a per-sprite hit flash; a full-screen colour grade; dust in
+the air; sun shafts tied to the clock; rain and thunder muffled indoors;
+a boot shader warm-up; a real day-arc (07:30-17:00 used to be one flat
+light); and OVERCAST weather so a dry day isn't automatically a sunny one.
+
+**STILL TO DO, biggest first:**
+
+- **Real 2D shadows.** `LightOccluder2D` on the wall segments so lamps and
+  the flashlight cast actual shadows. Single biggest atmosphere change
+  left, and it fixes B7 (flashlight through walls) in the same stroke.
+- **Glow / bloom** via a `WorldEnvironment`. The renderer is Forward+, so
+  it is available. Lamps, lit windows, sparks, the muzzle flash and the LZ
+  smoke would bleed light properly instead of being flat bright pixels;
+  right now the grade only fakes it with a highlight lift.
+- **Directional cast shadows** from props and the player, angled to the
+  sun and swinging through the day. Everything shares one static blob now.
+- **Wet-ground reflections** in rain; **contact shadows** so props sit in
+  the world rather than on it; **window light spill** onto pavement at
+  night; **heat shimmer** at midday.
+- **Sway shader** on bushes and trees — a WHOLE-PIXEL horizontal offset,
+  never a rotation.
+- NOT recommended: depth of field, chromatic aberration, motion blur.
+  They fight pixel art and just smear it.
+
+Agreed order for the remaining art work:
 
 1. **The in-game map screen (M).** *(user: "its like some minecraft map")*
    It is drawn as flat coloured rectangles — building footprints as solid
@@ -113,11 +138,25 @@ follow on from what was just said — topic threads, not a random ramble.
   cylinders, tires, part-stripped wrecks. Keep it restrained; their
   standing note is that too many objects looks odd.
 
-## B4. The smoker on the bench *(user)*
+## B4. The smoker on the bench *(user)* — NEXT UP
 
-Benches were rebuilt with a real seat. Still to do: seat him properly ON
-it, move the ground item that sits over his head, and redraw his legs —
-they read wrong.
+Benches were rebuilt with a real seat (v0.6.12). The smoker still needs:
+- **Rebuild him from the PLAYER's character sheet** so his shading and
+  contrast match everything else — the user's words: "why does this guy on
+  the bench look so much different than me". Give him **a black hat** to
+  tell him apart.
+- **Bigger smoke** off his puffs; they read as a small white blob now.
+- **Seat him on the bench BELOW him**, not the one he is currently inside,
+  and have him **face away from the backrest**, not into it.
+- Move the ground item that sits over his head.
+`make_smoker_sheet` in gen_art.py; placement at world_builder.gd ~2530.
+
+## B4b. The LZ green smoke reads as mist *(user)*
+
+The extraction marker smoke "just looks like mist" — it needs to read as
+a thick coloured signal plume: denser, more saturated green, rising in
+distinct billows rather than a soft haze. It is also a good first customer
+for the glow pass above.
 
 ## B5. Power box repair — the first quest interaction
 
