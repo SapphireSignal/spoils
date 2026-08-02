@@ -26,6 +26,16 @@ CRITIC CORRECTIONS APPLIED (see briefs/counter.md, "THE CRITIC'S FINDINGS"):
   * The channel-lamp bank the critic called a cloned grid does not exist any
     more; the hook rail that replaced it is rolled per instance.
 
+THE FOREGROUND FIGURE IS GONE FOR GOOD (user, twice: "just remove that black
+hand figure thing it just looks weird, replace it with something else on the
+screen so that's not a weak spot" and then "the black arm is still on mara's
+screen remove that thing"). It began as your shoulder with a pack strap, was
+cut back once to a gloved forearm and hand, and failed again. The "you are
+standing here, this is your own body" idea is ABANDONED — no third version, no
+other body part, no trace of glove, cuff, keeper or wrist wrap. What took its
+place is room, not person: kettle's balance on the counter top (see _scale)
+and the counter's own locked cupboard on the front face (see _under_counter).
+
 LIVING LAYER IS DELIBERATELY NOT BUILT. Room is left for it and the static
 bake already carries its consequences:
   * the taped splice at (838, 246) has its cf573c pilot bead lit and the
@@ -49,6 +59,8 @@ from PIL import Image, ImageFilter
 
 # ------------------------------------------------------------- geometry ------
 CEIL_Y = 104          # ceiling / tile boundary (drain is 92, den is 46)
+TRUSS_TOP = 18        # the depot roof truss: top chord (purlins land on it)
+TRUSS_BOT = 38        # bottom chord — carries the band's ONE lit lip
 FAR_Y = 372           # counter's far edge (wobbled per column)
 LIP_Y = 430           # counter's near edge — the frame's one hard line
 BOX = (662, 392)      # cold source: the light box sunk into the counter
@@ -134,13 +146,205 @@ def paint() -> Canvas:
     c.px = c.img.load()
     _work_lamp(c, rng)
 
-    _magpie(c, rng)                      # foreground last: it occludes all
+    _under_counter(c, rng)               # the counter's left third,
+    _scale(c, rng)                       # top face and front face
     return c
 
 
 # ---------------------------------------------------------------- ceiling ---
+# THE TOP 49 ROWS WERE ONE FLAT 090a14, EDGE TO EDGE (user: "why is there like
+# some black border of the whole screen at the top of all of the paintings, it
+# seems a bit odd"). They were right, and it is a DEFECT, not the house style:
+# measured the same way, the two SHIPPED backdrops art/gen/menu_den.png and
+# art/gen/menu_drain.png have ZERO uniform rows in their ceilings. They are
+# just as dark up there — the den's joists are 241527 on 090a14, the drain's
+# beams are 10141f — but neither ever collapses to a featureless slab. The den
+# hangs joists and a dead bulb's flex into it; the drain cuts a manhole throat
+# through it. Something is always in it.
+#
+# This is the old transit maintenance depot, so the ceiling is a depot's: a
+# roof truss across the frame with purlins landing on it from above, the
+# conduit that already fed the lamp now HUNG OFF that truss instead of floating
+# on straps that began in mid-air, an extract duct running off the left edge
+# (the whole left half of this band had nothing in it at all — the conduit only
+# ever started at x=624), two DEAD pendants, and a capping plate where the tile
+# wall stops. That last one does most of the work: black with a hard edge and
+# nothing under it reads as a border, and black with a plate under it reads as
+# a ceiling.
+#
+# NOTHING HERE IS LIGHT, and that is the whole constraint. Every value is
+# 090a14 / 10141f / 151d28 / 172038 — one step apart at the black end of the
+# ramp — plus a SINGLE 202e37 lip on the truss soffit directly over the light
+# box, which is the only thing in the room throwing anything upward at all (the
+# work lamp is shaded and tipped at the map, which is why it lights none of
+# this). MEASURED: top-60-row mean luminance went 11.52 -> 13.20, against a
+# ceiling of 14.52. The two shipped backdrops measure 11.74 (drain) and 13.59
+# (den) on the same 60 rows, so this now sits BETWEEN them instead of below
+# both. Uniform rows in the whole frame: 49 -> 0. Whole-image mean 32.53 ->
+# 32.95. This band is still by a long way the darkest part of the picture.
+#
+# The pendants are DEAD on purpose. A live one would put a third light source
+# in a scene whose entire pitch is two — cold box, warm lamp — and it would
+# brighten exactly the region that must not brighten.
+def _member(c: Canvas, x0: int, y0: int, x1: int, y1: int, bent: bool) -> None:
+    """One truss brace, drawn as a 3 px angle — lit edge, body, shade edge — so
+    it reads as steel with a section rather than as a ruled line."""
+    n = max(1, abs(x1 - x0))
+    for k in range(n + 1):
+        t = k / float(n)
+        bow = math.sin(t * math.pi) * 3.6 if bent else 0.0
+        x = x0 + int(round((x1 - x0) * t))
+        y = int(round(y0 + (y1 - y0) * t + bow))
+        c.set(x, y, C("151d28"))
+        c.set(x, y + 1, C("10141f"))
+        c.set(x, y + 2, C("090a14"))
+
+
+def _pendant(c: Canvas, x: int, drop: int, shade: bool) -> None:
+    """A dead pendant on its flex. One kept its shade; the other is a bare
+    socket with the glass gone — the same object twice would be the clone the
+    standing rule bans."""
+    def sway(k):
+        return x + int(round(math.sin(k / 23.0 + x * 0.7) * 1.7))
+
+    for k in range(drop):
+        sx, sy = sway(k), TRUSS_BOT + 5 + k
+        c.set(sx, sy, C("151d28"))
+        c.set(sx + 1, sy, C("090a14"))
+    cx, by = sway(drop), TRUSS_BOT + 5 + drop
+    if shade:
+        c.rect(cx - 2, by, cx + 3, by + 2, C("151d28"))       # the holder
+        c.set(cx + 3, by, C("090a14"))
+        for k in range(13):                                    # the cone
+            hw = 3 + int(k * 1.15)
+            c.hline(cx - hw, cx + hw, by + 3 + k, C("10141f"))
+            if k > 8:                                          # you look up
+                c.hline(cx - hw + 3, cx + hw - 3, by + 3 + k, C("090a14"))
+            c.set(cx - hw, by + 3 + k, C("151d28"))            # lit outer edge
+            c.set(cx + hw, by + 3 + k, C("090a14"))
+        c.rect(cx - 2, by + 13, cx + 2, by + 15, C("172038"))  # the dead bulb
+        c.set(cx - 2, by + 13, C("090a14"))
+        c.set(cx + 2, by + 13, C("090a14"))
+    else:
+        c.rect(cx - 3, by, cx + 3, by + 7, C("10141f"))        # the bare socket
+        c.vline(cx - 3, by, by + 7, C("151d28"))
+        c.vline(cx + 3, by, by + 7, C("090a14"))
+        c.hline(cx - 4, cx + 4, by + 8, C("090a14"))
+        for k in range(5):                                     # what is left of
+            hw = 4 - abs(k - 1)                                # the glass
+            c.hline(cx - hw, cx + hw, by + 9 + k, C("10141f"))
+        c.set(cx - 2, by + 10, C("172038"))
+        c.set(cx + 2, by + 12, C("090a14"))
+
+
 def _ceiling(c: Canvas) -> None:
+    # IT KEEPS ITS OWN RNG. _ceiling runs before every other draw in paint(),
+    # so taking a single number off the scene stream here would re-roll the
+    # entire picture underneath it — the mirror image of the builder rule about
+    # never SKIPPING a draw. Nothing below y=108 is allowed to move.
+    r = random.Random("spoils:pitch:counter:ceiling")
     c.rect(0, 0, SCENE_W - 1, CEIL_Y + 3, C("090a14"))
+
+    # ---- roof deck: two panel seams above the truss, each with a rolled gap
+    # so neither can run edge to edge as a ruled line
+    for si in range(2):
+        sy = 4 + si * 7 + r.randint(0, 2)
+        ph, ph2 = r.uniform(0, 6.3), r.uniform(0, 6.3)
+        g0 = r.randrange(120, SCENE_W - 300)
+        g1 = g0 + r.randint(90, 220)
+        for x in range(SCENE_W):
+            if g0 <= x < g1:
+                continue
+            c.set(x, sy + int(round(1.6 * math.sin(x / 91.0 + ph)
+                                    + 1.0 * math.sin(x / 27.0 + ph2))),
+                  C("10141f"))
+
+    # ---- purlins landing on the truss from above. Spacing, width, depth, wear
+    # and the size of the corroded patch are ALL rolled: no two are the same
+    # size and no two gaps match.
+    purlins = []
+    px = -r.randint(6, 44)
+    while px < SCENE_W:
+        w = r.randint(4, 11)
+        dep = TRUSS_TOP + r.randint(-1, 1)
+        purlins.append((px, w))
+        c.rect(px, 0, px + w, dep, C("10141f"))
+        c.vline(px, 0, dep, C("151d28"))                  # lit face
+        c.vline(px + w, 0, dep, C("090a14"))              # shade face
+        wy = r.randrange(2, dep - 5)                      # ONE solid corroded
+        c.rect(px + 1, wy, px + w - 1 - r.randint(0, 2),  # patch, never speckle
+               wy + r.randint(2, 5), C("090a14"))
+        c.hline(px - 1, px + w + 1, dep - 1, C("151d28"))  # bearing cleat
+        c.hline(px - 1, px + w + 1, dep, C("090a14"))
+        px += w + r.randint(52, 126)
+
+    # ---- the truss. Its chords are dead straight because rolled steel is
+    # machined — the same argument that keeps the counter's near lip straight.
+    # What stops a straight full-width run reading as a ruled stripe is that it
+    # is CROSSED: purlins bear on it from above, posts stand inside it, hangers
+    # drop off it below, and a splice plate interrupts it.
+    c.hline(0, SCENE_W - 1, TRUSS_TOP, C("10141f"))
+    c.hline(0, SCENE_W - 1, TRUSS_TOP + 1, C("090a14"))
+    # the bolted cleats that hold each purlin down sit ON the chord, in front
+    # of it — without them the chord's two rows were the only flat lines left
+    # in the band, which is the very thing being fixed
+    for (px, w) in purlins:
+        c.rect(px - 1, TRUSS_TOP, px + w + 1, TRUSS_TOP + 1, C("151d28"))
+        c.set(px + w + 1, TRUSS_TOP + 1, C("090a14"))
+        c.set(px - 1, TRUSS_TOP + 1, C("10141f"))
+    for x in range(SCENE_W):
+        c.set(x, TRUSS_BOT, C("090a14"))                  # shaded top of flange
+        c.set(x, TRUSS_BOT + 1, C("10141f"))              # the web face
+        c.set(x, TRUSS_BOT + 2, C("10141f"))
+        d = abs(x - BOX[0])                               # THE ONE LIT LIP
+        c.set(x, TRUSS_BOT + 3,
+              C("202e37") if d < 32 else (C("172038") if d < 132 else C("151d28")))
+        c.set(x, TRUSS_BOT + 4, C("090a14"))
+
+    # posts at ROLLED panel points, and only some bays are braced — a regular
+    # zigzag web is exactly the even-spaced repeat the standing rule bans, and
+    # a depot truss that has been patched for forty years would not have one.
+    pts, x = [], -r.randint(10, 50)
+    while x < SCENE_W + 60:
+        pts.append(x)
+        x += r.randint(46, 104)
+    for x in pts:
+        pw = r.randint(2, 4)
+        c.rect(x, TRUSS_TOP + 2, x + pw, TRUSS_BOT - 1, C("10141f"))
+        c.vline(x, TRUSS_TOP + 2, TRUSS_BOT - 1, C("151d28"))
+        c.vline(x + pw, TRUSS_TOP + 2, TRUSS_BOT - 1, C("090a14"))
+    braced = sorted(r.sample(range(len(pts) - 1), max(3, len(pts) // 3)))
+    buckled = braced[r.randrange(len(braced))]            # one has let go
+    for i in braced:
+        if r.random() < 0.5:
+            y0, y1 = TRUSS_BOT - 3, TRUSS_TOP + 3
+        else:
+            y0, y1 = TRUSS_TOP + 3, TRUSS_BOT - 3
+        _member(c, pts[i], y0, pts[i + 1], y1, i == buckled)
+
+    # one splice plate: the truss arrived in lengths and was bolted up on site
+    sp = pts[1 + r.randrange(max(1, len(pts) - 3))]
+    c.rect(sp - 9, TRUSS_BOT - 4, sp + 12, TRUSS_BOT + 3, C("151d28"))
+    c.hline(sp - 9, sp + 12, TRUSS_BOT - 4, C("172038"))
+    c.vline(sp + 12, TRUSS_BOT - 4, TRUSS_BOT + 3, C("090a14"))
+    c.hline(sp - 10, sp + 13, TRUSS_BOT + 4, C("090a14"))
+    for (rx, ry) in ((sp - 5, TRUSS_BOT - 2), (sp + 4, TRUSS_BOT - 2),
+                     (sp - 6, TRUSS_BOT + 1), (sp + 7, TRUSS_BOT)):
+        c.set(rx, ry, C("090a14"))
+        c.set(rx + 1, ry, C("10141f"))
+
+    # ---- hangers. The conduit's three saddles used to START at y=49, in
+    # mid-air, holding it up from nothing. They now run to the truss, which is
+    # where a conduit in a depot is hung from, and they land BETWEEN the hook
+    # rail's wall brackets below (738 / 836 / 916) so the two steel runs read as
+    # one install rather than two unrelated props.
+    # they start at TRUSS_BOT+3, wrapping the bottom flange, so the two rows
+    # under the chord are not left flat either
+    for (hx, hy) in ((676, 63), (762, 63), (890, 63), (96, 67), (214, 67)):
+        c.rect(hx, TRUSS_BOT + 3, hx + 3, hy, C("151d28"))
+        c.vline(hx + 3, TRUSS_BOT + 4, hy, C("10141f"))
+        c.vline(hx + 4, TRUSS_BOT + 5, hy, C("090a14"))
+
     # one conduit, right half only — the title band (x 340..620) stays bare
     for x in range(624, SCENE_W):
         wob = int(round(1.2 * math.sin(x / 47.0)))
@@ -151,6 +355,65 @@ def _ceiling(c: Canvas) -> None:
         c.rect(bx, 49, bx + 3, 63, C("151d28"))
         c.vline(bx + 3, 50, 63, C("10141f"))
         c.set(bx, 49, C("202e37"))
+
+    # ---- the extract duct, running off the left edge and capped at a grille.
+    DX1, DY0, DY1 = 296, 66, 93
+    c.rect(0, DY0, DX1, DY1, C("10141f"))
+    c.hline(0, DX1, DY0, C("090a14"))                    # top, in shade
+    c.hline(0, DX1, DY1 - 3, C("151d28"))                # lower edge, the only
+    c.hline(0, DX1, DY1 - 2, C("151d28"))                # part uplight reaches
+    c.hline(0, DX1, DY1 - 1, C("10141f"))
+    c.hline(0, DX1, DY1, C("090a14"))
+    sph = r.uniform(0, 6.3)                              # one folded seam along
+    for x in range(DX1):                                 # its length, so the
+        sy = DY0 + 9 + int(round(1.2 * math.sin(x / 53.0 + sph)))   # body is not
+        c.set(x, sy, C("090a14"))                        # one flat slab
+        c.set(x, sy + 1, C("151d28"))
+    for k in range(3):                                   # solid wear, no dots
+        wx = r.randrange(4, DX1 - 70)
+        wy = r.randrange(DY0 + 13, DY1 - 11)
+        c.rect(wx, wy, wx + r.randint(8, 26), wy + r.randint(3, 7), C("090a14"))
+    fx = 62
+    for k in range(2):                                   # bolted flange joints
+        fx += r.randint(78, 132)
+        c.rect(fx, DY0 - 2, fx + 4, DY1 + 1, C("151d28"))
+        c.vline(fx - 1, DY0 - 1, DY1, C("090a14"))
+        c.vline(fx + 5, DY0 - 1, DY1, C("090a14"))
+        c.vline(fx + 1, DY0 - 1, DY1, C("172038"))
+    c.vline(DX1 - 1, DY0 + 1, DY1 - 1, C("090a14"))      # the end cap
+    c.rect(DX1 - 23, DY0 + 5, DX1 - 6, DY1 - 6, C("090a14"))
+    for k in range(4):                                   # its louvres
+        c.hline(DX1 - 22, DX1 - 8 - r.randint(0, 4),
+                DY0 + 7 + k * 4 + r.randint(0, 1), C("151d28"))
+
+    # ---- two dead pendants over the counter. Both clear of the title band
+    # (x 340..620): one to its left, past the duct's end, one to its right,
+    # hanging cold directly over the light box the room actually works by.
+    _pendant(c, 320, 30, True)
+    _pendant(c, 692, 28, False)
+
+    # ---- the capping plate. The tile wall was stopping into nothing at all,
+    # which is most of why the black above it read as a border rather than as a
+    # room. Wobbled by two sines of different period like every other long
+    # horizontal seam in this file, so it cannot rule a line across the frame.
+    ph, ph2 = r.uniform(0, 6.3), r.uniform(0, 6.3)
+    for x in range(SCENE_W):
+        py = 103 + int(round(2.0 * math.sin(x / 67.0 + ph)
+                             + 1.4 * math.sin(x / 21.0 + ph2)))
+        for yy in range(py + 2, CEIL_Y + 4):
+            c.set(x, yy, C("090a14"))                    # its shadow on the wall
+        c.set(x, py - 2, C("090a14"))
+        c.set(x, py - 1, C("10141f"))
+        c.set(x, py, C("10141f"))
+        c.set(x, py + 1, C("151d28"))                    # the lit soffit
+    bx = -r.randint(0, 70)                               # its fixing brackets
+    while bx < SCENE_W:
+        bw, bh = r.randint(8, 21), r.randint(5, 12)
+        c.rect(bx, 99 - bh, bx + bw, 99, C("10141f"))
+        c.vline(bx, 99 - bh, 99, C("151d28"))
+        c.vline(bx + bw, 99 - bh, 99, C("090a14"))
+        c.hline(bx, bx + bw, 99 - bh, C("151d28"))
+        bx += bw + r.randint(54, 158)
 
 
 # ------------------------------------------------------------- the tile wall -
@@ -616,8 +879,11 @@ def _counter(c: Canvas, rng: random.Random, far: list) -> None:
     _pool(c, (BOX[0], BOX[1] + 14), 78, 24, grain, far,
           [(0.30, "253a5e"), (0.58, "1e1d39"), (0.82, "411d31"), (1.00, "241527")])
     # the near lip: dead straight, because a counter edge is machined. It is
-    # broken instead by what CROSSES it — the sheet and the magpie's forearm —
-    # and by a value gradient running along its length.
+    # broken instead by the ONE thing that crosses it — the job sheet, pushed
+    # half over to your side — and by a value gradient running along its
+    # length. (A foreground forearm used to cross it down at the left as well;
+    # that object is gone, and nothing was added to cross it in its place. Two
+    # crossings and the lip stops reading as an edge at all.)
     for x in range(SCENE_W):
         dw = abs(x - LAMP[0]) / 155.0
         dc = abs(x - BOX[0]) / 170.0
@@ -1370,7 +1636,7 @@ def _mara_arms(c: Canvas, rng: random.Random) -> None:
 
     The sleeves end at the elbows in _mara_body; every forearm here STARTS at
     the point its sleeve stopped and every hand STARTS at the point its forearm
-    stopped, which is the same discipline the foreground arm now follows."""
+    stopped: no piece of her floats free of the piece it hangs off."""
     def limb(x0, y0, x1, y1, w0, w1, core, up, dn):
         n = 84
         for k in range(n + 1):
@@ -1439,180 +1705,394 @@ def _mara_arms(c: Canvas, rng: random.Random) -> None:
     del rng
 
 
-# ------------------------------------------------------------- foreground ---
-def _magpie(c: Canvas, rng: random.Random) -> None:
-    """YOU — and now ONLY your forearm and your gloved hand, entering from the
-    bottom edge of the frame and resting on the counter.
+# ------------------------------------------------- under the counter -------
+# MEASURED, NOT GUESSED: of the 11,700 pixels the removed forearm used to own,
+# 8,158 were BELOW the near lip. The scale replaces it on the counter TOP, but
+# deleting the limb also uncovered a 130 px stretch of front face that had had
+# something in front of it since the pitch was first painted, and left it as
+# bare maroon. This is the counter's own carcass, not another prop: joinery
+# cannot be mistaken for a creature, which is the failure mode that killed the
+# shoulder and then the arm.
+#
+# It is a CUPBOARD, deliberately not a third drawer — the two drawers to its
+# left are a stack of flat fronts with finger pulls; this is a framed door with
+# a recessed panel, two mismatched strap hinges and a hasp. And the padlock is
+# the point: kettle's money lives under this counter (LORE 7a), and it is the
+# one hard, bright, instantly-named object in the bottom left of the frame.
+def _under_counter(c: Canvas, rng: random.Random) -> None:
+    D = C("090a14")
+    x0, y0, x1 = 164, 444, 296
+    bot = SCENE_H - 1
 
-    THE SHOULDER IS CUT (user, on the first render: "who is that black
-    figure?"). It was a dark mass hugging the left edge with a maroon pack
-    strap and a brass slider on it, meant to read as the viewer's own shoulder
-    in an over-the-shoulder framing. It never could: the one thing that would
-    identify a shoulder as YOURS is the head it belongs to, and that is exactly
-    what this framing has to leave out — so it read as a hooded person standing
-    in the room. Four cuts of it failed (hill, landmass, road, hooded man) and
-    the failure is structural, not a matter of more detail. The arm alone is
-    unambiguous: nobody else's arm enters a frame from the bottom edge.
+    c.rect(x0 - 2, y0 - 2, x1 + 2, bot, D)               # the reveal all round
+    c.rect(x0, y0, x1, bot, C("341c27"))                 # the door's face
+    c.hline(x0 + 1, x1 - 1, y0 + 1, C("4d2b32"))         # lit top bevel
+    c.vline(x0 + 1, y0 + 1, bot, C("4d2b32"))            # lit left bevel
+    c.vline(x1 - 1, y0 + 2, bot, C("241527"))
 
-    ARM AND HAND ARE ONE LIMB NOW (user: "can we fix his hand placement, it
-    looks off from his arm"). They were two unrelated pieces — a sweep that
-    stopped at (266,438) and a palm rectangle at (212,404)-(272,439) sitting
-    above and to the LEFT of it, with open counter showing through the break.
-    Wrist, palm, fingers and thumb are all derived from the SAME bezier and the
-    SAME tangent at t=1, so the hand cannot leave the arm; and the glove cuff
-    is laid across the join afterwards, overlapping both sides of it.
+    # the recessed panel. A recess lit from the upper left shows its TOP and
+    # LEFT inner walls in shadow and its RIGHT and BOTTOM ones catching, and
+    # the field sits in the shadow the top wall throws — that pair of facts is
+    # the entire difference between a panel and a rectangle drawn on a door.
+    px0, px1, py0 = x0 + 16, x1 - 16, y0 + 20
+    c.rect(px0, py0, px1, bot, C("341c27"))
+    c.rect(px0, py0, px1, py0 + 7, C("241527"))          # the recess's shadow
+    c.hline(px0, px1, py0, D)
+    c.hline(px0 + 1, px1 - 1, py0 + 1, C("241527"))
+    c.vline(px0, py0, bot, D)
+    c.vline(px0 + 1, py0 + 2, bot, C("241527"))
+    c.vline(px1, py0, bot, C("4d2b32"))                  # the lit inner walls
+    c.vline(px1 - 1, py0 + 2, bot, C("602c2c"))
+    for gi in range(3):                                  # its own grain, which
+        gy = 478 + gi * 24                               # does not line up with
+        for x in range(px0 + 2, px1 - 1):                # the counter's runs
+            y = gy + int(round(1.7 * math.sin(x / 39.0 + gi * 2.4)
+                               + 1.0 * math.sin(x / 15.0 + gi)))
+            c.set(x, y, C("241527"))
 
-    Out-of-focus in pixel art is FLATNESS, not blur: the limb is the palette's
-    two darkest tones with one lit rim, and it carries exactly two readable
-    structures (the sleeve roll and the glove cuff with its brass keeper)."""
-    DARK, DIM = C("090a14"), C("10141f")
+    # two strap hinges, NOT a matched pair: different lengths, and the lower
+    # one has lost its paint down one side. They run back onto the counter
+    # frame, because a hinge that starts at the door's own edge has nothing to
+    # be hinged to.
+    for (hy, ln, worn) in ((462, 36, False), (528, 27, True)):
+        c.rect(x0 - 7, hy, x0 + ln, hy + 6, C("202e37"))
+        c.hline(x0 - 7, x0 + ln, hy, C("202e37") if worn else C("394a50"))
+        c.hline(x0 - 7, x0 + ln, hy + 6, D)
+        c.set(x0 + ln, hy + 3, C("151d28"))
+        c.rect(x0 - 7, hy + 1, x0 - 4, hy + 5, C("394a50"))   # the knuckle
+        c.vline(x0 - 4, hy + 1, hy + 5, C("151d28"))
+        for rv in (7, 12 + ln // 2):                     # two rivets, uneven
+            c.rect(x0 + rv, hy + 2, x0 + rv + 1, hy + 3, C("577277"))
+            c.set(x0 + rv + 1, hy + 4, C("151d28"))
+        if worn:
+            c.hline(x0 + 4, x0 + ln - 6, hy + 5, C("151d28"))
 
-    # the forearm centreline. A cubic bezier so the tangent is continuous all
-    # the way into the wrist — a chain of smoothstepped segments kinked at the
-    # knots, and a kink in a limb reads as a broken bone.
-    P = ((66.0, 572.0), (116.0, 522.0), (176.0, 488.0), (230.0, 448.0))
+    # the hasp: a strap swung off the counter frame ONTO the door, so it
+    # crosses the door's right edge. That crossing is what makes it a lock and
+    # not a bracket.
+    hx0, hx1, hy = x1 - 26, x1 + 12, 484
+    c.rect(hx0, hy, hx1, hy + 7, C("202e37"))
+    c.hline(hx0, hx1, hy, C("394a50"))
+    c.hline(hx0, hx1, hy + 7, D)
+    c.hline(hx0 + 1, hx1 - 1, hy + 8, C("241527"))
+    c.vline(hx0, hy + 1, hy + 6, C("394a50"))
+    c.rect(hx0 + 5, hy + 2, hx0 + 15, hy + 5, C("151d28"))   # the slot
+    c.hline(hx0 + 5, hx0 + 15, hy + 2, D)
+    c.set(hx1 - 4, hy + 2, C("577277"))
+    c.set(hx1 - 7, hy + 5, C("151d28"))
 
-    def bez(t):
-        m = 1.0 - t
-        x = (m ** 3 * P[0][0] + 3 * m * m * t * P[1][0]
-             + 3 * m * t * t * P[2][0] + t ** 3 * P[3][0])
-        y = (m ** 3 * P[0][1] + 3 * m * m * t * P[1][1]
-             + 3 * m * t * t * P[2][1] + t ** 3 * P[3][1])
-        dx = (3 * m * m * (P[1][0] - P[0][0]) + 6 * m * t * (P[2][0] - P[1][0])
-              + 3 * t * t * (P[3][0] - P[2][0]))
-        dy = (3 * m * m * (P[1][1] - P[0][1]) + 6 * m * t * (P[2][1] - P[1][1])
-              + 3 * t * t * (P[3][1] - P[2][1]))
-        ln = (dx * dx + dy * dy) ** 0.5
-        return x, y, dx / ln, dy / ln
-
-    def rib(cx_, cy_, nx_, ny_, hw, lit=True):
-        """One perpendicular slice. The LIT edge is the down-right one: every
-        light in this room (the box at 662,392 and the lamp at 806,404) is off
-        to the right, so the arm's right flank is the one that catches."""
-        h = int(hw)
-        for w in range(-h, h + 1):
-            c.set(int(round(cx_ + nx_ * w)), int(round(cy_ + ny_ * w)), DARK)
-        if lit:
-            c.set(int(round(cx_ + nx_ * h)), int(round(cy_ + ny_ * h)), C("253a5e"))
-            c.set(int(round(cx_ + nx_ * (h - 1))),
-                  int(round(cy_ + ny_ * (h - 1))), C("172038"))
-            c.set(int(round(cx_ - nx_ * h)), int(round(cy_ - ny_ * h)), DIM)
-
-    # ---- forearm
-    N = 560
-    for k in range(N + 1):
-        t = k / float(N)
-        x, y, tx, ty = bez(t)
-        nx_, ny_ = -ty, tx                                 # down-right normal
-        r = 27.0 - 9.0 * t
-        rib(x, y, nx_, ny_, r)
-        if 0.09 < t < 0.23:                                # the sleeve roll
-            for w in range(-int(r) + 2, int(r) - 5):
-                c.set(int(round(x + nx_ * w)), int(round(y + ny_ * w)), DIM)
-        if 0.225 < t < 0.245:
-            for w in range(-int(r) + 1, int(r) - 3):
-                c.set(int(round(x + nx_ * w)), int(round(y + ny_ * w)), C("172038"))
-
-    wx, wy, wtx, wty = bez(1.0)
-    wnx, wny = -wty, wtx
-    ang0 = math.degrees(math.atan2(wty, wtx))
-
-    # ---- the palm, travelling on the tangent the forearm arrives on.
-    # SAMPLED AT 0.4 px. Stepping s by a whole pixel along a rotated axis and
-    # w by a whole pixel along the perpendicular samples a lattice rotated ~33
-    # degrees off the screen grid, and a unit-spaced rotated lattice LEAVES
-    # HOLES — the first render of this stippled the back of the hand into a
-    # checkerboard, which is the one texture this project bans outright.
-    def slab(s0, s1, w0, w1, col, step=0.4):
-        n = int((s1 - s0) / step)
-        m = int((w1 - w0) / step)
-        for i in range(n + 1):
-            s = s0 + i * step
-            for j in range(m + 1):
-                w = w0 + j * step
-                c.set(int(round(wx + wtx * s + wnx * w)),
-                      int(round(wy + wty * s + wny * w)), col)
-
-    def pw(s):                                       # the palm's half-width
-        return 17.0 + 5.0 * math.sin((s / 32.0) * 2.55)
-
-    for i in range(81):
-        s = i * 0.4
-        rib(wx + wtx * s, wy + wty * s, wnx, wny, pw(s))
-    # the back of the hand. It TAPERS WITH THE PALM: a straight-sided slab
-    # here read as a rectangular plate laid on top of the glove, and the two
-    # tendon grooves cut through it read as machined slots.
-    for i in range(46):
-        s = 6.0 + i * 0.4
-        h = pw(s) - 6.0
-        for j in range(int(2 * h / 0.4) + 1):
-            w = -h + j * 0.4
-            c.set(int(round(wx + wtx * s + wnx * w)),
-                  int(round(wy + wty * s + wny * w)), C("172038"))
-        if 9.0 < s < 21.0:                           # two tendons, converging
-            for (f, o) in ((-0.34, 0.0), (0.30, 0.6)):
-                for d in (0.0, 0.4):
-                    c.set(int(round(wx + wtx * s + wnx * (h * f + o + d))),
-                          int(round(wy + wty * s + wny * (h * f + o + d))), DIM)
-
-    def digit(rx_, ry_, ang, length, half):
-        dxx, dyy = math.cos(math.radians(ang)), math.sin(math.radians(ang))
-        for k in range(int(length * 3) + 1):
-            t = k / float(int(length * 3))
-            cx_, cy_ = rx_ + dxx * length * t, ry_ + dyy * length * t
-            h = half - (1 if t > 0.86 else 0)              # rounded tip
-            rib(cx_, cy_, -dyy, dxx, h)
-
-    # FOUR FINGERS RESTING, not a fan of bars. The first cut splayed them 15
-    # degrees apart over 30 px and the tips ended 9 px apart with counter
-    # showing between: it read as a claw. They are rooted 11 apart at a
-    # half-width of 5, so they TOUCH at the knuckles and part only toward the
-    # tips, and each one's dark left flank lands against its neighbour's lit
-    # right flank, which is what separates them without a gap.
-    kx, ky = wx + wtx * 25.0, wy + wty * 25.0
-    for (off, da, lg, hf) in ((-16.5, -9, 26, 5), (-5.5, -3, 29, 5),
-                              (5.5, 3, 27, 5), (16.5, 9, 21, 5)):
-        digit(kx + wnx * off, ky + wny * off, ang0 + da,
-              lg + rng.randint(0, 2), hf)
-    # the thumb: SHORTER and FATTER than any finger and rooted further back
-    # down the palm. At the same length and width as the others it was simply
-    # read as a fifth finger and the hand looked like a rake.
-    digit(wx + wtx * 4 + wnx * 15, wy + wty * 4 + wny * 15,
-          ang0 + 64, 17, 7)
-    for kn in (-15.5, -5.0, 5.5, 15.5):                    # knuckle catches —
-        for d in (0.0, 0.4, 0.8, 1.2):                     # short RUNS, because
-            c.set(int(round(kx + wnx * kn + wtx * d)),     # isolated bright
-                  int(round(ky + wny * kn + wty * d)), C("253a5e"))  # pixels
+    # THE PADLOCK, hanging under the hasp on the two legs of its shackle. The
+    # first cut swept the shackle as an arc of nine samples over 144 degrees
+    # and the gaps between them rendered as a jagged crown of loose pixels —
+    # so the shackle is now two legs and a corner, drawn as the solid thing it
+    # is, with its top hidden where it passes through the slot.
+    lx = hx0 + 6
+    for sx in (lx, lx + 9):
+        c.vline(sx, hy + 6, 498, C("577277"))
+        c.vline(sx + 1, hy + 6, 498, C("394a50"))
+        c.set(sx + 2, hy + 7, C("202e37"))
+    c.rect(lx - 3, 497, lx + 14, 514, C("394a50"))       # the body
+    c.hline(lx - 2, lx + 13, 496, C("394a50"))           # corners eased
+    c.hline(lx - 2, lx + 13, 515, C("151d28"))
+    c.vline(lx - 3, 498, 513, C("577277"))
+    c.hline(lx - 3, lx + 14, 497, C("577277"))
+    c.rect(lx + 10, 498, lx + 14, 514, C("202e37"))      # its turned-away side
+    c.hline(lx - 3, lx + 14, 514, C("151d28"))
+    c.hline(lx - 2, lx + 13, 516, D)
+    c.rect(lx + 2, 504, lx + 6, 506, C("151d28"))        # the keyway
+    c.rect(lx + 3, 506, lx + 4, 510, C("151d28"))
+    c.set(lx + 3, 503, C("819796"))
+    c.rect(lx + 15, 499, lx + 16, 513, C("241527"))      # its shadow, on the
+    c.rect(lx - 1, 517, lx + 13, 519, C("241527"))       # door behind it
+    del rng
 
 
-    # ---- the glove cuff, laid ACROSS the join last so it overlaps the end of
-    # the forearm and the start of the hand and welds them together. Kept LOW
-    # in value: the first cut ran 577277 and 819796 through it and a bright
-    # bracelet on a silhouette that is meant to be out of focus took the eye
-    # clean off mara.
-    for i in range(46):
-        s = -15.0 + i * 0.4
-        hw = 18.5 - 0.09 * s
-        h = int(hw)
-        for w in range(-h, h + 1):
-            col = C("202e37")
-            if -12 < s < -8:
-                col = C("151d28")                          # a strap shadow
-            if w < -h + 2:
-                col = C("10141f")
-            elif w > h - 3:
-                col = C("394a50")
-            c.set(int(round(wx + wtx * s + wnx * w)),
-                  int(round(wy + wty * s + wny * w)), col)
-    slab(4.6, 5.6, -18.0, 18.0, C("577277"))               # the cuff's mouth
-    slab(5.8, 6.6, -18.0, 18.0, C("151d28"))
-    slab(-15.6, -14.8, -19.0, 19.0, DIM)
-    # the brass keeper. Small and DULL: at be772b over de9e41 it read as a lit
-    # button on the glove, and there is nothing over there to light it.
-    slab(-7.5, -4.0, -3.0, 2.0, C("602c2c"))
-    slab(-7.5, -7.0, -3.0, 2.0, C("884b2b"))
-    slab(-7.5, -4.0, -3.0, -2.6, C("884b2b"))
-    slab(-4.4, -4.0, -3.0, 2.0, C("241527"))
+# ----------------------------------------------------- kettle's scale -------
+# WHAT WAS HERE BEFORE, AND WHY IT IS GONE (user, twice: "the black arm is
+# still on mara's screen remove that thing" / "just remove that black hand
+# figure thing it just looks weird, replace it with something else on the
+# screen so that's not a weak spot"). A gloved forearm entered from the bottom
+# left and rested on the counter — YOU, in an over-the-shoulder framing. It was
+# cut back once already (it began as a shoulder with a pack strap) and it still
+# failed. The idea is ABANDONED: there is no third version of it, no other body
+# part in its place, and not one pixel of glove, cuff, keeper or wrist wrap
+# left. The whole lower-left is a room object now.
+#
+# WHAT REPLACED IT: kettle's balance, at the paying end of the counter.
+# LORE 7a — the den is mara's radio plus KETTLE'S MONEY plus verne's table, and
+# 7b lists "kettle's scale and shelf" as day-one furniture; section 9 lists
+# "scale weights for kettle" as loot you can carry out. So the object is not
+# decoration, it is the other half of what this counter is FOR: mara's end has
+# the map, the sheet and the district tags, and this end weighs what you
+# brought back. It also finishes a story the corner had already half-told —
+# the sunk deposit tray with its two brass tokens is a few pixels away, and now
+# there is something to weigh them against.
+#
+# IT IS MID-WEIGH, WHICH IS WHY IT IS NOT SYMMETRIC. The beam tilts down to
+# the right: the loaded pan is low and heaped, the empty pan is high, and two
+# brass weights still sit unused on the foot. That kills the one real risk in
+# putting a balance here — two pans reading as a cloned pair. They are at
+# different heights, different fill, different visible interior, hung on a
+# different number of wires, and one rim is dented.
+#
+# VALUES ARE HELD DOWN ON PURPOSE. Nothing lights this corner (see
+# _counter_left), so the steel runs 151d28..394a50 with 577277 used only on
+# the beam's top edge and the two rims, and the only chroma is dull brass —
+# the same 884b2b/be772b the tray tokens use. mara keeps the frame.
+def _scale(c: Canvas, rng: random.Random) -> None:
+    D, S, M, L, H = (C("090a14"), C("151d28"), C("202e37"),
+                     C("394a50"), C("577277"))
+    CX, PY = 246, 410                    # column centre line, foot's top plate
+
+    # ---- the foot's shadow on the wood: penumbra first, core over it, thrown
+    # down-RIGHT the way every prop on this counter throws (hook plates, tin,
+    # mug). Most of it ends up hidden under the foot itself, which is what
+    # keeps it from reading as a black puddle.
+    for (dy, hw) in ell_rows(33, 11):
+        if hw < 0 or dy < -4:
+            continue
+        c.hline(CX + 7 - hw, CX + 7 + hw, PY + 6 + dy, C("241527"))
+    for (dy, hw) in ell_rows(29, 9):
+        if hw < 0 or dy < -3:
+            continue
+        c.hline(CX + 5 - hw, CX + 5 + hw, PY + 6 + dy, D)
+
+    # ---- the foot: a cast plate with REAL thickness. Side wall first, top
+    # plate over it, so the two faces meet with no seam to leak through.
+    for k in range(1, 8):
+        for (dy, hw) in ell_rows(27, 8):
+            if hw < 0 or dy < 0:
+                continue
+            col = M if k < 4 else (S if k < 7 else D)
+            c.hline(CX - hw, CX + hw, PY + dy + k, col)
+            c.set(CX - hw, PY + dy + k, L if k < 5 else S)
+            c.set(CX + hw, PY + dy + k, S if k < 6 else D)
+    for (dy, hw) in ell_rows(27, 8):
+        if hw < 0:
+            continue
+        c.hline(CX - hw, CX + hw, PY + dy, L if dy < 2 else M)
+        c.set(CX - hw, PY + dy, H if dy < 0 else L)
+        c.set(CX + hw, PY + dy, M if dy < 0 else S)
+    for (dy, hw) in ell_rows(24, 6):                 # a shallow dish in the top
+        if hw < 0:
+            continue
+        c.hline(CX - hw, CX + hw, PY + dy + 1, M if dy < 1 else L)
+
+    # ---- the column: tapered, with a flare where it is bolted to the foot and
+    # a collar the pointer swings against
+    for y in range(354, PY + 3):
+        t = (y - 354) / float(PY + 2 - 354)
+        hw = 3 + int(t * 2.2) + (3 if y > PY - 8 else 0) + (2 if y > PY - 4 else 0)
+        c.hline(CX - hw, CX + hw, y, M)
+        c.set(CX - hw, y, L)
+        c.set(CX + hw, y, S)
+    c.rect(CX - 8, 372, CX + 8, 378, M)              # the collar
+    c.hline(CX - 8, CX + 8, 372, L)
+    c.hline(CX - 7, CX + 7, 373, L)
+    c.hline(CX - 8, CX + 8, 378, D)
+    c.hline(CX - 7, CX + 7, 377, S)
+    c.vline(CX - 8, 373, 377, L)
+    c.vline(CX + 8, 373, 377, S)
+
+    # ---- the beam, tilted DOWN TO THE RIGHT because the right pan is loaded.
+    # A 16-in-88 slope steps every five or six pixels, and the FIRST cut put a
+    # 577277 line along the top and a 090a14 line along the bottom of a body
+    # only three pixels thick: every step got outlined and the beam read as a
+    # string of sausages. The body is thicker than its edges now and the top
+    # edge is one step down from the brightest the frame has.
+    BX0, BY0, BX1, BY1 = 202, 342, 290, 358
+    span = BX1 - BX0
+    for k in range(span + 1):
+        t = k / float(span)
+        x = BX0 + k
+        y = int(round(BY0 + (BY1 - BY0) * t))
+        h = 3 + (1 if 0.14 < t < 0.86 else 0)
+        c.rect(x, y - h, x, y + h, M)
+        c.set(x, y - h, L)
+        c.set(x, y + h, S)
+        c.set(x, y + h - 1, M)
+    for (r0, r1) in ((0.22, 0.34), (0.58, 0.71)):      # two catches, not a rule
+        for k in range(int(span * r0), int(span * r1)):
+            y = int(round(BY0 + (BY1 - BY0) * k / float(span)))
+            c.set(BX0 + k, y - 3 - (1 if 0.14 < k / float(span) < 0.86 else 0), H)
+    for (ex, ey) in ((BX0, BY0), (BX1, BY1)):        # the end finials
+        c.rect(ex - 2, ey - 4, ex + 1, ey + 4, M)
+        c.hline(ex - 2, ex + 1, ey - 4, L)
+        c.hline(ex - 2, ex + 1, ey + 4, D)
+        c.vline(ex - 2, ey - 3, ey + 3, L)
+        c.vline(ex + 1, ey - 3, ey + 3, S)
+        c.set(ex, ey, S)                             # the hanger's eye
+
+    # ---- the knife bracket the beam rocks on. It STARTS AT THE BEAM: the
+    # first cut began it three pixels lower and the gap read as a beam floating
+    # off its own stand.
+    for k in range(11):
+        w = 6 - k // 2
+        c.hline(CX - w, CX + w, 352 + k, M)
+        c.set(CX - w, 352 + k, L)
+        c.set(CX + w, 352 + k, S)
+    c.rect(CX - 3, 344, CX + 3, 349, M)                # the pivot boss, on top
+    c.hline(CX - 3, CX + 3, 344, L)
+    c.set(CX + 3, 345, S)
+    # THERE IS NO POINTER NEEDLE. One was drawn hanging off the boss and it
+    # landed straight down the front of the column, so at 1x it did not read as
+    # a needle at all — it just made the column look two pixels wider and badly
+    # shaded. A part nobody can identify is worth less than the plain metal it
+    # covers up.
+
+    # ---- the two pans -------------------------------------------------------
+    def wires(ex, ey, pts):
+        for (tx, ty) in pts:
+            n = max(abs(tx - ex), abs(ty - ey))
+            for k in range(n + 1):
+                t = k / float(n)
+                xx = int(round(ex + (tx - ex) * t))
+                yy = int(round(ey + (ty - ey) * t))
+                c.set(xx, yy, L if k % 4 else H)
+                c.set(xx + 1, yy, S)
+
+    def pan(cx, cy, rx, ry, deep, dent):
+        """A dish, not a disc: you see the OUTER wall below the rim and the FAR
+        INNER wall inside it, which is the same trick the sunk tray uses and
+        the only reason either one reads as having a volume."""
+        for dy in range(0, ry + deep + 1):
+            t = 1.0 - (dy / float(ry + deep)) ** 2
+            hw = int(rx * (t ** 0.5))
+            if hw < 1:
+                continue
+            c.hline(cx - hw, cx + hw, cy + dy, M if dy < ry else S)
+            c.set(cx - hw, cy + dy, L if dy < ry + 2 else S)
+            c.set(cx + hw, cy + dy, S if dy < ry else D)
+            if dy > ry + deep - 3:
+                c.hline(cx - hw, cx + hw, cy + dy, D)
+        for (dy, hw) in ell_rows(rx, ry):            # the rim ring
+            if hw < 0:
+                continue
+            c.hline(cx - hw, cx + hw, cy + dy, H if dy < 0 else L)
+        for (dy, hw) in ell_rows(rx - 3, ry - 1):    # the inside
+            if hw < 0:
+                continue
+            c.hline(cx - hw, cx + hw, cy + dy,
+                    L if dy < -ry + 3 else (M if dy < 1 else S))
+        if dent:                                     # one rim knocked in
+            for k in range(5):
+                c.set(cx - rx + 2 + k, cy - ry + 3 + abs(k - 2), M)
+                c.set(cx - rx + 3 + k, cy - ry + 4 + abs(k - 2), S)
+
+    # the EMPTY pan, high on the light end. Three wires, an open interior, a
+    # dented rim: nothing in it, and it has been knocked about for six years.
+    wires(BX0, BY0 + 4, ((188, 362), (202, 360), (215, 362)))
+    pan(202, 366, 16, 5, 6, True)
+
+    # the LOADED pan, low on the heavy end. Its shadow lands on the wood first
+    # so the pan reads as HANGING over the counter rather than standing on it.
+    for (dy, hw) in ell_rows(19, 6):
+        if hw < 0:
+            continue
+        c.hline(294 - hw, 294 + hw, 400 + dy, C("241527"))
+    for (dy, hw) in ell_rows(11, 3):
+        if hw < 0:
+            continue
+        c.hline(293 - hw, 293 + hw, 401 + dy, D)
+    wires(BX1, BY1 + 4, ((275, 383), (290, 380), (305, 383)))
+    pan(290, 386, 17, 6, 4, False)
+
+    # ---- the haul in it: SHINE (LORE 9). IT IS BRASS, AND THAT IS THE WHOLE
+    # POINT. Two cuts of this were painted in the same steel as the pan — once
+    # at the pan's own values, once a step above them — and BOTH read as one
+    # dark silhouette: a leather pouch the first time, a dark fin the second.
+    # In a corner with no light of its own, VALUE alone cannot separate two
+    # things that touch. Hue can. A warm load in a cold pan reads instantly, it
+    # says "the good stuff" with no text, and it ties this end of the counter
+    # to the two brass tokens already lying in the tray beside it.
+    #
+    # A heap of scrap is not a mound either — it is SUMMITS: three lumps of
+    # different heights whose slopes meet in visible valleys, each catching on
+    # its upper-left face. It STOPS AT y=385, one row above the rim's own
+    # centre line, so the near rim of the pan stays in FRONT of the load.
+    def lump(px, half, hgt):
+        return lambda x: hgt * max(0.0, 1.0 - ((x - px) / float(half)) ** 2)
+
+    lumps = [lump(281, 10, 13), lump(291, 7, 8), lump(299, 8, 16)]
+    for x in range(276, 305):
+        hgt = max(f(x) for f in lumps)
+        top = 386 - int(hgt)
+        if top > 384:
+            continue
+        rise = hgt - max(f(x + 2) for f in lumps)
+        for y in range(top, 386):
+            c.set(x, y, C("884b2b") if y < 383 else C("602c2c"))
+        c.set(x, top, C("be772b") if rise < 0.6 else C("884b2b"))
+        c.set(x, top + 1, C("be772b") if rise < 0.2 else C("884b2b"))
+    for x in range(276, 305):                        # the valleys between them
+        a = 386 - int(max(f(x) for f in lumps))
+        b = 386 - int(max(f(x + 1) for f in lumps))
+        if b > a + 1:
+            c.vline(x + 1, a, min(b, 385), C("602c2c"))
+    c.hline(294, 297, 371, C("de9e41"))              # one catch, the tallest
+    c.set(293, 372, C("de9e41"))
+    # TWO FLAT FACETS ON IT, because parabolas alone came back as a loaf of
+    # bread: scrap is pieces, and a piece has a straight edge somewhere.
+    for k in range(13):                              # a plate lying askew
+        px, py = 276 + k, 375 - k // 3
+        c.vline(px, py, py + 2, C("884b2b"))
+        c.set(px, py, C("be772b"))
+        c.set(px, py + 3, C("602c2c"))
+    for k in range(11):                              # a steel bar half buried
+        px, py = 281 + k, 381 + k // 5
+        c.set(px, py - 1, L)
+        c.set(px, py, M)
+        c.set(px, py + 1, S)
+    # ONE BENT ROD STANDING OUT OF THE PILE, and it is STEEL — the one cold
+    # thing in a warm heap, so the heap is a heap of different things and not a
+    # single cast lump. Two other objects were tried in this slot and both
+    # failed the same way: they left the pan SIDEWAYS. A brass chain over the
+    # near rim read as six orange dots (the banned texture), and a length of
+    # scrap poking out to the right read, dead obviously in the crop, as a
+    # FRYING PAN HANDLE. Anything that leaves this pan horizontally turns it
+    # into a skillet. This one leaves upward.
+    for k in range(15):
+        t = k / 14.0
+        rx_ = int(298 + t * 9 - math.sin(t * 2.1) * 3)
+        ry_ = int(373 - t * 12)
+        c.vline(rx_, ry_, ry_ + 1, M)
+        c.set(rx_ + 1, ry_, L)
+        c.set(rx_ - 1, ry_, S)
+
+    # ---- two brass weights still on the foot: the beam has not come level, so
+    # these have not gone in yet. Deliberately NOT a pair — one stands, one has
+    # been knocked onto its side, and they are different sizes.
+    wx0 = 224 + rng.randint(-1, 1)
+    for y in range(398, 415):                        # the tall one, standing
+        u = (y - 398) / 16.0
+        hw = 5 if u > 0.22 else 3
+        c.hline(wx0 - hw, wx0 + hw, y, C("884b2b") if u > 0.3 else C("602c2c"))
+        c.set(wx0 - hw, y, C("be772b"))
+        c.set(wx0 + hw, y, C("602c2c"))
+    for (dy, hw) in ell_rows(5, 2):                  # its knob
+        if hw < 0:
+            continue
+        c.hline(wx0 - hw, wx0 + hw, 398 + dy,
+                C("be772b") if dy < 0 else C("884b2b"))
+    c.hline(wx0 - 3, wx0 + 3, 396, C("884b2b"))
+    c.set(wx0 - 2, 395, C("602c2c"))
+    c.hline(wx0 - 4, wx0 + 4, 415, D)
+    # the second one is a BLOCK, not a smaller cylinder and not the same
+    # cylinder knocked over — a tipped disc read as a bread roll, and a second
+    # cylinder would have been the cloned pair this whole object is built to
+    # avoid. Three faces: top, front, and the short side in shade.
+    wx1 = 259 + rng.randint(-1, 1)
+    for k in range(5):                               # the top face, sheared
+        c.hline(wx1 - 6 + k, wx1 + 6 + k, 404 - k,   # up-RIGHT, same width as
+                C("be772b") if k > 2 else C("884b2b"))   # the front face
+    for k in range(5):                               # the side, turned away
+        c.vline(wx1 + 6 + k, 404 - k, 413 - k, C("602c2c"))
+        c.set(wx1 + 6 + k, 413 - k, C("241527"))
+    c.rect(wx1 - 6, 405, wx1 + 6, 413, C("884b2b"))  # the front face
+    c.vline(wx1 - 6, 405, 413, C("be772b"))
+    c.hline(wx1 - 6, wx1 + 6, 413, C("602c2c"))
+    c.hline(wx1 - 5, wx1 + 6, 414, D)
+    c.hline(wx1 - 3, wx1 + 1, 409, C("602c2c"))      # a stamped mark, unread
 
 
 if __name__ == "__main__":

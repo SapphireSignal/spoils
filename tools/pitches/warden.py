@@ -272,6 +272,205 @@ def _sky(c: Canvas, rng: random.Random) -> None:
         c.set(sx, sy, C("577277"))
 
 
+# ============================================================== zenith ======
+# THESE TWO ARE PAINTED LAST, NOT HERE. They live next to _sky because that is
+# what they belong to, but paint() calls them at the very end of the run —
+# every function in this file draws from ONE shared rng stream, so inserting a
+# consumer in the middle would re-roll the whole picture below it. Called last,
+# they cost the existing stream nothing. See _burn_old_stream for the same
+# problem solved the other way round.
+#
+# THE DEFECT THEY FIX (user, 2026-08-02): "why is there like some black border
+# of the whole screen at the top of all of the paintings, it seems a bit odd".
+# Rows 0-109 of this scene were flat 090a14 edge to edge — a slab, which reads
+# as a letterbox border rather than as sky. The two SHIPPED backdrops never do
+# this: the drain's ceiling is just as dark but its manhole throat and its
+# rolled beams run the full height of it, and the den keeps structure in its
+# top rows too. Dark is correct here; FEATURELESS is the defect.
+#
+# THE BUDGET IS THE POINT. This must stay the darkest region of the frame, so
+# the entire allowance is ONE step of the cold ladder (090a14 -> 10141f, the
+# same step the sky's own lower seams already use) plus a short, broken 151d28
+# lip on a few undersides. Nothing here is a light source and nothing is
+# allowed a third step. Measured: top-60-row mean luminance 10.84 -> 12.24.
+ZEN_LIMIT = 117        # nothing below this line may be touched. The booth roof
+                       # slab starts at ROOF_T 118 and the sky's first seam
+                       # never rises above y 110, so everything under this is
+                       # the signed-off composition.
+
+
+def _strata(c: Canvas, rng: random.Random) -> None:
+    """THIN CLOUD LYING ACROSS THE ZENITH, lit from beneath by the same town
+    glow that is already on the horizon.
+
+    AERIAL PERSPECTIVE, IN THE SKY: the low bars are the near ones, so they
+    are thinner, more torn, and they are the only ones that get the lit lip.
+    The high ones are wider, softer edged and carry no light at all. That
+    grading is also what stops four bars at four heights reading as a set of
+    stripes — they differ in thickness, in tear, in length and in whether
+    they are lit, not merely in y.
+
+    Each bar's TOP AND BOTTOM EDGES ARE INDEPENDENT — two sines apiece plus
+    its own bounded random walk. A bar of constant thickness is a ruler. And
+    each one dies by losing thickness at both ends rather than by stopping,
+    because a cloud with a cut end is a painted rectangle.
+    """
+    BLACK, STEP, LIP = C("090a14"), C("10141f"), C("151d28")
+
+    def put(x, y, col):
+        # the containment guard, and it is deliberately paranoid: a pixel is
+        # written ONLY if it is still the flat zenith slab and ONLY above the
+        # roof line. It cannot touch the sky's first seam, the three stars, or
+        # anything else in the frame no matter what the maths does.
+        if 0 <= x < SCENE_W and 0 <= y <= ZEN_LIMIT and c.get(x, y) == BLACK:
+            c.set(x, y, col)
+
+    def lip(x, y):
+        if 0 <= x < SCENE_W and 0 <= y <= ZEN_LIMIT and c.get(x, y) == STEP:
+            c.set(x, y, LIP)
+
+    def bar(x0, x1, mid, half, s1, p1, s2, p2, lit_to):
+        wt = wb = 0.0
+        run = gap = 0
+        for x in range(x0, x1):
+            # the walk is what tears the edge; the sines are what stop the
+            # tear from reading as noise. Both, or it is one or the other.
+            wt = max(-2.0, min(2.0, wt + rng.uniform(-0.55, 0.55)))
+            wb = max(-2.0, min(2.0, wb + rng.uniform(-0.55, 0.55)))
+            u = (x - x0) / float(x1 - x0)
+            taper = min(1.0, min(u, 1.0 - u) * 5.0 + 0.02)
+            h = half * taper + s1 * math.sin(x / p1 + 0.7)
+            if h < 0.5:
+                continue
+            m = mid + s2 * math.sin(x / p2 + 2.3)
+            top = int(m - h + wt)
+            bot = int(m + h + wb)
+            for y in range(top, bot + 1):
+                put(x, y, STEP)
+            # the lit lip. Broken into rolled runs with rolled gaps, and only
+            # over the left of the frame, because the glow it is lit by lives
+            # on the horizon out at x 0-612. A continuous lip under a whole
+            # bar is a drawn outline, not light landing on something.
+            if x > lit_to:
+                continue
+            if gap > 0:
+                gap -= 1
+                continue
+            if run > 0:
+                run -= 1
+                lip(x, bot)
+                if rng.random() < 0.22:
+                    lip(x, bot - 1)
+                continue
+            if rng.random() < 0.055:
+                run = rng.randint(4, 17)
+            else:
+                gap = rng.randint(2, 9)
+
+    # five bars, no two alike in length, thickness, tear or lighting, and
+    # nowhere near a common pitch. Two of them overlap in x so the layer reads
+    # as depth rather than as a ladder.
+    #
+    # THE TOP ONE IS CLIPPED BY THE FRAME ON PURPOSE. A first pass put the
+    # highest bar at y 27 and left rows 0-18 flat — which is the original
+    # defect, just eighteen rows tall instead of a hundred. A sky that is cut
+    # off by the top edge mid-cloud says the frame is a crop of somewhere
+    # bigger; a sky that stops short of it says the frame is a stage.
+    bar(196, 902, 4.0, 2.0, 0.9, 89.0, 3.4, 141.0, -1)      # clipped, faintest
+    bar(438, 726, 16.0, 1.5, 0.7, 31.0, 1.1, 53.0, -1)      # a torn-off scrap
+    bar(52, 700, 30.0, 4.0, 1.5, 71.0, 2.6, 113.0, -1)      # high, wide, dead
+    bar(0, 306, 53.0, 3.0, 1.1, 43.0, 1.9, 79.0, 240)       # short, left
+    bar(372, 884, 68.0, 3.2, 1.3, 59.0, 2.2, 97.0, 560)     # long, right
+    bar(148, 646, 94.0, 2.6, 0.9, 37.0, 1.6, 67.0, 610)     # low, near, lit
+
+
+def _mast(c: Canvas, rng: random.Random) -> None:
+    """THE BOOTH'S ANTENNA, standing off the roof.
+
+    The strata alone left the top-RIGHT still empty, and a band with nothing
+    but horizontals in it has nothing to hang on. This is the vertical. It is
+    roof furniture, so its base is hidden behind the roof slab's fascia at
+    y 118 exactly as it would be — it stops at ZEN_LIMIT and the fascia's own
+    lit lip finishes it.
+
+    IT READS 3D, which for a near-black object means exactly two values: the
+    shaft's own 10141f body with a 151d28 edge down the side that faces the
+    town glow (left), and a 090a14 edge on the side turned away. The cross
+    arms are LIT ON THEIR UNDERSIDES for the same reason — a beam has a lit
+    face and a shade face, never one flat value.
+
+    Nothing on it emits: the beacon housing is baked with no lamp, like every
+    other light in this pitch.
+    """
+    BASE_X, TOP_Y = 838, 12
+    BLACK, STEP, LIP = C("090a14"), C("10141f"), C("151d28")
+
+    def put(x, y, col):
+        if 0 <= x < SCENE_W and 0 <= y <= ZEN_LIMIT and c.get(x, y) != C("577277"):
+            c.set(x, y, col)
+
+    def shaft(y):                       # it leans a pixel, like the pole does
+        return BASE_X + int((y - TOP_Y) / 84.0 * 2.0)
+
+    for y in range(TOP_Y + 9, ZEN_LIMIT + 1):
+        s = shaft(y)
+        wd = 2 + int((y - TOP_Y) / 84.0 * 2.0)
+        for k in range(wd):
+            put(s + k, y, STEP)
+        put(s, y, LIP)                  # the glow is off to the left
+        put(s + wd - 1, y, BLACK)
+    for y in range(TOP_Y, TOP_Y + 9):   # the whip above the top arm
+        put(shaft(y), y, STEP)
+        put(shaft(y) + 1, y, BLACK)
+
+    # two cross arms, and every number about them is different: height, the
+    # reach either side, span, thickness. A first cut gave them 24px and 23px
+    # of total span — different offsets about the shaft, but the same LENGTH,
+    # and at a glance they read as twins. The eye measures the whole bar, not
+    # where the shaft crosses it.
+    for (ay, la, ra, th) in ((TOP_Y + 12, 17, 6, 2), (TOP_Y + 41, 6, 10, 3)):
+        s = shaft(ay)
+        for x in range(s - la, s + ra + 1):
+            for y in range(ay, ay + th):
+                put(x, y, STEP)
+            put(x, ay + th, LIP)        # the lit underside
+            put(x, ay - 1, BLACK)       # and the shade face on top
+        for k in (-la + 2, ra - 3):     # two pips, unevenly placed
+            put(s + k, ay - 3, STEP)
+            put(s + k, ay - 2, STEP)
+
+    # the beacon can, dead. Sits under the lower arm on a stub, off to one
+    # side, so the mast is not symmetric about its own shaft.
+    for y in range(TOP_Y + 58, TOP_Y + 69):
+        for x in range(shaft(y) - 8, shaft(y) - 2):
+            put(x, y, STEP)
+        put(shaft(y) - 8, y, LIP)
+        put(shaft(y) - 3, y, BLACK)
+    for x in range(shaft(TOP_Y + 62) - 3, shaft(TOP_Y + 62) + 1):
+        put(x, TOP_Y + 62, STEP)
+    put(shaft(TOP_Y + 68) - 7, TOP_Y + 69, LIP)
+
+    # two stays. They started as one off each side at similar angles and read
+    # as a symmetric letter A with the mast for its stem — the pair was more
+    # legible than either wire. So: one STEEP and high off the left, one
+    # SHALLOW and low off the right, and both slack enough to curve. A guy
+    # wire is never dead straight anyway.
+    for (ay, ax, sag) in ((TOP_Y + 14, 792, 4.5), (TOP_Y + 50, 904, 2.2)):
+        s = shaft(ay)
+        n = abs(ax - s)
+        for k in range(n):
+            u = k / float(n)
+            x = int(s + (ax - s) * u)
+            y = int(ay + (ZEN_LIMIT - ay) * u + sag * 4.0 * u * (1.0 - u))
+            if 0 <= x < SCENE_W and 0 <= y <= ZEN_LIMIT:
+                cur = c.get(x, y)
+                # capped at the lip value: the whole region's light budget is
+                # ONE step off black plus the odd 151d28 edge, and a wire
+                # crossing a cloud must not be the thing that spends a third.
+                if cur in (C("090a14"), C("10141f")):
+                    c.set(x, y, bump(cur, 1))
+
+
 # ============================================================ background ====
 def _far_ground(c: Canvas, rng: random.Random) -> None:
     # AERIAL PERSPECTIVE, and it is what makes the wire read at all: the
@@ -2075,6 +2274,11 @@ def paint() -> Canvas:
     _lamp_and_ledger(c, rng)
     _hand(c, rng)
     _boom(c, rng)
+    # LAST ON PURPOSE. Both draw only into the flat zenith slab above y 117,
+    # and calling them here means they take their rng draws after every other
+    # function has taken its own — so not one pixel below the roof line moves.
+    _strata(c, rng)
+    _mast(c, rng)
     return c
 
 
