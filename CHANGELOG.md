@@ -3,6 +3,35 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.24] — 2026-08-02 — a smaller font, and the safehouse moves
+
+### Added
+- **A second, much smaller font.** The vehicle labels on the map are tiny
+  now (user: "way smaller") — 3px x-height in a 6px box, against the main
+  font's 5 in 9. It had to be **drawn** at that size, not scaled: the main
+  font is a bitmap, so asking it for a smaller size resamples the glyphs
+  and blurs them. Same trap the changelog text hit. 40 glyphs, and it is
+  there for any future label that needs to be small.
+- Vehicle labels yield to each other the way the place names do. Two
+  vehicles parked together printed over each other and came out as
+  "truckck".
+
+### Changed
+- **The safehouse moved to the north-east corner** (user call — a
+  deliberate map revision). It used to search outward from the middle of
+  the southmost road band, which dropped it inside the playground. It now
+  anchors at the open corner and sweeps west then south. It lands at
+  [174, 73]; the playground is clear, and walkable cells are unchanged at
+  1297.
+
+### Fixed (test)
+- The all-doors check spawned the player 20 px inside the room, which can
+  land on furniture or in a wall — the physics then ejects the body to
+  resolve the overlap, sometimes to the far side of the door, and it
+  reported walking through one. It now skips any sample that does not
+  start clear. This surfaced the moment the safehouse move reshuffled
+  which door is which, and it was the test, not the door.
+
 ## [0.6.23] — 2026-08-02 — five things from a playtest
 
 ### Fixed

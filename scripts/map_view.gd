@@ -38,6 +38,12 @@ var _map_tex: ImageTexture
 var _pois: Array[Dictionary] = []     # {name, rect (cells), blurb, label}
 var _font: Font
 var _font_size := 8
+# a SECOND, much smaller cut for the vehicle dots (user: "way smaller").
+# The main font is a bitmap at one size — asking it for a smaller size
+# resamples the glyphs and they blur, so the tiny text is its own font,
+# drawn at 3px x-height.
+var _tiny_font: Font
+var _tiny_size := 6
 
 var _mode := "world"                  # remembered across open/close
 var _panel: PanelContainer
@@ -75,6 +81,9 @@ func setup(info: Dictionary, player: Player, environment: Node,
 	_font = theme.default_font
 	if theme.has_default_font_size():
 		_font_size = theme.default_font_size
+	var tiny := load("res://art/gen/spoils_tiny.fnt")
+	if tiny != null:
+		_tiny_font = tiny
 	_build_poi_list(info)
 	layer = 75
 	visible = false
@@ -674,6 +683,7 @@ func _draw_markers() -> void:
 		return
 	# live vehicle dots: SMALLER than they were, coloured by what they are,
 	# and named. Trucks read blue, cars amber (user).
+	var dot_labels: Array[Rect2] = []
 	for node in get_tree().get_nodes_in_group("cars"):
 		var car := node as DriveableCar
 		var car_cell := Vector2(_floor_layer.local_to_map(
@@ -687,9 +697,30 @@ func _draw_markers() -> void:
 		# and the whole thing turns to soup
 		if _zoom >= 3.0:
 			var word := "truck" if truck else "car"
-			var tw := _font.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT,
-				-1, _font_size).x
-			_halo_text(_markers, (at + Vector2(-tw * 0.5, -4.0)).round(), word,
+			var f: Font = _tiny_font if _tiny_font != null else _font
+			var fs: int = _tiny_size if _tiny_font != null else _font_size
+			var tw := f.get_string_size(word, HORIZONTAL_ALIGNMENT_LEFT,
+				-1, fs).x
+			var tp := (at + Vector2(-tw * 0.5, -3.0)).round()
+			# two vehicles parked together printed their names straight over
+			# each other and came out as "truckck" (seen on a map capture).
+			# Same collision-yield the place names use: if it would land on
+			# one already drawn, it does not draw.
+			var box := Rect2(tp - Vector2(1.0, float(fs)),
+				Vector2(tw + 2.0, float(fs) + 2.0))
+			var clash := false
+			for r in dot_labels:
+				if r.intersects(box):
+					clash = true
+					break
+			if clash:
+				continue
+			dot_labels.append(box)
+			for off in [Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1),
+					Vector2(0, 1)]:
+				_markers.draw_string(f, tp + off, word,
+					HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0.04, 0.05, 0.09, 0.9))
+			_markers.draw_string(f, tp, word, HORIZONTAL_ALIGNMENT_LEFT, -1, fs,
 				TRUCK_DOT if truck else CAR_DOT)
 	# ME: impossible to lose (user: "alot more noticable"). A pulsing ring,
 	# a bright core, cross ticks, and the label riding above it.

@@ -73,6 +73,11 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.24", [
+		"the car and truck labels on the map are much smaller. the games font only comes in one size, so this is a second font drawn from scratch at half the height rather than the old one shrunk down and blurred",
+		"two vehicles parked together used to print their names on top of each other. now the second one waits its turn",
+		"the safehouse moved to the open ground in the top right corner of the district. it was sitting in the middle of the playground",
+	]],
 	["v0.6.23", [
 		"walking away from the lift no longer lets you extract from halfway across the district. that was my fault - a grace period meant for driving out through the toll gate had been applied to the lift as well",
 		"you cant walk through the front of the extraction train any more. the engine sticks out further than its collision did, and there were gaps between the carriages too",

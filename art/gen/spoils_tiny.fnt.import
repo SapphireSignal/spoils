@@ -1,0 +1,17 @@
+[remap]
+
+importer="font_data_bmfont"
+type="FontFile"
+uid="uid://lxworv7c7qom"
+path="res://.godot/imported/spoils_tiny.fnt-944b647b4b5a9a2817ec0b5d8181f5c8.fontdata"
+
+[deps]
+
+source_file="res://art/gen/spoils_tiny.fnt"
+dest_files=["res://.godot/imported/spoils_tiny.fnt-944b647b4b5a9a2817ec0b5d8181f5c8.fontdata"]
+
+[params]
+
+fallbacks=[]
+compress=true
+scaling_mode=2

@@ -779,18 +779,20 @@ func _walk_dirt_path(from: Vector2i, to: Vector2i) -> void:
 
 
 func _plan_safehouse() -> void:
-	# the SAFEHOUSE: the same squat house near the map's south edge every
-	# raid, ringed with barriers — where every deploy begins
+	# the SAFEHOUSE: the same squat house every raid, ringed with barriers —
+	# where every deploy begins.
+	#
+	# MOVED TO THE NORTH-EAST CORNER (user call 2026-08-02, a deliberate map
+	# revision). It used to search out from the middle of the southmost road
+	# band, which dropped it right inside the playground. Up here the ground
+	# is open. Anchor at the corner and sweep west, then south.
 	var size := Vector2i(7, 6)
-	# just NORTH of the southmost road: "near the bottom" without landing
-	# on the road band or its sidewalks (the first probe row did exactly
-	# that and thirty x-shifts never escaped it)
-	var base_y: int = _roads_h[ROAD_COUNT - 1].x - size.y - 4
-	var base_x: int = MAP_W / 2
+	var base_y: int = BARRIER_INSET + 7
+	var base_x: int = MAP_W - BARRIER_INSET - 13
 	var placed := false
 	for probe in 240:
-		var dx := ((probe % 30) / 2 + 1) * (1 if probe % 2 == 0 else -1) * 2
-		var dy := -3 * (probe / 30)   # climb north band by band — a rail
+		var dx := -((probe % 30) / 2) * 3      # sweep WEST off the corner
+		var dy := 3 * (probe / 30)     # then south band by band — a rail
 		var pos := Vector2i(base_x + dx - size.x / 2, base_y + dy)
 		var rect := Rect2i(pos, size)  # line can cross several of them
 		var blocked := false
@@ -824,11 +826,11 @@ func _plan_safehouse() -> void:
 		placed = true
 		break
 	if not placed:
-		# exhaustive sweep: walk north row by row, first clear slot wins —
+		# exhaustive sweep: walk SOUTH row by row, first clear slot wins —
 		# a seed once landed rail+court+depot across every probe band and
 		# left the spawn at the map corner (sniper country)
 		var y := base_y
-		while not placed and y > BARRIER_INSET + 6:
+		while not placed and y < MAP_H - BARRIER_INSET - size.y - 6:
 			var x := BARRIER_INSET + 4
 			while not placed and x < MAP_W - BARRIER_INSET - size.x - 4:
 				var rect := Rect2i(Vector2i(x, y), size)
@@ -853,7 +855,7 @@ func _plan_safehouse() -> void:
 					})
 					placed = true
 				x += 3
-			y -= 3
+			y += 3
 
 
 func _place_safehouse_ring() -> void:

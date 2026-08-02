@@ -275,6 +275,14 @@ func _smoke() -> void:
 				for face in [-1.0, 1.0]:
 					player.position = at - shut_thru * 20.0 * face
 					await get_tree().process_frame
+					# only measure from a start that is actually CLEAR. 20 px
+					# inside a room can land on furniture or in a wall, and
+					# the physics then ejects the body to resolve the
+					# overlap — which can put it the far side of the door and
+					# read as walking through one. That is the test spawning
+					# badly, not the door leaking.
+					if player.test_move(player.global_transform, Vector2.ZERO):
+						continue
 					# which side of the wall PLANE we set off from —
 					# crossing it is the only thing that counts as through
 					var side_before: float = signf(
