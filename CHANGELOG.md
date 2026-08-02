@@ -3,6 +3,27 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.76] — 2026-08-02 — menu housekeeping
+
+### Changed
+- **The changelog window is much bigger** — 624x384 instead of 280x210,
+  with tighter leading, so seven versions fit where two did (user: less
+  scrolling). The text stays at size 9 on purpose: the font is a BITMAP
+  font cut at that size, so asking for 8 resamples the glyphs instead of
+  re-cutting them, and blurry menu text is a failure this project has
+  already had once.
+- **The changelog button hides while the map-select panel is open.** It
+  lives on the menu root, outside the panel, so it stayed clickable
+  underneath it (user).
+- **The district blurb reads once.** It used to list every POI as prose
+  and then list them all again under "on the board", which meant nothing
+  to anyone (user). Now: the places once, then what actually matters
+  before you commit — the three ways out, and that snipers own
+  everything past the wire. "bring a flashlight" is gone; you always
+  have one.
+- The district name reads as a heading now (accent colour and a rule
+  under it) rather than as another line of body copy.
+
 ## [0.6.75] — 2026-08-02 — the train is solid
 
 ### Fixed

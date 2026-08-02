@@ -58,6 +58,7 @@ var _settings: SettingsPanel
 var _keybinds: KeybindsPanel
 var _volume: VolumePanel
 var _changelog: PanelContainer
+var _changelog_btn: Button     # hidden while a full-screen panel owns the menu
 var _changelog_list: VBoxContainer
 var _changelog_open := false   # the USER opened it (vs the boot prewarm)
 var _map_select: PanelContainer
@@ -72,6 +73,11 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.76", [
+		"the changelog window is much bigger, so there is a lot less scrolling",
+		"the changelog button is hidden while the district select screen is open, it used to still be clickable underneath it",
+		"the district description doesnt list every place twice any more, and it tells you the three ways out instead",
+	]],
 	["v0.6.75", [
 		"the extraction train is solid. you could walk and drive straight through it before",
 		"the freight countdown moved to the top middle, it was printing over the fps counter",
@@ -1058,7 +1064,8 @@ func _build_ui() -> void:
 
 	# same look as every other button (a flat/dim version was invisible on
 	# the darker backdrops)
-	var changelog_btn := Button.new()
+	_changelog_btn = Button.new()
+	var changelog_btn := _changelog_btn
 	changelog_btn.text = "changelog"
 	changelog_btn.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	changelog_btn.offset_left = -96
@@ -1100,11 +1107,16 @@ func _build_changelog_panel() -> PanelContainer:
 	title.add_theme_color_override("font_color", UITheme.ACCENT)
 	box.add_child(title)
 
+	# A MUCH bigger window so there is far less scrolling (user). The text
+	# itself stays at 9: the font is a BITMAP font drawn at that size, and
+	# asking for 8 does not re-cut the glyphs, it resamples them — which is
+	# the blurry-text failure this project has hit before. More rows on
+	# screen and tighter leading buys the same thing without the blur.
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(280, 210)
+	scroll.custom_minimum_size = Vector2(624, 384)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_changelog_list = VBoxContainer.new()
-	_changelog_list.add_theme_constant_override("separation", 3)
+	_changelog_list.add_theme_constant_override("separation", 1)
 	_changelog_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	# rows are built LAZILY on first open — a few hundred labels made the
 	# menu heavy to build and heavy to tear down on deploy (frame spike)
@@ -1237,10 +1249,20 @@ func _build_map_select() -> PanelContainer:
 	info.add_theme_constant_override("separation", 6)
 	info.custom_minimum_size = Vector2(200, 0)
 	columns.add_child(info)
+	# the district's NAME has to read as a heading, not as another line of
+	# body copy (user: "you cant even tell transit is like the title").
+	# The bitmap font is one size, so the heading is carried by the accent
+	# colour and a rule underneath it.
 	_ms_name = Label.new()
 	_ms_name.text = "select a district"
-	_ms_name.add_theme_color_override("font_color", UITheme.TEXT_BRIGHT)
+	_ms_name.add_theme_color_override("font_color", UITheme.ACCENT)
 	info.add_child(_ms_name)
+	var name_rule := ColorRect.new()
+	name_rule.color = Color(UITheme.ACCENT.r, UITheme.ACCENT.g,
+		UITheme.ACCENT.b, 0.45)
+	name_rule.custom_minimum_size = Vector2(0, 1)
+	name_rule.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.add_child(name_rule)
 	_ms_blurb = Label.new()
 	_ms_blurb.text = "the wardens sealed four districts.\nonly one answers the radio."
 	_ms_blurb.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1270,18 +1292,28 @@ func _build_map_select() -> PanelContainer:
 
 func _select_transit() -> void:
 	_ms_name.text = "transit"
-	_ms_blurb.text = "the sealed transit district: a town and its courtyard, the school, a trainyard, the bus depot, a scrapyard, the comms relay - and the woods between them. snipers own the edge. bring a flashlight.\n\non the board: home base - courtyard - school - trainyard - depot - comms - gallery - scrapyard"
+	# ONE pass over the places, then what actually matters before you
+	# commit: how you get out, and what kills you. The old copy listed
+	# every poi twice — once as prose and again under "on the board",
+	# which meant nothing to anyone (user).
+	_ms_blurb.text = "a town around its courtyard, the school and its playground to the south, a trainyard cut straight through the middle, the bus depot, a scrapyard, the comms relay - and woods on every side.\n\nthree ways out: the lift, the toll gate, the night freight.\n\nsnipers own everything past the wire."
 	_ms_deploy.disabled = false
 
 
 func _open_map_select() -> void:
 	_buttons.visible = false
 	_map_select.visible = true
+	# the changelog button lives on the menu root, outside this panel, so
+	# it stayed clickable underneath it (user)
+	if _changelog_btn != null:
+		_changelog_btn.visible = false
 
 
 func _close_map_select() -> void:
 	_map_select.visible = false
 	_buttons.visible = true
+	if _changelog_btn != null:
+		_changelog_btn.visible = true
 
 
 func _menu_button(parent: Container, text: String, handler: Callable) -> Button:
