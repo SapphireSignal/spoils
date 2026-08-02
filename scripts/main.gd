@@ -40,6 +40,9 @@ func _ready() -> void:
 	# all, and ESC and M were both dead, so there was no way out of it.
 	# Every scene root now starts from an empty stack.
 	Ui.clear()
+	# Juice is an autoload too, so a raid that ended mid hit-stop would hand
+	# the next one a world running at 4% speed
+	Juice.reset()
 	_show_deploy_screen()
 	_build_world.call_deferred()
 
@@ -50,6 +53,7 @@ func _exit_tree() -> void:
 	# playing under the main menu (and into the next raid)
 	Sfx.silence_world()
 	Ui.clear()
+	Juice.reset()
 
 
 func _show_deploy_screen() -> void:

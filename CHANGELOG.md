@@ -3,6 +3,39 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.17] — 2026-08-02 — impact
+
+First slice of the visual-polish pass, and it takes the direction the user
+set: **the base art is not redrawn.** Everything here is engine-level —
+shaders, camera, held time — so it lifts every sprite at once instead of
+one family at a time.
+
+### Added
+- **Camera kick.** Taking a round, and hitting something in a car, now
+  move the world. Strength is in WHOLE SCREEN PIXELS and rides the same
+  grid the camera already snaps to, so a shake can never knock the view
+  half a pixel off and turn into the shimmer rule 1 exists to prevent.
+  The car's kick scales with how hard you hit; thunder gets a small one,
+  deliberately under the crash so weather never out-punches a collision.
+- **Hit stop.** A 55 ms beat of held time when a round lands. Long enough
+  to read as weight, short enough that it never reads as a dropped frame
+  — which on a 240 Hz display would be the first thing noticed.
+- **A per-sprite hit flash**, as a shader on the existing sprite rather
+  than a repaint. It mixes toward flat white on RGB only and scales by
+  the sprite's own alpha, so the silhouette can't fatten and the art is
+  untouched the instant the flash ends. Per-sprite on purpose: a
+  full-screen tint tells you that you were hit, this tells you *what*
+  was hit — which is what M3's enemies will need.
+- `Juice` autoload owns the hit-stop clock and hands out flash materials
+  (one material per sprite, one shared compiled shader). It resets on
+  deploy and on leaving a raid: an autoload that outlived a raid mid
+  hit-stop would hand the next one a world running at 4% speed.
+
+### Notes
+- Perf unchanged: 240 fps, 4.47–4.58 ms worst across four runs, storm
+  night included. A one-off 7.9 ms frame on first run was shader
+  compilation, and did not repeat.
+
 ## [0.6.16] — 2026-08-02 — a changelog worth reading
 
 ### Changed

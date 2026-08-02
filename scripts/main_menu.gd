@@ -73,6 +73,10 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.17", [
+		"getting shot hits harder. the camera kicks, time holds for a fraction of a second, and the raider flashes white - none of which touches the artwork itself",
+		"crashing a car shoves the screen, scaled by how hard you hit it, and close thunder gives the world a small shove of its own",
+	]],
 	["v0.6.16", [
 		"the changelog is rewritten. the older entries were cut into fifty-character scraps to fit an old narrow window, so one sentence came out as five stubby bullets - sixty-five versions now say what actually changed and why, using the detail that was only ever in the developer notes",
 		"the window is a little smaller again, and the text fills it properly instead of stopping halfway across",

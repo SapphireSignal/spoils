@@ -383,6 +383,11 @@ func _process(delta: float) -> void:
 
 
 func _strike() -> void:
+	# close thunder moves the world a little. Small — this is weather, not
+	# an explosion, and it has to sit under the crash kick, not over it.
+	var who := get_tree().get_first_node_in_group("player_shake") as Player
+	if who != null:
+		who.shake(1.0, 0.30)
 	var peak := (0.20 + 0.10 * night_amount) * randf_range(0.8, 1.15)
 	var tween := create_tween()
 	tween.tween_property(_flash, "color:a", peak, 0.09)

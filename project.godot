@@ -22,6 +22,7 @@ Sfx="*res://scripts/sfx.gd"
 Music="*res://scripts/music.gd"
 Ui="*res://scripts/ui_state.gd"
 Raid="*res://scripts/raid.gd"
+Juice="*res://scripts/juice.gd"
 Harness="*res://scripts/harness.gd"
 
 [debug]

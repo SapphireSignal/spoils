@@ -241,6 +241,10 @@ func _process(delta: float) -> void:
 			# every real hit gets a soft metal thump (user ask); SMOKE is
 			# reserved for full-speed crashes only
 			Sfx.play_car_bump(pre_speed / MAX_SPEED)
+			# the thump you HEAR should also be a thump you FEEL — scaled
+			# by how hard you hit, in whole screen pixels
+			if _player != null:
+				_player.shake(1.5 + 3.5 * (pre_speed / MAX_SPEED), 0.24)
 			if pre_speed >= MAX_SPEED * 0.85:
 				_spawn_crash_smoke()
 		speed *= 0.35           # you hit something; the car noticed

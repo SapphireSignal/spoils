@@ -89,6 +89,15 @@ var _prev_anim_step := -1
 # whole factor.
 var zoom_combined := 0
 var _zoom_view := 0.0
+# camera kick: whole screen pixels, decaying, driven through _camera_target
+# so it rides the SAME grid as everything else
+var _shake_left := 0.0
+var _shake_time := 0.0
+var _shake_amp := 0.0
+var _shake_rng := RandomNumberGenerator.new()
+var _flash := 0.0                # 1 -> 0 over FLASH_TIME on a hit
+var _flash_mat: ShaderMaterial
+const FLASH_TIME := 0.16
 
 
 func _init() -> void:
@@ -109,6 +118,10 @@ func _init() -> void:
 	_sprite.vframes = 8
 	_sprite.frame = _dir_index * SHEET_COLS
 	_sprite.offset = Vector2(0, -17)  # feet (frame y=37 of 40) sit on origin
+	# the hit flash lives in a shader on the EXISTING sprite — the art is
+	# untouched, and at flash 0 the shader is a straight passthrough
+	_flash_mat = Juice.flash_material()
+	_sprite.material = _flash_mat
 	add_child(_sprite)
 
 	var shape := CircleShape2D.new()
@@ -147,6 +160,8 @@ func _ready() -> void:
 	var s := float(maxi(1, Settings.pixel_scale))
 	camera.global_position = _camera_target(global_position, s)
 	camera.make_current()
+	# anything that wants to kick the camera finds the player through this
+	add_to_group("player_shake")
 
 
 func take_hit(bone: String = "", who: String = "") -> void:
@@ -159,6 +174,12 @@ func take_hit(bone: String = "", who: String = "") -> void:
 	hp -= 1
 	_hurt_left = HURT_FLASH_TIME
 	_hurt_rect.color.a = 0.30
+	# JUICE: the round arrives with a kick, a beat of held time, and the
+	# raider flashing white. None of it touches the base art — the flash is
+	# a shader on the existing sprite, the kick rides the pixel grid.
+	shake(3.0, 0.26)
+	_flash = 1.0
+	Juice.hit_stop(0.055)
 	hurt.emit()
 	if hp <= 0:
 		dead = true
@@ -225,6 +246,13 @@ func _process(delta: float) -> void:
 	if _hurt_left > 0.0:
 		_hurt_left -= delta
 		_hurt_rect.color.a = maxf(0.0, 0.30 * (_hurt_left / HURT_FLASH_TIME))
+	if _shake_left > 0.0:
+		# unscaled: a hit-stop slows the world, but the kick still snaps
+		_shake_left -= delta / maxf(Engine.time_scale, 0.05)
+	if _flash > 0.0:
+		_flash = maxf(0.0, _flash - (delta / maxf(Engine.time_scale, 0.05))
+			/ FLASH_TIME)
+		_flash_mat.set_shader_parameter("flash", _flash)
 
 	if riding != null:
 		# aboard the freight: the camera rides with it, nothing else runs
@@ -338,11 +366,28 @@ func _step_zoom(direction: int) -> void:
 	zoom_combined = 0 if next == s else next
 
 
+func shake(strength: float, seconds: float = 0.22) -> void:
+	## Kick the camera. Strength is in SCREEN PIXELS — the offset is applied
+	## on the same grid the camera already snaps to, so a shake can never
+	## knock the world half a pixel off and turn into shimmer (rule 1).
+	_shake_left = maxf(_shake_left, seconds)
+	_shake_time = maxf(_shake_time, seconds)
+	_shake_amp = maxf(_shake_amp, strength)
+
+
 func _camera_target(from: Vector2, s: float) -> Vector2:
 	# the camera NEVER clamps — it is welded to the character (user call).
 	# The world past the barricade ring is real and deep enough that the
 	# sniper ends any trip long before the void could scroll into view.
-	return ((from + CAM_OFFSET) * s).round() / s
+	var base := ((from + CAM_OFFSET) * s).round() / s
+	if _shake_left <= 0.0:
+		return base
+	# decays out, and every offset is a WHOLE screen pixel
+	var fall := _shake_left / maxf(_shake_time, 0.001)
+	var amp := _shake_amp * fall * fall
+	var ox := roundf(_shake_rng.randf_range(-amp, amp))
+	var oy := roundf(_shake_rng.randf_range(-amp, amp))
+	return base + Vector2(ox, oy) / s
 
 
 func _interact() -> void:
