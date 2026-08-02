@@ -584,11 +584,13 @@ def _clock(c: Canvas, rng: random.Random, cx: int, cy: int, r: int) -> None:
 
 
 # ------------------------------------------------------------------ tally ---
-# THE COUNT IS CANON: EXACTLY 83 MARKS — sixteen gates of five, plus three
-# loose. It is written in LORE.md section 7a ("THE TALLY IS CLOSED") and the
-# warden's wall carries the SAME number, because both walls stopped on the
-# same day. Nobody is dying out there any more; this is a finished ledger, not
-# a running count.
+# THE COUNT IS CANON: EXACTLY 41 MARKS — eight gates of five, plus one loose.
+# It is written in LORE.md section 7a ("THE TALLY IS CLOSED") and the warden's
+# wall carries the SAME number, because both walls stopped on the same day.
+# Nobody is dying out there any more; this is a finished ledger, not a running
+# count. (It was 83 for two revisions. The user saw both walls at that count
+# and called it too many on both — "there's too many tallies on both the
+# screens let's half the amount of both" — so it halved, on both.)
 #
 # So the count is made STRUCTURAL here, not a thing a later edit can nudge:
 # the row plan below is the only place it is stated, every stroke that gets
@@ -600,10 +602,34 @@ LONE = 1            # a single upright — nobody came back to close the gate
 # (row y, first x, tokens, gap style per gap). "c" crowded, "n" normal,
 # "w" wide. These are ANCHORS, not a ruling: every row wanders on a random
 # walk, every gap is re-rolled inside its style, and every stroke owns its
-# height, lean, weight and where the chalk lifted. The bottom three rows start
-# far left because they run UNDER the station clock, which owns x 57-127 down
-# to y 211 — that is also why the top three start at x 140 or right of it.
+# height, lean, weight and where the chalk lifted. The bottom rows start far
+# left because they run UNDER the station clock, which owns x 57-127 down to
+# y 211 — that is also why the top rows start right of x 140.
+#
+# HALVING THE COUNT SHRANK THE BLOCK, it did not thin it out: the surviving
+# marks keep the old spacing, so the wall still reads as the same hands writing
+# over the same years — there are just fewer of them, over less wall. MEASURED:
+# the chalk's bounding box went 249x210 -> 195x162, so 41 marks sit in 60% of
+# the area that 83 did. Slightly airier, not a thinned-out grid with holes in
+# it. Rows 3 and 4 were pulled left to x 42 / 66 on purpose: they run under the
+# clock and tie it into the block, which is what stops the smaller block from
+# drifting off to the right and leaving the clock stranded on bare tile.
 TALLY_ROWS = [
+    (122, 146, [GATE, GATE],                    ["w"]),
+    (164, 164, [GATE, LONE],                    ["n"]),
+    (212,  42, [GATE, GATE, GATE],              ["n", "c"]),
+    (258,  66, [GATE, GATE],                    ["w"]),
+]
+GAP = {"c": (13, 18), "n": (23, 30), "w": (36, 46)}
+
+# The retired sixteen-gate plan. IT IS NEVER DRAWN. It is replayed stroke for
+# stroke into a sink that throws the pixels away, purely so the ONE shared rng
+# stream this file runs on lands exactly where it used to — everything painted
+# after the tally (the hook rail, the counter, the lamp, the scale) draws from
+# that same stream, and dropping half the tally's draws would silently re-roll
+# all of it. Deleting this list is not a cleanup; it repaints the right half of
+# the picture.
+_RETIRED_ROWS = [
     (118, 148, [GATE, GATE],                    ["w"]),
     (154, 172, [GATE, GATE],                    ["w"]),
     (192, 138, [GATE, LONE, GATE],              ["n", "w"]),
@@ -611,7 +637,6 @@ TALLY_ROWS = [
     (268,  32, [GATE, GATE, LONE, GATE],        ["c", "w", "n"]),
     (306,  44, [GATE, LONE, GATE, GATE],        ["w", "n", "c"]),
 ]
-GAP = {"c": (13, 18), "n": (23, 30), "w": (36, 46)}
 
 CHALKS = [C("c7cfcc"), C("a8b5b2"), C("819796"), C("577277")]
 
@@ -697,26 +722,19 @@ def _gate(c: Canvas, rng: random.Random, x: int, y: int, base: float) -> tuple:
     return marks, right
 
 
-def _tally(c: Canvas, rng: random.Random) -> None:
-    """One chalk mark for every raider who went in and did not come out.
+class _Sink:
+    """Swallows pixels. See _RETIRED_ROWS — the old plan is walked for its rng
+    draws alone, and none of its chalk may reach the wall."""
 
-    HERS IS THE ROUGH ONE. Six years of traders, whoever was standing there
-    when someone did not come back — no ruling, no system, many hands. So the
-    rows wander on a random walk, gates crowd in some places and stand apart in
-    others, stroke heights swing, some are pressed hard and some are faint, and
-    a few are struck at a clear angle.
+    def set(self, *_a) -> None:
+        pass
 
-    The tension to hold: rough enough to read as accumulated, ordered enough
-    that a player who zooms in can still walk sixteen gates and three singles.
-    That is why the gates are GROUPED into wandering rows instead of scattered
-    freely — the previous cut was 12 free-floating clusters of 1-5 strokes,
-    which was both the wrong count and too sparse to read as a wall.
 
-    Nothing here crosses x=316, where quiet() starts biting: the reserved
-    button rectangle never sees a chalk pixel.
-    """
+def _rows(c, rng: random.Random, rows: list) -> tuple:
+    """Walk a row plan, drawing as it goes. Returns (marks drawn, rightmost
+    pixel touched)."""
     marks, right = 0, 0
-    for (row_y, x_start, tokens, gaps) in TALLY_ROWS:
+    for (row_y, x_start, tokens, gaps) in rows:
         x, drift = x_start, 0
         for i, tok in enumerate(tokens):
             # a random WALK, not independent jitter: that is what makes a row
@@ -737,10 +755,40 @@ def _tally(c: Canvas, rng: random.Random) -> None:
             marks += n
             right = max(right, r)
             x = r + (rng.randint(*GAP[gaps[i]]) if i < len(tokens) - 1 else 0)
+    return marks, right
+
+
+def _tally(c: Canvas, rng: random.Random) -> None:
+    """One chalk mark for every raider who went in and did not come out.
+
+    HERS IS THE ROUGH ONE. Six years of traders, whoever was standing there
+    when someone did not come back — no ruling, no system, many hands. So the
+    rows wander on a random walk, gates crowd in some places and stand apart in
+    others, stroke heights swing, some are pressed hard and some are faint, and
+    a few are struck at a clear angle.
+
+    The tension to hold: rough enough to read as accumulated, ordered enough
+    that a player who zooms in can still walk eight gates and one single. That
+    is why the gates are GROUPED into wandering rows instead of scattered
+    freely — an earlier cut was 12 free-floating clusters of 1-5 strokes, which
+    was both the wrong count and too sparse to read as a wall.
+
+    THE CHALK GETS ITS OWN RNG. Every other object in this file shares one
+    stream in draw order, so halving the mark count would have shifted every
+    draw after it; the tally now rolls on its own seed and pays the shared
+    stream back through _RETIRED_ROWS.
+
+    Nothing here crosses x=316, where quiet() starts biting: the reserved
+    button rectangle never sees a chalk pixel.
+    """
+    marks, right = _rows(c, random.Random("spoils:pitch:counter:tally"),
+                         TALLY_ROWS)
 
     # CANON — LORE.md section 7a. The warden's wall must print the same number.
-    assert marks == 83, "tally must be exactly 83 (canon, LORE.md 7a)"
+    assert marks == 41, "tally must be exactly 41 (canon, LORE.md 7a)"
     assert right < 316, "tally must not reach the reserved button band"
+
+    _rows(_Sink(), rng, _RETIRED_ROWS)      # drawn nowhere; keeps the stream
 
 
 def _hook_rail(c: Canvas, rng: random.Random) -> None:

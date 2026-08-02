@@ -83,11 +83,12 @@ renders). Four defects, four fixes, and what each one taught:
 
 CANON PASS (2026-08-02). The tally is now a FIXED NUMBER, not a texture.
 
-* EXACTLY 83 MARKS — sixteen gates of five and three loose. LORE.md 7a, and
+* EXACTLY 41 MARKS — eight gates of five and one loose. LORE.md 7a, and
   the same number is on the den's wall. `_tallies` builds an explicit plan,
   `_gate` returns what it actually DREW, and an assert crashes the module if
-  the two ever disagree.
-* ALL 83 ARE ON THE WARM TIMBER. User's words: "can you make the tallies on
+  the two ever disagree. (It was 83 until the user saw it painted: "there's
+  too many tallies on both the screens let's half the amount of both".)
+* ALL 41 ARE ON THE WARM TIMBER. User's words: "can you make the tallies on
   the wardens screen go on the wood, not the gray thing, looks a bit off".
   Nothing is chalked behind the glass, on the rollered grey panel or over the
   fuse box any more.
@@ -101,6 +102,29 @@ CANON PASS (2026-08-02). The tally is now a FIXED NUMBER, not a texture.
    ran past to nowhere. `_service` gives all three one reason: the vent is
    the generator's air, the conduit dies in an isolator, the isolator feeds
    the generator, and the can on the plinth is what the generator drinks.
+
+PLAYTEST PASS (2026-08-02). The user looked at the render and read three
+things wrong. All three are fixed; each one is documented at its function.
+
+1. THE CAR (`_queue`) — "is that even a car ... It's on the road. It looks
+   like it's clipping into the ground, like I only see the top half of the
+   car or whatever it is". Two causes together: its body sat flat ON gnd(x)
+   with no ground clearance, and its wheels were 7px arcs of 090a14 on a
+   151d28 road, i.e. drawn and invisible. It now has a real sill above the
+   tarmac, two differently-sized round wheels with four values each, cut
+   arches, and a contact shadow per wheel instead of one under the whole
+   body. The door got clearance too — hung to the road it was a crate.
+2. THE ROAD SPILL (`_spill` + the new `_light_path`) — "is that even a dead
+   body? Kinda looks like it, if it is I can't really see the body, and the
+   blood looks off a bit". There is no body, and that IS the defect. Three
+   causes: the ladder's hot end was rust brown, i.e. dried blood; the
+   brightest part of the pool had a dark mass lying across it (a road repair
+   filled a step DARKER than the tarmac, plus a half-ellipse of shade on the
+   manhole); and nothing at all connected the pool to the window, so it read
+   as a stain rather than as light. `_light_path` is the fix for the third
+   and the most important of the three.
+3. THE TALLY (`_tallies`) — "there's too many tallies on both the screens
+   let's half the amount of both". 83 -> 41, LORE.md 7a updated first.
 
 Three traps this pass fell into, all of which looked right in code:
 * a wobble added to break a smooth band edge must be TINY and SHORT. The
@@ -140,7 +164,17 @@ for _i, _n in enumerate(WARM):
 # the road's cold darks and the lamp's warms in ONE run, because a pixel in
 # the spill gets stepped up and down by ruts, cracks and standing water and
 # must never jump ramp mid-step.
-SPILL = ("090a14", "241527", "341c27", "4d2b32", "602c2c", "884b2b")
+#
+# IT USED TO TOP OUT AT 884b2b AND RUN 4d2b32 / 602c2c THROUGH ITS MIDDLE,
+# which are plum and maroon, and the user read the result as a corpse: "is
+# that even a dead body? Kinda looks like it, if it is I can't really see the
+# body, and the blood looks off a bit". There is no body. Rust brown lying in
+# an irregular pool on a dark road IS dried blood, whatever it was meant to
+# be, so the ladder now climbs through amber instead: 4d2b32 is gone, the
+# broad core is 884b2b and the hot end is be772b. Rust tones are kept for
+# actual rust (the car's sill, the booth's fixings) and are no longer the
+# colour of the light.
+SPILL = ("090a14", "241527", "341c27", "602c2c", "884b2b", "be772b")
 _SP = {C(_n): _i for _i, _n in enumerate(SPILL)}
 
 
@@ -816,9 +850,16 @@ def _spill(c: Canvas, rng: random.Random) -> None:
         jag[x] = j
 
     def field(x: int, y: int) -> float:
+        # THE NEAR END WAS IN THE WRONG PLACE AND THE WRONG SHAPE, which is
+        # most of why nothing joined this to the booth. cy 478 put the start
+        # of the footprint 20px ABOVE the plinth's foot — i.e. on road that is
+        # further away than the building the light comes out of — and hh 9
+        # made it an 18px sliver there, so the one end that should have been
+        # unmistakably bright was the smallest and the easiest to lose. It now
+        # starts level with the base of the booth and starts WIDE.
         t = min(1.0, max(0.0, (BOOTH_L - x) / 236.0))
-        cy = 478.0 + t * 26.0 + 3.5 * math.sin(x / 43.0 + 2.0)
-        hh = 9.0 + t * 23.0
+        cy = 490.0 + t * 22.0 + 3.5 * math.sin(x / 43.0 + 2.0)
+        hh = 15.0 + t * 21.0
         d = abs(y - cy) / hh
         d += 0.13 * math.sin(x / 27.0) + 0.09 * math.sin(y / 12.0)
         d += 0.07 * math.sin(x / 9.0 + 1.4) + 0.032 * math.sin(x / 4.3 + 0.2)
@@ -829,7 +870,14 @@ def _spill(c: Canvas, rng: random.Random) -> None:
     def level(x: int, y: int) -> int:
         """how bright this pixel of tarmac is, 0-3. The inner steps are also
         spent by distance, so the wash runs out of VALUE before it runs out
-        of area — the far end goes dim and ragged instead of ending."""
+        of area — the far end goes dim and ragged instead of ending.
+
+        THE TIER BOUNDARIES TIGHTENED when the ladder went amber. The same
+        0.34 / 0.70 cuts that were right for a plum ramp put 884b2b across
+        half the road and the whole pool read as a fire; the core is now a
+        third of the area it was. The values in a cel ramp are not
+        independent of where you cut it, which is easy to forget when you
+        only change the colours."""
         d = field(x, y)
         if d >= 1.0:
             return -1
@@ -838,7 +886,7 @@ def _spill(c: Canvas, rng: random.Random) -> None:
         # and drew two hard VERTICAL seams straight down the beam.
         t = min(1.0, max(0.0, (BOOTH_L - x) / 236.0))
         e = d + t * 0.62
-        return 3 if e < 0.34 else (2 if e < 0.70 else 1)
+        return 3 if e < 0.26 else (2 if e < 0.62 else 1)
 
     for x in range(300, BOOTH_L + 2):
         rt = road_top(x)
@@ -854,42 +902,62 @@ def _spill(c: Canvas, rng: random.Random) -> None:
     # Its ENDS are tapered, not cut: a first pass drew it between two fixed x
     # bounds and the two vertical edges read as a rectangle laid over the
     # light, which is the very defect this whole function exists to kill.
-    for x in range(464, 556):
-        u = (x - 464) / 92.0
+    #
+    # TWO THINGS MOVED HERE, and both were the "dead body" the user saw.
+    # It used to sit at x 464-556 — the MIDDLE of the wash, where the light
+    # is hottest — and it ate a step of that light, so the brightest part of
+    # the pool had a dark mass lying in it with a lighter rim all round.
+    # That is a silhouette in a puddle, and no amount of hue fixes it. It is
+    # now out at the beam's dying far end AND it takes a step UP instead of
+    # down: a concrete patch is coarser and paler than asphalt, so it now
+    # carries light rather than swallowing it, and nothing inside the wash is
+    # darker than the wash around it.
+    for x in range(396, 486):
+        u = (x - 396) / 90.0
         e = min(1.0, min(u, 1.0 - u) * 5.6 + 0.12)
-        mid = 474.5 + 3.0 * math.sin(u * 4.3 + 0.9)
+        mid = 482.5 + 3.0 * math.sin(u * 4.3 + 0.9)
         hh = 12.5 * e + 2.5 * math.sin(u * 6.1 + 0.4) + 1.6 * math.sin(x / 6.0)
         if hh < 1.0:
             continue
         top, bot = int(mid - hh), int(mid + hh)
         for y in range(max(top, road_top(x)), bot):
             lv = level(x, y)
-            c.set(x, y, C(SPILL[max(0, lv)]) if lv >= 0
-                  else C("10141f"))              # the patch is coarser and
-        if top >= road_top(x):                   # eats a step of the light,
-            c.set(x, top, lit(c.get(x, top), -1))   # but its near lip catches
-        c.set(x, bot, lit(c.get(x, bot), 1))        # what the patch does not
+            if lv >= 0:                          # pale concrete inside the
+                c.set(x, y, C(SPILL[min(3, lv + 2)]))    # light; OUTSIDE it
+        # the dry half of the patch is left at the road's own value and read
+        # from its two seams alone. Filled with 10141f it was a 90x30 slab a
+        # step DARKER than the tarmac, lying along the top of the bright pool
+        # — and a dark mass with a warm pool under it is the corpse the user
+        # saw, whatever colour the pool is. This is the "dark core inside a
+        # lighter surround" the brief means: it was above the light, not in
+        # it, and that is just as bad.
+        if top >= road_top(x):
+            c.set(x, top, lit(c.get(x, top), -1))   # far seam, cut into the
+        c.set(x, bot, lit(c.get(x, bot), 1))        # tarmac; near lip proud
     # a manhole inside the beam: a hard-edged real object with a seating
     # groove and a lit near rim, so there is something in the light that is
-    # not made of light. It sits FLUSH — a dark disc reads as an open hole.
+    # not made of light. It sits FLUSH — a dark disc reads as an open hole,
+    # and a half-ellipse of shade laid across the hottest 39px of the wash
+    # was the second half of the body the user saw. The cover now sits at the
+    # light's own value and is read entirely from its GROOVE and its rim.
     for x in range(509, 548):
         u = (x - 528.0) / 19.0
         h = 8.0 * math.sqrt(max(0.0, 1.0 - u * u))
         if h < 0.7:
             continue
-        top, bot = int(503 - h), int(503 + h)
-        for y in range(top + 1, 503):                # the far half sits in its
-            c.set(x, y, lit(c.get(x, y), -1))        # own shade
+        top, bot = int(499 - h), int(499 + h)
         # both arcs BREAK where the rim is worn. A closed ellipse outline
         # reads as a ring chalked on the road, not as a cover in it.
         if math.sin(x / 3.1 + 0.6) > -0.55:
             c.set(x, top, C("241527"))
+            c.set(x, top + 1, lit(c.get(x, top + 1), 1))
         if math.sin(x / 4.7 + 2.2) > -0.62:
             c.set(x, bot, lit(c.get(x, bot), 1))
+            c.set(x, bot - 1, C("341c27"))
     for k in range(3):                               # its lifting slots
-        c.hline(517 + k * 8, 521 + k * 8, 499 + k * 2, C("241527"))
-        c.hline(517 + k * 8, 521 + k * 8, 500 + k * 2,
-                lit(c.get(519, 500 + k * 2), 1))
+        c.hline(517 + k * 8, 521 + k * 8, 495 + k * 2, C("341c27"))
+        c.hline(517 + k * 8, 521 + k * 8, 496 + k * 2,
+                lit(c.get(519, 496 + k * 2), 1))
 
     # THE RAKE. Wet asphalt does not glow evenly — it streaks ALONG the light.
     # Rolled slopes out of the booth's left corner, each broken into dashes so
@@ -897,7 +965,7 @@ def _spill(c: Canvas, rng: random.Random) -> None:
     for i in range(11):
         sl = rng.uniform(-0.03, 0.28)
         x = BOOTH_L - rng.randint(1, 30)
-        y0 = 470.0 + rng.uniform(-9.0, 22.0)
+        y0 = 482.0 + rng.uniform(-9.0, 22.0)
         thick = rng.randint(1, 3)
         run = rng.randint(34, 170)
         gap = 0
@@ -914,7 +982,7 @@ def _spill(c: Canvas, rng: random.Random) -> None:
             for k in range(thick):
                 if field(x, yy + k) < 0.94 and yy + k >= road_top(x):
                     cur = c.get(x, yy + k)
-                    if _SP.get(cur, 9) < 4:          # capped at 602c2c: the
+                    if _SP.get(cur, 9) < 4:          # capped at 884b2b: the
                         c.set(x, yy + k, lit(cur, 1))  # rake is sheen, not
                                                        # a light source
 
@@ -926,7 +994,7 @@ def _spill(c: Canvas, rng: random.Random) -> None:
         pw = rng.randint(6, 15)
         ph = rng.randint(2, 5)
         t = (BOOTH_L - px) / 236.0
-        py = int(478 + t * 26 + rng.randint(-11, 13))
+        py = int(490 + t * 22 + rng.randint(-11, 13))
         wet = level(px, py) >= 2
         for x in range(px - pw, px + pw + 1):
             u = (x - px) / float(pw)
@@ -943,10 +1011,10 @@ def _spill(c: Canvas, rng: random.Random) -> None:
                     c.set(x, y, lit(cur, 1))
             if top >= road_top(x):
                 c.set(x, top, lit(c.get(x, top), -2))     # the far lip, dark
-            # the near lip is the ONLY 884b2b on the road, and only on the
-            # two puddles closest to the window: a glint, not a shape.
+            # the near lip is the top of the ladder, and only on the two
+            # puddles closest to the window: a glint, not a shape.
             if wet and t < 0.34 and abs(u) < 0.45:
-                c.set(x, bot, C("884b2b"))
+                c.set(x, bot, C("be772b"))
         px -= pw + rng.randint(16, 58)
 
 
@@ -1048,27 +1116,104 @@ def _queue(c: Canvas, rng: random.Random) -> None:
         # a flat-topped box all the way to the front end read as a skip.
         r = 496.0 - (x - x0) * 0.12
         if x >= SCRN:
-            r += min(11.2, (x - SCRN) * 0.8)
+            r += min(7.4, (x - SCRN) * 0.62)
         return r
+
+    # ---------------------------------------------------------------------
+    # GROUND CLEARANCE. THE DEFECT THIS FIXES, in the user's words: "is that
+    # even a car ... It's on the road. It looks like it's clipping into the
+    # ground, like I only see the top half of the car or whatever it is".
+    #
+    # Two causes, and it took both of them to make a car read as a sunken box:
+    # (a) the body's lower edge sat flat ON gnd(x), so the silhouette bottomed
+    #     out in one straight line meeting the tarmac — nothing under it; and
+    # (b) the wheels were 7px-high arcs of 090a14 laid on a 151d28 road, which
+    #     is the darkest colour in the palette against a value two steps up.
+    #     They were drawn, and they were invisible, so nothing carried it.
+    #
+    # So the body now stops at sill(x), which is a real distance ABOVE the
+    # tarmac, and the gap is where the wheels live. The clearance is NOT
+    # constant: it is deep between the axles and closes at both ends, because
+    # the two bumpers hang lower than the sill on every vehicle ever built —
+    # and because a constant offset would just be the same straight line 9px
+    # higher up.
+    WHEELS = (                       # (centre x, radius, squash, sink, wear)
+        (240, 12, 0.86, 1, 0),       # rear: bigger, barely settled
+        (331, 9, 0.92, 3, 1),        # front: smaller, rounder, sitting deeper
+    )                                # on a soft shoulder, and scuffed
+
+    def arch(x):
+        """how far the sill lifts here to clear a wheel. Without this the
+        wheels hang below a straight sill like castors under a wardrobe."""
+        a = 0.0
+        for (cx, r, _sq, _sk, _w) in WHEELS:
+            u = (x - cx) / float(r + 3)
+            if abs(u) < 1.0:
+                a = max(a, (r * 0.46) * math.sqrt(1.0 - u * u))
+        return a
+
+    def sill(x):
+        near = min(1.0, (x - x0) / 24.0)          # off the rear bumper
+        far = min(1.0, (x1 - 8 - x) / 34.0)       # into the front valance
+        k = max(0.0, min(near, far))
+        return gnd(x) - (2.6 + 6.8 * k) - arch(x)
 
     # the two planes. The rear face catches the horizon glow and the flank is
     # turned away from everything, so the corner between them is the whole
     # read — this is a box in space, not a blob on the road.
     for x in range(x0, x1):
-        g, r = int(gnd(x)), int(roof(x))
+        s, r = int(sill(x)), int(roof(x))
         col = C("151d28") if x < REAR else C("090a14")
-        for y in range(r, g):
+        for y in range(r, s):
             c.set(x, y, col)
         if x >= REAR:                                 # the flank's lower half
-            c.vline(x, min(g - 1, r + 20), g - 1, C("10141f"))
+            c.vline(x, min(s - 1, r + 20), s - 1, C("10141f"))
                                                       # lifts one step so the
                                                       # black wheels can read
         if REAR <= x < SCRN:                          # a sliver of roof TOP
             c.vline(x, r, r + 2, C("202e37"))         # face: we look down on it
         c.set(x, r, C("394a50") if x < SCRN + 3 else C("202e37"))
-    for y in range(int(roof(REAR)), int(gnd(REAR))):  # the corner post
+    for y in range(int(roof(REAR)), int(sill(REAR))):  # the corner post
         c.set(REAR, y, C("202e37"))
-    c.vline(x0, int(roof(x0)) + 1, int(gnd(x0)), C("090a14"))
+    c.vline(x0, int(roof(x0)) + 1, int(sill(x0)), C("090a14"))
+
+    # UNDER THE CAR. Not a solid black bar: the shadow is dense against the
+    # sill and lets go before it reaches the tarmac, so a ragged sliver of
+    # actual road survives under the middle of the vehicle. That sliver is the
+    # whole point — it is the only thing that proves there is air under there
+    # rather than more bodywork. Its lower edge is a wavy solid seam, never a
+    # ruled line, or it just becomes a second flat bottom 9px higher up.
+    for x in range(x0 + 1, x1):
+        s, g = int(sill(x)), int(gnd(x))
+        if g - s < 2:
+            continue
+        f = 0.44 + 0.17 * math.sin(x / 8.3) + 0.10 * math.sin(x / 21.0 + 1.7)
+        d = max(1, int((g - s) * f + 0.5))
+        for y in range(s, s + d):
+            c.set(x, y, C("090a14"))
+    # the sill's own lit lip, and the arch lips over the two wheels. The lip
+    # is what separates the underside from the shadow beneath it; the arch
+    # lips are brighter because they are rolled steel turning into the light.
+    # It runs UNBROKEN except where the rust has eaten through — a dashed lip
+    # (the first cut spent it on x % 17) reads as a rack of louvres, and an
+    # even modulo is a clone pattern besides.
+    lip_rng = random.Random("spoils:pitch:warden:sill")
+    gone = set()
+    gx = x0 + 6
+    while gx < x1:
+        for q in range(lip_rng.randint(2, 7)):
+            gone.add(gx + q)
+        gx += lip_rng.randint(14, 41)
+    for x in range(x0 + 1, x1):
+        s = int(sill(x))
+        a = arch(x)
+        if a > 0.9:
+            c.set(x, s - 1, C("577277") if x > SCRN - 40 else C("394a50"))
+            c.set(x, s - 2, C("394a50") if x > SCRN - 40 else C("202e37"))
+        elif s - 1 > int(roof(x)) + 2 and x not in gone:
+            c.set(x, s - 1, C("394a50") if x > 300 else C("202e37"))
+            c.set(x, s - 2, C("202e37") if x > 300 else C("151d28"))
+
     # glazing: a dead band along the flank and a rear screen, both blacked
     for x in range(REAR + 3, SCRN + 12):
         r = int(roof(x))
@@ -1087,25 +1232,88 @@ def _queue(c: Canvas, rng: random.Random) -> None:
                 C("151d28"))
     # THE DRIVER'S DOOR, standing open — the one shape that says abandoned
     # instead of parked, and the only thing that breaks the box
+    # Three values in it, not one: the dropped window is a VOID, the waist
+    # rail catches the booth, the skin below sits a step under the road. As
+    # one flat panel it was a 34x36 slab hung off the flank and it read as a
+    # crate, not a door.
     for k in range(34):
         dx = 262 + k
         top = int(roof(dx)) + 4 + k // 5
-        bot = int(gnd(dx)) + 5 + k // 3
+        bot = int(gnd(dx)) - 5 + k // 2      # it has clearance too: hung flat
+        waist = top + 13                     # to the tarmac it was a crate
+        c.set(dx, bot + 1, C("090a14"))      # standing on end, and it put the
+        c.set(dx, bot + 2, C("090a14"))      # middle of the car back in the
         for y in range(top, bot):
-            c.set(dx, y, C("10141f") if y < top + 13 else C("151d28"))
+            c.set(dx, y, C("090a14") if y < waist else C("10141f"))
+        c.set(dx, waist, C("394a50") if k < 24 else C("202e37"))
+        c.set(dx, waist + 1, C("202e37") if k < 24 else C("151d28"))
         c.set(dx, top, C("577277") if k < 20 else C("394a50"))
-        c.set(dx, bot, C("090a14"))
+        c.set(dx, bot, C("090a14"))          # road. Its own foot shadow is the
+        c.set(dx, bot - 1, C("202e37") if k % 13 else C("10141f"))  # two rows
+        if k > 3:                            # set just above.
+            c.set(dx, bot + 3, bump(c.get(dx, bot + 3), -1))
         if k > 26:
             c.vline(dx, top, bot, C("090a14"))        # its shaded far edge
-    # wheels: different radii, both flat, both with a lit arch lip over them
-    for (wx, wr) in ((238, 10), (334, 8)):
-        for k in range(-wr, wr + 1):
-            h = int(math.sqrt(max(0.0, wr * wr - k * k)) * 0.78)
-            g = int(gnd(wx + k))
-            for y in range(g - h, g + 2):
-                c.set(wx + k, y, C("090a14"))
-            if h > 2:
-                c.set(wx + k, g - h - 1, C("202e37"))
+    # THE WHEELS. Three things had to change before either of them read as a
+    # wheel at all: they are TALLER (they now rise into the arch instead of
+    # sitting under a flat sill), they are ROUND (a squashed disc, not a 7px
+    # arc), and they carry FOUR values instead of one — a near-black tread, a
+    # sidewall a step up, a hub a step up again, and one dark nut. A single
+    # 090a14 arc on a 151d28 road is invisible, which is why nothing was
+    # carrying the body before.
+    #
+    # They are NOT a mirrored pair. The rear one is a size bigger, barely
+    # settled and clean; the front one is smaller, rounder in section, sits
+    # 3px deeper into the shoulder and is scuffed down one flank. Each is
+    # drawn only DOWN FROM ITS OWN ARCH, so the bodywork occludes the top of
+    # the tyre exactly the way a wheel arch does.
+    wr = random.Random("spoils:pitch:warden:wheels")
+    for (cx, r, squash, sink, wear) in WHEELS:
+        # the contact shadow, first and under this wheel ONLY. It used to be
+        # one 156px-wide smear under the whole vehicle, which read as the
+        # thing the body was resting in.
+        for k in range(-r - 4, r + 5):
+            u = k / float(r + 4)
+            d = int((2.6 + 0.5 * sink) * math.sqrt(max(0.0, 1.0 - u * u)) + 0.5)
+            g = int(gnd(cx + k)) + sink
+            for y in range(g, g + max(0, d) + 1):
+                c.set(cx + k, y, C("090a14"))
+            if d > 1:
+                c.set(cx + k, g + d + 1, bump(c.get(cx + k, g + d + 1), -1))
+        hh = r * squash
+        for k in range(-r, r + 1):
+            u = k / float(r)
+            e = math.sqrt(max(0.0, 1.0 - u * u))
+            h = hh * e
+            cy = gnd(cx + k) + sink - hh
+            top, bot = int(cy - h), int(cy + h)
+            s = int(sill(cx + k))
+            for y in range(max(top, s - 1), bot + 1):
+                v = abs((y - cy) / hh) if hh else 1.0
+                q = math.sqrt(min(1.0, u * u + v * v))
+                if q > 0.70:
+                    col = C("090a14")                  # tread
+                elif q > 0.36:
+                    col = C("10141f")                  # sidewall
+                else:
+                    col = C("202e37")                  # hub
+                c.set(cx + k, y, col)
+            # the crown of the tyre catches the sky where it clears the arch,
+            # and the flank nearest the booth catches the window
+            if top >= s - 1 and h > 2:
+                c.set(cx + k, top, C("151d28") if k < 0 else C("202e37"))
+            if k > r - 3 and bot - top > 4:
+                c.vline(cx + k, max(top + 1, s), bot - 1, C("151d28"))
+        c.set(cx, int(gnd(cx)) + sink - int(hh), C("090a14"))      # the nut
+        c.set(cx + 1, int(gnd(cx)) + sink - int(hh), C("090a14"))
+        for _ in range(2 + wear * 3):                  # kerbed rubber, solid
+            a = wr.uniform(0.4, 2.7)                   # patches, never specks
+            rr = wr.uniform(0.74, 0.99) * r
+            px = int(cx + math.cos(a) * rr)
+            py = int(gnd(cx) + sink - hh + math.sin(a) * rr * squash)
+            for q in range(wr.randint(2, 4)):
+                if int(sill(px)) - 1 <= py + q:
+                    c.set(px, py + q, C("151d28"))
     # a tarp lashed over a roof load — the reason it was at the gate at all
     for x in range(272, 314):
         u = (x - 293) / 21.0
@@ -1123,14 +1331,11 @@ def _queue(c: Canvas, rng: random.Random) -> None:
     # rust eating the sill, and the dead tail-light glass on the rear face
     for k in range(rng.randint(14, 22)):
         xx = 204 + k
-        c.vline(xx, int(gnd(xx)) - 5 - k % 3, int(gnd(xx)) - 1, C("341c27"))
+        c.vline(xx, int(sill(xx)) - 5 - k % 3, int(sill(xx)) - 1, C("341c27"))
     c.rect(x0 + 2, int(roof(x0)) + 23, x0 + 5, int(roof(x0)) + 26, C("752438"))
-    for x in range(x0 - 4, x1 + 6):                   # the contact shadow
-        u = abs(x - 268) / 76.0
-        d = int(5.0 * math.sqrt(max(0.0, 1.0 - u * u)))
-        for y in range(int(gnd(min(x1 - 1, max(x0, x)))),
-                       int(gnd(min(x1 - 1, max(x0, x)))) + d):
-            c.set(x, y, C("090a14"))
+    # NO full-length contact shadow any more — each wheel drew its own, above.
+    # The old one ran the whole 156px under the body and was half of why this
+    # read as a box sunk into the tarmac rather than a vehicle standing on it.
 
 
 # ================================================================= booth ====
@@ -1454,17 +1659,25 @@ def _interior(c: Canvas, rng: random.Random) -> None:
 
 
 # --------------------------------------------------------------- the count ----
-# CANON: EXACTLY 83 MARKS — sixteen gates of five, plus three loose. A "gate"
+# CANON: EXACTLY 41 MARKS — eight gates of five, plus one loose. A "gate"
 # is the standard tally five: four uprights and one diagonal struck through
-# them, so 16 x 5 = 80, and 3 single uprights makes 83. The number lives in
+# them, so 8 x 5 = 40, and 1 single upright makes 41. The number lives in
 # LORE.md section 7a ("THE TALLY IS CLOSED") and it is THE SAME NUMBER on the
 # den's wall — the two paintings must agree, because the player zooms in.
 # The count below is built from an explicit plan and then counted from what
 # was actually DRAWN, and the assert at the end crashes the module rather
 # than letting it drift if anyone edits this.
-GATES = 16
-LOOSE = 3
-TALLY_CANON = GATES * 5 + LOOSE          # 83
+#
+# IT WAS 83 (sixteen gates and three loose) for two revisions. The user saw
+# both walls painted at that count and called it: "there's too many tallies on
+# both the screens let's half the amount of both". Halving it took two ruled
+# rows off each panel — the ruling, the pitch, the stroke height and the
+# strike angle are all unchanged, so his hand is the same hand; there is
+# simply less of it, and the bare board below the last row is now the thing
+# that says the count stopped.
+GATES = 8
+LOOSE = 1
+TALLY_CANON = GATES * 5 + LOOSE          # 41
 
 # HIS handwriting. The den's wall is six years of different hands in the
 # dark; this is one man with a system and a straight edge, so the rows are
@@ -1545,7 +1758,7 @@ def _tallies(c: Canvas, rng: random.Random) -> None:
     USER CALL: "can you make the tallies on the wardens screen go on the wood,
     not the gray thing, looks a bit off". Every mark used to be spread across
     the whole opening, which put clusters behind the glass, on the grey steel
-    panel and over the fuse box — you do not chalk a cabinet. All 83 now sit
+    panel and over the fuse box — you do not chalk a cabinet. All 41 now sit
     on the two pieces of bare board he can actually reach: the strip beside
     his ear (x 619-648) and the open panel past his right shoulder
     (x 712-770). Both were measured against his silhouette and against his
@@ -1564,24 +1777,30 @@ def _tallies(c: Canvas, rng: random.Random) -> None:
         for px in range(796 + wobx, 848 - wobx):
             c.set(px, py, C("394a50") if py < 270 else C("202e37"))
 
-    # THE PLAN. Four ruled rows of one gate down the narrow strip, four ruled
+    # THE PLAN. Two ruled rows of one gate down the narrow strip, two ruled
     # rows of three gates across the open panel, and the row he never
-    # finished: three uprights with no diagonal through them, because the
-    # fourth raider of that week never went in.
+    # finished: ONE upright with no diagonal through it, because the second
+    # raider of that week never went in.
+    #
+    # The rows fill from the TOP down and stop, which is what a real count
+    # does — the empty ruled space under the last row is doing as much work as
+    # the marks are. (Do not "balance" it by spreading eight gates over four
+    # rows: a count with gaps in the middle reads as texture, not as a
+    # ledger, which is the exact defect the canon pass fixed.)
     plan = []
-    for row in range(4):
+    for row in range(2):
         plan.append((LEFT_X, ROW_Y[row], 4, True))
-    for row in range(4):
+    for row in range(2):
         for k in range(3):
             plan.append((RIGHT_X + k * GATE_PITCH, ROW_Y[row], 4, True))
-    plan.append((RIGHT_X, ROW_Y[4], LOOSE, False))
+    plan.append((RIGHT_X, ROW_Y[2], LOOSE, False))
 
     marks = 0
     for (gx, gy, ups, struck) in plan:
         marks += _gate(c, r, gx, gy, ups, struck)
 
     # canon, and it lives in LORE.md 7a. CRASH rather than drift.
-    assert marks == 83, "tally must be exactly 83 (canon, LORE.md 7a)"
+    assert marks == 41, "tally must be exactly 41 (canon, LORE.md 7a)"
     assert marks == TALLY_CANON
 
 
@@ -2163,6 +2382,145 @@ def _hand(c: Canvas, rng: random.Random) -> None:
 
 
 # ============================================================== the boom ====
+def _to_warm(col, add: int):
+    """take a pixel that is on either ladder and put it on the WARM one, `add`
+    steps up. The wash has to keep whatever structure was already painted
+    there — battens, corrugation seams, the vent, the plinth's wear — or it
+    stops being light falling on a wall and becomes paint. So it never sets a
+    flat colour: it maps the pixel's own value across."""
+    e = _IDX.get(col)
+    if e is None:
+        return col
+    ramp, i = e
+    if ramp is WARM:
+        return C(WARM[max(0, min(3, i + add))])
+    # 090a14/10141f -> 241527, 151d28 -> 341c27, 202e37 -> 602c2c,
+    # 394a50 and every highlight above it -> 884b2b. THE CAP IS 884b2b (index
+    # 3) and it is not negotiable: one step further is ad7757, which is the
+    # value of his lit cheekbone, and the moment a 300px-wide wall carries the
+    # same value as his face the composition has lost its subject.
+    return C(WARM[max(0, min(3, max(0, i - 1) + add))])
+
+
+def _light_path(c: Canvas, rng: random.Random) -> None:
+    """WHERE THE LIGHT ON THE ROAD COMES FROM.
+
+    The user, on the spill: "is that even a dead body? Kinda looks like it, if
+    it is I can't really see the body, and the blood looks off a bit". There
+    is no body — and that is the point. A warm irregular pool lying on dark
+    tarmac with NOTHING joining it to a source is not read as light, because
+    light is a thing that comes FROM somewhere; with the chain broken the eye
+    files it as a stain, and a stain that colour is blood.
+
+    So this draws the middle of the chain. The counter shelf was already lit
+    and the road was already lit; what was missing was everything in between.
+    Grazing light off the shelf's front edge runs down the boards under the
+    window, the plinth's TOP face takes it square on because it is the one
+    horizontal surface the window can see, and the plinth's left return
+    carries it into the road at the exact x where the wash begins. Window ->
+    shelf -> wall -> plinth -> tarmac, traceable in one look.
+
+    Three rules it obeys: it is banded cel light with wavy solid seams (no
+    gradient, no dither); it maps existing pixels through `_to_warm` so every
+    batten and seam under it survives; and it stops at 884b2b, one full step
+    under his lit jaw, because the face is the focal point and nothing on a
+    wall is allowed to compete with it. It cannot reach the button band —
+    the booth's front face does not begin until x 568 and the band ends at
+    560."""
+    lp = random.Random("spoils:pitch:warden:lightpath")
+
+    def plinth_top(x: int) -> int:
+        pt = int(498 + wob(x, 3.0, 67.0, 0.9, 2.0, 23.0, 2.4))
+        if x > BOOTH_R:
+            pt += int((x - BOOTH_R) / float(SCENE_W - BOOTH_R) * 22)
+        return pt
+
+    # ---- the boards under the shelf. GRAZING light: it runs almost parallel
+    # to the wall, so it is weak, it is a POOL and not a wash, and it dies
+    # within about 90px of the shelf. The first cut spent it over the whole
+    # 300px face in two broad bands and turned the entire booth warm brown —
+    # which did connect the window to the road, and lost the man's face doing
+    # it. On a wall, area costs more than value does.
+    # It is TWO shapes maxed together, and the second one is the whole trick:
+    # f1 is the band hanging off the shelf, and f2 is a narrow run continuing
+    # down the booth's left CORNER to the plinth — because that corner is
+    # where the light escapes past the end of the shelf, and because a band
+    # that simply stopped in the middle of the wall left a 50px dead gap
+    # between the wall and the plinth and broke the chain again.
+    # it stops short of x 704 ON PURPOSE. Run out to the vent at 690-746 and
+    # the wobble alone lifted the odd pixel over the low threshold — and the
+    # grille's 394a50 slats map to 884b2b, so a wash that was meant to be
+    # imperceptible out there painted the vent in orange stripes. A highlight
+    # crossing a ladder is where a hue map costs the most; keep the wash off
+    # anything with highlights in it.
+    for x in range(569, 704):
+        pt = plinth_top(x)
+        for y in range(362, min(pt, 512)):
+            # SUMMED, not maxed. max() of two fields leaves a crease where
+            # they cross, and after quantising, a crease is a hard kink in
+            # the band edge that reads as the outline of an object on the
+            # wall. Two clamped fields added together stay smooth.
+            f1 = max(0.0, 1.0 - (y - 361) / 92.0 - max(0.0, x - 686) / 74.0)
+            f2 = (max(0.0, 1.0 - abs(x - 590) / 48.0)
+                  * max(0.0, 1.0 - (y - 361) / 152.0) * 0.84)
+            a = f1 + f2 * 0.8
+            a += 0.065 * math.sin(x / 19.0 + 0.4) + 0.05 * math.sin(y / 13.0)
+            a += 0.04 * math.sin(x / 6.7 + y / 9.0)
+            if a > 0.46:
+                c.set(x, y, _to_warm(c.get(x, y), 1))
+            elif a > 0.16:
+                c.set(x, y, _to_warm(c.get(x, y), 0))
+    # ---- the plinth. THE LINK. Its top face is the only horizontal surface
+    # out here that the window can see, so it takes the light nearly square
+    # on and it is the warmest thing outside the booth — but it is a BAND,
+    # about ten pixels deep, not a lit slab: the front of a plinth faces the
+    # camera, not the window, and lighting all 46px of it made the booth look
+    # like it was standing in a fire.
+    for x in range(569, 880):
+        pt = plinth_top(x)
+        for y in range(pt, min(SCENE_H, pt + 22)):
+            k = (y - pt) / 15.0
+            a = (1.0 - k * k) * 0.95 - abs(x - 634) / 210.0
+            a += 0.07 * math.sin(x / 17.0 + 1.1) + 0.05 * math.sin(y / 9.0)
+            a += 0.045 * math.sin(x / 6.1 + 2.0)
+            if a > 0.58:
+                c.set(x, y, _to_warm(c.get(x, y), 1))
+            elif a > 0.22:
+                c.set(x, y, _to_warm(c.get(x, y), 0))
+    # ---- the left return, where the plinth turns the corner and runs into
+    # the tarmac. This is the hand-off: below it the road's own wash takes
+    # over at the same value, so the two are one run and not two objects.
+    # the chips in it are SOLID runs rolled once each, never a per-pixel coin
+    # flip: the first cut skipped individual pixels at p=0.09 and produced
+    # exactly the single-pixel dot noise this project has a standing rule
+    # against — it looked like static sprayed down the corner.
+    chip = set()
+    cy = plinth_top(576) + 2
+    while cy < SCENE_H:
+        cx = 570 + lp.randint(0, 12)
+        for q in range(lp.randint(2, 6)):
+            for w in range(lp.randint(2, 5)):
+                chip.add((cx + w, cy + q))
+        cy += lp.randint(7, 19)
+    for x in range(570, 588):
+        pt = plinth_top(x)
+        for y in range(pt, SCENE_H):
+            if (x, y) in chip:                   # a chipped, uneven corner —
+                continue                         # never a ruled vertical band
+            c.set(x, y, _to_warm(c.get(x, y), 1 if y < pt + 7 else 0))
+    # a few SOLID wear patches so the lit band is not one clean plate. They go
+    # through blob() like every other wear mark in this file — a hand-rolled
+    # run of 1-3px columns came out as a line of dashes, which is the dot
+    # noise rule in a different costume.
+    region = {(x, y) for x in range(578, 800)
+              for y in range(plinth_top(x), plinth_top(x) + 13)}
+    for i in range(4):
+        bx = lp.randrange(586, 786)
+        for (qx, qy) in blob(lp, bx, plinth_top(bx) + lp.randint(1, 9),
+                             lp.randint(14, 40), region):
+            c.set(qx, qy, bump(c.get(qx, qy), -1))
+
+
 def _boom(c: Canvas, rng: random.Random) -> None:
     """FOREGROUND: near-silhouette, light arriving only as rims. The hard
     090a14 shadow line under its full length is what makes it sit in FRONT
@@ -2273,6 +2631,12 @@ def paint() -> Canvas:
     _counter(c, rng)
     _lamp_and_ledger(c, rng)
     _hand(c, rng)
+    # AFTER the booth, its service corner and the counter, because it maps
+    # whatever is already painted there rather than replacing it — and BEFORE
+    # the boom, which passes in front of the wall and is not lit by the
+    # window. It takes no draw from the shared stream (its own rng), so
+    # nothing downstream of it moves.
+    _light_path(c, rng)
     _boom(c, rng)
     # LAST ON PURPOSE. Both draw only into the flat zenith slab above y 117,
     # and calling them here means they take their rng draws after every other

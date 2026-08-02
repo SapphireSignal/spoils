@@ -257,10 +257,15 @@ out-count them; they both stopped on the same day, which is the joke he
 will not admit. Your own deaths do not go on it either — the wall is the
 raider age, and the raider age is over.
 
-**CANON COUNT: 83 marks** — sixteen gates of five and three loose. Both
-walls, exactly. It is deliberately not round, and it is small enough to
-actually count, because the player zooms in. Any painting of either wall
-uses this number; if it ever changes it changes in both places and here.
+**CANON COUNT: 41 marks** — eight gates of five and one loose. Both walls,
+exactly. It is deliberately not round, and it is small enough to actually
+count, because the player zooms in. Any painting of either wall uses this
+number; if it ever changes it changes in both places and here.
+
+(It was 83 for two revisions. The user saw both walls painted at that count
+and called it too many on both — *"there's too many tallies on both the
+screens let's half the amount of both"* — so it halved, on both, keeping the
+same-count rule they set.)
 
 ## 7b. the den — home, and what it becomes
 
