@@ -3,6 +3,23 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.67] — 2026-08-01 — the door is solid either way
+
+### Fixed
+- **A door has collision all the time now, not only when it's shut**
+  (user). Opening one used to switch its collider off entirely, so the
+  panel became a ghost you could walk straight through — which is what
+  the "walk through doors" reports were about. The leaf now carries a
+  second collider in its swung position: closed, it blocks the
+  doorway; open, it blocks where the panel actually stands. You walk
+  through the opening and never through the door.
+- The smoke test covers both states: it walks into a closed door from
+  five offsets, and asserts an open door still has a solid leaf.
+- **The warden can be talked to from a car** — he gets his prompt while
+  you're driving, since pulling up to his window in a car is how
+  you'll always arrive (the car already acted on the F press; there
+  was simply no prompt to tell you so).
+
 ## [0.6.66] — 2026-08-01 — walls are one surface
 
 ### Fixed

@@ -70,6 +70,12 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.67", ["doors are solid ALL the time now, not just when shut.",
+		"the panel keeps its collision when it swings open - it",
+		"just stands somewhere else - so you walk through the",
+		"doorway and never through the door",
+		"and the warden gets a prompt while youre in a car,",
+		"because thats how youll always arrive at his window"]],
 	["v0.6.66", ["the black lines running down every building are gone.",
 		"each wall piece was drawing its own outline, so every",
 		"join between them became a dark seam - and the gap",

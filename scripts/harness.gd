@@ -246,6 +246,20 @@ func _smoke() -> void:
 						% int(lateral))
 					break
 
+	# an OPEN door's leaf is still solid — it just stands somewhere else
+	if player != null and not block_doors.is_empty():
+		var swung := block_doors[0] as Door
+		if swung != null:
+			# the swing is 4 frames at 0.06s — wait it OUT, not a fixed
+			# frame count (at 240 fps twelve frames is a twentieth of it,
+			# and the door was still open when the next check ran)
+			swung.toggle()
+			await get_tree().create_timer(0.45).timeout
+			if swung.is_open() and not swung.leaf_is_solid():
+				failures.append("an open door's leaf lost its collision")
+			swung.toggle()
+			await get_tree().create_timer(0.45).timeout
+
 	# doors: closed by default, F-toggle opens (collider off) and closes back
 	var doors := get_tree().get_nodes_in_group("doors")
 	if doors.is_empty():

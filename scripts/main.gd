@@ -353,10 +353,33 @@ func _update_prompt() -> void:
 		_prompt_target = null
 		_player.prompt_target = null
 		return
-	if _player.driving != null or _player.extracting:
+	if _player.extracting:
 		_prompt.visible = false
 		_prompt_target = null
 		_player.prompt_target = null
+		return
+	if _player.driving != null:
+		# driving hides everything EXCEPT the warden: you pull up to his
+		# window in a car, every time, because a car is how you leave
+		# (user). The car itself acts on the F press.
+		var from_car: TollGate = null
+		for node in get_tree().get_nodes_in_group("toll_gates"):
+			var g := node as TollGate
+			if g != null and g.can_use() \
+					and g.global_position.distance_to(_player.global_position) \
+					< TollGate.INTERACT_RANGE:
+				from_car = g
+				break
+		if from_car == null:
+			_prompt.visible = false
+			_prompt_target = null
+			_player.prompt_target = null
+			return
+		if from_car != _prompt_target:
+			_prompt_target = from_car
+			_prompt.text = "press %s to talk to the warden" \
+				% Settings.bind_label("interact").to_lower()
+		_place_prompt_over(from_car)
 		return
 	var best: Node2D = null
 	var best_d := 30.0 * 30.0
@@ -426,6 +449,11 @@ func _update_prompt() -> void:
 			_prompt.text = "press %s to get on the train" % key
 		else:
 			_prompt.text = "press %s to enter the car" % key
+	_place_prompt_over(best)
+	_prompt.visible = true
+
+
+func _place_prompt_over(best: Node2D) -> void:
 	# pin the label just above the target, following it on screen
 	var camera := get_viewport().get_camera_2d()
 	if camera != null:
