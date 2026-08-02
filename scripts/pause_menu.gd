@@ -49,9 +49,17 @@ func _ready() -> void:
 	box.add_child(spacer)
 	_resume_btn = _button(box, "resume", close)
 	_button(box, "settings", _show_settings)
-	_button(box, "main menu", func() -> void:
-		get_tree().paused = false
-		get_tree().change_scene_to_file("res://scenes/menu.tscn"))
+	# leaving mid-raid is not a free exit any more (user call): the raid
+	# owner hands you the same debrief dying would. Outside a raid (or if
+	# something went wrong building it) this still just leaves.
+	_button(box, "abandon raid", func() -> void:
+		close()
+		var raid := get_tree().current_scene
+		if raid != null and raid.has_method("abandon_raid"):
+			raid.call("abandon_raid")
+		else:
+			get_tree().paused = false
+			get_tree().change_scene_to_file("res://scenes/menu.tscn"))
 	_button(box, "quit to desktop", func() -> void: get_tree().quit())
 	_main_panel.add_child(box)
 	center.add_child(_main_panel)

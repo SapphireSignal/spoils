@@ -442,6 +442,19 @@ func _shot(shot_name: String) -> void:
 			var dialog := get_tree().current_scene.get_node_or_null("TollDialog")
 			if dialog != null:
 				dialog.call("open")
+		if arg == "--death":
+			# take a few rounds somewhere believable, then abandon: the
+			# debrief has to be shootable to be judged
+			var hurt := _find_player()
+			var scene := get_tree().current_scene
+			if hurt != null and scene != null and scene.has_method("abandon_raid"):
+				Raid.add_xp(260)
+				hurt.take_hit("thorax", "a marksman on the wire")
+				hurt.take_hit("left leg", "a marksman on the wire")
+				hurt.take_hit("thorax", "a marksman on the wire")
+				scene.call("abandon_raid")
+				for i in 4:
+					await get_tree().process_frame
 		if arg.begins_with("--extract="):
 			# jump straight to the debrief with a sample ledger, so the
 			# screen can be judged before enemies exist to fill it

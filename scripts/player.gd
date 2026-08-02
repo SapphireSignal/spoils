@@ -32,6 +32,7 @@ var prone := false
 var flashlight_on := false
 var hp := MAX_HP
 var dead := false
+var hits: Array[Dictionary] = []   # {bone, who, at} — read by the debrief
 var floor_lift := 0.0           # sprite+camera rise while on a second story
 var upstairs := false           # gates ground-floor doors while up there
 var driving: DriveableCar = null
@@ -148,9 +149,13 @@ func _ready() -> void:
 	camera.make_current()
 
 
-func take_hit() -> void:
+func take_hit(bone: String = "", who: String = "") -> void:
 	if dead:
 		return
+	# WHERE it landed and WHO sent it — the debrief draws a doll from
+	# this, so every hit has to say more than "you lost a point"
+	if bone != "":
+		hits.append({"bone": bone, "who": who, "at": Raid.elapsed()})
 	hp -= 1
 	_hurt_left = HURT_FLASH_TIME
 	_hurt_rect.color.a = 0.30
@@ -164,6 +169,7 @@ func respawn(at: Vector2) -> void:
 	position = at
 	hp = MAX_HP
 	dead = false
+	hits.clear()
 	velocity = Vector2.ZERO
 	# dying aboard the freight left `riding` set with no way to clear it:
 	# respawn teleported you straight back onto the departed train every

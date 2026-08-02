@@ -192,6 +192,24 @@ func _spawn_round() -> void:
 	_round_age.append(0.0)
 
 
+func _hit_bone() -> String:
+	# where the round actually landed. Centre mass most of the time — they
+	# are shooting to stop you, not to be clever — with the head and the
+	# limbs taking the rest.
+	var roll := _rng.randf()
+	if roll < 0.42:
+		return "thorax"
+	if roll < 0.62:
+		return "stomach"
+	if roll < 0.70:
+		return "head"
+	if roll < 0.73:
+		return "eyes"
+	if roll < 0.82:
+		return "left arm" if _rng.randf() < 0.5 else "right arm"
+	return "left leg" if _rng.randf() < 0.5 else "right leg"
+
+
 func _update_rounds(delta: float) -> void:
 	var i := _rounds.size() - 1
 	while i >= 0:
@@ -202,7 +220,8 @@ func _update_rounds(delta: float) -> void:
 		if not done and _player != null and not _player.dead \
 				and node.position.distance_squared_to(_player.global_position + Vector2(0, -10)) \
 				< HIT_RADIUS * HIT_RADIUS:
-			Authority.damage_player(_player)
+			Authority.damage_player(_player, _hit_bone(),
+				"a marksman on the wire")
 			done = true
 		if done:
 			node.queue_free()

@@ -3,6 +3,30 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.60] — 2026-08-01 — the bill for walking out
+
+### Added
+- **Abandoning a raid costs you.** The pause menu's "main menu" is now
+  **"abandon raid"**, and it hands you the same debrief dying would
+  (user call — quitting mid-raid used to be a free escape, and nothing
+  carried over anyway).
+- **The debrief reads like a report:** how long you lasted, xp earned,
+  kills and raider kills, rounds taken, and what was lost with you —
+  money now, the haul once the stash lands in M4.
+- **A hit-location doll**, Tarkov-style. Every round the wire puts in
+  you records **where** it landed and **who** sent it; the doll marks
+  the parts that took them — head, eyes, thorax, stomach, arms, legs —
+  reddening with the count, one tick per round, with the full list
+  underneath giving the minute, the part and the shooter.
+- Snipers roll a real hit location per round: centre mass most of the
+  time, with the head, eyes and limbs taking the rest.
+- Harness: `--death` takes a few rounds and abandons, so the screen is
+  shootable.
+
+**Still to decide:** actually dying (three hits) still respawns you
+mid-raid, which is the old placeholder behaviour — it should probably
+end the raid into this same screen. Say the word and it will.
+
 ## [0.6.59] — 2026-08-01 — every place has its own things in it
 
 ### Added

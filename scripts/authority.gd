@@ -13,5 +13,5 @@ func spawn_player(parent: Node, pos: Vector2) -> Player:
 	return player
 
 
-func damage_player(player: Player) -> void:
-	player.take_hit()
+func damage_player(player: Player, bone: String = "", who: String = "") -> void:
+	player.take_hit(bone, who)

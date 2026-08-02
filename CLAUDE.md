@@ -206,13 +206,17 @@ next session's work**:
   autoload (`world_time`, `advance_clock`, `time_label`, `is_night`);
   the menu advances it, the environment reads it on deploy and writes
   it back, and publishes `day_seconds` so both run at one rate.
-- **F. QUITTING MID-RAID MUST COUNT AS DYING** — still TODO. Death
-  screen with loot lost, xp, who killed you, and WHERE you were hit:
-  a character doll marking real hit locations (thorax, stomach, head,
-  eyes), Tarkov-style. `Raid.record_kill(who, bone, is_player)`
-  already stores a BONE per kill — the doll should read that. Hook the
-  pause menu's "main menu" button. (Their related question "how does
-  saving work?" — answer: nothing persists between raids yet; the
+- ~~F. quitting mid-raid must count as dying~~ **DONE v0.6.60**:
+  `scripts/death_screen.gd` (doll + ledger + hit log), pause menu
+  button renamed "abandon raid" → `main.abandon_raid()`.
+  `player.hits` records {bone, who, at} per round;
+  `Authority.damage_player(player, bone, who)`; edge_guard rolls a
+  real location. Harness `--death`. **OPEN:** actually dying (3 hits)
+  still RESPAWNS mid-raid — the old placeholder. It should end the
+  raid into this same screen; ask the user, and mind that the smoke
+  test drives `player.respawn()` itself and that opening a Ui window
+  on death could block later smoke steps. (Their related question
+  "how does saving work?" — nothing persists between raids yet; the
   stash is M4.)
 - **H. POWER LINES ACROSS THE DISTRICT** — still TODO. Pylons with
   catenary, some broken, some lines SNAPPED and hanging (overrun

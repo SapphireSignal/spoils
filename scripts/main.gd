@@ -24,6 +24,7 @@ var _car_hint: RichTextLabel
 var _car_hint_until := 0.0
 var _was_driving := false
 var _extract_screen: ExtractScreen
+var _death_screen: DeathScreen
 var _toll_dialog: TollDialog
 
 
@@ -167,6 +168,11 @@ func _build_world() -> void:
 	_extract_screen = ExtractScreen.new()
 	_extract_screen.name = "ExtractScreen"
 	add_child(_extract_screen)
+	# ...and the bill if you don't make it out, walking away included
+	_death_screen = DeathScreen.new()
+	_death_screen.name = "DeathScreen"
+	_death_screen.visible = false
+	add_child(_death_screen)
 	var extraction := Extraction.new()
 	extraction.name = "Extraction"
 	add_child(extraction)
@@ -438,6 +444,19 @@ func _process(delta: float) -> void:
 	for roof in _roofs:
 		var reveal := roof as RoofReveal
 		reveal.set_inside(reveal.cells.has_point(cell))
+
+
+func abandon_raid() -> void:
+	## quitting to the menu mid-raid: you don't get to walk away clean
+	## (user call). Same debrief you'd get for dying, because that is what
+	## leaving a raid on foot amounts to.
+	if _death_screen == null or _player == null:
+		get_tree().paused = false
+		get_tree().change_scene_to_file("res://scenes/menu.tscn")
+		return
+	Music.stop_raid(1.0)
+	Sfx.set_engine(0.0)
+	_death_screen.show_debrief(_player, true)
 
 
 func _on_extracted(method: String) -> void:
