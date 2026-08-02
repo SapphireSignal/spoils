@@ -63,11 +63,18 @@ var _changelog_open := false   # the USER opened it (vs the boot prewarm)
 var _map_select: PanelContainer
 var _ms_name: Label
 var _ms_blurb: Label
+var _ms_clock: Label
+var _ms_clock_stamp := ""
 var _ms_deploy: Button
 var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.55", ["the map select screen shows the districts clock and",
+		"whether its day or night, ticking, before you commit -",
+		"and the time you read there is the time you deploy",
+		"into. the district keeps its own time while you sit in",
+		"the menu"]],
 	["v0.6.54", ["the freight keeps a timetable now: she comes at 24:00,",
 		"the darkest point of the night, once per day - never in",
 		"the morning - and mara only calls her in when shes",
@@ -590,6 +597,15 @@ func show_backdrop(index: int) -> void:  # harness hook for screenshots
 
 func _process(delta: float) -> void:
 	_time += delta
+	# the district keeps its own time while you stand in the menu, so the
+	# clock on the map-select screen is the one you deploy into
+	Raid.advance_clock(delta)
+	if _ms_clock != null and _map_select.visible:
+		var stamp := "%s   -   %s" % [Raid.time_label(),
+			"night" if Raid.is_night() else "day"]
+		if stamp != _ms_clock_stamp:      # relabel only when it changes
+			_ms_clock_stamp = stamp
+			_ms_clock.text = stamp
 	_rotate_timer += delta
 	if _rotate_timer >= SCENE_SECONDS:
 		_rotate_timer = 0.0
@@ -1120,6 +1136,11 @@ func _build_map_select() -> PanelContainer:
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	info.add_child(spacer)
+	# the district's clock, live, BEFORE you commit to it (user call): the
+	# time you read here is the time you deploy into
+	_ms_clock = Label.new()
+	_ms_clock.add_theme_color_override("font_color", UITheme.ACCENT)
+	info.add_child(_ms_clock)
 	_ms_deploy = Button.new()
 	_ms_deploy.text = "deploy"
 	_ms_deploy.disabled = true

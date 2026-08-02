@@ -3,6 +3,25 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.55] — 2026-08-01 — the district's clock, on the way in
+
+### Added
+- **Map select shows the live in-game time and day/night** before you
+  pick a district (user call), and it ticks while you sit there.
+- **One world clock.** It lives in the `Raid` autoload; the menu
+  advances it and the environment both reads it on deploy and writes
+  it back as it runs — so the time you read on the way in is the time
+  you land in, and the district keeps its own time while you're in the
+  menu. The environment still owns the day *length* and publishes it,
+  so there's a single source for that.
+
+**Known oddity, worth a decision:** the clock and the lighting curve
+don't agree with real-world intuition — nightfall currently lands at
+15:22 and dawn at 04:05, so the screen can read "04:19 — day". The
+freight's 24:00 arrival *is* correctly at peak darkness. Re-timing the
+gradient so dusk falls nearer 21:00 and dawn nearer 06:00 is a small
+change; say the word.
+
 ## [0.6.54] — 2026-08-01 — the freight keeps a timetable
 
 All from the user's live playtest.

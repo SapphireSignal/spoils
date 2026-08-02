@@ -227,6 +227,10 @@ func setup(root: Node2D, floor_layer: TileMapLayer, puddle_spots: Array,
 		DEEP_NIGHT, DEEP_NIGHT,
 	])
 	_weather_timer = randf_range(60.0, 200.0)
+	# deploy into the time the menu was showing, and publish the day length
+	# so the menu's clock runs at the same rate (one source for both)
+	day_time = Raid.world_time
+	Raid.day_seconds = DAY_SECONDS
 	add_to_group("environment")
 	set_process(true)
 
@@ -245,6 +249,7 @@ func force_weather(rain_on: bool) -> void:  # harness hook
 
 func force_time(t: float) -> void:  # harness hook, 0..1
 	day_time = t
+	Raid.world_time = t
 	var morning := _morning_amount(t)
 	if morning > 0.0 and not _fog_sprites.is_empty():
 		# pre-fill the dawn fog (like force_weather prefills rain): shots
@@ -258,6 +263,7 @@ func force_time(t: float) -> void:  # harness hook, 0..1
 
 func _process(delta: float) -> void:
 	day_time = fmod(day_time + delta / DAY_SECONDS, 1.0)
+	Raid.world_time = day_time      # the menu's clock reads this
 	var tint := _tint_gradient.sample(day_time)
 	# storm darkening on its own slow, eased fade — decoupled from the rain
 	# density ramp so the screen color NEVER visibly steps

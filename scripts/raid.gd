@@ -17,8 +17,33 @@ var money := 120
 var kills: Array[Dictionary] = []    # {name, player, bone, at (seconds)}
 var haul: Array[Dictionary] = []     # {name, count} — the stash lands in M4
 
+# THE WORLD CLOCK, 0..1. Shared by the menu and the raid so the time the
+# map-select screen shows is the time you actually deploy into (user
+# call), and it keeps running while you sit in the menu — the district
+# does not wait for you. The environment owns the real length and pushes
+# it here on setup, so there is still ONE source for the day length.
+var world_time := 0.18
+var day_seconds := 1080.0
+# nightfall / dawn, mirroring environment_system's gradient stops
+const NIGHT_FROM := 0.64
+const NIGHT_UNTIL := 0.08
+
 var _started_ms := 0
 var _ended_at := 0.0
+
+
+func advance_clock(delta: float) -> void:
+	world_time = fmod(world_time + delta / day_seconds, 1.0)
+
+
+func time_label() -> String:
+	var minutes := int(world_time * 1440.0) % 1440
+	@warning_ignore("integer_division")
+	return "%02d:%02d" % [minutes / 60, minutes % 60]
+
+
+func is_night() -> bool:
+	return world_time >= NIGHT_FROM or world_time < NIGHT_UNTIL
 
 
 func begin() -> void:

@@ -189,32 +189,45 @@ This file carries everything a fresh session needs that isn't in those two.
 ## THE QUEUE (as of v0.6.44 — work straight down it)
 
 **NEW BATCH — user asks sent 2026-08-01 after v0.6.53** (they are
-playtesting live; work these next, they are all concrete):
-A. **Mara's popup wording** — it shows a "mara" title AND says
-   "magpie, mara. ..." Both name mentions go. Wanted line: "magpie,
-   ive got a freight inbound to the trainyard, give or take". Say
-   TRAINYARD, not yard. Also HOLD the popup 1–2 s longer (4.6 → ~6.5).
-B. **A really subtle sound when the popup APPEARS** (nothing on
-   disappear — v0.6.46 removed both at their ask). Quiet: ≤ -18 dB,
-   on the sfx bus.
-C. **The freight runs on the CLOCK, at 24:00** — peak darkness, a
-   fixed in-game time every day, never in the morning. Mara's freight
-   calls fire only with it (they saw popups at 3am and in daylight).
-D. **Longer day/night cycle** — DAY_SECONDS 600 feels short to them.
-E. **The freight must not drive through parked trains** — it clipped
-   straight through one on the main line.
-F. **Quitting to the menu mid-raid must count as DYING**: death screen
-   with loot lost, xp, who killed you, and WHERE you were hit — a
-   character doll marking real hit locations (thorax, stomach, head,
-   eyes), Tarkov-style. They also asked "how does saving work?" —
-   answer: nothing persists yet, the stash is M4.
-G. **Map select shows the live in-game clock + day/night**, ticking,
-   BEFORE you pick a map. Needs a time source shared with the raid.
-H. **Power lines across the district** — pylons with catenary, some
-   broken, some lines SNAPPED and hanging (overrun look). They run
-   underground to a YELLOW utility box on the BACK of a power tower
-   beside the comms relay: not a POI, just a small spot with power
-   boxes and tools scattered on the ground.
+playtesting live). A–E and G SHIPPED as v0.6.54–55; **F and H are the
+next session's work**:
+
+- ~~A mara popup wording~~ **v0.6.54** (name plate gone, no "magpie,
+  mara.", says trainyard, HOLD 4.6 → 6.5).
+- ~~B subtle appear sound~~ **v0.6.54** (`Sfx.play_radio_tick`, -30 dB,
+  sfx bus; still silent on drop-off).
+- ~~C freight on the clock at 24:00~~ **v0.6.54** — it now reads
+  `environment.day_time` via the `_environment` handle; warns at
+  WARN_AT 0.985 and arrives when the clock wraps past midnight.
+- ~~D longer day~~ **v0.6.54** (DAY_SECONDS 600 → 1080).
+- ~~E freight drove through parked boxcars~~ **v0.6.54** (stranded
+  stock moved to `_rail_row ± 2`; the running line stays clear).
+- ~~G map-select clock~~ **v0.6.55** — ONE world clock in the `Raid`
+  autoload (`world_time`, `advance_clock`, `time_label`, `is_night`);
+  the menu advances it, the environment reads it on deploy and writes
+  it back, and publishes `day_seconds` so both run at one rate.
+- **F. QUITTING MID-RAID MUST COUNT AS DYING** — still TODO. Death
+  screen with loot lost, xp, who killed you, and WHERE you were hit:
+  a character doll marking real hit locations (thorax, stomach, head,
+  eyes), Tarkov-style. `Raid.record_kill(who, bone, is_player)`
+  already stores a BONE per kill — the doll should read that. Hook the
+  pause menu's "main menu" button. (Their related question "how does
+  saving work?" — answer: nothing persists between raids yet; the
+  stash is M4.)
+- **H. POWER LINES ACROSS THE DISTRICT** — still TODO. Pylons with
+  catenary, some broken, some lines SNAPPED and hanging (overrun
+  look). They run UNDERGROUND to a YELLOW utility box on the BACK of a
+  power tower beside the comms relay — not a POI, just a small spot
+  with power boxes and tools scattered on the ground. Reuse the flat
+  decal layer (`_flat`) for anything lying on the ground and the
+  `_side_rng` trick if the layout must stay put.
+
+**OPEN QUESTION FOR THE USER (raised by G):** the clock and the
+lighting curve disagree with real-world intuition — nightfall lands at
+15:22 and dawn at 04:05, so map select can read "04:19 — day". The
+freight's 24:00 arrival IS at peak darkness, so their spec is met;
+re-timing the gradient (dusk ~21:00, dawn ~06:00) is a small change
+awaiting their call.
 
 **THE OVERNIGHT BATCH IS DONE** (all five user asks shipped as
 v0.6.45–48 — detail in "Where we are" above). What remains below is
