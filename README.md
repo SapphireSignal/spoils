@@ -26,10 +26,10 @@ gear slots, no second chances. The gun-feel goal is *Destiny*'s — punchy,
 juicy weapons — at 32 pixels tall. Nothing supernatural ever happened here:
 **every enemy is a human being**, and every one of them wants your bag.
 
-> **Status:** early development. The world is in: the district of **transit** —
-> one fixed, learnable map with day/night, real weather, interactive doors,
-> driveable cars, three working extractions, and a sniper watching its edges.
-> Gunplay is next. See the [changelog](CHANGELOG.md).
+**Status:** early development. The world is in: the district of **transit** —
+one fixed, learnable map with day/night, real weather, interactive doors,
+driveable cars, three working extractions, and a sniper watching its edges.
+Gunplay is next. See the [changelog](CHANGELOG.md).
 
 ## Screenshots
 

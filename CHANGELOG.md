@@ -3,6 +3,42 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.27] — 2026-08-02 — three that outlived their scene
+
+Found by a scene-swap audit: state that survives longer than the thing that
+created it. All three verified against the code before the fix, and the
+first one reproduced end to end.
+
+### Fixed
+- **`--audiodebug` permanently muted the game.** It drives the real volume
+  slider to 0 to test it, and that path is
+  `Settings.set_volume()` → `_save()` → `user://settings.cfg`. Nothing put
+  it back, so a single run left `master=0.0` on disk and **every future
+  launch booted silent** — no menu theme, no rain, no footsteps — with no
+  on-screen cause and a slider the user never touched sitting at 0%. The
+  flag now captures the master first and restores it as its last act, after
+  the dumps, so the measurement still shows the muted graph. **Verified by
+  running it: `AFTER master=0.00` → `RESTORED master=1.00`, and
+  `settings.cfg` reads `master=1.0`.** This is a harness path that was
+  silently editing real user settings — exactly what `CLAUDE.md` warns the
+  user-data folder holds.
+- **Thunder rolled over the main menu.** `Sfx.silence_world()` stopped the
+  rain and engine loops but not `_thunder_player`, a multi-second one-shot
+  on the same persistent autoload — so a strike a couple of seconds before
+  you extracted kept playing through the scene change and over the menu
+  guitar. `environment_system.gd` already guarded the *deferred* half of a
+  strike; this covers the clap already in flight.
+- **Dying at the wheel could leave a car stuck half-exited.** `exit_car()`
+  awaits a 0.34 s door swing, then uses `_player` — but the death path
+  (`abandon()`) nulls that reference, so pressing F inside the death fade
+  called `unboard_car()` on nothing. The coroutine died before clearing
+  `driven`/`_busy`, wedging the car for the rest of the raid. `enter()` has
+  carried the identical guard all along; the exit path never got it.
+
+### Changed
+- Every blockquote removed from all seven docs (user call: the `>` marker
+  lands on every wrapped line and reads as noise). No wording changed.
+
 ## [0.6.26] — 2026-08-02 — every scene root defends itself
 
 ### Fixed
@@ -51,14 +87,13 @@ All notable changes to SPOILS are documented here. Versions follow a simple
 ### Notes
 - Simulated over 500 days the mix now runs **clear 52%, overcast 33%,
   rain 9%, storm 6%**: dry 85% of the time, but sunny only about half.
-  > **Correction, 2026-08-02 — this figure was never right.** Solving the
-  > roll in `scripts/environment_system.gd` for its steady state and
-  > weighting by spell length gives **overcast ~42%, clear ~36%, rain ~13%,
-  > storm ~9%** (dry ~78%). The `weather != CLEAR` guard makes it impossible
-  > for one clear spell to follow another, while overcast can repeat — so
-  > **overcast is the most common sky, not clear.** Left in place as shipped
-  > history with the correction attached; the true numbers live in
-  > `CLAUDE.md`.
+- **CORRECTION, 2026-08-02 — the figure above was never right.** Solving the
+  roll in `scripts/environment_system.gd` for its steady state and weighting
+  by spell length gives **overcast ~42%, clear ~36%, rain ~13%, storm ~9%**
+  (dry ~78%). The `weather != CLEAR` guard makes it impossible for one clear
+  spell to follow another, while overcast can repeat — so **overcast is the
+  most common sky, not clear.** The original line is left as shipped history
+  with this correction attached; the true numbers live in `CLAUDE.md`.
 
 ## [0.6.24] — 2026-08-02 — a smaller font, and the safehouse moves
 
@@ -2457,9 +2492,9 @@ The district update: the world got 10x bigger and came alive.
 - Ambient junk is rarer and clusters around buildings instead of everywhere.
 ## [0.1.14] — 2026-07-31
 
-> Versioning from here on: patch bumps (0.6.x) for polish and fix batches;
-> the minor only moves when a MILESTONE lands (0.7 gunplay, 0.8 enemies,
-> 0.9 the raid loop). 1.0 = the complete v1 game from the design doc.
+**Versioning from here on:** patch bumps (0.6.x) for polish and fix batches;
+the minor only moves when a MILESTONE lands (0.7 gunplay, 0.8 enemies,
+0.9 the raid loop). 1.0 = the complete v1 game from the design doc.
 
 ### Added
 - Loading yard south of the warehouse: asphalt pad with faded stall lines,

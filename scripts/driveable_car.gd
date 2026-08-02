@@ -175,6 +175,16 @@ func exit_car() -> void:
 	Sfx.play_car_door(true)
 	_apply_variant("%s_door" % _base_variant_name())
 	await get_tree().create_timer(DOOR_TIME).timeout
+	if _player == null:
+		# died at the wheel DURING the door swing: abandon() already emptied
+		# the cabin, so there is nobody to put on the pavement — just finish
+		# the door. enter() has carried this guard all along; this path was
+		# missing it and would call unboard_car() on a freed player, killing
+		# the coroutine before it could clear _busy and leaving the car
+		# half-exited for the rest of the raid.
+		_apply_variant(_base_variant_name())
+		_busy = false
+		return
 	var out := (global_position + (EXIT_OFFSET[heading] as Vector2)).round()
 	_player.unboard_car(out)
 	_player = null

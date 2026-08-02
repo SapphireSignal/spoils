@@ -326,6 +326,13 @@ func silence_world() -> void:
 	_rain_db = -60.0
 	if _rain_player != null:
 		_rain_player.stop()
+	# thunder is a multi-second ONE-SHOT on this same persistent node, so a
+	# strike a few seconds before you extract kept rolling over the menu
+	# theme. environment_system already guards the DEFERRED half of a
+	# strike; this covers the clap already in flight. The hard stop lands on
+	# the black scene-swap cut at -22..-16 dB, so it is inaudible.
+	if _thunder_player != null:
+		_thunder_player.stop()
 
 
 func alarm_stream() -> AudioStreamWAV:

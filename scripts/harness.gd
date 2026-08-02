@@ -48,6 +48,13 @@ func _audio_debug() -> void:
 	## below never resumes). Until it is moved into the second loop, pair it
 	## with a real action flag, e.g. `--perf --audiodebug`.
 	await get_tree().process_frame
+	# THE SLIDER WRITES THE USER'S REAL SETTINGS FILE. Settings.set_volume()
+	# calls _save(), which persists master to user://settings.cfg — so
+	# without the restore at the bottom of this function, running this once
+	# left the GAME MUTED on every future launch, with no on-screen cause
+	# and a slider the user never touched sitting at 0%. Never leave a
+	# harness path holding a persisted setting.
+	var prev_master := Settings.volume_master
 	# drive the REAL panel, not the setter behind it: the report is "the
 	# slider does nothing", so the slider is what has to be tested
 	var panel := VolumePanel.new()
@@ -71,6 +78,12 @@ func _audio_debug() -> void:
 				var p := child as AudioStreamPlayer
 				print("PLAYER %s/%s bus=%s playing=%s db=%.1f" % [
 					node.name, p.name, p.bus, p.playing, p.volume_db])
+	# put the user's volume back — LAST, so every dump above still shows the
+	# muted graph this flag exists to measure. Re-applies the buses and
+	# rewrites settings.cfg. Same save/restore convention as _smoke()'s
+	# crouch_toggle.
+	Settings.set_volume("master", prev_master)
+	print("RESTORED master=%.2f" % Settings.volume_master)
 
 
 func _ready() -> void:

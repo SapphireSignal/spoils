@@ -1,10 +1,11 @@
 # SPOILS — Design & Workflow Doc
 
-> Handoff brief. A fresh Claude session should be able to read this and start building
-> with zero questions about setup, tooling, or intent.
-> Project dir: `D:\Games\Spoils`. The name **SPOILS** was chosen and availability-vetted
-> 2026-07-31 (only collision: an out-of-print 2016 card game) — it's the loot you carry
-> out, and what greed does to you.
+Handoff brief. A fresh Claude session should be able to read this and start building
+with zero questions about setup, tooling, or intent.
+
+Project dir: `D:\Games\Spoils`. The name **SPOILS** was chosen and availability-vetted
+2026-07-31 (only collision: an out-of-print 2016 card game) — it's the loot you carry
+out, and what greed does to you.
 
 ## 1. What this is
 
