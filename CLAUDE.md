@@ -4,8 +4,14 @@
 > **`HANDOFF.md`** — what the last session actually did and said, and the
 > chain of every session before it. **`TASKS.md`** — every open item and the
 > milestone roadmap, each with the diagnosis already done, so nothing is
-> re-derived. Then run `--checkdocs` (one second) to prove these docs still
-> match the repo before you trust a word of them.
+> re-derived. Then run **`--checksec` and `--checkdocs`** (a second each) to
+> prove the repo is intact and these docs still match it, before you trust a
+> word of them:
+>
+> ```
+> godot_console --headless --path . -- --checksec
+> godot_console --headless --path . -- --checkdocs
+> ```
 >
 > Nothing about a chat survives except what is committed. `HANDOFF.md` is
 > the memory, `TASKS.md` is the work, `CHANGELOG.md` is what shipped, this
