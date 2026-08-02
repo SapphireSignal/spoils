@@ -2605,6 +2605,23 @@ func _dress_spot(area: Rect2i, families: Array, count: int) -> void:
 
 const PYLON_SPAN := 6        # cells between towers — the wire art's span
 const PYLON_ARM_Y := -52.0   # where the crossarms sit above the base
+const PYLON_EDGE_BAND := 18  # how far in from the wire counts as "outskirts"
+
+
+func _pylon_allowed(cell: Vector2i) -> bool:
+	## Transmission towers belong to the WOODS and the OUTSKIRTS (user
+	## call). The middle of the district is telegraph-pole country — the
+	## two are different things and mixing them made neither read.
+	if _forest.has(cell):
+		return true
+	var band := PYLON_EDGE_BAND
+	var outer := cell.x < BARRIER_INSET + band \
+		or cell.x > MAP_W - BARRIER_INSET - band \
+		or cell.y < BARRIER_INSET + band \
+		or cell.y > MAP_H - BARRIER_INSET - band
+	# "sometimes in the outers" — out there the run thins rather than
+	# marching unbroken to the wire
+	return outer and _side_rng.randf() < 0.6
 
 func _place_power_line() -> void:
 	## THE GRID, marching across the district: one line of lattice towers
@@ -2630,7 +2647,8 @@ func _place_power_line() -> void:
 		# ground can't — skipping those left long gaps and the run stopped
 		# reading as a line at all (user report). A pylon foot standing in
 		# the litter is exactly right.
-		var blocked := _rail_cells.has(cell) or _near_a_door(cell)
+		var blocked := _rail_cells.has(cell) or _near_a_door(cell) \
+			or not _pylon_allowed(cell)
 		for plot in _plots:
 			if (plot["rect"] as Rect2i).grow(1).has_point(cell):
 				blocked = true
@@ -3010,15 +3028,36 @@ func _dress_rail_line() -> void:
 		return
 	var side := 2 if _rng.randf() < 0.5 else -2
 	var x := BARRIER_INSET + _rng.randi_range(2, 6)
+	# the previous pole, so the wire between them can be strung
+	var last_cell := Vector2i(-999, -999)
+	var last_side := side
 	while x < MAP_W - BARRIER_INSET - 2:
 		await _tick()
 		var cell := Vector2i(x, _rail_row + side)
+		var stood := false
 		if not _occupied.has(cell) and not _on_road(cell) \
 				and not _rail_cells.has(cell) and not _ballast.has(cell) \
 				and not _near_a_door(cell):
+			# NO clutter offset. A jittered pole is a pole the wire cannot
+			# reach — exactly the bug the pylons already taught us
+			# (CLAUDE.md): the span art is drawn for one exact gap.
 			_add_prop(_pick_variant_varied("telegraph_pole"),
-				_floor_layer.map_to_local(cell) + _clutter_offset(7.0))
+				_floor_layer.map_to_local(cell))
 			_occupied[cell] = true
+			stood = true
+		# string the span back to the pole behind this one. A telegraph
+		# route IS its wires — poles on their own read as fence posts
+		# (user). Skipped when the line changes sides, because the run
+		# genuinely breaks there.
+		if stood and last_cell.x > -900 and last_side == side:
+			var gap: int = cell.x - last_cell.x
+			if gap >= 7 and gap <= 10 and _side_rng.randf() < 0.93:
+				var wire := _add_prop("telegraph_wire_%d" % gap,
+					_floor_layer.map_to_local(last_cell))
+				wire.z_index = 5          # overhead, like the power spans
+		if stood:
+			last_cell = cell
+			last_side = side
 		# poles run at a rhythm, but never a metronome
 		x += _rng.randi_range(7, 10)
 		if _rng.randf() < 0.12:

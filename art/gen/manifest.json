@@ -5840,11 +5840,11 @@
     "telegraph_pole_0": {
       "size": [
         18,
-        57
+        59
       ],
       "origin": [
         9,
-        54
+        56
       ],
       "collider": [
         "diamond",
@@ -5855,11 +5855,11 @@
     "telegraph_pole_1": {
       "size": [
         19,
-        55
+        57
       ],
       "origin": [
         8,
-        52
+        54
       ],
       "collider": [
         "diamond",
@@ -5870,11 +5870,11 @@
     "telegraph_pole_2": {
       "size": [
         19,
-        55
+        57
       ],
       "origin": [
         11,
-        52
+        54
       ],
       "collider": [
         "diamond",
@@ -5885,17 +5885,61 @@
     "telegraph_pole_3": {
       "size": [
         18,
-        50
+        52
       ],
       "origin": [
         9,
-        47
+        49
       ],
       "collider": [
         "diamond",
         3.0,
         2.0
       ]
+    },
+    "telegraph_wire_7": {
+      "size": [
+        238,
+        121
+      ],
+      "origin": [
+        7,
+        46
+      ],
+      "collider": null
+    },
+    "telegraph_wire_8": {
+      "size": [
+        270,
+        137
+      ],
+      "origin": [
+        7,
+        46
+      ],
+      "collider": null
+    },
+    "telegraph_wire_9": {
+      "size": [
+        302,
+        153
+      ],
+      "origin": [
+        7,
+        46
+      ],
+      "collider": null
+    },
+    "telegraph_wire_10": {
+      "size": [
+        334,
+        169
+      ],
+      "origin": [
+        7,
+        46
+      ],
+      "collider": null
     },
     "rail_signal_0": {
       "size": [

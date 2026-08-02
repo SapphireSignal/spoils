@@ -3,6 +3,28 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.73] — 2026-08-02 — the wires along the line
+
+### Added
+- **Telegraph poles carry wires now** (user: they had none). Four thin
+  lines strung pole to pole along the railway, sagging between the
+  crossarms. A telegraph route *is* its wires — without them the poles
+  were just posts.
+- The run skips a span wherever the line changes sides of the track,
+  because it genuinely breaks there.
+
+### Changed
+- **Power pylons only appear in the woods and out toward the wire**
+  (user). The middle of the district is telegraph-pole country; the two
+  are different things and mixing them made neither read. Out on the
+  outskirts the run thins rather than marching unbroken to the edge.
+- Telegraph poles no longer take a random position offset, and their
+  crossarms sit at a fixed height. Both were necessary for the wires to
+  meet them — the same lesson the pylon spans already taught: the art
+  is drawn for one exact gap, so a jittered pole is a pole the wire
+  cannot reach. The pole *top* still varies, and the lean and the
+  missing-arm variant carry the rest of the variety.
+
 ## [0.6.72] — 2026-08-02 — you can see the whole door
 
 ### Fixed

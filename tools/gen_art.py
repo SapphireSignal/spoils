@@ -4207,6 +4207,18 @@ def make_smoker_sheet() -> tuple[Canvas, tuple, list | None]:
     sheet.px = sheet.img.load()
     return sheet, (14, 34), None
 
+# The crossarms sit a FIXED height above the base, and the insulators a
+# fixed distance along them, so the wires strung between poles actually
+# meet the arms. The pole TOP still varies, which is where the variety
+# comes from — same lesson the pylons taught: vary the height and the
+# spans stop reaching (CLAUDE.md).
+TELE_ARMS = ((44, 7), (37, 5))          # (px above base, half-span)
+
+
+def _tele_insulators(span: int) -> tuple:
+    return (-span + 1, 0, span - 1)
+
+
 def make_telegraph_pole(variant: int) -> tuple[Canvas, tuple, list]:
     """The poles that march beside the line. A straight railway reads as a
     drawn line until something repeats ALONGSIDE it at human intervals —
@@ -4214,22 +4226,23 @@ def make_telegraph_pole(variant: int) -> tuple[Canvas, tuple, list]:
     rng = random.Random(f"{SEED}:telegraph:{variant}")
     c = Canvas(34, 76)
     px, base = 16, 66
-    height = rng.randint(46, 54)
+    height = rng.randint(48, 56)           # only the top varies now
     lean = (0, 1, -1, 0)[variant % 4]
     for k in range(height):                    # the pole, lit on the north
         x = px + (k * lean) // 24
         c.set(x, base - k, C("602c2c"))
         c.set(x + 1, base - k, C("341c27"))
     top = base - height
-    for (arm_y, span) in ((top + 6, 7), (top + 13, 5)):
-        ax = px + ((base - arm_y) * lean) // 24
+    for (arm_up, span) in TELE_ARMS:
+        arm_y = base - arm_up
+        ax = px + (arm_up * lean) // 24
         for i in range(-span, span + 1):
             c.set(ax + i, arm_y + abs(i) // 4, C("4d2b32"))
-        for i in (-span + 1, 0, span - 1):     # insulators
+        for i in _tele_insulators(span):       # insulators
             c.set(ax + i, arm_y + abs(i) // 4 - 1, C("73bed3"))
     if variant % 3 == 0:                        # one pole has lost an arm
         for i in range(3, 8):
-            c.set(px + i, top + 6 + i // 4, (0, 0, 0, 0))
+            c.set(px + i, base - TELE_ARMS[0][0] + i // 4, (0, 0, 0, 0))
     for _ in range(rng.randint(1, 3)):
         c.set(px + rng.randint(0, 1), base - rng.randrange(6, height - 6),
               C("241527"))
@@ -4829,6 +4842,9 @@ def prop_inventory() -> tuple[dict, dict]:
     props["locomotive"] = make_locomotive()
     for i in range(4):
         fam("telegraph_pole", i, make_telegraph_pole(i))
+    # one wire span per gap the placer can roll (7..10 cells)
+    for span in range(7, 11):
+        props["telegraph_wire_%d" % span] = make_telegraph_wire(span)
     fam("rail_signal", 0, make_rail_signal(False))
     fam("rail_signal", 1, make_rail_signal(True))
     props["toll_booth"] = make_toll_booth()
@@ -6434,6 +6450,42 @@ def make_power_wire(variant: int) -> tuple[Canvas, tuple, list | None]:
             y = oy + int(end * 0.5 + 9.0 * (1.0 - (2.0 * f - 1.0) ** 2)) + k
             c.set(ox + end + k // 3, y, C("241527"))
     c.outline_auto()
+    cropped, origin = crop_canvas(c, (ox, oy))
+    return cropped, origin, None
+
+
+def make_telegraph_wire(span_cells: int) -> tuple[Canvas, tuple, list | None]:
+    """The wires between two telegraph poles, one span. Six of them — three
+    per crossarm, off the insulators — running down the map's +x axis, which
+    is screen down-right at 32 x 16 px per cell.
+
+    Thinner and slacker than the power catenary on purpose: a transmission
+    line is two heavy conductors, a telegraph route is a bundle of thin ones,
+    and at native resolution that difference is the whole read. The origin is
+    the near pole's BASE, so placing it is just "put it where that pole is"."""
+    w = span_cells * 32
+    h = span_cells * 16          # the run drops a full half-cell per cell
+    # the canvas has to hold the whole DESCENT, not just the pole height:
+    # the far end sits h px below the near one, plus the sag
+    c = Canvas(w + 32, h + 80)
+    ox = 16
+    oy = 48                                      # the near pole's base
+    for (arm_up, arm_span) in TELE_ARMS:
+        # only the OUTER insulators get a wire. All three reads as a solid
+        # dark band at this scale — six near-parallel 1 px lines three pixels
+        # apart merge into a mass, especially once anything outlines them.
+        for ins in (-arm_span + 1, arm_span - 1):
+            # sag scales with the span: a long run droops further
+            droop = 2.5 + span_cells * 0.55
+            for i in range(w):
+                f = i / float(w)
+                sag = droop * (1.0 - (2.0 * f - 1.0) ** 2)
+                x = ox + ins + i
+                y = oy - arm_up + int(i * 0.5 + sag) - 1
+                c.set(x, y, C("241527"))
+    # NO outline_auto here. It draws a border around every run, and on lines
+    # this close together the borders meet and fill the gaps — the span came
+    # out as a solid dark ramp beside the track.
     cropped, origin = crop_canvas(c, (ox, oy))
     return cropped, origin, None
 
