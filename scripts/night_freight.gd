@@ -39,6 +39,12 @@ var _player: Player
 var _radio: Radio
 var _environment: Node          # owns day_time — the freight runs on it
 var _last_day := -1.0           # so midnight only triggers once per day
+# she does NOT run every night (user call): three nights out of every
+# seven, on whatever days they happen to fall — they can bunch at the
+# start of a week or straggle to the end of it
+var _nights_seen := 0
+var _week_nights: Array[int] = []
+var _week_rng := RandomNumberGenerator.new()
 var _notice: Label
 var _countdown: Label
 var _steam_tex: Texture2D
@@ -62,6 +68,8 @@ func setup(stop_pos: Vector2, player: Player, radio: Radio,
 	position = _stop_pos - RAIL_DIR * 2600.0
 	visible = false
 	_clock = 0.0
+	_week_rng.randomize()
+	_roll_week()
 
 	# origins come from the manifest like every other prop — guessing them
 	# put the hauled cars off the rails. The builder already parsed the
@@ -133,6 +141,22 @@ func setup(stop_pos: Vector2, player: Player, radio: Radio,
 	add_child(layer)
 
 
+func _roll_week() -> void:
+	## three running nights out of the seven, drawn without replacement so
+	## they land wherever they land — two together at the start of a week
+	## and one at the far end is a perfectly good week
+	_week_nights.clear()
+	var days := [0, 1, 2, 3, 4, 5, 6]
+	for i in 3:
+		var pick := _week_rng.randi_range(0, days.size() - 1)
+		_week_nights.append(days[pick])
+		days.remove_at(pick)
+
+
+func _runs_on(night: int) -> bool:
+	return _week_nights.has(night % 7)
+
+
 func force_waiting() -> void:
 	## harness hook: put it in the yard now instead of waiting out the
 	## real-time cycle
@@ -177,7 +201,12 @@ func _process(delta: float) -> void:
 			var day: float = _environment.get("day_time") if _environment != null else 0.0
 			var wrapped := day < _last_day - 0.5   # the clock passed 24:00
 			_last_day = day
-			if not _warned and day >= WARN_AT:
+			if wrapped:
+				_nights_seen += 1
+				if _nights_seen % 7 == 0:
+					_roll_week()               # a fresh timetable each week
+			# ...and only on the nights she actually runs
+			if not _warned and day >= WARN_AT and _runs_on(_nights_seen + 1):
 				# she is called in just BEFORE midnight, so the warning and
 				# the arrival are the same event from the raider's side
 				_warned = true

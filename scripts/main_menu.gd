@@ -70,6 +70,13 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.65", ["the freight only runs three nights out of seven now,",
+		"and which nights is different every week - two together",
+		"and one at the far end, or spread out, you have to",
+		"learn the timetable",
+		"the cables inside houses are gone",
+		"closed doors are now covered by a test that walks into",
+		"one from five different angles"]],
 	["v0.6.64", ["opening a menu takes the worlds labels down with it.",
 		"press f to open, the driving hint, the freight notice",
 		"and maras call all come off the screen while a window",

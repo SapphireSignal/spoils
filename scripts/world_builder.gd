@@ -2729,14 +2729,9 @@ func _place_room_light(interior: Rect2i, box_cell: Vector2i,
 			if interior.has_point(lamp_cell + off) and not _occupied.has(lamp_cell + off):
 				lamp_cell += off
 				break
-	# the flex first, so the fixture y-sorts over its own cable
-	var cursor := lamp_cell
-	while cursor.x != box_cell.x:
-		cursor.x += signi(box_cell.x - cursor.x)
-		_add_cable(cursor, "x")
-	while cursor.y != box_cell.y:
-		cursor.y += signi(box_cell.y - cursor.y)
-		_add_cable(cursor, "y")
+	# NO interior flex (user call — they didn't like it). The exterior box
+	# still says where a house gets its power; running the cable across
+	# the floor inside read as clutter rather than as wiring.
 	if dead_supply:
 		return                          # wired, but nothing comes down it
 	var info: Dictionary = _manifest["props"]["interior_lamp"]

@@ -3,6 +3,30 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.65] — 2026-08-01 — a timetable worth learning
+
+### Changed
+- **The freight runs three nights in seven** (user call), not every
+  night. The three are drawn without replacement each week, so they
+  land wherever they land — two together at the start and one at the
+  far end is a perfectly good week — and the timetable is re-rolled
+  every seventh night. She still arrives at 24:00 on the nights she
+  runs, and mara only calls her in on those nights.
+- **The cables inside houses are gone.** The exterior box still says
+  where a house gets its power; running the flex across the floor
+  inside read as clutter rather than as wiring (user).
+
+### Testing
+- **Closed doors now have permanent regression cover:** the smoke test
+  walks the player straight into a closed door from five lateral
+  offsets across the leaf and fails if they get through.
+
+**On the door report:** I could not reproduce it. The new test blocks
+at every offset, so a closed door does stop you head-on across its
+whole width. It may be an open door's leaf (passable by design), the
+wall beside a doorway, or a particular orientation — a circled
+screenshot would pin it down.
+
 ## [0.6.64] — 2026-08-01 — windows take the HUD with them
 
 ### Fixed

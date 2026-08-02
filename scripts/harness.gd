@@ -225,6 +225,27 @@ func _smoke() -> void:
 		player.respawn(info["spawn"])
 		await get_tree().process_frame
 
+	# a CLOSED door has to be a wall: walk straight at one and stay put
+	var block_doors := get_tree().get_nodes_in_group("doors")
+	if player != null and not block_doors.is_empty():
+		var blocker := block_doors[0] as Door
+		if blocker != null and not blocker.is_open():
+			# sweep along the leaf as well as dead centre: a collider that
+			# is too SHORT lets you round its ends, which reads as walking
+			# through the door
+			for lateral in [-14.0, -7.0, 0.0, 7.0, 14.0]:
+				player.position = blocker.global_position \
+					+ Vector2(lateral, -26.0)
+				await get_tree().process_frame
+				player.velocity = Vector2(0.0, 100.0)
+				for i in 22:
+					player.move_and_slide()
+					await get_tree().process_frame
+				if player.position.y > blocker.global_position.y + 2.0:
+					failures.append("walked through a closed door (offset %d)"
+						% int(lateral))
+					break
+
 	# doors: closed by default, F-toggle opens (collider off) and closes back
 	var doors := get_tree().get_nodes_in_group("doors")
 	if doors.is_empty():

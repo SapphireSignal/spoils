@@ -188,6 +188,30 @@ This file carries everything a fresh session needs that isn't in those two.
 
 ## THE QUEUE (as of v0.6.44 — work straight down it)
 
+**OPEN USER ASKS as of v0.6.65 — the live playtest queue.** Full
+detail (repro steps, implementation notes) is in the session task list;
+this is the durable copy:
+1. **Power box repair** — near the broken box: a subtle spark sound, a
+   prompt "press f to open the power box", a window showing the box +
+   the player's inventory with "drag electricians kit on the power
+   box", a wire-cutter animation of a couple of seconds, then it is
+   REPAIRED: no more interaction, no more sparks. Needs a stub
+   inventory (real one is M4), drag-and-drop, cutter frames, a repaired
+   sprite, and a repaired state in power_box.gd. The box is pinned to
+   the safehouse so it is always findable.
+2. **Cosy safehouse** — inside: bookshelf, cabinet, TV, plus POSTERS
+   and PICTURES on the walls (new art: wall-face decals, like the
+   graffiti walls). Outside: a little dirt road from the safehouse door
+   to the nearest POI (reuse `_walk_dirt_path`).
+3. **Flashlight shines through walls** — the cone is visible outside
+   while you stand inside. Needs LightOccluder2D on the wall segments,
+   or gate/mask the cone while the player is in interior cells (main.gd
+   already tracks that for the roof reveal). CHECK the interior lights
+   for the same leak.
+4. **Doors walk-throughable** — COULD NOT REPRODUCE (v0.6.65 added a
+   smoke test that walks into a closed door at five offsets; it blocks
+   every time). ASK THEM TO CIRCLE IT on a zoomed shot.
+
 **NEW BATCH — user asks sent 2026-08-01 after v0.6.53** (they are
 playtesting live). A–E and G SHIPPED as v0.6.54–55; **F and H are the
 next session's work**:
