@@ -31,8 +31,7 @@ patches, which read badly. All 90 releases were re-spread **evenly — 15
 per minor line, v0.1.0 through v0.6.14** — across `CHANGELOG.md`, the
 in-game list, every doc, every code comment and every git tag. Commits
 were never rewritten; only tag names moved. The old→new map and each
-tag's commit sha are in the session scratchpad (`vermap.json`,
-`tag_shas.json`).
+tag's commit sha are committed in `docs/version_renumber_2026-08-02/`.
 
 **Any version number quoted in an old chat log is wrong.** They were all
 remapped. Trust this repo, not a transcript.
@@ -174,7 +173,7 @@ badly in the changelog. All 90 releases were re-spread EVENLY — fifteen per
 minor line, v0.1.0 through v0.6.14 — across CHANGELOG.md, CHANGELOG_ENTRIES,
 every doc, every code comment, and every git tag. **Commits were never
 rewritten; only tag names moved.** The old-to-new map and each tag's commit
-sha are in the session scratchpad (`vermap.json`, `tag_shas.json`) if this
+sha are in `docs/version_renumber_2026-08-02/` if this
 ever has to be undone. Do NOT try to reconcile old version numbers quoted in
 an old chat log against this file — they were all remapped.
 
