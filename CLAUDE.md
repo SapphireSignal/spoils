@@ -372,7 +372,9 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   randomness through the seeded _rng — `Array.shuffle()` is banned, use
   `_shuffle()` (audited v0.3.5: zero unseeded calls in the layout path). Road grid with
   center dashes both axes, dirt roads, forests + interior groves + lone trees
-  on green pockets, ~34 buildings (thin-wall shells, modular roofs, ONE floor
+  on green pockets, 15 buildings (this line said ~34; `--probe-world` reports
+  DOORS total=15 and every building gets exactly one door, so doors ==
+  buildings) (thin-wall shells, modular roofs, ONE floor
   look per building, interactive Door on a visible side, entrance pockets kept
   clear inside AND out), lane-correct road vehicles (some broken + litter),
   sparse mostly-dead street lamps, sticks, clustered scatter, puddle spots.
@@ -382,7 +384,10 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   placed 0-2 per intersection, mirrored so heads hang over the asphalt),
   district weathering zones (concrete_worn/damp picked by two offset
   8-cell hash grids off _zone_salt — probabilistic mix, no patch grid).
-  BARRICADE RING at inset 72 = the advertised map edge (art axis x/y, flats
+  BARRICADE RING at inset 66 (`BARRIER_INSET`, world_builder.gd:30 — this
+  line said 72, a value the ring never held; the code's history is 78→68→66,
+  and CLAUDE.md's own safehouse [174, 73] only computes from 66)
+  = the advertised map edge (art axis x/y, flats
   walkable-over, road breaches get wreckage) + sparse bodies past it; tree
   density tiers off through the buffer band. Border collision at the true
   diamond edge is only a backstop. build() is a COROUTINE with TIME-BUDGETED
@@ -469,8 +474,11 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
 - `scripts/shader_warm.gd` — boot-time shader warm-up between the studio
   card and the menu, with a "compiling shaders" bar that only appears if
   the work exceeds 120 ms. Fingerprints the engine build plus every
-  `.gdshader` into `user://`, so it runs only after an update. Currently
-  dormant: one shader, 40 ms.
+  `.gdshader` into `user://`, so it runs only after an update. There are
+  THREE shaders (`flash`, `grade`, `sunshafts` — all three are documented
+  individually just above); this line claimed one, so treat its old "40 ms"
+  as unmeasured. That figure decides whether the 120 ms bar ever shows, so
+  re-measure before relying on it.
 - `Player.shake(strength, seconds)` — camera kick in WHOLE SCREEN PIXELS,
   applied inside `_camera_target` so it rides the same grid the camera
   already snaps to. Anything can find the player via group `player_shake`.
@@ -543,8 +551,24 @@ before writing code** — that is the whole point of it.
 After ANY art change: `python tools\gen_art.py`, then delete orphan imports:
 `python -c "import pathlib; [p.unlink() for p in pathlib.Path('art/gen').glob('*.png.import') if not p.with_suffix('').exists()]"`
 then `godot_console --headless --path . --import`.
-- Smoke: `godot_console --headless --path . -- --smoke` → must print SMOKE PASS
-  (covers movement, crouch, border, roofs, doors, edge sniper, pause).
+- Smoke — the one the process rules make MANDATORY before every push, so it
+  is written out in full here rather than in shorthand:
+
+  ```
+  D:\Godot\Godot_v4.7.1-stable_win64_console.exe --headless --path . -- --smoke
+  ```
+
+  → must print `SMOKE PASS` (covers movement, crouch, border, roofs, doors,
+  edge sniper, pause; `harness.gd`'s `_smoke()` is the source of truth for
+  coverage — the three extractions are NOT in it, check those as shots).
+  **Its output looks alarming and is fine.** A headless run prints ~50
+  blocks of `ERROR: Not supported by this display server` from
+  `keyboard_get_keycode_from_physical` (the keybind panel asking for key
+  names with no display server), and on exit `4 ObjectDB instances were
+  leaked` / `2 resources still in use`. Both are headless-teardown noise and
+  neither contradicts the "Leaks: none" baseline above, which is measured by
+  `--leakcheck` inside a running game, not at process exit. **What matters is
+  `SMOKE PASS` at the END and zero `Parse Error` at the HEAD.**
 - Shots: `godot_console --path . -- --shot=<name>` (+ optional flags:
   `--scene=menu`, `--menu=pause|settings|changelog`, `--backdrop=N`,
   `--at=X,Y`, `--face=N|S|E...`, `--crouch`, `--weather=rain`, `--tod=0..1`,

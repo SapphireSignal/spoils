@@ -82,10 +82,14 @@ is best"*.
 - **The last session's open permissions question is ANSWERED: `git tag -f`
   works now.** Tested on a throwaway local tag, then deleted. Project
   allowlist covers force ops; no need for `bypassPermissions`.
-- **`--checkdocs` has a real hole, now written down honestly in CLAUDE.md:**
-  it scans only 3 of 7 docs for bad paths, only sees backticked paths
-  starting `scripts/ tools/ docs/ art/ assets/ scenes/`, and tests nothing
-  about whether a documented COMMAND resolves.
+- **`--checkdocs` HAD a real hole** — it scanned only 3 of 7 docs for bad
+  paths and tested nothing about whether a documented COMMAND resolves, which
+  is how the top-of-file migration block stayed unrunnable behind a green
+  gate. **Closed later in this same session; see the hardening below.** What
+  is still true, and is now stated honestly in CLAUDE.md rather than
+  overclaimed: it is blind to BACKSLASH paths (`python tools\gen_art.py` is
+  not covered), it resolves absolute `.exe` paths only, and it cannot verify
+  prose at all.
 
 **Then `--checkdocs` was hardened, and every part fire-tested.** It is now
 five parts: (0) the docs it reads exist and are non-empty — before this,
@@ -116,12 +120,57 @@ stdout is injected into Claude's context, so it prints nothing — verified
 stdout length 0, UTF-8 intact, zero CR bytes. A settings change needs a
 RESTART to take effect.
 
-**Picked up at:** The
-user's autosave: a prompt-submit hook appending their messages verbatim to a
-docs/sessions/ folder (unbackticked deliberately — it does not exist yet, and
-`--checkdocs` fired on the backticked form while this entry was being written,
-which is the check doing its job). Kept **inside** `--checksec`'s scan — their
-call and mine, a noisy gate beats a blind one. Then the smoker (TASKS.md B4).
+**Then the migration was COLD-TESTED** — three fresh sessions with no context
+each followed CLAUDE.md's onboarding literally (one maximally literal, one
+verifying prose against code, one trying to start work). **All three ran the
+top-of-file commands verbatim first try and correctly named the version,
+the milestone and the next task. All three rated readiness 8/10.** So
+migration works. But they confirmed **10 more false claims**, and the lesson
+is sharper than the count:
+
+- **The morning's fixes stopped at the `.md` files.** `world_builder.gd:3`
+  still said "320x320" and `player.gd:6` + `world_builder.gd:11` still
+  described a camera "clamped to an inset diamond" — which `player.gd:379`
+  contradicts in its own file, and which the user had explicitly removed.
+  That header even supplied a plausible *reason* for the clamp, so a session
+  trusting it would have reintroduced exactly what the user asked to be taken
+  out. **Fix the code comments in the same pass as the docs; nothing scans
+  them.**
+- **`BARRIER_INSET` is 66, not the 72 CLAUDE.md claimed** — a value the ring
+  never held. Load-bearing: placement maths off by 6 cells. CLAUDE.md's own
+  safehouse [174, 73] only computes from 66, so the file contradicted itself.
+- **15 buildings, not "~34"** (`--probe-world`: DOORS total=15, one door per
+  building). **Three shaders, not "one"**. `DESIGN.md` claimed RoofReveal
+  fades walls to 30% — walls are NEVER faded, the user rejected that.
+- All ten sat behind `SEC PASS` + `DOCS PASS`. Prose again.
+
+Also fixed: `--smoke` is now written out in full (it is mandatory before every
+push and was the one shorthand command a new session could not paste), and its
+alarming-but-normal headless output is documented so the ~50 display-server
+ERRORs and the exit-time leak warnings stop reading as failures next to the
+"Leaks: none" baseline.
+
+**Picked up at:** **The smoker on the bench (TASKS.md B4)** — nothing is
+blocked and nothing is half-done. Rebuild him from the PLAYER's character
+sheet so his shading matches everything else, give him a black hat to tell
+him apart, bigger smoke, and seat him on the bench BELOW facing away from the
+backrest. Then the LZ green smoke (B4b).
+
+Everything from this session shipped and is pushed: the 14 doc fixes, the
+five-part `--checkdocs`, and the autosave. All gates green, tree clean, still
+v0.6.25. The session logs live in `docs/sessions/` and stay **inside**
+`--checksec`'s secret scan — the user's explicit call and mine, because a
+noisy gate beats a blind one. Verified on the most adversarial input it will
+see: a log containing this whole conversation about keys and secret patterns
+still passes.
+
+**Two things in this entry were WRONG while it was being written, and both
+are corrected above rather than quietly edited away.** It claimed
+`--checkdocs` scans only 3 of 7 docs — true when written, closed hours later
+in the same session. And its "picked up at" described the autosave as
+outstanding after it had already shipped. A handoff entry written in stages
+rots exactly like any other doc; read the whole entry before trusting its
+last paragraph.
 
 ---
 

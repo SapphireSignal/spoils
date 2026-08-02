@@ -188,8 +188,11 @@ than being scattered through UI/input code — so a server can own them later. N
     `art/gen/manifest.json`; the game hardcodes none of it. Props vary per
     instance (parameterized generators, incl. fallen/toppled poses).
   - Buildings: THIN edge-wall segments (not full-tile blocks) + corner/door
-    posts, varied windows, tar roofs. RoofReveal fades the roof to zero AND
-    the camera-facing walls to 30% while the player is inside.
+    posts, varied windows, tar roofs. RoofReveal fades the roof to zero while
+    the player is inside — **walls are NEVER faded** (`roof_reveal.gd`:5, and
+    CLAUDE.md agrees). This line used to claim walls fade to 30%, which the
+    user explicitly REJECTED; a session trusting it would have implemented a
+    change that had already been vetoed.
   - Font: lowercase-only proportional bitmap font; uppercase codepoints map to
     lowercase glyphs (user wants no capitals anywhere). If the .fnt ever fails
     to import, delete its .import + .godot/imported cache and reimport —

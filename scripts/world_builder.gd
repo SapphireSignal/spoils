@@ -1,16 +1,20 @@
 class_name WorldBuilder
 extends RefCounted
-## Builds the raid map: a 320x320 ruined district. Deterministic per seed.
+## Builds the raid map: a 256x256 ruined district (MAP_W/MAP_H below are the
+## authority; this line said 320x320 for a long time). Deterministic per seed.
 ## Consumes art/gen/manifest.json — sprite sizes, origins, colliders and
 ## variant families all come from the art pipeline.
 ##
 ## Layout is PLANNED first (roads, forests, dirt paths, building plots), then
 ## painted and populated. The map is a true iso diamond and is walkable to its
 ## real edge: the border collision hugs the diamond (tips chamfered just
-## enough that the camera can always keep the player on screen), and the
-## camera itself is clamped to an inset diamond so the void outside the tiles
-## can never be seen. The last stretch before the edge is sniper country —
-## the EdgeGuard handles that.
+## enough that the camera can always keep the player on screen). The camera is
+## NEVER clamped — it is welded to the character (user call). This header
+## claimed an inset-diamond clamp for releases after that clamp was removed,
+## and supplied a plausible reason for it, which is worse: a session trusting
+## it would reintroduce exactly what the user asked to be taken out. What
+## actually keeps you off the void is the deep sniper buffer past the
+## barricades — the EdgeGuard handles that.
 ##
 ## build() is a COROUTINE: it yields to the render loop while it works, so
 ## the deploy screen keeps animating and no frame ever hitches, no matter how
@@ -26,7 +30,10 @@ const EDGE_FOREST := 68      # content margin: gameplay stays inside the
                              # and scatter all stopped 19 cells short of
                              # the barricades and the district's outer
                              # rim came out visibly bare.
-                             # treeline fringe (inset 78..85, inside the ring)
+                             # (a trailing note here used to describe the
+                             # treeline fringe as "inset 78..85" — stale from
+                             # when the ring sat at 78. The fringe derives
+                             # from EDGE_FOREST above, not from a fixed band.)
 const BARRIER_INSET := 66    # the barricade ring — the map's ADVERTISED edge.
                              # 78 gave ~100 playable cells and squeezed the
                              # zone blocks so hard the scrapyard hall had to

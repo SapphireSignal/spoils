@@ -3,9 +3,10 @@ extends CharacterBody2D
 ## Raider avatar: 8-direction WASD movement with iso perspective squash.
 ## Built entirely in code (no .tscn) — the whole game is code-authored.
 ##
-## Camera: manual follow, clamped to an inset DIAMOND matching the iso map
-## (a rectangle can never hug a diamond — that is where the old edge-void
-## came from), then snapped to SCREEN pixels (multiples of 1/scale world px).
+## Camera: manual follow, NEVER clamped — welded to the character (user call;
+## see _camera_target below, which says so and is the code that runs). This
+## header described an inset-diamond clamp for releases after it was removed.
+## Then snapped to SCREEN pixels (multiples of 1/scale world px).
 ## At 2x window scale that makes 120 px/s walking exactly one screen pixel
 ## per frame at 240 Hz — perfectly even scroll, zero blur, no more
 ## "looks like lower fps" while moving.
