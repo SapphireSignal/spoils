@@ -1,28 +1,30 @@
 # SPOILS — session handoff (read this first)
 
-> **MIGRATING FROM ANOTHER CHAT? Read these two, in this order:**
-> **`HANDOFF.md`** — what the last session actually did and said, and the
-> chain of every session before it. **`TASKS.md`** — every open item and the
-> milestone roadmap, each with the diagnosis already done, so nothing is
-> re-derived. Then run **`--checksec` and `--checkdocs`** (a second each) to
-> prove the repo is intact and these docs still match it, before you trust a
-> word of them:
->
-> ```
-> D:\Godot\Godot_v4.7.1-stable_win64_console.exe --headless --path . -- --checksec
-> D:\Godot\Godot_v4.7.1-stable_win64_console.exe --headless --path . -- --checkdocs
-> ```
->
-> **`godot_console` further down this file means that exe.** It is NOT on
-> PATH and there is no alias — type the path. PowerShell wants the
-> backslash form above; the Bash tool wants
-> `D:/Godot/Godot_v4.7.1-stable_win64_console.exe`. Both are pre-approved in
-> `.claude/settings.json`, so the wrong slash for the shell costs a
-> permission prompt.
->
-> Nothing about a chat survives except what is committed. `HANDOFF.md` is
-> the memory, `TASKS.md` is the work, `CHANGELOG.md` is what shipped, this
-> file is the rules and the systems map.
+## MIGRATING FROM ANOTHER CHAT? Read these two, in this order
+
+**`HANDOFF.md`** — what the last session actually did and said, and the
+chain of every session before it. **`TASKS.md`** — every open item and the
+milestone roadmap, each with the diagnosis already done, so nothing is
+re-derived.
+
+Then run **`--checksec` and `--checkdocs`** (a second each) to prove the repo
+is intact and these docs still match it, before you trust a word of them:
+
+```
+D:\Godot\Godot_v4.7.1-stable_win64_console.exe --headless --path . -- --checksec
+D:\Godot\Godot_v4.7.1-stable_win64_console.exe --headless --path . -- --checkdocs
+```
+
+**`godot_console` further down this file means that exe.** It is NOT on
+PATH and there is no alias — type the path. PowerShell wants the backslash
+form above; the Bash tool wants
+`D:/Godot/Godot_v4.7.1-stable_win64_console.exe`. Both are pre-approved in
+`.claude/settings.json`, so the wrong slash for the shell costs a
+permission prompt.
+
+Nothing about a chat survives except what is committed. `HANDOFF.md` is
+the memory, `TASKS.md` is the work, `CHANGELOG.md` is what shipped, this
+file is the rules and the systems map.
 
 2D isometric extraction shooter, pixel art, Godot 4.7, Windows. **Read
 `DESIGN.md` for the full game design & workflow contract** — it is the source
