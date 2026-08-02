@@ -611,6 +611,12 @@ func _draw_district() -> void:
 	var ring := Rect2(_cell_to_screen(Vector2(inset, inset)),
 		Vector2(w - inset * 2.0, h - inset * 2.0) * z)
 	_draw_dashed_rect(_canvas, ring, RING, 2.0, 7.0, 5.0)
+	# the place names belong to THIS layer: they only move when you pan or
+	# zoom, exactly like everything else here. They used to sit on the
+	# markers layer, which redraws every frame, so ~135 text-shaping calls
+	# ran at render rate the whole time the map was up — on top of the raid,
+	# because the map deliberately does not pause the tree.
+	_draw_poi_labels(_canvas)
 
 
 func _draw_dashed_rect(on: Control, rect: Rect2, col: Color, width: float,
@@ -629,11 +635,11 @@ func _draw_dashed_rect(on: Control, rect: Rect2, col: Color, width: float,
 			t = t2 + gap
 
 
-func _draw_markers() -> void:
-	if _vec.is_empty() and _map_tex == null:
-		return
+func _draw_poi_labels(on: Control) -> void:
 	# POI names ON the map — no boxes any more (user: "remove all of the
-	# squares"), just type with a dark halo so it reads over anything
+	# squares"), just type with a dark halo so it reads over anything.
+	# Collision-yield: a name that would land on one already placed is
+	# dropped rather than stacked.
 	var drawn: Array[Rect2] = []
 	for poi in _pois:
 		if not bool(poi["label"]):
@@ -653,8 +659,12 @@ func _draw_markers() -> void:
 		if clash:
 			continue
 		drawn.append(bounds)
-		_halo_text(_markers, pos, text,
-			ME if text == "safehouse" else LABEL)
+		_halo_text(on, pos, text, ME if text == "safehouse" else LABEL)
+
+
+func _draw_markers() -> void:
+	if _vec.is_empty() and _map_tex == null:
+		return
 	# live car dots
 	for node in get_tree().get_nodes_in_group("cars"):
 		var car_cell := Vector2(_floor_layer.local_to_map(

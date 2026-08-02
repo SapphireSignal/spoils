@@ -72,6 +72,12 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.69", [
+		"the upstairs floor is actually there now. the furniture was standing on nothing because the buildings own walls were being drawn on top of the floorboards, leaving only a strip of them showing",
+		"dying and then abandoning the raid during the fade gave you two debrief screens stacked on each other. now whichever one gets there first is the one you get",
+		"sniper rounds were appearing inside your view instead of flying in from off the screen. they were spawning at a distance picked for a much smaller window than the one you actually play in",
+		"the maps place names stopped redrawing themselves every single frame while the map is open",
+	]],
 	["v0.6.68", [
 		"doors are solid in every state now - shut, open, and while theyre still swinging. the open leaf stands where the art actually draws it, a quarter turn into the room",
 		"south facing doors were the ghost ones. their open collider was being placed a whole cell away on the wrong side of the doorway, so you walked straight through the panel",

@@ -51,7 +51,30 @@ now covers all three states for real (see below).
 
 ---
 
-## 2. Second floors: furniture floats with no slab — LEADS ELIMINATED
+## 2. Second floors: furniture floats — FIXED v0.6.69
+
+**Root cause: DRAW ORDER.** A second floor is a horizontal plane, and
+y-sorting a plane against vertical walls cannot work. The container is
+anchored far north so the player always sorts above it — which also
+put it behind the building's OWN wall segments, sitting at much larger
+y. The walls painted over most of the slab, leaving a band of boards
+and furniture apparently standing on nothing.
+
+**Fix:** `_set_upper_state` gives the upper floor its own z band while
+you are on it — slab at 1 (over the ground floor and its walls),
+player + upper props + the staircase at 2 (over the slab). All back to
+0 on the way down, so nothing outside that building is affected. The
+staircase needs to be in the band explicitly or the new floor
+swallows it.
+
+**Tooling:** `--upstairs=<n>` puts the player on second story *n*,
+prints `upstairs/lift/cells` and the slab's `visible/children/pos`,
+and is shot-able. Use it if this ever regresses.
+
+*Everything below is the record of how the old leads were killed —
+kept so nobody resurrects them.*
+
+## 2b. The old leads (both dead, for the record)
 
 **Repro:** a two-story house **at the courtyard** — climbing the stairs
 shows the upper *furniture* but no upper *floor*.

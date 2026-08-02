@@ -15,6 +15,7 @@ var _deploy_label: Label
 var _deploy_time := 0.0
 var _last_roof_cell := Vector2i(-9999, -9999)
 var _respawning := false
+var _debrief_open := false     # one debrief per raid, whichever path gets there
 var _prompt: Label
 var _prompt_target: Node2D
 var _prompt_open := false
@@ -317,10 +318,33 @@ func _on_stairs_used(index: int) -> void:
 
 
 func _set_upper_state(index: int, up: bool) -> void:
+	## The upper floor gets its own z BAND while you're on it.
+	##
+	## Y-sorting a horizontal slab against vertical walls cannot work: the
+	## container is anchored far north so the player always sorts over it,
+	## but that also puts it behind the building's OWN walls, which sit at
+	## much larger y. The result was a floor drawn in a band with the room
+	## grey around it, and furniture apparently floating — measured with
+	## --upstairs=0 and proved with --slabtop.
+	##
+	## So: slab at 1 (over the ground floor and its walls), everything you
+	## are meant to see standing ON it at 2. Both drop back to 0 on the way
+	## down, so nothing outside this building is affected while you're not
+	## up there.
 	var upper: Dictionary = _uppers[index]
-	(upper["container"] as Node2D).visible = up
+	var container := upper["container"] as Node2D
+	container.visible = up
+	container.z_index = 1 if up else 0
+	if _player != null:
+		_player.z_index = 2 if up else 0
+	# the flight is shared by both floors and has to keep rising THROUGH
+	# the slab — at z 0 the new floor swallowed it whole
+	var stairs := upper.get("stairs_node") as Node2D
+	if stairs != null:
+		stairs.z_index = 2 if up else 0
 	for node in (upper["upper_props"] as Array):
 		(node as Node2D).visible = up
+		(node as Node2D).z_index = 2 if up else 0
 		if node is StaticBody2D:
 			(node as StaticBody2D).collision_layer = 1 if up else 0
 	for node in (upper["ground_props"] as Array):
@@ -507,6 +531,13 @@ func abandon_raid() -> void:
 		get_tree().paused = false
 		get_tree().change_scene_to_file("res://scenes/menu.tscn")
 		return
+	# ONE debrief per raid. Dying holds for 1.2s on a SceneTreeTimer before
+	# it builds its own, and that timer keeps counting under the paused tree
+	# (process_always defaults true) — so pressing esc and abandoning during
+	# the hold used to build the screen twice and stack two panels.
+	if _debrief_open:
+		return
+	_debrief_open = true
 	Music.stop_raid(1.0)
 	Sfx.set_engine(0.0)
 	_death_screen.show_debrief(_player, true)
@@ -569,6 +600,9 @@ func _on_player_died() -> void:
 	# the rounds that actually landed.
 	if _death_screen != null and not Harness.suppress_debrief:
 		layer.queue_free()
+		if _debrief_open:
+			return           # abandoned during the hold; that screen stands
+		_debrief_open = true
 		_death_screen.show_debrief(_player, false)
 		return
 	# no debrief available (a raid that never finished building): fall

@@ -659,6 +659,34 @@ func _shot(shot_name: String) -> void:
 				Raid.record_kill("stray", "head")
 				Raid.record_kill("magpie", "leg", true)
 				screen.call("show_debrief", arg.trim_prefix("--extract="))
+		if arg.begins_with("--upstairs="):
+			# put the player on a second story and look at it. The reported
+			# bug is "furniture floats, no floor" and the slab is MEASURABLY
+			# built (see --probe-world UPPERS), so the only way to settle it
+			# is to photograph the thing.
+			var idx := int(arg.trim_prefix("--upstairs="))
+			var main_node := get_tree().current_scene
+			var uppers: Array = (main_node.get("world_info") as Dictionary).get(
+				"uppers", []) as Array
+			if idx >= 0 and idx < uppers.size():
+				var reg := uppers[idx] as Dictionary
+				var stairs_cell: Vector2i = reg["stairs_cell"]
+				var pl := _find_player()
+				var fl := main_node.get("_floor_layer") as TileMapLayer
+				if pl != null and fl != null:
+					pl.global_position = fl.map_to_local(stairs_cell)
+					await get_tree().process_frame
+					main_node.call("_on_stairs_used", idx)
+					for i in 6:
+						await get_tree().process_frame
+					var cont := reg["container"] as Node2D
+					print("UPSTAIRS idx=%d upstairs=%s lift=%.1f cells=%s"
+						% [idx, str(pl.upstairs), pl.floor_lift,
+							str(reg["cells"])])
+					print("UPSTAIRS slab visible=%s children=%d pos=%s props=%d"
+						% [str(cont.visible), cont.get_child_count(),
+							str(cont.global_position),
+							(reg["upper_props"] as Array).size()])
 		if arg.begins_with("--map="):
 			var wanted := arg.trim_prefix("--map=")
 			var map_view := get_tree().current_scene.get_node_or_null("MapView")
@@ -687,6 +715,15 @@ func _perf() -> void:
 		var player := _find_player()
 		if player != null:
 			player.set_flashlight(true)
+	# --perf --map=transit measures the map screen HELD OPEN over the live
+	# raid. It does not pause the tree, so whatever it redraws lands on top
+	# of everything else — the one place a UI panel can cost real frames.
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--map="):
+			var map_view := get_tree().current_scene.get_node_or_null("MapView")
+			if map_view != null:
+				map_view.call("set_open", true)
+				map_view.call("_set_mode", arg.trim_prefix("--map="))
 	for i in 40:
 		await get_tree().process_frame
 	var frames := 0

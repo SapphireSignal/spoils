@@ -234,12 +234,17 @@ canvas layer and the sprite vanishes behind the floor. Sweep the
 catalogue for others that read as ground (spilled trash, paint, spray
 cans, painted markers); anything with real height stays y-sorted.
 
-**BUG WITH A REPRO — DO THIS FIRST (user, 2026-08-01):** a two-story
-house AT THE COURTYARD shows its upper FURNITURE but no upper FLOOR
-when you climb — the furniture floats. Must hold for every two-story
-building, and they also want a sweep of ALL interiors (houses,
-warehouses, school, safehouse) for furniture that floats / sits wrong
-/ overlaps. **BOTH OLD LEADS ARE DEAD — measured v0.6.68, do not re-derive.**
+**SECOND FLOORS — FIXED v0.6.69.** Root cause was DRAW ORDER, not
+construction: a slab is a horizontal plane, and y-sorting a plane
+against vertical walls cannot work. The container is anchored far
+north so the player sorts above it, which also put it BEHIND the
+building's own walls (much larger y), so the walls painted over most
+of the floor. `_set_upper_state` now gives the upper floor its own z
+band while you're on it: slab 1, player + upper props + STAIRCASE 2
+(the flight must be in the band or the slab swallows it), all back to
+0 on the way down. Repro/verify with `--upstairs=<n>`. **STILL OPEN
+from this ask:** the sweep of ALL interiors (houses, warehouses,
+school, safehouse) for furniture that sits wrong or overlaps. **BOTH OLD LEADS ARE DEAD — measured v0.6.68, do not re-derive.**
 `--probe-world` prints `UPPERS total=6 floorless=0 propless=0
 stairs=6`: six flights, six registries, every upper container holding
 its floor sprites. The "`_plan_plots` upgrades stories after the shell

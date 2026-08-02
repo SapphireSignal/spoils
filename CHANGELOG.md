@@ -3,6 +3,67 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.69] — 2026-08-02 — the upstairs floor, and three audit finds
+
+### Fixed
+- **Second floors: the furniture no longer floats.** Climbing the
+  stairs showed the upper furniture standing on grey nothing, with the
+  floorboards visible only as a band through the middle of the room.
+  Both leads recorded in the handoff were wrong and are now retired:
+  the slab is built correctly and every one of its tiles exists
+  (`--probe-world` reports `UPPERS total=6 floorless=0`). The problem
+  was **draw order**. A second floor is a horizontal plane, and
+  y-sorting a plane against vertical walls cannot work — the container
+  is anchored far north so the player always sorts above it, but that
+  also put it *behind* the building's own walls, which sit at much
+  larger y. So the walls painted over most of the floor. The upper
+  floor now takes its own z band while you are on it: the slab above
+  the ground floor and its walls, and the player, the upper furniture
+  and the staircase above the slab. Everything drops back on the way
+  down, so nothing outside that building is touched.
+- Proved by experiment rather than argument: `--upstairs=<n>` puts the
+  player on a second story and reports the state, and forcing the slab
+  to the front made the floor fill the room. `--upstairs` stays as the
+  standing check for this.
+
+Three more came from a multi-agent audit of the whole codebase: 35
+candidate findings, each handed to skeptics told to refute it. Five
+survived; two of those were already fixed in v0.6.68.
+
+### Fixed
+- **Dying and then abandoning gave you two debrief screens.** Death
+  holds for 1.2 s before it builds its debrief. Pressing escape and
+  hitting "abandon raid" during that hold ran both paths, stacking two
+  full panels on the same layer — the death timer keeps counting even
+  though the tree is paused, because Godot's scene-tree timers default
+  to running while paused. There is now one flag, and whichever path
+  arrives first owns the screen.
+- **Sniper rounds were appearing inside your view instead of flying in
+  from off-screen.** They spawned a fixed 430 px away, commented as
+  "beyond every supported view half-diagonal". That was true of the
+  640×360 design base, but the default setup — borderless at the
+  desktop resolution — renders 840×540, whose half-diagonal is ~500.
+  At the widest zoom the rounds were popping into existence on screen.
+  The distance is now measured from what the camera can actually see,
+  at whatever zoom you are on, plus clearance for the camera offset
+  and the predicted-aim lead. It only ever increases at the widest
+  zoom; zoomed in, the visible rect is smaller than the old floor and
+  nothing changes.
+
+### Changed
+- The map's place names moved to the layer that only redraws when you
+  pan or zoom. They were on the every-frame markers layer, so roughly
+  135 text-shaping calls ran at render rate the entire time the map
+  was open — on top of the live raid, since the map deliberately does
+  not pause the tree. **Honest note: no measured frame-rate win.**
+  Across three runs each the difference sits inside the run-to-run
+  spread, and the machine holds 240 fps either way. It is strictly
+  less work per frame and matches the file's own stated intent, so it
+  stays, but it is not a fix for a visible stutter.
+- `--perf` accepts `--map=transit`, so the map screen's cost over a
+  live raid can be measured rather than argued about. It runs about
+  1.0 ms/frame while open, before and after this change.
+
 ## [0.6.68] — 2026-08-02 — the door is solid, for real this time
 
 ### Fixed

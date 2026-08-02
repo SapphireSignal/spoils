@@ -9,7 +9,10 @@ const GRACE_SECONDS := 3.0
 const SHOT_INTERVAL_MIN := 1.3
 const SHOT_INTERVAL_MAX := 2.1
 const SHOT_SPEED := 1150.0  # dodging one on reaction should barely work
-const SHOT_SPAWN_DIST := 430.0   # beyond every supported view half-diagonal
+const SHOT_SPAWN_DIST := 430.0   # floor; the real distance is measured below
+# clearance on top of the view's half-diagonal: covers the camera's own
+# offset and the predicted-aim lead, which both push the target off-centre
+const SHOT_SPAWN_MARGIN := 96.0
 const SHOT_LIFE := 1.4
 const HIT_RADIUS := 8.0
 # past these depths beyond the barricades the sniper stops playing fair —
@@ -149,6 +152,24 @@ func _fire_volley(depth: float) -> void:
 		_pending.append(_rng.randf_range(0.14, 0.42) * float(extra))
 
 
+func _spawn_distance() -> float:
+	## Rounds have to ARRIVE from off-screen — seeing one blink into
+	## existence gives the whole thing away.
+	##
+	## 430 was sized for the 640x360 design base. The default setup
+	## (borderless at the desktop resolution) renders 840x540 on the user's
+	## display, and the widest zoom stop shows all of it, so the view's
+	## half-diagonal is ~500 — rounds were spawning INSIDE the visible rect.
+	## Measure it instead: whatever the camera can see, at whatever zoom the
+	## player is on, plus clearance.
+	var view := Vector2(get_viewport().get_visible_rect().size)
+	if _player != null and _player.camera != null:
+		var zoom := _player.camera.zoom
+		if zoom.x > 0.0 and zoom.y > 0.0:
+			view /= zoom
+	return maxf(SHOT_SPAWN_DIST, view.length() * 0.5 + SHOT_SPAWN_MARGIN)
+
+
 func _spawn_round() -> void:
 	if _player == null or _player.dead or stood_down:
 		return
@@ -163,10 +184,11 @@ func _spawn_round() -> void:
 	# PREDICTED aim (user call): lead the runner — the round flies at where
 	# you are HEADED, not where you are. Slight per-shooter over/under-lead
 	# keeps direction changes worth something.
-	var lead_time := SHOT_SPAWN_DIST / SHOT_SPEED
+	var spawn_dist := _spawn_distance()
+	var lead_time := spawn_dist / SHOT_SPEED
 	var target := _player.global_position \
 		+ _player.velocity * lead_time * _rng.randf_range(0.75, 1.05)
-	var start := target + out_dir * SHOT_SPAWN_DIST \
+	var start := target + out_dir * spawn_dist \
 		+ side * _rng.randf_range(-140.0, 140.0)
 	var err := 2.0 if depth > ESCALATE_DEPTH else 7.0
 	var aim := target + side * _rng.randf_range(-err, err)
