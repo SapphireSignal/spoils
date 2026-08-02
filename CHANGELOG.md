@@ -3,6 +3,34 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.49] — 2026-08-01 — the centre line, actually centred
+
+Third attempt, first one measured instead of reasoned — the user's
+red-line photo plus pixel measurement of the rendered road.
+
+### Fixed
+- **The yellow centre line sat a full lane off, on half the roads.**
+  Measured before: the dash sat **0.95 cells** from the centre of the
+  four-cell road band. Measured after: **0.02 cells**, with the dash
+  weight unchanged (6 screen px, same as before).
+  Two compounding causes, neither visible from reading the code:
+  - An iso diamond tile only **owns two of its four edges** (the
+    top-left and top-right ones); the other two belong to its
+    neighbours or the atlas wouldn't tessellate. Both halves of the
+    dash were painted along edges their tile does *not* own — so the
+    plain "b" tile rendered **literally zero yellow pixels** (verified
+    against the atlas), leaving one lone half-dash a lane out, and the
+    `_h` non-b tile rendered a 6-pixel sliver.
+  - The `p` parameter runs **with +x** on the plain tiles but
+    **against +y** on the `_h` ones, so one shared edge condition
+    cannot be correct for both orientations. The horizontal roads
+    happened to land on the true centre and the vertical ones did not
+    — which is why it looked fine half the time and wrong half the
+    time.
+  Each half now measures the region its tile actually owns and paints
+  against the shared boundary, so the dash straddles the true centre
+  on both road axes.
+
 ## [0.6.48] — 2026-08-01 — shelters off the crossings
 
 ### Fixed

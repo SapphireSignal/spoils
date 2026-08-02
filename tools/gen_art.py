@@ -413,24 +413,43 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
                 if (nx, ny) in region and (nx, ny) not in hole:
                     c.set(nx, ny, CONC_BASE if (nx + ny) % 3 == 0 else CONC_D2)
     elif kind.startswith("asphalt_line"):
-        # center dashes. The road is FOUR cells wide, so its true center is
-        # the BOUNDARY between the middle two cells — each of them paints
-        # half the dash along its shared edge ("the yellow line seems a bit
-        # off" — it used to run down the middle of one cell, half a lane
-        # out). "_h" = roads along +x (screen SE); plain = along +y (SW).
-        # "b" = the far-side half. Dash period 16 divides 64; the two halves
-        # share phase because the per-cell param shift is a multiple of 8.
+        # CENTRE dashes. The road is FOUR cells wide, so its true centre is
+        # the boundary between the middle two cells (+1 and +2); each paints
+        # half the dash along that shared edge. "_h" = roads along +x
+        # (screen SE); plain = along +y (SW). "b" = the +2 cell's half.
+        #
+        # Two things broke this twice before, both invisible from the code:
+        # (1) a diamond tile only OWNS two of its four edges (the top-left
+        # and top-right ones) — the other two belong to its neighbours, so
+        # a half painted along them renders as almost nothing. The plain
+        # "b" tile drew LITERALLY ZERO yellow pixels, which is why one lone
+        # half-dash was left sitting a full lane off centre. (2) the p
+        # parameter runs WITH +x on the plain tiles but AGAINST +y on the
+        # "_h" ones, so a single shared condition cannot be right for both
+        # orientations — the horizontal roads happened to land correctly
+        # and the vertical ones did not (user photo, marked in red).
+        #
+        # So: work out which end of p is the shared edge for this tile, and
+        # measure the region the tile actually owns instead of assuming it
+        # reaches ±16. Both halves then sit hard against the true centre.
         region = _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.0, 0.0)  # smooth like the road (user: nothing on the asphalt but cracks/holes)
         horiz = "_h" in kind
         far = kind.endswith("b")
+        inner_high = far == horiz
+        params = {}
         for (x, y) in region:
-            p = (x - 32) * 0.5 - (y - 16) if horiz else (x - 32) * 0.5 + (y - 16)
-            # sides SWAPPED from the first cut: each half must hug the edge
-            # it SHARES with its partner cell, not the outer one (the twin
-            # parallel lines the user screenshotted)
-            on_edge = p <= -14.6 if not far else p >= 14.6
-            if on_edge and (x // 8) % 2 == 0 and rng.random() < 0.94:
-                c.set(x, y, C("de9e41"))
+            params[(x, y)] = (x - 32) * 0.5 - (y - 16) if horiz \
+                else (x - 32) * 0.5 + (y - 16)
+        if params:
+            edge_p = max(params.values()) if inner_high else min(params.values())
+            for (x, y), p in params.items():
+                # keep the ORIGINAL dash weight (~1.5 world px): the tile
+                # that owns the boundary lays the dash, its partner adds
+                # whatever sliver falls on its side. A wider band read as
+                # fat notched blocks instead of a painted line.
+                on_edge = abs(p - edge_p) <= 1.3
+                if on_edge and (x // 8) % 2 == 0 and rng.random() < 0.94:
+                    c.set(x, y, C("de9e41"))
 
     elif kind == "ballast":
         # trainyard gravel bed: dark base with STONES — small 2-4px shapes

@@ -67,6 +67,12 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.49", ["the yellow centre line finally runs down the middle",
+		"of the road. it was drawing on the half of the tile",
+		"the neighbouring tile owns, so half the dash rendered",
+		"as nothing and the rest sat a full lane off - and only",
+		"on roads running one direction, which is why it looked",
+		"fine half the time"]],
 	["v0.6.48", ["bus shelters stopped parking half-in the road at",
 		"crossings - any shelter whose roof would reach the",
 		"crossing asphalt simply doesnt get built there"]],

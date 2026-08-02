@@ -193,10 +193,14 @@ v0.6.45–48 — detail in "Where we are" above). What remains below is
 what the next session works, in order. Items needing THE USER are
 marked; don't attempt them without them.
 
-1. **Yellow centreline still one lane off** — NEEDS THE USER: their
-   red-line photo is in an old chat; ask them to re-send it, then
-   verify EMPIRICALLY against it (fixed twice by reasoning, failed
-   twice).
+1. ~~Yellow centreline one lane off~~ **DONE v0.6.49** (measured, not
+   reasoned: 0.95 cells off → 0.02). ROOT CAUSE WORTH KEEPING: an iso
+   diamond tile only OWNS two of its four edges (top-left/top-right);
+   paint on the other two renders as nothing (the plain `_b` tile drew
+   ZERO pixels). AND the `p` param runs with +x on plain tiles but
+   against +y on `_h` ones, so one shared edge condition can't serve
+   both orientations. Any future edge-hugging tile art must measure
+   the owned region (`max/min` of p) instead of assuming ±16.
 2. **Roads shouldn't be a symmetrical grid** — NEEDS THE USER (it's a
    deliberate layout revision of the fixed district: re-audition +
    their sign-off): some areas with no roads, broken road ends with
