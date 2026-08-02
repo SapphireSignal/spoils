@@ -455,7 +455,7 @@ func _smoke() -> void:
 		failures.append("Esc did not close the pause menu")
 
 	# LAST, because it ends the raid: three rounds must put up the debrief
-	# with the hit locations on it, not respawn you (v0.6.61)
+	# with the hit locations on it, not respawn you (v0.5.14)
 	suppress_debrief = false
 	var dying := _find_player()
 	if dying != null:
@@ -904,7 +904,7 @@ func _probe_world() -> void:
 		bush_cells.append(floor_layer.local_to_map((bush as Node2D).position))
 	print("FOLIAGE bushes=%d cells=%s" % [bush_cells.size(), bush_cells.slice(0, 6)])
 	print("WALKS cells=%d" % int(info.get("walk_cells", -1)))
-	# v0.6.18 places: zone block rects (cell coords) + the interactables
+	# v0.3.1 places: zone block rects (cell coords) + the interactables
 	var zones: Dictionary = info.get("zones", {})
 	for zone_name in zones:
 		print("ZONE %s blocks=%s" % [zone_name, zones[zone_name]])
@@ -912,7 +912,7 @@ func _probe_world() -> void:
 	for poi_name in poi:
 		print("POI %s=%s" % [poi_name, poi[poi_name]])
 	# roads carry [x, width, span_from, span_to] — a road that stops short
-	# has a span narrower than the playable band (v0.6.51)
+	# has a span narrower than the playable band (v0.5.4)
 	var vec: Dictionary = info.get("map_vec", {})
 	print("ROADS_V %s" % [vec.get("roads_v", [])])
 	print("ROADS_H %s" % [vec.get("roads_h", [])])

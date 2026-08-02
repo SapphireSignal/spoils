@@ -3387,7 +3387,7 @@ def make_puddle(variant: int) -> tuple[Canvas, tuple, list | None]:
 
 
 # ------------------------------------------------- districts update props ----
-# v0.6.18: the POI set — stairs/beds for two-story houses, buses for the
+# v0.3.1: the POI set — stairs/beds for two-story houses, buses for the
 # depot, boxcars + buffers for the trainyard, the playground, courtyard
 # pieces, and the comms relay compound. All iso, all Apollo, all 3D-read.
 
@@ -3972,7 +3972,7 @@ def make_school_sign() -> tuple[Canvas, tuple, list]:
 
 
 # ------------------------------------------------ scrapyard + street set ----
-# v0.6.19: the scrapyard's machines, the gallery's art, the street's boxes,
+# v0.3.2: the scrapyard's machines, the gallery's art, the street's boxes,
 # and the houses' power. Same rules: iso, Apollo, 3D-read, quiet wear.
 
 def make_forklift(variant: int) -> tuple[Canvas, tuple, list]:

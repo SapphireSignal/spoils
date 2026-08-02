@@ -10,7 +10,7 @@ already known so nothing gets re-derived.
 
 ---
 
-## 1. Doors: solid at all times — SHIPPED v0.6.68, awaiting the user's eye
+## 1. Doors: solid at all times — SHIPPED v0.6.6, awaiting the user's eye
 
 Asked four times. Fixed; the user has not seen it in a playtest yet.
 
@@ -51,7 +51,7 @@ now covers all three states for real (see below).
 
 ---
 
-## 2. Second floors: furniture floats — FIXED v0.6.69
+## 2. Second floors: furniture floats — FIXED v0.6.7
 
 **Root cause: DRAW ORDER.** A second floor is a horizontal plane, and
 y-sorting a plane against vertical walls cannot work. The container is
@@ -60,14 +60,14 @@ put it behind the building's OWN wall segments, sitting at much larger
 y. The walls painted over most of the slab, leaving a band of boards
 and furniture apparently standing on nothing.
 
-**Fix (final, v0.6.70):** every floor tile is **its own y-sorted node**
+**Fix (final, v0.6.8):** every floor tile is **its own y-sorted node**
 in `_ysort`, at its true cell position, with the art lifted by the
 sprite's `offset` instead of by moving the node. **Sorting position and
 drawing position are different things, and splitting them is the whole
 trick.** Near walls then occlude the floor and far walls don't, with no
 `z_index` anywhere.
 
-**The z-band attempt (v0.6.69) was wrong — don't retry it.** Putting
+**The z-band attempt (v0.6.7) was wrong — don't retry it.** Putting
 the slab at z 1 and the player/props/stairs at z 2 fixed the floating
 furniture but made the floor clip over the top of the house, because a
 plane sorted as ONE unit is either in front of every wall or behind
@@ -128,7 +128,7 @@ top of** the raider standing on it, so walking over it reads as walking
 through it. The user confirmed it does **not** block — this is purely
 draw order.
 
-**The fix already exists:** `_flat` in `world_builder.gd` (added v0.6.53
+**The fix already exists:** `_flat` in `world_builder.gd` (added v0.5.6
 for the interior cables) is a `Node2D` sibling between the floor
 `TileMapLayer` and the y-sorted `_ysort`. Anything lying flat belongs
 there. Add a helper mirroring `_add_cable` and route flat props through
@@ -160,7 +160,7 @@ y-sorted.
 **Needs:** a stub inventory holding an "electricians kit" (the real
 inventory is M4), drag-and-drop in the window, cutter animation frames,
 a repaired box sprite, and a repaired state in `power_box.gd`. The box
-is pinned to the safehouse (v0.6.46), so it is always findable.
+is pinned to the safehouse (v0.4.14), so it is always findable.
 
 ---
 
@@ -195,7 +195,7 @@ the cheap route: `main.gd` already tracks which interior cells the
 player is in for the roof reveal, so the cone can be masked or shrunk
 while inside.
 
-**Check the same leak** on the interior room lights (v0.6.53) and on
+**Check the same leak** on the interior room lights (v0.5.6) and on
 street lamps standing near buildings.
 
 ---
@@ -214,7 +214,7 @@ faces the asphalt — check `toll_booth` in `gen_art.py`. Re-verify
 `TollGate.setup`'s boom offset (currently -4 cells along x) still spans
 the road, and that the extract zone beyond the wire still lines up.
 
-*(Talking to him from a car already works — shipped in v0.6.67.)*
+*(Talking to him from a car already works — shipped in v0.6.5.)*
 
 ---
 
@@ -262,8 +262,8 @@ were hand-wrapped across several strings, so one sentence got a dash on
 every line.
 
 The labels already autowrap, so the convention is **one string per
-bullet, unwrapped** — the renderer needs no change. **Done:** v0.6.65,
-v0.6.66, v0.6.67. **To do:** every entry from v0.6.64 down to v0.6.3 —
+bullet, unwrapped** — the renderer needs no change. **Done:** v0.6.3,
+v0.6.4, v0.6.5. **To do:** every entry from v0.6.2 down to v0.2.1 —
 merge each hand-wrapped run into one string per idea, keeping the
 wording. Note the menu's version label derives from
 `CHANGELOG_ENTRIES[0][0]`, so don't disturb ordering or version strings.
@@ -295,7 +295,7 @@ Full design detail lives in `DESIGN.md` §8; `LORE.md` carries the world
 bible. **1.0 = the complete v1 game.** Minor versions bump only when a
 milestone lands; everything else is a patch (0.6.x).
 
-- **M1 — a walkable world. DONE.** Shipped across v0.2.0 → v0.6.x: the
+- **M1 — a walkable world. DONE.** Shipped across v0.1.2 → v0.6.x: the
   fixed transit district, barricade ring and sniper buffer, weather and
   a day/night cycle, driveable cars, interiors with second floors, the
   map screen, three working extractions, and the debrief.

@@ -89,7 +89,7 @@ threat is human; see LORE.md hard rule 1.)
   second map. **Explicitly out of v1:** multiplayer/netcode, attachments/modding,
   hideout upgrades, limb damage, insurance.
 
-### World rules (v0.6.3–v0.6.5 — keep true)
+### World rules (v0.2.1–v0.2.3 — keep true)
 - **The barricade ring IS the map edge**: per-stretch ONE dominant jersey
   design repeated (real lines repeat), fences as accents, some askew/flat,
   uneven spacing, wreckage where roads dead-end into it. Beyond the line:
@@ -163,7 +163,7 @@ than being scattered through UI/input code — so a server can own them later. N
 - **Godot 4.7.1 Windows export templates already installed** (`%APPDATA%\Godot\export_templates\4.7.1.stable\`)
   — shipping a standalone .exe needs no downloads.
 - **Deliberately absent:** Aseprite, Tiled, Audacity (removed at user request — do not reinstall).
-- Current project state: **v0.6.68** — Milestone 1 complete, plus a long
+- Current project state: **v0.6.6** — Milestone 1 complete, plus a long
   run of user-feedback and content passes (the fixed transit district,
   weather/day-night, driveable cars, interiors with second floors, the map
   screen, three working extractions and the debrief; see CHANGELOG.md,

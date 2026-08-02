@@ -14,7 +14,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 ## Where we are
 
-- **Version v0.6.68 SHIPPED** (2026-08-02) — **the doors are actually
+- **Version v0.6.6 SHIPPED** (2026-08-02) — **the doors are actually
   solid now.** Three measured bugs, not the one this file used to
   claim: the swung collider was mirrored 180° for south (`x`) doors,
   the east (`y`) door's open frames ran off their canvas and were cut,
@@ -26,36 +26,36 @@ This file carries everything a fresh session needs that isn't in those two.
   now come from the generator via `manifest.collider_open` /
   `collider_jambs`; `Door` derives nothing. Mid-swing both panels are
   solid. **BIGGEST LESSON: the door smoke test had been VACUOUS since
-  v0.6.65** — it drove the player with `velocity` +
+  v0.6.3** — it drove the player with `velocity` +
   `move_and_slide()`, which scales by frame delta, and a headless run
   is uncapped, so the player moved a fraction of a pixel and never
-  reached the door. That is why v0.6.65 "could not reproduce" the
+  reached the door. That is why v0.6.3 "could not reproduce" the
   user's report. `Harness._shove()` now uses `move_and_collide` in
   fixed 1 px steps with sliding — **use it for any future
   did-it-walk-through test, never velocity + move_and_slide.**
   Perf after: 240 avg / 4.56 ms worst / 7892 nodes.
 
-- **Version v0.6.48 SHIPPED** (2026-08-01, overnight while the user
+- **Version v0.5.1 SHIPPED** (2026-08-01, overnight while the user
   slept — they pre-authorized the batch and went to bed; they wake to
-  v0.6.45–48 plus the completed sweep versions below). The overnight
+  v0.4.13–48 plus the completed sweep versions below). The overnight
   four:
-  - **v0.6.45 the car faces where it drives** — root cause was double:
+  - **v0.4.13 the car faces where it drives** — root cause was double:
     `_veh_profile` runs front→rear from index 0, the flank painter
     drew index 0 at the LEFT while believing front-right (lights
     painted end-swapped), AND the e/w registration was inverted. The
     drawn flank art IS the westbound sprite now. Plus INSTANT WASD
     facing (user call: carve/slerp/hysteresis deleted — input vector →
     nearest of 8, applied immediately).
-  - **v0.6.46** — the sparking power box is pinned to the SAFEHOUSE
+  - **v0.4.14** — the sparking power box is pinned to the SAFEHOUSE
     (roll burned; repair quest hangs off it later); mara's popup is
     SILENT both ways (Sfx.play_radio intentionally kept unused).
-  - **v0.6.47 the volume page** — settings → volume: master/music/
+  - **v0.5.0 the volume page** — settings → volume: master/music/
     effects/ambient sliders, live + persisted. REAL buses (music/sfx/
     ambient → Master) created by Settings BEFORE Sfx/Music load; the
     engine's low-passed bus sends to ambient. RULE: every new
     AudioStreamPlayer must set `player.bus` or it bypasses the mix
     (verified tonight: zero unbussed players). Harness --menu=volume.
-  - **v0.6.48** — shelters whose span reaches a crossing road within
+  - **v0.5.1** — shelters whose span reaches a crossing road within
     2 cells along their run are dropped (rolls burn; fixed district
     otherwise untouched; verified pixel-identical at the toll
     crossing minus the offender).
@@ -64,8 +64,8 @@ This file carries everything a fresh session needs that isn't in those two.
     4.45 ms worst / ~8k nodes (session best). Known cosmetic stales:
     radio.say() docstring still says "key up" (the squelch is gone);
     Sfx.play_radio/_synth_squelch unused on purpose.
-- **Version v0.6.44 SHIPPED** (2026-08-01). **The sweep is COMPLETE**:
-  v0.6.42 = severe finds, v0.6.43 = the remaining fifteen, v0.6.44 =
+- **Version v0.4.12 SHIPPED** (2026-08-01). **The sweep is COMPLETE**:
+  v0.4.10 = severe finds, v0.4.11 = the remaining fifteen, v0.4.12 =
   the verified dead-code deletion. All three verified layout-identical
   on transit-01 (probe diff + pixel diff; the one visible change was
   the askew barricade that really was clipping the toll booth — gone).
@@ -76,7 +76,7 @@ This file carries everything a fresh session needs that isn't in those two.
   toll stand-down re-arms when you come back inside the wire or die,
   and `Ui` lost its unused owns/top/changed API — only
   open/close/any_open/blocks_gameplay/clear exist.
-- **Version v0.6.42 SHIPPED** (2026-08-01). v0.6.25→v0.6.42 all landed
+- **Version v0.4.10 SHIPPED** (2026-08-01). v0.3.8→v0.4.10 all landed
   in one long session; CHANGELOG.md has the detail. What a fresh session
   most needs to know:
   - **NEW AUTOLOADS.** `Ui` (scripts/ui_state.gd) = the window stack;
@@ -84,7 +84,7 @@ This file carries everything a fresh session needs that isn't in those two.
     and car ask `Ui.blocks_gameplay()`. **It is an autoload, so it
     OUTLIVES the scene: every scene root must call `Ui.clear()` in
     `_ready`** or a leftover entry bricks the next raid (input dead, esc
-    and m dead, no way out — shipped that bug, fixed in v0.6.42).
+    and m dead, no way out — shipped that bug, fixed in v0.4.10).
     `Raid` (scripts/raid.gd) = per-raid ledger: time, xp, kills with
     minute + bone, and `money` (STUB, 120/raid, moves to the stash in M4).
   - **EXTRACTION IS LIVE** — `scripts/extraction.gd` holds zones
@@ -118,8 +118,8 @@ This file carries everything a fresh session needs that isn't in those two.
     `_pick_variant_varied()`, never the bare literal name.
   - `preview.png` (dev contact sheet) writes to **docs/**, not art/gen —
     it was a 512 KB file the deploy prewarmed every raid (233 ms stall).
-- **Version v0.6.24 SHIPPED** (28th release on 2026-08-01 — read
-  CHANGELOG.md; all same-day). **v0.6.24 = 8-DIRECTION VEHICLES + the
+- **Version v0.3.7 SHIPPED** (28th release on 2026-08-01 — read
+  CHANGELOG.md; all same-day). **v0.3.7 = 8-DIRECTION VEHICLES + the
   new car controls.** Sample was approved by the user first (process:
   sample → sign-off → fleet). gen_art: `_veh_profile` (length-agnostic
   profile), `make_vehicle_flank` (screen-horizontal heading; flank
@@ -133,12 +133,12 @@ This file carries everything a fresh session needs that isn't in those two.
   cars). CONTROLS (user call): engine auto-starts on enter and dies on
   exit (the `engine` action is DELETED from project.godot, settings
   BIND_ACTIONS/labels/defaults, and the panel), WASD drives all eight
-  headings with the v0.6.23 carve + iso squash on the vertical,
+  headings with the v0.3.6 carve + iso squash on the vertical,
   cursor-follow REMOVED, E lights, F in/out. Harness drives via
   `auto_drive` and asserts engine-on-entry / engine-off-on-exit.
   Perf 240 / 4.72ms / ~5.3k.
-- **Version v0.6.23 SHIPPED** (27th release on 2026-08-01 — read
-  CHANGELOG.md; all same-day). **v0.6.23 = THE REAL MAP + honest second
+- **Version v0.3.6 SHIPPED** (27th release on 2026-08-01 — read
+  CHANGELOG.md; all same-day). **v0.3.6 = THE REAL MAP + honest second
   floors + car feel.** M-map rebuilt: fit-whole-district open at the
   best whole zoom, POI labels ON the map (collision-yield), realtime
   "me"+label, live car dots, REAL buttons (the old world-view hit test
@@ -150,7 +150,7 @@ This file carries everything a fresh session needs that isn't in those two.
   outline. Upper floors WOOD everywhere + lit floor_edge_x/y lips +
   ≥4 two-story-house quota (transit-01 had rolled ZERO; school desks
   were gated on _occupied, which the shell sets for its whole interior
-  — the school stood empty since v0.6.19). Classroom: chalkboard +
+  — the school stood empty since v0.3.2). Classroom: chalkboard +
   teacher desk + desk/chair pairs facing the board. Safehouse: parking
   pad (_pad_clear, unalarmed car), ring thinned to step 3, power boxes
   dodge windows district-wide (_window_cells). 3D bushes (lumpy lit
@@ -158,17 +158,17 @@ This file carries everything a fresh session needs that isn't in those two.
   hysteresis + play_car_bump crash thump + full-speed smoke + 12s
   amber-key RichTextLabel hint. Engine "static" fixed (pitch slew+cap
   1.16, low-pass "engine" bus); foliage muted while driving. Trails
-  never cross sidewalks; dash halves paired (_dash_here). (The 8-direction vehicle work SHIPPED in v0.6.24 — see above.
+  never cross sidewalks; dash halves paired (_dash_here). (The 8-direction vehicle work SHIPPED in v0.3.7 — see above.
   LESSON WORTH KEEPING: sample → user sign-off → fleet conversion is
   the right shape for any art change that touches everything; it is
-  what the end-face saga bought us.) **v0.6.22 = THE FIXED
+  what the end-face saga bought us.) **v0.3.5 = THE FIXED
   MAP** (user call, retroactive to day one: NO procedural rerolls, ever —
   quests will point at real addresses). DISTRICT_SEED "transit-01" in
   world_builder.gd IS the district (picked from a 5-seed audition: towns
   north, rail through the middle industrial belt, school+gallery south,
   safehouse spawn south-center, autumn grove SE corner); --seed still
   overrides for tests; builder audited clean of unseeded layout
-  randomness. Also v0.6.22: scrapyard block plans its OWN guaranteed hall
+  randomness. Also v0.3.5: scrapyard block plans its OWN guaranteed hall
   (_plan_scrap_hall — the rack line reads as its yard now); walk-in bushes
   40-52px + the PLAYER fades to 0.5 with the bush (player.hidden_in_bush,
   foliage RADIUS 28); slow 4-beat whole-px sway w/ per-bush phase; rustle
@@ -181,7 +181,7 @@ This file carries everything a fresh session needs that isn't in those two.
   worst 4.45ms day / 6.25ms storm-night, ~5.2k nodes); FIXED the
   standalone-ternary safehouse-fence bug (the editor's one real warning),
   made 3 fake-coroutine placers really tick, integer-division warning off
-  in project.godot ([debug] section). v0.6.20: safehouse
+  in project.godot ([debug] section). v0.3.3: safehouse
   spawn (bulletproof placement — probe bands + exhaustive row-walk),
   free-angle cursor driving (max 190, `auto_target` hook for harness/
   future AI), diagonal-parallelogram colliders on all (2,1) vehicles
@@ -195,7 +195,7 @@ This file carries everything a fresh session needs that isn't in those two.
   self-decays (_engine_target + Sfx._process — it played forever once),
   splash SHATTER (crack frames → shards → studio_signal core → beams →
   studio_tag; _shot_splash captures at 2.4s; soft click ticks).
-  v0.6.21: bushes 30-42px hide-in size (foliage RADIUS 24), AUTUMN
+  v0.3.4: bushes 30-42px hide-in size (foliage RADIUS 24), AUTUMN
   GROVE = east half of the forest block (tree_autumn family, leaves
   0-1 green / 2-3 red, color-true shedding via _leaf_trees_red +
   encoded near-list). Perf 240/4.5ms/~5k. **AWAITING REACTIONS**;
@@ -214,9 +214,9 @@ This file carries everything a fresh session needs that isn't in those two.
   prone/standing size, den board text, splash SHATTER pacing, all sound
   levels, day length (8-min offer stands), night darkness.
 
-## THE QUEUE (as of v0.6.44 — work straight down it)
+## THE QUEUE (as of v0.4.12 — work straight down it)
 
-**DOORS — DONE v0.6.68** (see "Where we are"). Awaiting the user's
+**DOORS — DONE v0.6.6** (see "Where we are"). Awaiting the user's
 playtest confirmation. If they still report walking through one, ask
 WHICH door and whether it was shut, open, or mid-swing, and get a
 zoomed screenshot — all three states are covered by real collision
@@ -226,7 +226,7 @@ tests now.
 small flat ground thing (orange-brown diamond) renders ON TOP of the
 raider standing on it, so walking over it looks like walking THROUGH
 it. It is NOT a collision problem — they confirmed it does not block.
-THE LAYER ALREADY EXISTS: `_flat` (added v0.6.53 for the cables) sits
+THE LAYER ALREADY EXISTS: `_flat` (added v0.5.6 for the cables) sits
 between the floor tilemap and `_ysort`; route every genuinely flat
 prop through it via a helper mirroring `_add_cable`. NEVER use a
 negative z_index inside `_ysort` for this — z sorts globally in the
@@ -234,23 +234,23 @@ canvas layer and the sprite vanishes behind the floor. Sweep the
 catalogue for others that read as ground (spilled trash, paint, spray
 cans, painted markers); anything with real height stays y-sorted.
 
-**SECOND FLOORS — FIXED v0.6.69.** Root cause was DRAW ORDER, not
+**SECOND FLOORS — FIXED v0.6.7.** Root cause was DRAW ORDER, not
 construction: a slab is a horizontal plane, and y-sorting a plane
 against vertical walls cannot work. The container is anchored far
 north so the player sorts above it, which also put it BEHIND the
 building's own walls (much larger y), so the walls painted over most
-of the floor. **FINAL FIX v0.6.70:** every floor tile is
+of the floor. **FINAL FIX v0.6.8:** every floor tile is
 its OWN y-sorted node in `_ysort` at its true cell position, with the
 art lifted by the sprite's `offset` instead of by moving the node.
 **SORT POSITION AND DRAW POSITION ARE DIFFERENT THINGS — splitting
 them is the whole trick**, and it is reusable for anything that sits
 at a height. Near walls occlude the floor, far walls don't, no
-`z_index` involved. The v0.6.69 z-band (slab 1 / player+props+stairs
+`z_index` involved. The v0.6.7 z-band (slab 1 / player+props+stairs
 2) is DELETED — it made the floor clip over the top of the house,
 because a plane sorted as ONE unit is in front of every wall or behind
 every wall. Repro/verify with `--upstairs=<n>`. **STILL OPEN
 from this ask:** the sweep of ALL interiors (houses, warehouses,
-school, safehouse) for furniture that sits wrong or overlaps. **BOTH OLD LEADS ARE DEAD — measured v0.6.68, do not re-derive.**
+school, safehouse) for furniture that sits wrong or overlaps. **BOTH OLD LEADS ARE DEAD — measured v0.6.6, do not re-derive.**
 `--probe-world` prints `UPPERS total=6 floorless=0 propless=0
 stairs=6`: six flights, six registries, every upper container holding
 its floor sprites. The "`_plan_plots` upgrades stories after the shell
@@ -267,7 +267,7 @@ own ground-floor wall segments, which sit at much larger y. The upper
 furniture keeps its true cell position and sorts late, so it stays
 visible — exactly the reported symptom. See TASKS.md item 2.
 
-**OPEN USER ASKS as of v0.6.65 — the live playtest queue.** Full
+**OPEN USER ASKS as of v0.6.3 — the live playtest queue.** Full
 detail (repro steps, implementation notes) is in the session task list;
 this is the durable copy:
 1. **Power box repair** — near the broken box: a subtle spark sound, a
@@ -287,34 +287,34 @@ this is the durable copy:
    or gate/mask the cone while the player is in interior cells (main.gd
    already tracks that for the roof reveal). CHECK the interior lights
    for the same leak.
-4. **Doors walk-throughable** — COULD NOT REPRODUCE (v0.6.65 added a
+4. **Doors walk-throughable** — COULD NOT REPRODUCE (v0.6.3 added a
    smoke test that walks into a closed door at five offsets; it blocks
    every time). ASK THEM TO CIRCLE IT on a zoomed shot.
 
-**NEW BATCH — user asks sent 2026-08-01 after v0.6.53** (they are
-playtesting live). A–E and G SHIPPED as v0.6.54–55; **F and H are the
+**NEW BATCH — user asks sent 2026-08-01 after v0.5.6** (they are
+playtesting live). A–E and G SHIPPED as v0.5.7–55; **F and H are the
 next session's work**:
 
-- ~~A mara popup wording~~ **v0.6.54** (name plate gone, no "magpie,
+- ~~A mara popup wording~~ **v0.5.7** (name plate gone, no "magpie,
   mara.", says trainyard, HOLD 4.6 → 6.5).
-- ~~B subtle appear sound~~ **v0.6.54** (`Sfx.play_radio_tick`, -30 dB,
+- ~~B subtle appear sound~~ **v0.5.7** (`Sfx.play_radio_tick`, -30 dB,
   sfx bus; still silent on drop-off).
-- ~~C freight on the clock at 24:00~~ **v0.6.54** — it now reads
+- ~~C freight on the clock at 24:00~~ **v0.5.7** — it now reads
   `environment.day_time` via the `_environment` handle; warns at
   WARN_AT 0.985 and arrives when the clock wraps past midnight.
-- ~~D longer day~~ **v0.6.54** (DAY_SECONDS 600 → 1080).
-- ~~E freight drove through parked boxcars~~ **v0.6.54** (stranded
+- ~~D longer day~~ **v0.5.7** (DAY_SECONDS 600 → 1080).
+- ~~E freight drove through parked boxcars~~ **v0.5.7** (stranded
   stock moved to `_rail_row ± 2`; the running line stays clear).
-- ~~G map-select clock~~ **v0.6.55** — ONE world clock in the `Raid`
+- ~~G map-select clock~~ **v0.5.8** — ONE world clock in the `Raid`
   autoload (`world_time`, `advance_clock`, `time_label`, `is_night`);
   the menu advances it, the environment reads it on deploy and writes
   it back, and publishes `day_seconds` so both run at one rate.
-- ~~F. quitting mid-raid must count as dying~~ **DONE v0.6.60**:
+- ~~F. quitting mid-raid must count as dying~~ **DONE v0.5.13**:
   `scripts/death_screen.gd` (doll + ledger + hit log), pause menu
   button renamed "abandon raid" → `main.abandon_raid()`.
   `player.hits` records {bone, who, at} per round;
   `Authority.damage_player(player, bone, who)`; edge_guard rolls a
-  real location. Harness `--death`. **v0.6.61: DYING ENDS THE RAID
+  real location. Harness `--death`. **v0.5.14: DYING ENDS THE RAID
   TOO** — same screen, no respawn (fallback respawn kept only for a
   raid with no debrief). NOTE the harness seam: `Harness.
   suppress_debrief` is ON while the smoke probes (a paused tree behind
@@ -323,7 +323,7 @@ next session's work**:
   related question
   "how does saving work?" — nothing persists between raids yet; the
   stash is M4.)
-- ~~H. power lines across the district~~ **DONE v0.6.62**:
+- ~~H. power lines across the district~~ **DONE v0.6.0**:
   `_place_power_line()` + `_place_utility_spot()`. Art: `pylon_0..3`
   (two standing, one leaning, one snapped) and `power_wire_0/1`
   (intact / snapped), plus `utility_box`. KEY CONSTRAINTS if you touch
@@ -333,33 +333,33 @@ next session's work**:
   are `z_index = 5` because they are overhead. Rolled from
   `_side_rng`, so it moved nothing else.
 
-- ~~clock vs light disagreed~~ **RESOLVED v0.6.56** (user: "yes re-time
+- ~~clock vs light disagreed~~ **RESOLVED v0.5.9** (user: "yes re-time
   it, dusk at 21:00 and dawn at 06:00"). The gradient stops are real
   hours now — dawn 06:00, day 07:30, warm from 20:00, dusk 21:00,
   deep night 22:15..05:00; `_night_amount_for`, the dawn fog window
   and `Raid.NIGHT_FROM/NIGHT_UNTIL` all track the same stops, and a
   raid starts at 07:12. **If you touch any of these, move ALL of
   them** — the visible clock makes any drift obvious now.
-- ~~master volume at 0 still played music~~ **v0.6.56**: master scales
+- ~~master volume at 0 still played music~~ **v0.5.9**: master scales
   every CHANNEL bus as well as Master. NOTE: the bus graph was already
   correct when measured (`--audiodebug` proves it), so if the user
   still hears audio at master 0, the cause is elsewhere — run
   `--audiodebug` first, it drives the real slider and dumps every
   bus and player.
-- Blue sparks thrown off broken power boxes (v0.6.56, user request).
+- Blue sparks thrown off broken power boxes (v0.5.9, user request).
 
-**LATEST BATCH (v0.6.57–58), and what's left of it:**
-- ~~rain vs storm were the same thing~~ **v0.6.57**: CLEAR / RAIN /
+**LATEST BATCH (v0.5.10–58), and what's left of it:**
+- ~~rain vs storm were the same thing~~ **v0.5.10**: CLEAR / RAIN /
   STORM spells (`environment.weather`, `weather_label()`). Storm rains
   full and flashes every 7–19 s; rain is lighter and flashes every
   45–110 s. **NO fog spell** — the user rejected it: the dawn mist
   comes every morning, so a fog forecast says nothing.
-- ~~map bar~~ **v0.6.57**: "07:12 morning — raining" (clock, part of
+- ~~map bar~~ **v0.5.10**: "07:12 morning — raining" (clock, part of
   day, weather).
-- ~~court/depot names, unlabelled places~~ **v0.6.57**: "courtyard",
+- ~~court/depot names, unlabelled places~~ **v0.5.10**: "courtyard",
   "bus depot"; lz/gallery/comms/trainyard/scrapyard/playground get
   outlined rects via `map_vec.areas` (`_map_areas()`).
-- ~~freight in the wrong POI~~ **v0.6.58**: crates/shelves out of the
+- ~~freight in the wrong POI~~ **v0.5.11**: crates/shelves out of the
   scrapyard (it keeps machines + the new `toolbox` family), warehouses
   got yard stacks, loaded outside shelving, trucks with a load at the
   tailgate, and packed halls (16–26 pieces, box-weighted).
@@ -370,16 +370,16 @@ next session's work**:
   list.
 - **ASK THE USER FIRST:** they said "move all the boxes and shelves
   AND WAREHOUSE from the scrapyard area". The scrapyard's own hall was
-  added deliberately in v0.6.22 *because* racks in the open read wrong
+  added deliberately in v0.3.5 *because* racks in the open read wrong
   to them ("i know there used to be one there"). Only the stock was
   moved; confirm before removing the building.
 
 **THE OVERNIGHT BATCH IS DONE** (all five user asks shipped as
-v0.6.45–48 — detail in "Where we are" above). What remains below is
+v0.4.13–48 — detail in "Where we are" above). What remains below is
 what the next session works, in order. Items needing THE USER are
 marked; don't attempt them without them.
 
-1. ~~Yellow centreline one lane off~~ **DONE v0.6.49** (measured, not
+1. ~~Yellow centreline one lane off~~ **DONE v0.5.2** (measured, not
    reasoned: 0.95 cells off → 0.02). ROOT CAUSE WORTH KEEPING: an iso
    diamond tile only OWNS two of its four edges (top-left/top-right);
    paint on the other two renders as nothing (the plain `_b` tile drew
@@ -387,7 +387,7 @@ marked; don't attempt them without them.
    against +y on `_h` ones, so one shared edge condition can't serve
    both orientations. Any future edge-hugging tile art must measure
    the owned region (`max/min` of p) instead of assuming ±16.
-2. ~~Roads shouldn't be a symmetrical grid~~ **DONE v0.6.51** (user
+2. ~~Roads shouldn't be a symmetrical grid~~ **DONE v0.5.4** (user
    approved the revision). Roads carry SPANS now (`_road_v_span` /
    `_road_h_span`); most stop short, ends break up + rubble
    (`_dress_road_ends`). KEY TECHNIQUE, reuse it: the spans roll from
@@ -397,18 +397,18 @@ marked; don't attempt them without them.
    (`_on_road` does it centrally); the map screen reads spans from
    `map_vec.roads_v/h` = [x, width, from, to]. `--probe-world` prints
    ROADS_V / ROADS_H.
-3. ~~Bus shelters half in the road at crossings~~ **DONE v0.6.48**
+3. ~~Bus shelters half in the road at crossings~~ **DONE v0.5.1**
    (_shelter_overhangs: crossing road within 2 cells along the run →
    the piece is dropped, rolls burn identically).
 4. **Interior lights at night**, some flickering, cable visibly pathed
    to the power box (see the standing cable rule below).
-5. ~~Pines shed nothing~~ **DONE v0.6.52** — conifers register in
+5. ~~Pines shed nothing~~ **DONE v0.5.5** — conifers register in
    `_leaf_trees_needle` (encoded 200000+ in the environment's near-list),
    sprites leaves_4/5, fall pattern 3 = straight down. Snags still bare.
    **AWAITING THE USER'S EYE**: needles are subtle inside dense woods
    (the forest floor has its own green speckle) — if they want them
    louder, raise the sprite size/brightness or the drop rate.
-6. ~~Flip vehicles~~ **DONE v0.6.45** (was the flank facing bug — see
+6. ~~Flip vehicles~~ **DONE v0.4.13** (was the flank facing bug — see
    the overnight batch above).
 7. **Pickup bed** — NEEDS THE USER (sample → sign-off): shade the
    interior so it reads as a container, put a box in it, sample sheet
@@ -417,7 +417,7 @@ marked; don't attempt them without them.
    shelter, vending, newsbox, forklift, planter, swing) + singleton
    crane/sandbox. Deeper fix: parameterise builders so SHAPES differ,
    not just wear.
-9. ~~Changelog / map first-open dip~~ **DONE v0.6.50** — user
+9. ~~Changelog / map first-open dip~~ **DONE v0.5.3** — user
    confirmed it was FIRST OPEN ONLY (~80 fps for a moment). Changelog
    built ~300 Labels in that one frame; map drew its whole vector
    district in that one frame. Both prewarm now (changelog under the
@@ -429,7 +429,7 @@ marked; don't attempt them without them.
 ## PROCESS (learned the hard way this session)
 
 - **NEVER chain the smoke test and the push.** `smoke; git push` pushed a
-  RED build (v0.6.34). Run smoke, READ the verdict, then push.
+  RED build (v0.4.2). Run smoke, READ the verdict, then push.
 - **Write commit messages to a FILE and use `git commit -F`.** A
   multi-line `-m` here-string silently failed and left the tag on the
   wrong commit; recovery is `git tag -f` + force-push the tag.
@@ -443,7 +443,7 @@ marked; don't attempt them without them.
 Three exits, shipping one per version in the 0.6.x line, all ending on
 ONE summary screen. Full spec in DESIGN.md §8.4 and LORE.md §7c.
 1. **the lift** — green-smoke LZ off a dirt track, proximity countdown
-   5..1, helicopter flies in, rope, lift, screen. (v0.6.27 target)
+   5..1, helicopter flies in, rope, lift, screen. (v0.3.10 target)
 2. **the toll gate** — warden in a booth on the district edge; portrait
    dialogue with an ENDLESS "reply" button (he rambles lore: the gates,
    what he's made off raiders — mean and weird by design), "pay the fee
@@ -482,9 +482,9 @@ stash lands in M4).
    INSTALLED on the box** — user must OK an install (e.g. winget
    install Gyan.FFmpeg) or ship a portable copy into tools/.
 2. **M2 "go"** — guns + tunnels + the film + walk-in tutorial (v0.7.0).
-3. Watch-list reactions above → v0.6.22 tunings.
+3. Watch-list reactions above → v0.3.5 tunings.
 
-## v0.6.19 systems (shipped 2026-08-01)
+## v0.3.2 systems (shipped 2026-08-01)
 
 - MAP (map_view.gd, CanvasLayer 75, action "map"=M): builder bakes
   info["map_image"] (_bake_map_image: 1px/cell from plan dicts + plot
@@ -528,7 +528,7 @@ stash lands in M4).
 - KEYBINDS: engine=Q, map=M, inventory=TAB (inert until M4) — in
   project.godot [input] + settings BIND_* (panel auto-lists).
 
-## v0.6.18 systems (shipped 2026-08-01)
+## v0.3.1 systems (shipped 2026-08-01)
 
 - ZONED MAP: 256×256 grid, BARRIER_INSET 68 (playable ~120), ROAD_COUNT
   4/axis (jitter ±4 — bigger jitter squeezed blocks into the one-door
@@ -594,12 +594,12 @@ stash lands in M4).
   drives rotation; --backdrop=2 clamps to drain); make_scene_storm +
   saves deleted from gen_art. Den board verified against the user's
   08:49 spec (paper notes, tacked photos, transit ringed, traders).
-- v0.6.17 (same day): morning fog + falling leaves + 10-min day w/ hard
+- v0.3.0 (same day): morning fog + falling leaves + 10-min day w/ hard
   nights (DEEP_NIGHT .085/.095/.24, night ~26%, lamps from 0.64) + rain
   slew (-49..-34) + thunder -24..-18 & 0.15-0.5s after flash; breaths
   24-38s. Fog window 0.10-0.38; force_time prefills; _shot re-applies
   env flags after camera settle.
-- v0.6.16: raid music = USER'S 3 AUDITIONED PICKS (guitar02/harp01/piano01
+- v0.2.14: raid music = USER'S 3 AUDITIONED PICKS (guitar02/harp01/piano01
   as raid_0..2) rotating random-no-repeat, CONTINUOUS from raid start to
   death (2-5s breaths; stop on died, restart post-respawn; the audition
   folder music/"in game music"/ is .gdignore'd — more candidates go there,
@@ -613,7 +613,7 @@ stash lands in M4).
   mud. HARNESS: _ensure_game_scene aborts loudly after 30s (fail-fast —
   never let a broken world hang a probe again); probe prints WALKS +
   FOLIAGE cells.
-- v0.6.15: menu backdrops = den/drain/storm (LIVING: candle/needles/LEDs/
+- v0.2.13: menu backdrops = den/drain/storm (LIVING: candle/needles/LEDs/
   smoke; ray/motes/drips; rain/strikes/bolts/thunder/flickering windows —
   scene coords use PC offset const, backdrop 0/1/2), raid music (music.gd
   play_raid: 3 tracks -26dB, 70-180s gaps, never same twice), NO-DOTS
@@ -623,7 +623,7 @@ stash lands in M4).
   KNOWN ARTIFACT: menu screenshots always read 1-20 fps in the corner —
   capture-harness quirk since forever (old shots show "1 fps"); the real
   menu holds refresh. Do NOT chase it.
-- v0.6.14 = "the streets update": map HALVED (ring inset 31→72, playable
+- v0.2.12 = "the streets update": map HALVED (ring inset 31→72, playable
   ~176², counts rebalanced, nodes ~11k), sidewalks + worn crosswalks +
   manholes + dead traffic lights (5 damage states, mirrored per corner),
   weathering zones (concrete_worn/damp via offset hash grids), warehouses
@@ -638,7 +638,7 @@ The user circled the exact spot on a 6x truck sheet and that cracked it:
 the END FACE was drawn as a 5px stub CONTINUING LENGTHWISE off the near
 corner, instead of a full-width wall across the body's iso width axis.
 Rebuilt as full-width walls (tailgate/trunk/grille + corner lights +
-shutline + bumper strip) in v0.6.13. Trucks confirmed by the user ("yes
+shutline + bumper strip) in v0.2.11. Trucks confirmed by the user ("yes
 thats it, exactly like that"); cars got the same treatment at their
 request ("i think the cars had that problem too") — they will confirm
 cars in their next playtest. LESSON: when the user reports something
@@ -647,21 +647,21 @@ five theory-driven fixes found real bugs but missed the actual one.
 Audio taste addendum learned the same day: footsteps at -18dB were
 "loud and obnoxious" — organic sounds now sit at -22dB and below.
 
-## Recent-history context (v0.6.6-v0.6.11: prone stance on Z,
+## Recent-history context (v0.2.4-v0.2.9: prone stance on Z,
   splash screen + menu music + full audio suite, lattice-fence barricade
   line, 3D barrels, complete vehicles, wheel zoom ladder w/ edge
   auto-tighten, anti-banding dither film, clip audit in gen_art — generation
-  FAILS on canvas-edge content, keep it that way). Older baseline: v0.6.5
+  FAILS on canvas-edge content, keep it that way). Older baseline: v0.2.3
   ("the barricade update"), committed & pushed. Map
   **"transit"** (user-named), 320×320 total with the PLAYABLE district inside
-  a randomized barricade ring (inset 72 cells since v0.6.14); the world visibly continues
+  a randomized barricade ring (inset 72 cells since v0.2.12); the world visibly continues
   beyond it but escalating sniper fire owns the buffer (fallen-raider bodies
   past the line sell it). Camera NEVER clamps (user call). Doors interactive
   (F, with prompt), flashlight (E, real click), DARK nights, flickering lamps,
   world-anchored rain, ~45 s weather tint fades, dip-free time-budgeted
   deploys, fresh seeded layout per deploy.
 - **Milestone 1 (walkable world) is DONE** (~18 user feedback passes, see
-  CHANGELOG v0.2.0 → v0.6.5).
+  CHANGELOG v0.1.2 → v0.2.3).
 - **NEXT: Milestone 2 — GUNPLAY + TUNNELS + STORY, to ship as v0.7.0.**
   Story foundation is drafted in LORE.md (the cordon/wardens lore, magpie +
   traders mara/kettle/verne, and the full shot list for "the wire" — the
@@ -683,9 +683,22 @@ Audio taste addendum learned the same day: footsteps at -18dB were
 
 ## Versioning policy (user-agreed, do not drift)
 
-Patch bumps (0.6.x) for polish/fix/content batches. Minor bumps ONLY when a
-design-doc milestone lands (0.7 guns, 0.8 enemies, 0.9 loop). **1.0 = the
-complete v1 game.** The in-game changelog (CHANGELOG_ENTRIES in
+**THE HISTORY WAS RENUMBERED on 2026-08-02 (user call).** 0.1–0.5 had flown
+past in a handful of releases while 0.6 ground on for 76 patches, which read
+badly in the changelog. All 90 releases were re-spread EVENLY — fifteen per
+minor line, v0.1.0 through v0.6.14 — across CHANGELOG.md, CHANGELOG_ENTRIES,
+every doc, every code comment, and every git tag. **Commits were never
+rewritten; only tag names moved.** The old-to-new map and each tag's commit
+sha are in the session scratchpad (`vermap.json`, `tag_shas.json`) if this
+ever has to be undone. Do NOT try to reconcile old version numbers quoted in
+an old chat log against this file — they were all remapped.
+
+Going forward: patch bumps (0.6.x) for polish/fix/content batches. Minor bumps
+ONLY when a design-doc milestone lands (0.7 guns, 0.8 enemies, 0.9 loop).
+**1.0 = the complete v1 game.** With 15 per line the current line has room;
+if 0.6 fills up before guns land, keep going (0.6.15+) rather than stealing
+0.7 — that number belongs to the milestone. The in-game changelog
+(CHANGELOG_ENTRIES in
 `scripts/main_menu.gd`) must gain an entry EVERY version — the menu's corner
 version label derives from its newest entry (single source of truth). Also
 update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
@@ -697,12 +710,12 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   (sizes, origins, collision shapes, variant families — the game hardcodes
   none of it). `tools/gen_font.py` (invoked by gen_art) builds the lowercase
   bitmap font. `tools/gen_banner.py` → repo banner.
-- `scripts/world_builder.gd` — 256×256 planned map (ZONED since v0.6.18 —
-  see the systems section above), **FIXED DISTRICT since v0.6.22**:
+- `scripts/world_builder.gd` — 256×256 planned map (ZONED since v0.3.1 —
+  see the systems section above), **FIXED DISTRICT since v0.3.5**:
   build() defaults to DISTRICT_SEED ("transit-01"), so every deploy is
   bit-identical; harness --seed swaps worlds for TESTS ONLY; ALL
   randomness through the seeded _rng — `Array.shuffle()` is banned, use
-  `_shuffle()` (audited v0.6.22: zero unseeded calls in the layout path). Road grid with
+  `_shuffle()` (audited v0.3.5: zero unseeded calls in the layout path). Road grid with
   center dashes both axes, dirt roads, forests + interior groves + lone trees
   on green pockets, ~34 buildings (thin-wall shells, modular roofs, ONE floor
   look per building, interactive Door on a visible side, entrance pockets kept
@@ -732,7 +745,7 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
 - `scripts/stairs.gd` — second-story flight, group "stairs", F flips the
   floor via main.gd. `scripts/driveable_car.gd` — intact cars as
   CharacterBody2D: F enter/exit w/ door frames+sounds, Q engine, WASD
-  drive, E headlights (see v0.6.18 systems).
+  drive, E headlights (see v0.3.1 systems).
 - `scripts/edge_guard.gd` — barricade-line snipers with PREDICTIVE aim
   (lead the player's velocity by flight time, per-shooter 0.75-1.05x) and
   STAGGERED volleys (first shot instant, rest via _pending countdowns in
@@ -759,13 +772,13 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   integer window scale) + 0.2s-window fps counter. `scripts/keybinds_panel.gd`,
   `scripts/settings_panel.gd`, `scripts/pause_menu.gd`, `scripts/ui_theme.gd`
   (bitmap font + near-black/light-border buttons), `scripts/sfx.gd`
-  (HYBRID since v0.6.13: synth for UI blips, door thunks, sniper crack,
+  (HYBRID since v0.2.11: synth for UI blips, door thunks, sniper crack,
   flashlight click, splash ping, rain bed (set_rain), car alarm; LICENSED
   RECORDINGS under assets/audio/ for per-surface footsteps
   (play_step(kind, quiet), -22/-27dB) and thunder — licenses in
   assets/audio/LICENSES.md, DESIGN.md §5 amended; rain+alarm still render
   on a Thread), `scripts/music.gd` (menu theme = licensed guitar loop at
-  -18dB; RAID mode since v0.6.15: play_raid()/stop_raid() — dongxiao/
+  -18dB; RAID mode since v0.2.13: play_raid()/stop_raid() — dongxiao/
   harp/guitar loops at -26dB, one at a time, 70-180s silences, never the
   same twice; main.gd starts it post-build, menu _ready switches back;
   42 more pack tracks re-downloadable), `scripts/splash.gd` +
@@ -792,12 +805,12 @@ then `godot_console --headless --path . --import`.
   lamp/vehicle/door/traffic-light counts + shot-aimable cells) with the same
   seed you then shoot, or your coordinates aim at a different world.
 - Perf: `godot_console --path . -- --perf [--weather=rain --tod=0 ...]` →
-  prints avg fps / worst frame ms / node count. v0.6.3 baseline on the user's
+  prints avg fps / worst frame ms / node count. v0.2.1 baseline on the user's
   240 Hz box: 240 avg, worst ~5 ms, ~34k nodes.
 - Leaks: `godot_console --headless --path . -- --leakcheck` → deploys into a
   raid and back to the menu FOUR times, printing nodes/orphans/objects/memory
   retained each cycle plus a growth verdict. **Read the TREND, not cycle 0**
-  (one-time caches fill on the first pass). v0.6.68 baseline: menu settles to
+  (one-time caches fill on the first pass). v0.6.6 baseline: menu settles to
   932 nodes / 0 orphans / 3585 objects every cycle, memory flat to 0.06 MB.
   ORPHANS is the sharpest signal — a node out of the tree and unfreed is a
   leak with no excuse.
@@ -826,8 +839,8 @@ then `godot_console --headless --path . --import`.
    sprite+shadow park on the grid and the camera is defined off that SAME
    snapped point (constant character-to-camera offset — see player._process).
    120 px/s walking = exactly 1 screen px/frame at 240 Hz. Do NOT round the
-   camera to whole WORLD pixels (halves scroll rate → "low fps walk", v0.6.3),
-   do NOT let camera and sprite round independently (shimmer, v0.6.4), and
+   camera to whole WORLD pixels (halves scroll rate → "low fps walk", v0.2.1),
+   do NOT let camera and sprite round independently (shimmer, v0.2.2), and
    snap_2d_transforms_to_pixel stays OFF — engine auto-snap fights the grid
    at half-pixel positions. Static props/splashes sit on whole world pixels
    (_add_prop rounds); the player settles to whole world px when idle.
@@ -876,7 +889,7 @@ then `godot_console --headless --path . --import`.
   and shaded faces, per-instance wear, its own slight lean. Audit variant
   counts per family before assuming it's fine; SINGLE-sprite families are
   the worst offenders and are invisible until they're side by side.
-- **HUD BELONGS TO THE WINDOW STACK** (v0.6.64, standing rule): any
+- **HUD BELONGS TO THE WINDOW STACK** (v0.6.2, standing rule): any
   world-space label — interaction prompts, hints, notices, mara's radio
   — must join the group **"hud"** and implement
   `set_hud_hidden(hidden)`. A label CANNOT hide itself when a menu
@@ -900,7 +913,7 @@ then `godot_console --headless --path . --import`.
   (anchor + thinning satellites along a lean), `_clutter_offset()`
   (WHOLE world px only) and `_pick_variant_varied()` (never the same
   variant twice running). (`_scatter_around` was verified unused and
-  deleted in v0.6.44 — resurrect from git history if a real caller
+  deleted in v0.4.12 — resurrect from git history if a real caller
   ever appears.)
 - **THE MAP IS FIXED** (user call 2026-08-01, retroactive to day one):
   one canonical district per map, no procedural rerolls — quests point at
@@ -947,7 +960,7 @@ then `godot_console --headless --path . --import`.
 - Dislikes clutter, clones, visible grids/patterns, anything "off"/asymmetric.
 - Wants the world to feel alive/real (weather, time, POIs, furniture).
 - GitHub: https://github.com/SapphireSignal/spoils (PRIVATE, account
-  SapphireSignal, branch main, tags v0.1.0…v0.6.2). Push after each batch.
+  SapphireSignal, branch main, tags v0.1.0…v0.2.0). Push after each batch.
   Commits end with the Claude Co-Authored-By trailer.
 
 ## Registered-but-inert (activate in later milestones)
@@ -956,8 +969,8 @@ then `godot_console --headless --path . --import`.
   reload(R), weapon slots(1/2/3) — wire in M2 (guns).
 - Settings "graphics quality" is stored but drives nothing until M5
   lighting/effects.
-- Night darkness + flashlight + lamp lights shipped in v0.6.3, deepened in
-  v0.6.5 (CanvasModulate + PointLight2D — real 2D lighting still expands in
+- Night darkness + flashlight + lamp lights shipped in v0.2.1, deepened in
+  v0.2.3 (CanvasModulate + PointLight2D — real 2D lighting still expands in
   M5). Known minor: monitor panel-stretch shimmer is out of our control. One
   ~30 ms frame on the menu→game scene swap remains (hard cut, invisible in
   motion; the fps counter blips ~200 for one window) — everything after holds

@@ -310,7 +310,7 @@ func _update_camera(delta: float) -> void:
 	# snapped point. Character-to-camera offset is therefore constant: the
 	# raider is pixel-welded to the screen, and the world scrolls on the
 	# identical grid. Two disagreeing grids read as shimmer/blur while
-	# walking (v0.6.4 lesson). The grid is 1/combined-zoom-factor wide.
+	# walking (v0.2.2 lesson). The grid is 1/combined-zoom-factor wide.
 	# floor_lift raises sprite AND camera together (whole px) — the second
 	# story reads higher while the true position stays on the ground grid.
 	var s := float(maxi(1, Settings.pixel_scale))

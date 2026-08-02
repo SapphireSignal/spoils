@@ -1,6 +1,6 @@
 extends Node
 ## Sfx autoload. SUBTLE by direction: quiet, clean, matched to what it's for.
-## Since v0.6.13 the organic sounds are licensed recordings (per-surface
+## Since v0.2.11 the organic sounds are licensed recordings (per-surface
 ## footsteps, thunder — see assets/audio/LICENSES.md); the mechanical ones
 ## stay synthesized (UI blips, door thunks, sniper crack, flashlight click,
 ## splash ping, rain bed, car alarm). UI blips auto-wire to every Button.
@@ -141,7 +141,7 @@ func play_click(quiet: bool = false) -> void:
 func play_radio_tick() -> void:
 	## mara keying up. DELIBERATELY tiny (user: "a really subtle sound
 	## effect") — the old squelch was too much and got cut entirely in
-	## v0.6.46. Nothing plays when the call drops off.
+	## v0.4.14. Nothing plays when the call drops off.
 	_play(_click, -30.0)
 
 

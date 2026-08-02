@@ -488,7 +488,7 @@ extract) → 5s den epilogue (kettle weighs, mara: "and that's the job.")
 menu offers skip; harness skips all. M3 upgrades the staged crack to a
 real patrol; M4 adds "pocket anything that shines."
 
-## appendix c: menu backdrop canon (shipped v0.6.15)
+## appendix c: menu backdrop canon (shipped v0.2.13)
 
 den (backdrop 0) / drain (1) / storm over the cordon (2) — see
 CHANGELOG. The den IS the game's home space; the board on it is the

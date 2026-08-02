@@ -93,7 +93,7 @@ func _process(delta: float) -> void:
 		# paying the warden buys exactly this: the guns stop caring while
 		# you drive out past the line. Rounds ALREADY QUEUED have to die
 		# too — the staggered volley kept landing up to 0.84 s after the
-		# stand-down, which is the very thing v0.6.40 claimed to fix.
+		# stand-down, which is the very thing v0.4.8 claimed to fix.
 		_pending.clear()
 		_leave_zone()
 		# It used to buy exactly ONE crossing — step back inside the wire

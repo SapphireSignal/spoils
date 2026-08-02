@@ -33,9 +33,9 @@ const BARRIER_INSET := 66    # the barricade ring — the map's ADVERTISED edge.
                              # shrink to fit beside the rails (user: "make
                              # the map a bit bigger, so the warehouse can be
                              # better"). 66 gives ~124 and roomier blocks.
-# v0.6.19: nudged in again ("just make the map a bit smaller again") —
+# v0.3.2: nudged in again ("just make the map a bit smaller again") —
 # playable diamond ~100 cells now.
-# v0.6.18: the district shrank AGAIN ("way smaller, its still huge" — user,
+# v0.3.1: the district shrank AGAIN ("way smaller, its still huge" — user,
 # third time) — total map 320 -> 256 and the ring pulled to 68, leaving a
 # ~120-cell playable diamond, under half the old area. What's left is now
 # ZONED into distinct places (town / forest / warehouses / school /
@@ -55,7 +55,7 @@ const TIP_CUT_Y := 256.0
 # fixed, learnable transit layout, because quests will point at real
 # addresses and players must be able to remember where everything is).
 # Change ONLY as a deliberate map revision; harness --seed still
-# overrides for tests. Picked by auditioning candidates in v0.6.22.
+# overrides for tests. Picked by auditioning candidates in v0.3.5.
 const DISTRICT_SEED := "transit-01"
 
 var _rng := RandomNumberGenerator.new()
@@ -99,7 +99,7 @@ var _leaf_trees_red := PackedVector2Array()  # the autumn grove's shedders
 var _leaf_trees_needle := PackedVector2Array()  # conifers — needles, not leaves
 var _autumn_rect := Rect2i()             # east half of the woods turns
 
-# zoning (v0.6.18): the district is PLACES now, not sprawl
+# zoning (v0.3.1): the district is PLACES now, not sprawl
 var _zones: Dictionary = {}          # block Vector2i(bx,by) -> zone name
 var _block_rects: Dictionary = {}    # block -> Rect2i of interior cells
 var _plaza: Dictionary = {}          # cell -> true (courtyard pavers)
@@ -135,7 +135,7 @@ var _cars: Array[Dictionary] = []    # driveable car records for main.gd
 
 
 func build(root: Node2D, seed_text: String = "") -> Dictionary:
-	# ONE canonical district every deploy (fixed-map call, v0.6.22) —
+	# ONE canonical district every deploy (fixed-map call, v0.3.5) —
 	# ALL randomness below flows from _rng, so the layout is bit-identical
 	# every time. Harness --seed=x still swaps worlds for testing.
 	if seed_text.is_empty():
@@ -420,7 +420,7 @@ func _on_road(cell: Vector2i) -> bool:
 
 
 func _plan_zones() -> void:
-	# v0.6.18: carve the 3x3 grid of blocks between the roads and deal out
+	# v0.3.1: carve the 3x3 grid of blocks between the roads and deal out
 	# the PLACES — a two-block town, a two-block forest, one block each for
 	# the warehouses, the school, the trainyard and the bus depot; the last
 	# block stays open with the comms relay in one corner. Every district
@@ -1065,7 +1065,7 @@ func _plan_scrap_hall(b: Vector2i) -> void:
 		return
 	# Every roll failed. The hall is GUARANTEED — the whole reason it
 	# exists is that racks and crates in the open with no warehouse was a
-	# bug the user reported (v0.6.22), and skipping it brought that bug
+	# bug the user reported (v0.3.5), and skipping it brought that bug
 	# straight back. So: walk the block for a rail-free slot, and if the
 	# full footprint won't fit between the rail and the block edge, keep
 	# SHRINKING it until something does. A smaller hall is a building; no

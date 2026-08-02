@@ -557,7 +557,7 @@ func _draw_district() -> void:
 	for r in (_vec["roads_v"] as Array):
 		var x := float(r[0])
 		var rw := float(r[1]) * z
-		# a road that stops short is drawn stopping short (v0.6.51)
+		# a road that stops short is drawn stopping short (v0.5.4)
 		var from_y := float(r[2]) if r.size() > 3 else inset
 		var to_y := float(r[3]) if r.size() > 3 else h - inset
 		var top := _cell_to_screen(Vector2(x, maxf(from_y, inset)))

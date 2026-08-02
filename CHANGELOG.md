@@ -3,7 +3,7 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
-## [0.6.76] — 2026-08-02 — menu housekeeping
+## [0.6.14] — 2026-08-02 — menu housekeeping
 
 ### Changed
 - **The changelog window is much bigger** — 624x384 instead of 280x210,
@@ -24,7 +24,7 @@ All notable changes to SPOILS are documented here. Versions follow a simple
 - The district name reads as a heading now (accent colour and a rule
   under it) rather than as another line of body copy.
 
-## [0.6.75] — 2026-08-02 — the train is solid
+## [0.6.13] — 2026-08-02 — the train is solid
 
 ### Fixed
 - **You could walk and drive straight through the extraction train**
@@ -40,7 +40,7 @@ All notable changes to SPOILS are documented here. Versions follow a simple
   raid. The values were already being kept — an unconditional recentre
   on every open was throwing them away.
 
-## [0.6.74] — 2026-08-02 — the toll you paid for, and a bench you can sit on
+## [0.6.12] — 2026-08-02 — the toll you paid for, and a bench you can sit on
 
 ### Fixed
 - **You could drive straight through the toll extraction** (user). The
@@ -62,7 +62,7 @@ All notable changes to SPOILS are documented here. Versions follow a simple
   two-slat backrest and four legs.
 
 ### Fixed (regression caught in the same pass)
-- Removing the telegraph poles' random offset in v0.6.73 also removed
+- Removing the telegraph poles' random offset in v0.6.11 also removed
   **two draws from the layout RNG**, which silently re-rolled part of a
   district that is supposed to be FIXED. The roll is taken and thrown
   away now, and doors, stairs, lamps and walkable cells are once again
@@ -72,7 +72,7 @@ All notable changes to SPOILS are documented here. Versions follow a simple
   door hid a real failure: when the layout shifted, a different door
   let the player through. All 15 pass.
 
-## [0.6.73] — 2026-08-02 — the wires along the line
+## [0.6.11] — 2026-08-02 — the wires along the line
 
 ### Added
 - **Telegraph poles carry wires now** (user: they had none). Four thin
@@ -94,17 +94,17 @@ All notable changes to SPOILS are documented here. Versions follow a simple
   cannot reach. The pole *top* still varies, and the lean and the
   missing-arm variant carry the rest of the variety.
 
-## [0.6.72] — 2026-08-02 — you can see the whole door
+## [0.6.10] — 2026-08-02 — you can see the whole door
 
 ### Fixed
 - **A door opened from inside was cut in half by the board beside it**
-  (user). v0.6.68 made the jamb boards draw *over* the leaf so the wall
+  (user). v0.6.6 made the jamb boards draw *over* the leaf so the wall
   correctly hides a door swinging into the room. When the outward swing
-  arrived in v0.6.71 that order was left alone — but an outward door
+  arrived in v0.6.9 that order was left alone — but an outward door
   swings *toward* the camera and has to cover the jamb, not hide behind
   it. The draw order now flips with the swing.
 
-## [0.6.71] — 2026-08-02 — doors get out of your way
+## [0.6.9] — 2026-08-02 — doors get out of your way
 
 ### Changed
 - **A door now swings away from whoever opens it** (user). Stand
@@ -114,16 +114,16 @@ All notable changes to SPOILS are documented here. Versions follow a simple
   it stays a single texture and a single prop. The generator emits a
   second open-state collider for the outward leaf, and whichever leaf
   is actually swinging is the solid one, so the "never a ghost"
-  guarantee from v0.6.68 holds in both directions.
+  guarantee from v0.6.6 holds in both directions.
 - The smoke asserts a door opened from outside does **not** swing
   toward the player, and places the player deliberately first so the
   rest of the door checks stay deterministic.
 
-## [0.6.70] — 2026-08-02 — the upstairs floor stays inside the house
+## [0.6.8] — 2026-08-02 — the upstairs floor stays inside the house
 
 ### Fixed
 - **The second floor was clipping over the top of the house** (user,
-  with the shape drawn on a screenshot). v0.6.69 fixed the floor by
+  with the shape drawn on a screenshot). v0.6.7 fixed the floor by
   putting it in front of the walls — which was only half right. A
   second floor is a horizontal plane, and a plane sorted as ONE unit
   is either in front of every wall or behind every wall, and both are
@@ -135,11 +135,11 @@ All notable changes to SPOILS are documented here. Versions follow a simple
   moving the node. Sorting position and drawing position are separate
   things, and splitting them is the whole trick: the walls in front of
   you occlude the floor, the walls behind you do not, and neither
-  needs a z_index. The z band from v0.6.69 is gone, along with the
+  needs a z_index. The z band from v0.6.7 is gone, along with the
   special case that had to be added to keep the staircase from being
   swallowed.
 
-## [0.6.69] — 2026-08-02 — the upstairs floor, and three audit finds
+## [0.6.7] — 2026-08-02 — the upstairs floor, and three audit finds
 
 ### Fixed
 - **Second floors: the furniture no longer floats.** Climbing the
@@ -164,7 +164,7 @@ All notable changes to SPOILS are documented here. Versions follow a simple
 
 Three more came from a multi-agent audit of the whole codebase: 35
 candidate findings, each handed to skeptics told to refute it. Five
-survived; two of those were already fixed in v0.6.68.
+survived; two of those were already fixed in v0.6.6.
 
 ### Fixed
 - **Dying and then abandoning gave you two debrief screens.** Death
@@ -200,10 +200,10 @@ survived; two of those were already fixed in v0.6.68.
   live raid can be measured rather than argued about. It runs about
   1.0 ms/frame while open, before and after this change.
 
-## [0.6.68] — 2026-08-02 — the door is solid, for real this time
+## [0.6.6] — 2026-08-02 — the door is solid, for real this time
 
 ### Fixed
-- **Doors are solid in every state.** v0.6.67 added a second collider
+- **Doors are solid in every state.** v0.6.5 added a second collider
   for the open leaf but put it in the wrong place, so the problem
   survived. Three separate bugs, all measured rather than reasoned:
   the swung collider was mirrored **180° for south-facing doors** (the
@@ -240,7 +240,7 @@ survived; two of those were already fixed in v0.6.68.
   scales motion by the frame delta; a headless run is uncapped, so the
   player advanced a fraction of a pixel per step and never travelled
   the 26 px to reach the door. Every "did it walk through?" assertion
-  passed without anything being touched — which is why v0.6.65 could
+  passed without anything being touched — which is why v0.6.3 could
   not reproduce the user's report. Pushes now use `move_and_collide`
   in fixed 1 px steps with proper sliding, so they are frame-rate
   independent. The closed door, the swung leaf (from both sides), the
@@ -248,7 +248,7 @@ survived; two of those were already fixed in v0.6.68.
 - `--probe-world` reports second floors:
   `UPPERS total=6 floorless=0 propless=0 stairs=6`.
 
-## [0.6.67] — 2026-08-01 — the door is solid either way
+## [0.6.5] — 2026-08-01 — the door is solid either way
 
 ### Fixed
 - **A door has collision all the time now, not only when it's shut**
@@ -265,7 +265,7 @@ survived; two of those were already fixed in v0.6.68.
   you'll always arrive (the car already acted on the F press; there
   was simply no prompt to tell you so).
 
-## [0.6.66] — 2026-08-01 — walls are one surface
+## [0.6.4] — 2026-08-01 — walls are one surface
 
 ### Fixed
 - **The black lines running down every building are gone.** Each wall
@@ -283,12 +283,12 @@ survived; two of those were already fixed in v0.6.68.
 ### On the door report
 The door's collider is **byte-identical to a wall segment's**
 (`[-13.6,-12.8, 18.4,3.2, 13.6,12.8, -18.4,-3.2]`) — a closed door is
-exactly as solid as the wall it sits in, and the v0.6.65 smoke test
+exactly as solid as the wall it sits in, and the v0.6.3 smoke test
 confirms it blocks from every offset across the leaf. The see-through
 above is the most likely thing that was actually being seen. If a door
 still lets you pass after this, a circled screenshot pins it down.
 
-## [0.6.65] — 2026-08-01 — a timetable worth learning
+## [0.6.3] — 2026-08-01 — a timetable worth learning
 
 ### Changed
 - **The freight runs three nights in seven** (user call), not every
@@ -312,7 +312,7 @@ whole width. It may be an open door's leaf (passable by design), the
 wall beside a doorway, or a particular orientation — a circled
 screenshot would pin it down.
 
-## [0.6.64] — 2026-08-01 — windows take the HUD with them
+## [0.6.2] — 2026-08-01 — windows take the HUD with them
 
 ### Fixed
 - **"press f to open" stayed on screen behind the pause menu** (user
@@ -328,7 +328,7 @@ screenshot would pin it down.
 - The interaction target is dropped along with the prompt, so F can't
   act on something you were standing next to before opening a menu.
 
-## [0.6.63] — 2026-08-01 — the lines actually connect
+## [0.6.1] — 2026-08-01 — the lines actually connect
 
 User photographed the run with red lines drawn where the wires should
 be: connected, tower to tower, all the way along.
@@ -353,7 +353,7 @@ be: connected, tower to tower, all the way along.
   snapped one: you see the line arrive and drop, which reads far
   better than the wires simply stopping short of nothing.
 
-## [0.6.62] — 2026-08-01 — the grid
+## [0.6.0] — 2026-08-01 — the grid
 
 ### Added
 - **Power lines across the district** (user spec). A line of lattice
@@ -376,7 +376,7 @@ be: connected, tower to tower, all the way along.
 - The whole run is rolled from the side RNG, so adding it didn't move
   anything else in the district.
 
-## [0.6.61] — 2026-08-01 — dying ends the raid
+## [0.5.14] — 2026-08-01 — dying ends the raid
 
 ### Changed
 - **Death ends the raid** (user call). Three rounds used to fade to
@@ -398,7 +398,7 @@ be: connected, tower to tower, all the way along.
   strand every later check — the flag is set for exactly that window
   and turned back on for the assertion.
 
-## [0.6.60] — 2026-08-01 — the bill for walking out
+## [0.5.13] — 2026-08-01 — the bill for walking out
 
 ### Added
 - **Abandoning a raid costs you.** The pause menu's "main menu" is now
@@ -422,7 +422,7 @@ be: connected, tower to tower, all the way along.
 mid-raid, which is the old placeholder behaviour — it should probably
 end the raid into this same screen. Say the word and it will.
 
-## [0.6.59] — 2026-08-01 — every place has its own things in it
+## [0.5.12] — 2026-08-01 — every place has its own things in it
 
 ### Added
 - **A dressing pass for the rest of the POIs** (user: "liven up the map
@@ -448,7 +448,7 @@ end the raid into this same screen. Say the word and it will.
 
 The scrapyard keeps its hall (user confirmed) — only its stock moved.
 
-## [0.6.58] — 2026-08-01 — freight belongs to the warehouses
+## [0.5.11] — 2026-08-01 — freight belongs to the warehouses
 
 ### Changed
 - **The crates and shelves left the scrapyard** (user call). A
@@ -468,7 +468,7 @@ The scrapyard keeps its hall (user confirmed) — only its stock moved.
   The spells are clear, rain and storm; the morning still reads
   "morning mist" because that's a time of day, not weather.
 
-## [0.6.57] — 2026-08-01 — real weather, and a map that names things
+## [0.5.10] — 2026-08-01 — real weather, and a map that names things
 
 ### Changed
 - **Rain and storms are genuinely different weather now.** The user
@@ -489,7 +489,7 @@ The scrapyard keeps its hall (user confirmed) — only its stock moved.
   are, so they read as somewhere rather than a word floating over open
   ground.
 
-## [0.6.56] — 2026-08-01 — the clock and the light agree
+## [0.5.9] — 2026-08-01 — the clock and the light agree
 
 ### Changed
 - **The day/night gradient is re-timed to real hours** (user call):
@@ -520,7 +520,7 @@ The scrapyard keeps its hall (user confirmed) — only its stock moved.
   it reads against the warm arc inside the box. *Worth a look in
   motion — bursts are brief and a screenshot rarely catches one.*
 
-## [0.6.55] — 2026-08-01 — the district's clock, on the way in
+## [0.5.8] — 2026-08-01 — the district's clock, on the way in
 
 ### Added
 - **Map select shows the live in-game time and day/night** before you
@@ -539,7 +539,7 @@ freight's 24:00 arrival *is* correctly at peak darkness. Re-timing the
 gradient so dusk falls nearer 21:00 and dawn nearer 06:00 is a small
 change; say the word.
 
-## [0.6.54] — 2026-08-01 — the freight keeps a timetable
+## [0.5.7] — 2026-08-01 — the freight keeps a timetable
 
 All from the user's live playtest.
 
@@ -565,7 +565,7 @@ All from the user's live playtest.
   shoulder, so the main line the freight uses stays clear. Sidings
   keep their rolling stock.
 
-## [0.6.53] — 2026-08-01 — lit rooms, and the cable that feeds them
+## [0.5.6] — 2026-08-01 — lit rooms, and the cable that feeds them
 
 ### Added
 - **Every house has a room light.** A tin shade on a short flex, hung
@@ -591,10 +591,10 @@ All from the user's live playtest.
   a cell or two from the box, and those cells sit behind the wall
   sprite — again, drawn and invisible.
 
-## [0.6.52] — 2026-08-01 — pines shed needles
+## [0.5.5] — 2026-08-01 — pines shed needles
 
 ### Added
-- **Conifers drop needles.** v0.6.31 excluded them from shedding so
+- **Conifers drop needles.** v0.3.14 excluded them from shedding so
   they couldn't drop broadleaf leaves out of a pine — but a pine that
   drops nothing reads as dead (user). They now have their own drop:
   two needle sprites (a fresh green and a dried tan, both brighter
@@ -612,7 +612,7 @@ subtle against the forest floor's own green speckle; they read most
 clearly on pines standing in the open. Say the word and they can go
 bigger, brighter or more frequent.
 
-## [0.6.51] — 2026-08-01 — the roads stop somewhere
+## [0.5.4] — 2026-08-01 — the roads stop somewhere
 
 A deliberate **map revision** of transit-01, approved by the user
 ("yes its ok to change the map up a bit"), not a re-roll: the fixed
@@ -648,7 +648,7 @@ roll. Road-end dressing spends the side RNG too.
 
 Perf: 240 avg, worst frame 5.53 ms, ~7.6k nodes.
 
-## [0.6.50] — 2026-08-01 — first-open hitches, prewarmed
+## [0.5.3] — 2026-08-01 — first-open hitches, prewarmed
 
 User confirmed the dip is **first open only** — the changelog panel,
 and the map "when i load into the map, i drop down to like 80 fps for
@@ -669,7 +669,7 @@ a sec".
   the curtain and the first M press is warm. The prewarm deliberately
   does not touch the window stack, so it can't be mistaken for an open.
 
-## [0.6.49] — 2026-08-01 — the centre line, actually centred
+## [0.5.2] — 2026-08-01 — the centre line, actually centred
 
 Third attempt, first one measured instead of reasoned — the user's
 red-line photo plus pixel measurement of the rendered road.
@@ -697,7 +697,7 @@ red-line photo plus pixel measurement of the rendered road.
   against the shared boundary, so the dash straddles the true centre
   on both road axes.
 
-## [0.6.48] — 2026-08-01 — shelters off the crossings
+## [0.5.1] — 2026-08-01 — shelters off the crossings
 
 ### Fixed
 - **Bus shelters no longer hang into the crossing road.** A shelter is
@@ -710,7 +710,7 @@ red-line photo plus pixel measurement of the rendered road.
   the offending shelter is gone, the legitimate one is untouched, and
   everything else in the frame is pixel-identical.
 
-## [0.6.47] — 2026-08-01 — the volume page
+## [0.5.0] — 2026-08-01 — the volume page
 
 ### Added
 - **Settings → volume** (user call): four sliders — master, music,
@@ -725,7 +725,7 @@ red-line photo plus pixel measurement of the rendered road.
   menu both host the page; ESC steps back through it; harness:
   `--menu=volume`.
 
-## [0.6.46] — 2026-08-01 — the safehouse's problem, and a quieter mara
+## [0.4.14] — 2026-08-01 — the safehouse's problem, and a quieter mara
 
 ### Changed
 - **The broken, sparking power box is always the safehouse's** (user
@@ -737,7 +737,7 @@ red-line photo plus pixel measurement of the rendered road.
   is kept for M2's walk-in in case a subtle version is ever wanted
   back.
 
-## [0.6.45] — 2026-08-01 — the car faces where it drives
+## [0.4.13] — 2026-08-01 — the car faces where it drives
 
 User report (before sleep): driving left showed the truck — and the
 cars — facing right.
@@ -755,13 +755,13 @@ cars — facing right.
   views were verified correct and untouched.
 
 ### Changed
-- **Steering is instant** (user call, supersedes the v0.6.23 carve):
+- **Steering is instant** (user call, supersedes the v0.3.6 carve):
   W/A/S/D — and two keys together for a diagonal — snap the nose to
   that heading immediately. The steering-inertia slerp, the facing
   hysteresis and the turn cooldown are gone. Accel, braking, coast,
   crash physics and the iso squash are unchanged.
 
-## [0.6.44] — 2026-08-01 — taking out the dead code
+## [0.4.12] — 2026-08-01 — taking out the dead code
 
 The audits' verified-safe dead list, deleted. No behavior change — the
 point is less surface for the next bug to hide in.
@@ -791,9 +791,9 @@ Verified: regeneration proved every surviving sprite byte-identical
 different against the old atlas); probe bit-identical; SMOKE PASS.
 Full art regen + reimport measured at ~5 s total.
 
-## [0.6.43] — 2026-08-01 — the sweep, part two
+## [0.4.11] — 2026-08-01 — the sweep, part two
 
-The remaining fifteen findings from the v0.6.42 audits, fixed. The two
+The remaining fifteen findings from the v0.4.10 audits, fixed. The two
 world-builder fixes were verified against the fixed district: the probe
 is bit-identical to before (only the unseeded per-raid fog wind
 differs), and the one visible change is the intended one.
@@ -869,7 +869,7 @@ differs), and the one visible change is the intended one.
 
 Perf after: 240 avg fps, worst frame 4.50 ms (baseline 4.45–4.72).
 
-## [0.6.42] — 2026-08-01 — the sweep, part one
+## [0.4.10] — 2026-08-01 — the sweep, part one
 
 Three parallel audits read every script end to end. These are the
 severe findings, fixed. The rest are logged, not silently dropped.
@@ -888,7 +888,7 @@ severe findings, fixed. The rest are logged, not silently dropped.
   collisionless, with input never read. Respawn now clears the ride,
   visibility, collision and floor lift.
 - **The first night freight arrived 580 seconds in, not 20.** The cycle
-  clock was seeded with its sign inverted, which means the v0.6.40 note
+  clock was seeded with its sign inverted, which means the v0.4.8 note
   claiming "the first freight arrives 20 seconds in" was flatly wrong.
 - **Extracting worked underneath an open map.** The map deliberately
   doesn't pause the tree, so standing in the landing zone and pressing M
@@ -896,14 +896,14 @@ severe findings, fixed. The rest are logged, not silently dropped.
   window stack per the first bug. Extraction now stands down while any
   window is open, and the green counter no longer sits over the death
   fade.
-- **The sniper stand-down was incomplete** — the fix v0.6.40 claimed.
+- **The sniper stand-down was incomplete** — the fix v0.4.8 claimed.
   Already-queued rounds in a staggered volley still spawned and could
   kill you up to 0.84 s after paying the warden or boarding the train.
   Queued rounds are now dropped and `_spawn_round` respects the flag.
 
 ### Fixed — world
 - **The district's outer rim was bare.** `EDGE_FOREST`, the content
-  margin, was left at 85 when v0.6.36 moved the barricade ring to 66, so
+  margin, was left at 85 when v0.4.4 moved the barricade ring to 66, so
   lamps, lone trees, road vehicles, puddles and scatter all stopped 19
   cells short of the barricades.
 - **Half the street scatter was missing**: heaps incremented the placed
@@ -928,7 +928,7 @@ tail, `_place_toll_gate` not checking occupancy, `_plan_safehouse`
 running before the POI rects it tests against exist, and ~10 genuinely
 dead functions and sprite families. All recorded.
 
-## [0.6.41] — 2026-08-01
+## [0.4.9] — 2026-08-01
 
 ### Performance
 - **Killed the deploy stall** (user: "when you load into transit, it goes
@@ -944,7 +944,7 @@ dead functions and sprite families. All recorded.
   **After:** build 1.11 s, worst frames 29.0 / 18.5 / 6.4 / 5.9 ms.
   The remaining 29 ms is the known menu→game scene swap.
 
-## [0.6.40] — 2026-08-01
+## [0.4.8] — 2026-08-01
 
 ### Fixed
 - **The snipers kept shooting while you rode the freight out** (user
@@ -965,7 +965,7 @@ dead functions and sprite families. All recorded.
   the top-left corner, which pulled the eye off the world every time she
   keyed up (user).
 
-## [0.6.39] — 2026-08-01
+## [0.4.7] — 2026-08-01
 
 ### Fixed
 - **The locomotive was missing its end face** (user: "the extract train is
@@ -980,7 +980,7 @@ dead functions and sprite families. All recorded.
   LENGTHWISE off a corner instead of a wall across the width axis always
   reads as missing.** Check every new vehicle against it.
 
-## [0.6.38] — 2026-08-01
+## [0.4.6] — 2026-08-01
 
 ### Added
 - **A facing cone on the map marker** (user: "a circle i cant really
@@ -991,7 +991,7 @@ dead functions and sprite families. All recorded.
   45° apart from east, and on an iso map screen direction *is* the
   direction you'd walk. While driving it follows the car's heading.
 
-## [0.6.37] — 2026-08-01
+## [0.4.5] — 2026-08-01
 
 ### Changed
 - **Furniture variety** (user: "these have visual repetition... make sure
@@ -999,7 +999,7 @@ dead functions and sprite families. All recorded.
   family's variant count found the real culprit: **all seven interior
   furniture pieces were single sprites** — every house in the district
   had the identical table, chair, bookshelf, cabinet, couch, tv stand
-  and bed. Each now bakes 4–5 copies through the v0.6.29
+  and bed. Each now bakes 4–5 copies through the v0.3.12
   `clutter_variants` path, so every instance carries its own grime
   patches and its own slight lean. Furniture leans *a little* — a
   cabinet tipped like a crate reads as falling over, not lived-in.
@@ -1016,7 +1016,7 @@ dead functions and sprite families. All recorded.
 - The deeper fix is parameterising the builders so variants differ in
   SHAPE and size, not only in wear and lean.
 
-## [0.6.36] — 2026-08-01
+## [0.4.4] — 2026-08-01
 
 ### Changed
 - **The district is bigger** (user: "make the map a bit bigger, so the
@@ -1029,18 +1029,18 @@ dead functions and sprite families. All recorded.
 - **One railway, the whole way across** (user: "it should be the same
   track all the way across the map, same look, the wood planks with
   steel beam... make sure the railroad tracks are all connected").
-  **Reverted the worn/overgrown track variants added in v0.6.33** — the
+  **Reverted the worn/overgrown track variants added in v0.4.1** — the
   stretches of rusted rail with rotted ties and weed-grown ballast broke
   the line into what read as separate, disconnected bits of railway.
   There is one rail tile again: wooden ties under steel rail, identical
   tile to tile, continuous end to end. The trackside dressing from
-  v0.6.33 stays — poles, signals and lineside junk were never the
+  v0.4.1 stays — poles, signals and lineside junk were never the
   problem, the track surface was.
 
-## [0.6.35] — 2026-08-01
+## [0.4.3] — 2026-08-01
 
 ### Fixed
-- **v0.6.34 shipped with a failing smoke test.** The commands were
+- **v0.4.2 shipped with a failing smoke test.** The commands were
   chained unconditionally, so a red build reached main. Two genuine
   problems were underneath it:
   - **The smoke test asserted the wrong thing.** It drove whichever car
@@ -1049,24 +1049,24 @@ dead functions and sprite families. All recorded.
     room, and the entire build failed for it. It now tries all four
     directions and fails only if the car can't move in *any* of them —
     asserting that driving works, not that one car is parked well.
-  - **Clutter pile satellites had no occupancy check** (a v0.6.29 bug of
+  - **Clutter pile satellites had no occupancy check** (a v0.3.12 bug of
     mine): they could land in roads, in doorways, and on top of parked
     cars. They now test the cell like every other placement does.
 
-## [0.6.34] — 2026-08-01
+## [0.4.2] — 2026-08-01
 
 ### Fixed
 - **The scrapyard warehouse came back** (user: "thats where the warehouse
-  should have been, now you removed it again"). v0.6.31 stopped the hall
+  should have been, now you removed it again"). v0.3.14 stopped the hall
   being built on top of the railway by **skipping it** when no rail-free
-  footprint fitted — which silently reintroduced the original v0.6.22
+  footprint fitted — which silently reintroduced the original v0.3.5
   bug, racks and crates standing in the open with no building. Wrong
   trade. The hall is guaranteed again: it now searches the block at
   progressively smaller footprints (12×8 down to 6×4) until one fits
   clear of track, ballast and crossings. A smaller hall is a hall; no
   hall is the old bug.
 
-## [0.6.33] — 2026-08-01
+## [0.4.1] — 2026-08-01
 
 ### Changed
 - **The rail line reads as a railway** (user: "it does look a bit odd the
@@ -1080,14 +1080,14 @@ dead functions and sprite families. All recorded.
   - **Colour-light signals** stand where they'd really stand — on the
     approach to each level crossing and at the yard throat. Most are
     dead; one still shows an aspect.
-  - **Trackside junk** piles along the ballast using the v0.6.29 clutter
+  - **Trackside junk** piles along the ballast using the v0.3.12 clutter
     piling, because that's where a railway collects things.
   - **The track wears in STRETCHES, not per tile**: runs of overgrown
     track with grass through the ballast and up between the rails, runs
     of rusted rail with the odd tie rotted away, then clean again. A
     per-cell roll would read as noise; a run reads as neglect.
 
-## [0.6.32] — 2026-08-01
+## [0.4.0] — 2026-08-01
 
 ### Added
 - **Extract 3: THE NIGHT FREIGHT** (user design, including the timing).
@@ -1116,7 +1116,7 @@ dead functions and sprite families. All recorded.
 - Harness: `--freight` puts the train in the yard immediately instead of
   waiting out the real-time cycle.
 
-## [0.6.31] — 2026-08-01
+## [0.3.14] — 2026-08-01
 
 ### Fixed
 - **Falling leaves, both halves of it** (user: "a tree that doesnt have
@@ -1140,7 +1140,7 @@ dead functions and sprite families. All recorded.
   a rail-free footprint (checking track, ballast and crossings), and
   skips the hall entirely rather than dropping a warehouse on the line.
 
-## [0.6.30] — 2026-08-01
+## [0.3.13] — 2026-08-01
 
 ### Added
 - **Extract 2: THE TOLL GATE** (user design). Where the middle road
@@ -1149,7 +1149,7 @@ dead functions and sprite families. All recorded.
   across the asphalt. Pull up **in a car** and press F — F at the wheel
   talks to him instead of getting out, because the whole point of the
   gate is that you drive to it — or walk up; either way the prompt
-  offers it, and the prompt is the permission (v0.6.28's rule).
+  offers it, and the prompt is the permission (v0.3.11's rule).
 - **His window.** A portrait panel with his face, whatever he's decided
   to tell you, and three answers: a **reply button that shows the line
   you'd actually say** and changes every time, **pay 30 to extract**,
@@ -1171,7 +1171,7 @@ dead functions and sprite families. All recorded.
 - The toll gate and the landing zone are both named POIs on the map now.
 - Harness: `--toll` opens his window for review.
 
-## [0.6.29] — 2026-08-01
+## [0.3.12] — 2026-08-01
 
 ### Changed
 - **Clutter variation** (user ask: break visual repetition without adding
@@ -1207,7 +1207,7 @@ dead functions and sprite families. All recorded.
   extraction, driveable cars, second stories, the map key, the real
   controls, and the human-only rule.
 
-## [0.6.28] — 2026-08-01
+## [0.3.11] — 2026-08-01
 
 ### Fixed
 - **The prompt is the permission** (user report: "im a bit further back
@@ -1224,7 +1224,7 @@ dead functions and sprite families. All recorded.
   the game's back: F must open the door while standing at it, and must
   do nothing at all from across the street.
 
-## [0.6.27] — 2026-08-01
+## [0.3.10] — 2026-08-01
 
 ### Added
 - **EXTRACTION — you can leave the raid.** New `Extraction` manager holds
@@ -1258,7 +1258,7 @@ dead functions and sprite families. All recorded.
   freight, and the lift — with the drain, outfall and fog window kept
   for later. CLAUDE.md gained an IN FLIGHT section tracking all three.
 
-## [0.6.26] — 2026-08-01
+## [0.3.9] — 2026-08-01
 
 ### Changed
 - **The district map is DRAWN, not sampled** (user: "make it all vector
@@ -1287,7 +1287,7 @@ dead functions and sprite families. All recorded.
   zoom, so it lives on its own layer and the markers redraw alone each
   frame. 240 avg, worst 5.34 ms, ~5.3k nodes. SMOKE PASS.
 
-## [0.6.25] — 2026-08-01
+## [0.3.8] — 2026-08-01
 
 ### Fixed
 - **Windows own the screen** (user: "once a window is open i want only
@@ -1316,7 +1316,7 @@ dead functions and sprite families. All recorded.
   six exit pitches for the user to pick from. DESIGN.md's "dead overrun
   district" line reworded: nothing overran this city.
 
-## [0.6.24] — 2026-08-01
+## [0.3.7] — 2026-08-01
 
 ### Changed
 - **EIGHT-DIRECTION VEHICLES** (user request, sample approved first): the
@@ -1342,7 +1342,7 @@ dead functions and sprite families. All recorded.
   itself; get out and it shuts off** — the engine action is gone from
   the input map, the settings binds and the keybinds panel. **WASD
   drives** across all eight headings (cursor-follow removed), keeping
-  the steering inertia from v0.6.23 — the car carves toward your input
+  the steering inertia from v0.3.6 — the car carves toward your input
   and turns tighten as you slow — plus iso squash on the vertical so a
   car crossing north-south covers ground at the rate the tiles imply.
   **E** headlights, **F** in and out. Controls card rewritten to match.
@@ -1352,7 +1352,7 @@ dead functions and sprite families. All recorded.
 
 Perf: 240 avg, worst 4.72 ms, ~5.3k nodes. SMOKE PASS.
 
-## [0.6.23] — 2026-08-01
+## [0.3.6] — 2026-08-01
 
 ### Changed
 - **THE MAP, rebuilt** (user: "make it something how a real triple a
@@ -1379,7 +1379,7 @@ Perf: 240 avg, worst 4.72 ms, ~5.3k nodes. SMOKE PASS.
   slab gets a LIT edge lip along its open borders, and a quota
   guarantees ≥4 two-story houses — the fixed seed had rolled ZERO
   (45% dice across ~15 homes; with one permanent map that would have
-  been forever). The school stood nearly empty since v0.6.19: its desks
+  been forever). The school stood nearly empty since v0.3.2: its desks
   were the only furniture gated on `_occupied`, which the shell sets
   for its whole interior before furnishing.
 - **The classroom** (user request): chalkboard with chalk ghosts on the
@@ -1394,7 +1394,7 @@ Perf: 240 avg, worst 4.72 ms, ~5.3k nodes. SMOKE PASS.
   lit lumpy masses — crowns with lit/shaded sides, dark under-skirt,
   sky-lit rim; benches rebuilt as boxes — grooved top face, front face,
   under-shadow, two-tone legs. (The catalog-wide 3D pass shipped in
-  v0.6.9; these two were the stragglers. Circle anything else.)
+  v0.2.7; these two were the stragglers. Circle anything else.)
 - **Driving feel** (user: "add some sort of physics"): steering
   inertia — the car carves toward the cursor and turns tighten as you
   slow; facing swaps get hysteresis (no diagonal flicker); every real
@@ -1424,7 +1424,7 @@ SMOKE PASS.
   need their own art round: ONE sample sedan sheet for user sign-off
   first, then the fleet — the end-face saga earned that process.
 
-## [0.6.22] — 2026-08-01
+## [0.3.5] — 2026-08-01
 
 ### Changed
 - **The fixed district** (user call: "i want everything on the map to be
@@ -1478,7 +1478,7 @@ SMOKE PASS.
 - Verified: 240 avg fps, worst frame 4.45 ms (day) / 6.25 ms (storm
   night), ~5.2k nodes. SMOKE PASS.
 
-## [0.6.21] — 2026-08-01
+## [0.3.4] — 2026-08-01
 
 ### Changed
 - **Big bushes** (user: "make them alot bigger please so the user can hide
@@ -1491,7 +1491,7 @@ SMOKE PASS.
   red leaf sprites, everything green drops only green. The comms relay
   clearing sits right against it.
 
-## [0.6.20] — 2026-08-01
+## [0.3.3] — 2026-08-01
 
 ### Added
 - **The safehouse**: every raid now starts inside the same squat house near
@@ -1537,7 +1537,7 @@ SMOKE PASS.
   walk out of the building mid-air).
 - Perf: 240 avg, ~4.5 ms worst, ~5.0k nodes.
 
-## [0.6.19] — 2026-08-01
+## [0.3.2] — 2026-08-01
 
 ### Added
 - **The map (M)**: a big window; the FIRST open shows the world view — the
@@ -1604,7 +1604,7 @@ SMOKE PASS.
 - **Perf** on the user's box: 240 avg fps day/dawn/night, worst ~4.5 ms,
   ~4.6k nodes.
 
-## [0.6.18] — 2026-08-01
+## [0.3.1] — 2026-08-01
 
 ### Changed
 - **The districts update.** The map shrank AGAIN (user: "way smaller, its
@@ -1661,7 +1661,7 @@ SMOKE PASS.
 - **Perf** on the user's 240 Hz box: 240 avg fps day/dawn/night, worst
   frame ~4.5 ms, process ~0.9-1.5 ms, ~6.3k nodes (down from ~10.4k).
 
-## [0.6.17] — 2026-08-01
+## [0.3.0] — 2026-08-01
 
 ### Added
 - **Morning fog**: soft-alpha mist puffs (3 sprites, gen_art `make_fog_puffs`)
@@ -1692,7 +1692,7 @@ SMOKE PASS.
   anchors to the framed view; headless runs fall back to a 640×360 assumed
   view when the window reports a degenerate size.
 
-## [0.6.16] — 2026-08-01
+## [0.2.14] — 2026-08-01
 
 ### Changed
 - **Raid music, the user's way:** they auditioned 23 candidate tracks from
@@ -1719,7 +1719,7 @@ SMOKE PASS.
   loudly after 30 s instead of hanging (the "stuck background task" the
   user kept having to kill); the world probe reports WALKS and FOLIAGE.
 
-## [0.6.15] — 2026-08-01
+## [0.2.13] — 2026-08-01
 
 ### Changed
 - **Three new living menu backdrops** (user's picks, replacing hoard/
@@ -1751,7 +1751,7 @@ SMOKE PASS.
   fps in the corner counter (historical shots show "1 fps"); it is a
   capture-harness artifact, not a menu regression.
 
-## [0.6.14] — 2026-08-01
+## [0.2.12] — 2026-08-01
 
 ### Changed
 - **The district tightened to roughly half its area** (user: "the map is way
@@ -1783,7 +1783,7 @@ SMOKE PASS.
   interactive manholes with ladders) are specced into Milestone 2 alongside
   gunplay; enemy high-visibility accents specced into M3.
 
-## [0.6.13] — 2026-08-01
+## [0.2.11] — 2026-08-01
 
 ### Fixed
 - **Vehicles have real backs and fronts now — the saga is over.** The user's
@@ -1812,15 +1812,15 @@ SMOKE PASS.
 - UI blips, door thunks, the sniper crack, flashlight click, splash ping,
   rain bed and car alarms stay synthesized — they were approved as-is.
 
-## [0.6.12] — 2026-08-01
+## [0.2.10] — 2026-08-01
 
 ### Changed
 - **Car end-cap colors rolled back to the original dark look** (user call —
-  the brightened caps from the visibility fix read worse). The v0.6.10
+  the brightened caps from the visibility fix read worse). The v0.2.8
   geometry fixes stayed: raked-ramp fills, smaller wheel arches, the
   attached broken-car door.
 
-## [0.6.11] — 2026-08-01
+## [0.2.9] — 2026-08-01
 
 ### Changed
 - **The 3D-illusion pass** (user call: everything should read like the
@@ -1834,7 +1834,7 @@ SMOKE PASS.
   dark ground contact. Everything else (crates, furniture, buildings) was
   already prism-built.
 
-## [0.6.10] — 2026-08-01
+## [0.2.8] — 2026-08-01
 
 ### Fixed
 - **The car ends were there all along — painted invisibly.** The end caps
@@ -1856,7 +1856,7 @@ SMOKE PASS.
   the widest); the ladder now reaches 6x with smooth glides between stops,
   always resting on whole pixel factors.
 
-## [0.6.9] — 2026-08-01
+## [0.2.7] — 2026-08-01
 
 The polish storm: everything the playtest surfaced in one pass.
 
@@ -1902,7 +1902,7 @@ The polish storm: everything the playtest surfaced in one pass.
 - **Boxes belong to industry**: crates/stacks/pallets only spawn around
   warehouses and their yards, never in the open street.
 
-## [0.6.8] — 2026-08-01
+## [0.2.6] — 2026-08-01
 
 The sound update: the district found its voice — and its studio card.
 
@@ -1937,7 +1937,7 @@ The sound update: the district found its voice — and its studio card.
   a door hanging open, one flat tire, dark side windows with a couple of
   glints, rust. Reads as an event, not noise.
 
-## [0.6.7] — 2026-08-01
+## [0.2.5] — 2026-08-01
 
 ### Changed
 - **The barricade line reads as one barrier**: each stretch repeats a single
@@ -1957,7 +1957,7 @@ The sound update: the district found its voice — and its studio card.
   standing proportions — wider torso, full-size head, thicker limbs,
   most noticeably on diagonals).
 
-## [0.6.6] — 2026-08-01
+## [0.2.4] — 2026-08-01
 
 ### Added
 - **Prone** on Z (rebindable): a full 8-direction crawl sheet (pack on the
@@ -1969,7 +1969,7 @@ The sound update: the district found its voice — and its studio card.
 - The door prompt ("press f to open/close") floats pinned above the door
   itself instead of sitting at the bottom of the screen.
 
-## [0.6.5] — 2026-08-01
+## [0.2.3] — 2026-08-01
 
 The barricade update: the map got honest edges, the deploy got smooth, and the
 roadmap got bigger.
@@ -2019,7 +2019,7 @@ roadmap got bigger.
   copies by value — it now uses reference capture and passes for the right
   reason.
 
-## [0.6.4] — 2026-08-01
+## [0.2.2] — 2026-08-01
 
 ### Fixed
 - **Blurry/shimmering walk** (worst on diagonals): the camera snapped to the
@@ -2034,7 +2034,7 @@ roadmap got bigger.
   grid. Engine auto-snap is OFF: every placement is explicit (static props on
   whole world pixels, movers on the screen-pixel grid).
 
-## [0.6.3] — 2026-08-01
+## [0.2.1] — 2026-08-01
 
 The transit update: the district got a name, real edges, real doors, real rain —
 and the first damage in the game.
@@ -2111,7 +2111,7 @@ and the first damage in the game.
 - Couch (or any furniture/stock) could block a building entrance.
 - Non-deterministic world layout across runs with the same seed.
 
-## [0.6.2] — 2026-07-31
+## [0.2.0] — 2026-07-31
 
 The district update: the world got 10x bigger and came alive.
 
@@ -2142,7 +2142,7 @@ The district update: the world got 10x bigger and came alive.
 ### Changed
 - Warehouse floors are smooth gray concrete (the green screed looked wrong).
 - Ambient junk is rarer and clusters around buildings instead of everywhere.
-## [0.6.1] — 2026-07-31
+## [0.1.14] — 2026-07-31
 
 > Versioning from here on: patch bumps (0.6.x) for polish and fix batches;
 > the minor only moves when a MILESTONE lands (0.7 gunplay, 0.8 enemies,
@@ -2166,7 +2166,7 @@ The district update: the world got 10x bigger and came alive.
 - The gold in the vault backdrop now falls down the light shaft (was rising).
 - Menu buttons are exactly centered (and stay centered as buttons are added);
   the tagline is smaller and no longer bobs with the title.
-## [0.6.0] — 2026-07-31
+## [0.1.13] — 2026-07-31
 
 ### Added
 - **Keybinds screen** (settings → keybinds): every action rebindable — click a
@@ -2190,7 +2190,7 @@ The district update: the world got 10x bigger and came alive.
 - VSync ON greys out the FPS cap slider and shows the display refresh instead.
 - Settings window has a fixed, slightly wider size (no more resizing when
   value text changes).
-## [0.5.6] — 2026-07-31
+## [0.1.12] — 2026-07-31
 
 ### Fixed
 - Wall symmetry for good: the coping-flip experiment is removed — every wall
@@ -2207,7 +2207,7 @@ The district update: the world got 10x bigger and came alive.
 - Buttons restyled once more: near-black translucent fill with a light border
   and bright text — contrast by brightness instead of hue, so they read on
   the gold vault, the purple cave and the blue-gray scenes alike.
-## [0.5.5] — 2026-07-31
+## [0.1.11] — 2026-07-31
 
 ### Changed
 - Buttons are deep burgundy now — clearly visible over every menu backdrop
@@ -2215,7 +2215,7 @@ The district update: the world got 10x bigger and came alive.
 - The changelog link is a dim flat footer link, matching the version label.
 - In-game changelog entries expanded with more detail per version.
 
-## [0.5.4] — 2026-07-31
+## [0.1.10] — 2026-07-31
 
 ### Added
 - In-game changelog viewer on the main menu (bottom-right, above the version):
@@ -2226,7 +2226,7 @@ The district update: the world got 10x bigger and came alive.
   re-decoding + particle pre-simulation). Backdrops are now preloaded for the
   process lifetime and only the first scene pre-warms its particles.
 
-## [0.5.3] — 2026-07-31
+## [0.1.9] — 2026-07-31
 
 ### Changed
 - Roof rebuilt as modular pieces placed by explicit formula: one tile per
@@ -2235,7 +2235,7 @@ The district update: the world got 10x bigger and came alive.
   variants), and corner posts are exactly wall height so their caps close the
   fascia line at the corners instead of poking through the roof.
 
-## [0.5.2] — 2026-07-31
+## [0.1.8] — 2026-07-31
 
 ### Fixed
 - Roofs sit flush on the walls (the slab was overhanging ~8px past them);
@@ -2251,7 +2251,7 @@ The district update: the world got 10x bigger and came alive.
   masonry — and their roofs are two different near-blacks (charcoal blue vs.
   dark umber). More per-thing variation, per the standing direction.
 
-## [0.5.1] — 2026-07-31
+## [0.1.7] — 2026-07-31
 
 ### Added
 - First synthesized audio: soft UI hover/press blips, generated in code at
@@ -2273,7 +2273,7 @@ The district update: the world got 10x bigger and came alive.
   caps the walls exactly (fascia trim, baked vents), replacing the
   tile-assembled roof and its corner glitches for good.
 
-## [0.5.0] — 2026-07-31
+## [0.1.6] — 2026-07-31
 
 ### Fixed
 - **The blurry UI text, for real this time.** The bitmap font had silently
@@ -2304,7 +2304,7 @@ The district update: the world got 10x bigger and came alive.
   cliff-edge overlook with drifting clouds over a dead city. The gameplay map
   is no longer the menu background.
 
-## [0.4.0] — 2026-07-31
+## [0.1.5] — 2026-07-31
 
 The presentation update.
 
@@ -2339,7 +2339,7 @@ The presentation update.
 ### Fixed
 - Blurry UI text: tiny vector-font rendering replaced by the bitmap font.
 
-## [0.3.0] — 2026-07-31
+## [0.1.4] — 2026-07-31
 
 ### Added
 - Pause menu on **Esc** with Back / Settings / Quit.
@@ -2357,7 +2357,7 @@ The presentation update.
   the largest whole-number pixel scale — no black frame, on any resolution,
   with pixels staying perfectly crisp.
 
-## [0.2.1] — 2026-07-31
+## [0.1.3] — 2026-07-31
 
 ### Fixed
 - **High-refresh judder:** movement and camera now update every rendered frame
@@ -2369,7 +2369,7 @@ The presentation update.
 ### Changed
 - Game now launches fullscreen (borderless) by default, integer-scaled.
 
-## [0.2.0] — 2026-07-31
+## [0.1.2] — 2026-07-31
 
 First playtest feedback pass.
 
