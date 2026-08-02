@@ -816,6 +816,34 @@ then `godot_console --headless --path . --import`.
 
 ## User preferences (communication & product)
 
+### HOW TO WRITE A SUMMARY (user call, 2026-08-02 — standing rule)
+
+Their words: *"can you make all write ups like that really show whats
+fixed, what still needs to be fixed stuff like that"*.
+
+**Every status must say, for each item, which of these it is.** Not implied
+by tense, not inferable from context — labelled.
+
+- **FIXED** — done and shipped. Say how it was VERIFIED (which gate, which
+  test, which command), because "fixed" without evidence is the thing this
+  whole project distrusts.
+- **STILL OPEN** — found but not done, and why (out of scope, needs their
+  call, deferred). It goes in `TASKS.md` in the same breath or it is lost.
+- **COULDN'T VERIFY** — the honest third bucket. Say what would settle it.
+- **NEEDS YOUR DECISION** — nothing happens until they answer.
+
+**What went wrong, so it is not repeated:** v0.6.27 fixed three bugs and
+shipped them together. The write-up gave one its own "proven end to end"
+heading and put the other two under "Two smaller real ones" — which read as
+a list of FINDINGS, not fixes, so they asked why the other two had not been
+fixed. Every one of them was already fixed and tagged. **A heading that
+merely describes a bug reads as an open bug.** Lead each line with its
+status word, and never let a bug description stand alone with no verdict
+attached.
+
+Applies to any list of work: never mix fixed and unfixed items under one
+neutral heading, and never let the reader infer status from grammar.
+
 - Plain, short, non-technical summaries; they playtest and react — build,
   verify, ship, send screenshots, stop. Milestones proceed on their "go".
 - Very sensitive to frame pacing and visual artifacts (spots 1px issues, fps
