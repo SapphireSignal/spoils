@@ -3,6 +3,28 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.61] — 2026-08-01 — dying ends the raid
+
+### Changed
+- **Death ends the raid** (user call). Three rounds used to fade to
+  black and wake you back at the safehouse — the placeholder from
+  before extraction existed, and it left dying *cheaper* than walking
+  out. Now it hands you the same debrief: the doll with the parts that
+  took rounds, what was lost with you, who did it and where.
+- Dying still tidies what you left behind first — you're taken off the
+  second floor and out of the car (engine and headlights off) before
+  the screen comes up.
+- If a raid somehow has no debrief to show, the old respawn is still
+  there as a fallback, so nothing can strand you in a dead world.
+
+### Testing
+- The smoke test now **asserts** it: at the end of its run it takes
+  three rounds and requires the debrief to appear with the raider
+  actually dead. It suppresses the debrief while it's probing
+  everything else, because a paused tree behind a death screen would
+  strand every later check — the flag is set for exactly that window
+  and turned back on for the assertion.
+
 ## [0.6.60] — 2026-08-01 — the bill for walking out
 
 ### Added

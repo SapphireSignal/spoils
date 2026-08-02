@@ -8,6 +8,11 @@ extends Node
 ##   --probe-exclusive  report display mode capabilities and quit
 
 var world_seed := ""  # --seed=<text>: pin the district layout (shots/probes)
+# the smoke needs a LIVING world to probe: dying ends the raid and pauses
+# the tree behind the debrief, which would strand every later check. The
+# probe suppresses it while it works, then turns it back on and asserts
+# the debrief really does appear (see the end of _smoke).
+var suppress_debrief := false
 
 var _shot_menu := ""
 var _shot_scene := "game"
@@ -109,6 +114,7 @@ func _ensure_game_scene() -> void:
 
 
 func _smoke() -> void:
+	suppress_debrief = true      # a living world to probe; asserted at the end
 	await _ensure_game_scene()
 	var failures: Array[String] = []
 
@@ -329,6 +335,27 @@ func _smoke() -> void:
 		await get_tree().process_frame
 	if get_tree().paused:
 		failures.append("Esc did not close the pause menu")
+
+	# LAST, because it ends the raid: three rounds must put up the debrief
+	# with the hit locations on it, not respawn you (v0.6.61)
+	suppress_debrief = false
+	var dying := _find_player()
+	if dying != null:
+		dying.take_hit("thorax", "a marksman on the wire")
+		dying.take_hit("head", "a marksman on the wire")
+		dying.take_hit("thorax", "a marksman on the wire")
+		var waited := 0.0
+		var debrief := main.get_node_or_null("DeathScreen") as DeathScreen
+		while waited < 4.0 and (debrief == null or not debrief.visible):
+			await get_tree().create_timer(0.2).timeout
+			waited += 0.2
+			debrief = main.get_node_or_null("DeathScreen") as DeathScreen
+		if debrief == null or not debrief.visible:
+			failures.append("dying did not end the raid into the debrief")
+		elif not dying.dead:
+			failures.append("the debrief came up but the raider is not dead")
+		else:
+			debrief.dismiss()
 
 	_finish_smoke(failures)
 

@@ -194,8 +194,15 @@ func _draw_doll() -> void:
 	_doll.draw_rect(zones["eyes"], Color("151d28"), false, 1.0)
 
 
-func _leave() -> void:
+func dismiss() -> void:
+	## take the screen down and hand the world back. The button does this
+	## on its way to the menu; the smoke test does it to carry on probing
+	## a raid it deliberately died in.
 	visible = false
 	Ui.close(&"death")
 	get_tree().paused = false
+
+
+func _leave() -> void:
+	dismiss()
 	get_tree().change_scene_to_file("res://scenes/menu.tscn")

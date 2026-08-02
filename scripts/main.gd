@@ -496,7 +496,7 @@ func _on_player_died() -> void:
 	# coroutine on a dead instance
 	if not is_inside_tree():
 		return
-	if _player_upper != -1:      # death upstairs respawns on the ground
+	if _player_upper != -1:      # tidy the world you left behind
 		_set_upper_state(_player_upper, false)
 		_player_upper = -1
 		_player.floor_lift = 0.0
@@ -509,6 +509,17 @@ func _on_player_died() -> void:
 		_player.visible = true
 		_player.collision_layer = 1
 		Sfx.set_engine(0.0)
+	# DYING ENDS THE RAID (user call). It used to respawn you where you
+	# woke up, which was the placeholder from before extraction existed —
+	# and it made walking out (which now costs you everything) harsher
+	# than being killed. Same debrief either way; the doll is drawn from
+	# the rounds that actually landed.
+	if _death_screen != null and not Harness.suppress_debrief:
+		layer.queue_free()
+		_death_screen.show_debrief(_player, false)
+		return
+	# no debrief available (a raid that never finished building): fall
+	# back to the old respawn so the player is never stranded
 	_player.respawn(world_info["spawn"])
 	label.visible = false
 	await get_tree().process_frame

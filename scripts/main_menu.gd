@@ -70,6 +70,10 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.61", ["dying ends the raid now. three rounds and you get the",
+		"same debrief walking out gives you - the doll, what you",
+		"lost, who did it and where they hit you. no more waking",
+		"up back at the safehouse like nothing happened"]],
 	["v0.6.60", ["walking out of a raid is not free any more. the pause",
 		"menu says abandon raid, and it hands you the same",
 		"debrief dying would: how long you lasted, the xp, what",

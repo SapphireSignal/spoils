@@ -211,11 +211,13 @@ next session's work**:
   button renamed "abandon raid" → `main.abandon_raid()`.
   `player.hits` records {bone, who, at} per round;
   `Authority.damage_player(player, bone, who)`; edge_guard rolls a
-  real location. Harness `--death`. **OPEN:** actually dying (3 hits)
-  still RESPAWNS mid-raid — the old placeholder. It should end the
-  raid into this same screen; ask the user, and mind that the smoke
-  test drives `player.respawn()` itself and that opening a Ui window
-  on death could block later smoke steps. (Their related question
+  real location. Harness `--death`. **v0.6.61: DYING ENDS THE RAID
+  TOO** — same screen, no respawn (fallback respawn kept only for a
+  raid with no debrief). NOTE the harness seam: `Harness.
+  suppress_debrief` is ON while the smoke probes (a paused tree behind
+  the death screen stranded every later check) and turned OFF at the
+  end, where the smoke asserts the debrief really appears. (Their
+  related question
   "how does saving work?" — nothing persists between raids yet; the
   stash is M4.)
 - **H. POWER LINES ACROSS THE DISTRICT** — still TODO. Pylons with
