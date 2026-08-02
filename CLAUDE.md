@@ -1,11 +1,15 @@
 # SPOILS — session handoff (read this first)
 
-> **MIGRATING FROM ANOTHER CHAT? Read `TASKS.md` after this file.** It
-> holds every open item and the whole milestone roadmap, each with the
-> diagnosis already done, so nothing is re-derived. This file is the
-> rules and the systems map; `TASKS.md` is the work; `CHANGELOG.md` is
-> what already shipped. The session task list does NOT survive a chat
-> migration — `TASKS.md` is the copy that does.
+> **MIGRATING FROM ANOTHER CHAT? Read these two, in this order:**
+> **`HANDOFF.md`** — what the last session actually did and said, and the
+> chain of every session before it. **`TASKS.md`** — every open item and the
+> milestone roadmap, each with the diagnosis already done, so nothing is
+> re-derived. Then run `--checkdocs` (one second) to prove these docs still
+> match the repo before you trust a word of them.
+>
+> Nothing about a chat survives except what is committed. `HANDOFF.md` is
+> the memory, `TASKS.md` is the work, `CHANGELOG.md` is what shipped, this
+> file is the rules and the systems map.
 
 2D isometric extraction shooter, pixel art, Godot 4.7, Windows. **Read
 `DESIGN.md` for the full game design & workflow contract** — it is the source
@@ -14,6 +18,8 @@ This file carries everything a fresh session needs that isn't in those two.
 
 ## Where we are
 
+<!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
+     form "vX.Y.Z shipped" or the check will fail loudly. -->
 **v0.6.25 shipped, 2026-08-02.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
@@ -124,6 +130,13 @@ light spill.
 
 ## PROCESS (learned the hard way this session)
 
+- **WRITE A `HANDOFF.md` ENTRY BEFORE YOU PUSH, every session.** Not at the
+  end — there is no end, a chat just stops. The format and the rules are at
+  the top of that file. This is not optional bookkeeping: handoffs on this
+  project have gone nineteen releases stale, pointed at a deleted temp
+  folder, and twice recorded a **wrong diagnosis as settled fact** that the
+  next session then acted on. Quote the user verbatim, and say plainly what
+  you got wrong.
 - **NEVER chain the smoke test and the push.** `smoke; git push` pushed a
   RED build (v0.4.2). Run smoke, READ the verdict, then push.
 - **Write commit messages to a FILE and use `git commit -F`.** A
@@ -217,7 +230,9 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   diamond edge is only a backstop. build() is a COROUTINE with TIME-BUDGETED
   yielding (~2.4 ms/frame via _tick() — never fixed work-counts; that caused
   deploy fps dips).
-- `scripts/environment_system.gd` — day/night tint (20 min, continuous
+- `scripts/environment_system.gd` — day/night tint (**18 min** —
+  `DAY_SECONDS` 1080.0 is the one true value; this line said 20 and the
+  README said 10, both wrong, both fixed 2026-08-02. Continuous
   gradient loop — endpoints MUST match or midnight snaps), world-anchored
   rain (drop pool falls to real ground points, splash pool stays put, roofed
   cells skipped, all puddle-blue), long storms, double-strike lightning,
@@ -254,7 +269,8 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   `scripts/settings.gd` —
   display/res/quality/fps/vsync/show-fps + rebindable keys + pixel_scale (the
   integer window scale) + 0.2s-window fps counter. `scripts/keybinds_panel.gd`,
-  `scripts/settings_panel.gd`, `scripts/pause_menu.gd`, `scripts/ui_theme.gd`
+  `scripts/settings_panel.gd`, `scripts/pause_menu.gd`, `scripts/ui_state.gd`
+  (the `Ui` autoload — window stack, `open/close/clear`), `scripts/ui_theme.gd`
   (bitmap font + near-black/light-border buttons), `scripts/sfx.gd`
   (HYBRID since v0.2.11: synth for UI blips, door thunks, sniper crack,
   flashlight click, splash ping, rain bed (set_rain), car alarm; LICENSED
@@ -305,6 +321,18 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
 
 ## Verification workflow (design doc §7 — never skip)
 
+**Start here, it takes a second:**
+`godot_console --headless --path . -- --checkdocs` → must print `DOCS PASS`.
+It proves the handoff still matches the repo — every version claim in
+`CLAUDE.md`, `TASKS.md`, `CHANGELOG.md`, the in-game list and the newest git
+tag agree; all 90 renumbered tags still sit on the commits
+`docs/version_renumber_2026-08-02/tag_commits.json` pins them to; and no doc
+names a file that does not exist. It runs inside `--smoke` too, first and
+before the world builds, so a stale handoff is a red build rather than
+something the next session discovers hours in. **If it fails, fix the docs
+before writing code** — that is the whole point of it.
+
+
 After ANY art change: `python tools\gen_art.py`, then delete orphan imports:
 `python -c "import pathlib; [p.unlink() for p in pathlib.Path('art/gen').glob('*.png.import') if not p.with_suffix('').exists()]"`
 then `godot_console --headless --path . --import`.
@@ -319,8 +347,10 @@ then `godot_console --headless --path . --import`.
   lamp/vehicle/door/traffic-light counts + shot-aimable cells) with the same
   seed you then shoot, or your coordinates aim at a different world.
 - Perf: `godot_console --path . -- --perf [--weather=rain --tod=0 ...]` →
-  prints avg fps / worst frame ms / node count. v0.2.1 baseline on the user's
-  240 Hz box: 240 avg, worst ~5 ms, ~34k nodes.
+  prints avg fps / worst frame ms / node count. Compare against the baseline
+  in "Current state of the world" above — that is the ONE place the numbers
+  live, so they cannot drift apart (this line used to carry its own stale
+  copy claiming ~34k nodes, four times the real count).
 - Leaks: `godot_console --headless --path . -- --leakcheck` → deploys into a
   raid and back to the menu FOUR times, printing nodes/orphans/objects/memory
   retained each cycle plus a growth verdict. **Read the TREND, not cycle 0**
@@ -488,8 +518,11 @@ then `godot_console --headless --path . --import`.
 - Dislikes clutter, clones, visible grids/patterns, anything "off"/asymmetric.
 - Wants the world to feel alive/real (weather, time, POIs, furniture).
 - GitHub: https://github.com/SapphireSignal/spoils (PRIVATE, account
-  SapphireSignal, branch main, tags v0.1.0…v0.2.0). Push after each batch.
-  Commits end with the Claude Co-Authored-By trailer.
+  SapphireSignal, branch main, every release tagged). Push after each batch.
+  Commits end with the Claude Co-Authored-By trailer. **Do not write the
+  newest tag name here** — it went stale at "v0.1.0…v0.2.0" for twenty-odd
+  releases. `git describe --tags --abbrev=0` is the answer, and `--checkdocs`
+  enforces it.
 
 ## Registered-but-inert (activate in later milestones)
 

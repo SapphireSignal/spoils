@@ -28,7 +28,7 @@ juicy weapons — at 32 pixels tall. Nothing supernatural ever happened here:
 
 > **Status:** early development. The world is in: the district of **transit** —
 > one fixed, learnable map with day/night, real weather, interactive doors,
-> driveable cars, a working extraction, and a sniper watching its edges.
+> driveable cars, three working extractions, and a sniper watching its edges.
 > Gunplay is next. See the [changelog](CHANGELOG.md).
 
 ## Screenshots
@@ -50,15 +50,19 @@ juicy weapons — at 32 pixels tall. Nothing supernatural ever happened here:
   trainyard, a bus depot, a scrapyard, a comms relay, a graffiti gallery, an
   autumn grove, and the safehouse you wake up in. The art is still generated
   from a seed — that seed is simply pinned, so the generator *is* the map file.
-- **Ways out.** Extraction is live: reach the green-smoked landing zone and a
-  helicopter comes in over the treeline for you, then a debrief screen tallies
-  the run. A toll gate and a night freight are on the way.
+- **Three ways out**, all live. Reach the green-smoked landing zone and a
+  helicopter comes in over the treeline for you. Or pay the warden at the
+  **toll gate** and drive out through the wire. Or catch the **night
+  freight** and ride it off the map. Whichever you take, a debrief screen
+  tallies the run.
 - **Cars you can drive.** Get in, the engine starts; WASD across eight drawn
   facings, headlights, honest collisions, and a thump when you clip something.
-- **A living sky**: a 10-minute day/night cycle with properly dark nights,
-  dawn fog, rain spells whose drops fall through the world and splash where
-  they land, distant lightning, puddles that fill and dry, and leaves that
-  shed in the colour of the tree that dropped them.
+- **A living sky**: an 18-minute day/night cycle with properly dark nights,
+  a sun that moves — warm and low in the morning, gold through the
+  afternoon — dawn fog, four kinds of weather (clear, overcast, rain,
+  storm), rain whose drops fall through the world and splash where they
+  land, distant lightning, puddles that fill and dry, and leaves that shed
+  in the colour of the tree that dropped them.
 - **Doors that open** (walk up, press F), **second stories** with real stairs,
   a **flashlight** for the dark (E), street lamps that flicker — the few that
   still work, and a district map on **M** with a live marker for where you are.

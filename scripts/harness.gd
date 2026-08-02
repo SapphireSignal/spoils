@@ -10,6 +10,12 @@ extends Node
 ##                    memory retention per cycle and a growth verdict
 ##   --shaderwarm     run the boot shader warm-up cold then warm; the
 ##                    second must be a no-op or every launch pays the cost
+##   --checkdocs      prove the handoff docs still match the repo: every
+##                    version claim agrees with the newest git tag, the
+##                    renumbered tags still sit on their recorded commits,
+##                    and no doc names a file that does not exist. Runs
+##                    inside --smoke too; this flag is the one-second
+##                    standalone version. Must print "DOCS PASS".
 
 var world_seed := ""  # --seed=<text>: pin the district layout (shots/probes)
 # the smoke needs a LIVING world to probe: dying ends the raid and pauses
@@ -94,6 +100,8 @@ func _ready() -> void:
 			_leakcheck.call_deferred()
 		elif arg == "--shaderwarm":
 			_shaderwarm.call_deferred()
+		elif arg == "--checkdocs":
+			_checkdocs.call_deferred()
 		else:
 			continue
 		acted = true
@@ -107,7 +115,7 @@ func _ready() -> void:
 		printerr("HARNESS: no action in %s" % str(args))
 		printerr("HARNESS: expected --smoke, --shot=<name>, --perf, "
 			+ "--perf-deploy, --probe-world, --probe-sniper, "
-			+ "--probe-exclusive or --leakcheck. "
+			+ "--probe-exclusive, --checkdocs or --leakcheck. "
 			+ "--toll/--freight/--at=/--seed= only MODIFY --shot.")
 		get_tree().quit.call_deferred(2)
 
@@ -140,8 +148,10 @@ func _ensure_game_scene() -> void:
 
 func _smoke() -> void:
 	suppress_debrief = true      # a living world to probe; asserted at the end
+	# DOCS FIRST. It costs a millisecond, needs no world, and a stale handoff
+	# is a real failure — there is no sense building a district to find it.
+	var failures: Array[String] = _check_docs()
 	await _ensure_game_scene()
-	var failures: Array[String] = []
 
 	var main := get_tree().current_scene
 	if main == null:
@@ -617,6 +627,155 @@ func _shove(body: CharacterBody2D, dir: Vector2, distance: float) -> void:
 			# way move_and_slide would. Without this a graze reads as a wall,
 			# and a door you can actually slide around would test as solid.
 			body.move_and_collide(hit.get_remainder().slide(hit.get_normal()))
+
+
+func _root_dir() -> String:
+	return ProjectSettings.globalize_path("res://")
+
+
+func _read_doc(rel: String) -> String:
+	# absolute path, NOT res://. docs/ carries a .gdignore so the editor skips
+	# it, and .md files are not imported resources — globalize and read the
+	# real file instead of hoping the resource loader cooperates.
+	var f := FileAccess.open(_root_dir() + rel, FileAccess.READ)
+	if f == null:
+		return ""
+	var text := f.get_as_text()
+	f.close()
+	return text
+
+
+func _first_match(text: String, pattern: String) -> String:
+	var re := RegEx.new()
+	re.compile(pattern)
+	var m := re.search(text)
+	return "" if m == null else m.get_string(1)
+
+
+func _git(args: PackedStringArray) -> Array:
+	## -> [exit_code, combined output]
+	var out := []
+	var code := OS.execute("git", args, out, true)
+	var text := ""
+	for chunk in out:
+		text += str(chunk)
+	return [code, text]
+
+
+func _check_docs() -> Array[String]:
+	## THE ANTI-ROT CHECK. Every place a version is written must agree with
+	## every other place and with the newest git tag.
+	##
+	## This exists because the handoff docs went NINETEEN releases stale
+	## without anything noticing — CLAUDE.md claimed v0.6.6 while the repo was
+	## on v0.6.25 — and a fresh chat inherited that as fact. It also catches
+	## the two other ways the handoff has actually broken: a doc naming a file
+	## that does not exist (CLAUDE.md once pointed at a session temp folder
+	## that gets deleted), and a renumbered tag sliding off its commit.
+	var fails: Array[String] = []
+	var root := _root_dir()
+
+	# --- 1. what each source claims the current version is ----------------
+	var claims := {
+		"CLAUDE.md": _first_match(_read_doc("CLAUDE.md"),
+			"\\*\\*v(\\d+\\.\\d+\\.\\d+) shipped"),
+		"TASKS.md": _first_match(_read_doc("TASKS.md"),
+			"Current version: v(\\d+\\.\\d+\\.\\d+)"),
+		"CHANGELOG.md": _first_match(_read_doc("CHANGELOG.md"),
+			"(?m)^## \\[(\\d+\\.\\d+\\.\\d+)\\]"),
+		"the in-game list": _first_match(_read_doc("scripts/main_menu.gd"),
+			"\\[\"v(\\d+\\.\\d+\\.\\d+)\""),
+	}
+	var newest_tag := ""
+	if DirAccess.dir_exists_absolute(root + ".git"):
+		var described := _git(PackedStringArray(
+			["-C", root, "describe", "--tags", "--abbrev=0"]))
+		if described[0] != 0:
+			fails.append("git could not name the newest tag (exit %d)" % described[0])
+		else:
+			newest_tag = str(described[1]).strip_edges().trim_prefix("v")
+			claims["the newest git tag"] = newest_tag
+
+	var seen := {}
+	for source in claims:
+		var claimed := str(claims[source])
+		if claimed == "":
+			fails.append("no version found in %s — was that line reworded? "
+				% source + "the check anchors on it")
+			continue
+		if not seen.has(claimed):
+			seen[claimed] = []
+		seen[claimed].append(source)
+	if seen.size() > 1:
+		var parts: Array[String] = []
+		for value in seen:
+			parts.append("v%s (%s)" % [value, ", ".join(seen[value])])
+		fails.append("version disagreement — " + " vs ".join(parts))
+
+	# --- 2. the renumbered tags still sit on their recorded commits -------
+	var record_rel := "docs/version_renumber_2026-08-02/tag_commits.json"
+	var record_text := _read_doc(record_rel)
+	if record_text == "":
+		fails.append("the renumber record is gone (%s) — it is the ONLY way "
+			% record_rel + "to undo the 2026-08-02 renumbering")
+	elif newest_tag != "":
+		var record: Variant = JSON.parse_string(record_text)
+		if typeof(record) != TYPE_DICTIONARY:
+			fails.append("%s will not parse as json" % record_rel)
+		else:
+			var listed := _git(PackedStringArray(["-C", root, "show-ref", "--tags"]))
+			var tag_at := {}
+			for line in str(listed[1]).split("\n"):
+				var bits := line.strip_edges().split(" ")
+				if bits.size() == 2:
+					tag_at[bits[1].trim_prefix("refs/tags/")] = bits[0]
+			var wrong := 0
+			var example := ""
+			for old_name in record:
+				var entry: Dictionary = record[old_name]
+				var new_name := str(entry.get("new", ""))
+				var sha := str(entry.get("sha", ""))
+				if not tag_at.has(new_name):
+					wrong += 1
+					if example == "":
+						example = "%s (was %s) has no tag" % [new_name, old_name]
+				elif str(tag_at[new_name]) != sha:
+					wrong += 1
+					if example == "":
+						example = "%s is on %s but the record says %s" % [
+							new_name, str(tag_at[new_name]).substr(0, 7),
+							sha.substr(0, 7)]
+			if wrong > 0:
+				fails.append("%d renumbered tag(s) moved off the commit the "
+					% wrong + "record pins them to — e.g. %s" % example)
+
+	# --- 3. every repo path the handoff docs name still exists ------------
+	# the exact bug that shipped: CLAUDE.md pointed at the renumber undo-map
+	# in a session temp folder, so a new chat found a dead reference to the
+	# one artefact that can reverse the renumbering.
+	var path_re := RegEx.new()
+	path_re.compile("`((?:scripts|tools|docs|art|assets|scenes)/[A-Za-z0-9_./-]+)`")
+	for doc in ["CLAUDE.md", "TASKS.md", "HANDOFF.md"]:
+		for m in path_re.search_all(_read_doc(doc)):
+			var named := m.get_string(1)
+			var abs := root + named
+			if FileAccess.file_exists(abs):
+				continue
+			if DirAccess.dir_exists_absolute(abs.trim_suffix("/")):
+				continue
+			fails.append("%s names `%s`, which does not exist" % [doc, named])
+	return fails
+
+
+func _checkdocs() -> void:
+	var fails := _check_docs()
+	if fails.is_empty():
+		print("DOCS PASS")
+		get_tree().quit(0)
+	else:
+		for failure in fails:
+			printerr("DOCS FAIL: " + failure)
+		get_tree().quit(1)
 
 
 func _finish_smoke(failures: Array[String]) -> void:
