@@ -214,6 +214,13 @@ dependency, reading a file from an outside source, or authenticating any of
 the MCP connectors. Those are the moments to be alert; the routine ones are
 not.
 
+`--checksec` now ENFORCES this rather than trusting it. What it deliberately
+does NOT do: scan repo files for injection-shaped phrases. That was
+considered and rejected — the realistic injection surface is content from
+OUTSIDE the repo (a web page, a dependency, someone else's issue), which a
+repo scan cannot see, and the phrases false-positive against LORE.md and this
+very section. It would have looked like protection while providing none.
+
 ### The permission classifier is a FEATURE
 
 The user runs `permissions.defaultMode: "auto"` and **chose to keep it**
@@ -398,7 +405,20 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
 
 ## Verification workflow (design doc §7 — never skip)
 
-**Start here, it takes a second:**
+**Start here, both take a second:**
+`godot_console --headless --path . -- --checksec` → must print `SEC PASS`.
+The security audit, and these are INVARIANTS not warnings: the git remote has
+not moved; **no network call exists anywhere** in `scripts/` or `tools/`; the
+python toolchain imports only vetted modules; shelling out is confined to
+`harness.gd` and only ever to git; nothing credential-shaped is tracked; and
+`project.godot` autoloads exactly the eight known entries (an autoload runs
+on every launch — it is the natural hiding place for something persistent).
+It scans committed AND uncommitted files, so a backdoor is caught before it
+reaches a commit, not after. Every list in it is an allowlist: widening one
+is a deliberate decision, which is the point. **All six checks were verified
+to actually FIRE** by planting a violation of each — a check that only ever
+passes is decoration.
+
 `godot_console --headless --path . -- --checkdocs` → must print `DOCS PASS`.
 It proves the handoff still matches the repo — every version claim in
 `CLAUDE.md`, `TASKS.md`, `CHANGELOG.md`, the in-game list and the newest git

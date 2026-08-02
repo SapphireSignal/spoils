@@ -16,6 +16,12 @@ extends Node
 ##                    and no doc names a file that does not exist. Runs
 ##                    inside --smoke too; this flag is the one-second
 ##                    standalone version. Must print "DOCS PASS".
+##   --checksec       the security audit: the git remote has not moved, no
+##                    network calls exist anywhere, the python toolchain
+##                    imports only vetted modules, shelling out is confined
+##                    to this file and only to git, and nothing
+##                    credential-shaped is tracked. Also runs inside
+##                    --smoke. Must print "SEC PASS".
 
 var world_seed := ""  # --seed=<text>: pin the district layout (shots/probes)
 # the smoke needs a LIVING world to probe: dying ends the raid and pauses
@@ -102,6 +108,8 @@ func _ready() -> void:
 			_shaderwarm.call_deferred()
 		elif arg == "--checkdocs":
 			_checkdocs.call_deferred()
+		elif arg == "--checksec":
+			_checksec.call_deferred()
 		else:
 			continue
 		acted = true
@@ -115,7 +123,7 @@ func _ready() -> void:
 		printerr("HARNESS: no action in %s" % str(args))
 		printerr("HARNESS: expected --smoke, --shot=<name>, --perf, "
 			+ "--perf-deploy, --probe-world, --probe-sniper, "
-			+ "--probe-exclusive, --checkdocs or --leakcheck. "
+			+ "--probe-exclusive, --checkdocs, --checksec or --leakcheck. "
 			+ "--toll/--freight/--at=/--seed= only MODIFY --shot.")
 		get_tree().quit.call_deferred(2)
 
@@ -151,6 +159,7 @@ func _smoke() -> void:
 	# DOCS FIRST. It costs a millisecond, needs no world, and a stale handoff
 	# is a real failure — there is no sense building a district to find it.
 	var failures: Array[String] = _check_docs()
+	failures.append_array(_check_security())
 	await _ensure_game_scene()
 
 	var main := get_tree().current_scene
@@ -765,6 +774,260 @@ func _check_docs() -> Array[String]:
 				continue
 			fails.append("%s names `%s`, which does not exist" % [doc, named])
 	return fails
+
+
+# ---------------------------------------------------------------------------
+# THE SECURITY AUDIT (--checksec, and it runs inside --smoke)
+#
+# These are INVARIANTS, not warnings. Each one is currently true of this repo,
+# and each maps to a concrete way the project could be turned against the
+# user — most sharply, code that quietly ships their data somewhere.
+#
+# Every list below is an ALLOWLIST. Widening one should be a deliberate,
+# explained decision, which is the whole point: the check turns "nobody
+# noticed a network call appeared" into a red build.
+#
+# HONEST LIMITATION: the auditor cannot fully audit itself. harness.gd is
+# skipped by the pattern scans because it necessarily contains the very
+# strings it searches for. It gets its own narrower check instead (every
+# OS.execute here must invoke git). A self-audit always has this hole; better
+# to name it than to pretend otherwise.
+# ---------------------------------------------------------------------------
+
+const SEC_REMOTE := "https://github.com/SapphireSignal/spoils.git"
+
+## stdlib + Pillow + this project's own tool modules. Nothing else has ever
+## been imported; a new name here is a supply-chain decision, so it stops.
+const SEC_PY_IMPORTS := [
+	"json", "math", "pathlib", "random", "itertools", "collections",
+	"functools", "typing", "dataclasses", "struct", "hashlib", "colorsys",
+	"sys", "os", "re", "time", "copy", "textwrap", "argparse", "shutil",
+	"PIL", "gen_font", "gen_art",
+]
+
+## anything that can open a socket. The game is single-player and offline;
+## when multiplayer genuinely lands (DESIGN.md keeps the door open) this
+## list gets edited on purpose, not discovered after the fact.
+const SEC_NET_GD := [
+	"HTTPRequest", "HTTPClient", "StreamPeerTCP", "StreamPeerTLS",
+	"PacketPeerUDP", "WebSocketPeer", "ENetConnection", "ENetMultiplayerPeer",
+	"UPNP", "IP.resolve_hostname",
+]
+const SEC_NET_PY := [
+	"import socket", "import urllib", "from urllib", "import requests",
+	"import http", "from http", "urlopen", "httpx", "aiohttp", "smtplib",
+	"ftplib", "telnetlib", "import ssl",
+]
+
+## process execution and dynamic evaluation, in tools/. gen_art.py draws
+## pixels; it has never needed to run a program or eval a string.
+const SEC_EXEC_PY := [
+	"subprocess", "os.system", "os.popen", "eval(", "exec(", "__import__",
+	"pickle.loads", "marshal.loads",
+]
+
+## credential-shaped things that must never be tracked
+const SEC_SECRET_NAMES := [
+	".env", ".pem", "id_rsa", "id_dsa", "id_ecdsa", ".pfx", ".p12",
+	".netrc", ".npmrc", "credentials.json", "secrets.json", ".keystore",
+]
+const SEC_SECRET_CONTENT := [
+	"AKIA[0-9A-Z]{16}",                      # aws access key
+	"ghp_[A-Za-z0-9]{36}",                   # github personal token
+	"github_pat_[A-Za-z0-9_]{20,}",
+	"xox[baprs]-[A-Za-z0-9-]{10,}",          # slack
+	"-----BEGIN [A-Z ]*PRIVATE KEY-----",
+	"AIza[0-9A-Za-z_-]{35}",                 # google api key
+]
+
+
+func _sec_tracked_files(root: String, suffixes: Array) -> Array[String]:
+	## git's view of the repo is the right boundary for this: a secret that
+	## is not tracked cannot be pushed, and a file git does not know about
+	## cannot reach the remote.
+	##
+	## Returns Array[String], NOT Array — an untyped array hands back Variant
+	## elements and every `var x := rel.something()` downstream fails to infer,
+	## which is a PARSE error, which makes the autoload fail to load, which
+	## looks exactly like a hang. (It did. See CLAUDE.md.)
+	## --others --exclude-standard also catches files sitting in the working
+	## tree that nobody has committed yet. Tracked-only would mean a freshly
+	## written backdoor is invisible until it is already in a commit, which
+	## is precisely too late.
+	var listed := _git(PackedStringArray(
+		["-C", root, "ls-files", "--cached", "--others", "--exclude-standard"]))
+	var out: Array[String] = []
+	if listed[0] != 0:
+		return out
+	for line in str(listed[1]).split("\n"):
+		var rel := line.strip_edges()
+		if rel == "":
+			continue
+		if suffixes.is_empty():
+			out.append(rel)
+			continue
+		for suffix in suffixes:
+			if rel.ends_with(suffix):
+				out.append(rel)
+				break
+	return out
+
+
+func _check_security() -> Array[String]:
+	var fails: Array[String] = []
+	var root := _root_dir()
+	if not DirAccess.dir_exists_absolute(root + ".git"):
+		return fails      # not a checkout; nothing to assert against
+
+	# --- 1. the remote has not moved ------------------------------------
+	# the cheapest possible guard against "push their work somewhere else".
+	var remotes := _git(PackedStringArray(["-C", root, "remote", "-v"]))
+	var reported := {}          # -v lists fetch AND push; report each once
+	for line in str(remotes[1]).split("\n"):
+		var row := line.strip_edges()
+		if row == "":
+			continue
+		var parts := row.split("\t")
+		if parts.size() < 2:
+			continue
+		var url := parts[1].split(" ")[0]
+		if url == SEC_REMOTE or reported.has(parts[0]):
+			continue
+		reported[parts[0]] = true
+		fails.append("git remote '%s' points at %s, expected %s"
+			% [parts[0], url, SEC_REMOTE])
+
+	# --- 2. no network capability anywhere in the project ----------------
+	for rel in _sec_tracked_files(root, [".gd"]):
+		if rel.ends_with("harness.gd"):
+			continue                      # the auditor names its own patterns
+		var body := _read_doc(rel)
+		for needle in SEC_NET_GD:
+			if body.contains(needle):
+				fails.append("%s uses %s — this project makes NO network "
+					% [rel, needle] + "calls; if that is changing, say so")
+	for rel in _sec_tracked_files(root, [".py"]):
+		var body := _read_doc(rel)
+		for needle in SEC_NET_PY:
+			if body.contains(needle):
+				fails.append("%s uses '%s' — the tools are offline by design"
+					% [rel, needle])
+		for needle in SEC_EXEC_PY:
+			if body.contains(needle):
+				fails.append("%s uses '%s' — the art tools do not run "
+					% [rel, needle] + "programs or evaluate strings")
+
+	# --- 3. the python toolchain's imports are the ones we vetted --------
+	# two patterns, not one clever one: "import a, b" and "from x import y"
+	# parse differently, and a combined regex misfires on prose that happens
+	# to begin with the word "from".
+	var plain_re := RegEx.new()
+	plain_re.compile("(?m)^[ \\t]*import[ \\t]+([A-Za-z_][A-Za-z0-9_., \\t]*)")
+	var from_re := RegEx.new()
+	from_re.compile("(?m)^[ \\t]*from[ \\t]+([A-Za-z_][A-Za-z0-9_.]*)[ \\t]+import[ \\t]")
+	for rel in _sec_tracked_files(root, [".py"]):
+		var body := _read_doc(rel)
+		var modules: Array[String] = []
+		for m in plain_re.search_all(body):
+			for piece in m.get_string(1).split(","):
+				modules.append(piece.strip_edges())
+		for m in from_re.search_all(body):
+			modules.append(m.get_string(1))
+		for module in modules:
+			var top := module.split(".")[0].split(" ")[0]     # drop "as x"
+			if top == "":
+				continue
+			if not SEC_PY_IMPORTS.has(top):
+				fails.append("%s imports '%s', which is not on the vetted "
+					% [rel, top] + "list — new dependency, decide on purpose")
+
+	# --- 4. shelling out is confined to the harness, and only to git -----
+	for rel in _sec_tracked_files(root, [".gd"]):
+		var body := _read_doc(rel)
+		if rel.ends_with("harness.gd"):
+			# narrower check for the one file exempt above: every execute
+			# call here must be a git call.
+			var exec_re := RegEx.new()
+			exec_re.compile("OS\\.execute\\(\\s*\"([^\"]*)\"")
+			for m in exec_re.search_all(body):
+				if m.get_string(1) != "git":
+					fails.append("harness.gd runs '%s' — only git is allowed"
+						% m.get_string(1))
+			continue
+		for needle in ["OS.execute", "OS.create_process", "OS.shell_open"]:
+			if body.contains(needle):
+				fails.append("%s calls %s — running programs is confined "
+					% [rel, needle] + "to harness.gd, and only git")
+
+	# --- 5. nothing credential-shaped is tracked -------------------------
+	for rel in _sec_tracked_files(root, []):
+		var lower := rel.to_lower()
+		for needle in SEC_SECRET_NAMES:
+			if lower.ends_with(needle) or lower.get_file() == needle:
+				fails.append("%s is tracked by git and looks like a "
+					% rel + "credential file")
+	# --- 6. the autoload list is exactly the eight we know about ---------
+	# an autoload runs on EVERY launch before anything else. It is the
+	# natural place to hide something persistent, and it is one line of
+	# project.godot. CLAUDE.md documents these eight; this enforces them.
+	var expected_autoloads := {
+		"Authority": "*res://scripts/authority.gd",
+		"Settings": "*res://scripts/settings.gd",
+		"Sfx": "*res://scripts/sfx.gd",
+		"Music": "*res://scripts/music.gd",
+		"Ui": "*res://scripts/ui_state.gd",
+		"Raid": "*res://scripts/raid.gd",
+		"Juice": "*res://scripts/juice.gd",
+		"Harness": "*res://scripts/harness.gd",
+	}
+	var in_section := false
+	var found := {}
+	for line in _read_doc("project.godot").split("\n"):
+		var row := line.strip_edges()
+		if row.begins_with("["):
+			in_section = row == "[autoload]"
+			continue
+		if not in_section or row == "" or row.begins_with(";"):
+			continue
+		var eq := row.find("=")
+		if eq < 0:
+			continue
+		found[row.substr(0, eq)] = row.substr(eq + 1).strip_edges().trim_prefix("\"").trim_suffix("\"")
+	for name in found:
+		if not expected_autoloads.has(name):
+			fails.append("project.godot autoloads '%s' (%s), which is not "
+				% [name, found[name]] + "one of the eight known autoloads")
+		elif str(found[name]) != str(expected_autoloads[name]):
+			fails.append("autoload %s points at %s, expected %s"
+				% [name, found[name], expected_autoloads[name]])
+	for name in expected_autoloads:
+		if not found.has(name):
+			fails.append("autoload %s is missing from project.godot" % name)
+
+	var secret_res: Array[RegEx] = []
+	for pattern in SEC_SECRET_CONTENT:
+		var re := RegEx.new()
+		re.compile(pattern)
+		secret_res.append(re)
+	for rel in _sec_tracked_files(root, [".gd", ".py", ".md", ".json", ".cfg",
+			".tscn", ".bat", ".txt", ".gdshader"]):
+		var body := _read_doc(rel)
+		for i in secret_res.size():
+			if secret_res[i].search(body) != null:
+				fails.append("%s contains something shaped like a secret "
+					% rel + "(pattern %d) — check before it is pushed" % i)
+	return fails
+
+
+func _checksec() -> void:
+	var fails := _check_security()
+	if fails.is_empty():
+		print("SEC PASS")
+		get_tree().quit(0)
+	else:
+		for failure in fails:
+			printerr("SEC FAIL: " + failure)
+		get_tree().quit(1)
 
 
 func _checkdocs() -> void:

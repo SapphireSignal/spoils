@@ -51,7 +51,11 @@ at "v0.1.0…v0.2.0" for twenty-odd releases, a perf baseline claiming ~34k
 nodes against the real ~7.9k, and a missing mention of `scripts/ui_state.gd`
 (the `Ui` autoload). Also added a **SAFETY & TRUST** section to `CLAUDE.md`
 at the user's request — prompt injection, reversibility, and why the
-permission classifier is kept.
+permission classifier is kept. Then, when they asked for actual protection
+rather than documentation, `--checksec`: six enforced invariants (remote
+unchanged, zero network calls, vetted python imports only, shelling out
+confined to `harness.gd` and only to git, no tracked secrets, exactly the
+eight known autoloads). It runs inside `--smoke`.
 
 **The user's words:** *"im scared something might get lost or break because
 we just did a whole renumbering thing"* — and they asked for migration to be
@@ -88,6 +92,27 @@ commands whenever you need me to."*
   classifier overrides allow-rules and only
   `defaultMode: "bypassPermissions"` will change it — the user's call, they
   deliberately picked the narrower option over full bypass.
+- **A check that only ever passes is decoration.** Every one of the six
+  `--checksec` invariants was verified to actually FIRE by planting a real
+  violation of it — a `HTTPRequest` in a .gd, an `import boto3`, an
+  `OS.execute` outside the harness, a fake AWS key, a bogus autoload in
+  `project.godot`, a second git remote. All six were caught, then removed.
+  **Do this for any check added later.** Writing it and seeing green proves
+  nothing.
+- **`--checksec` scans uncommitted files too** (`ls-files --cached --others
+  --exclude-standard`). Tracked-only would make a freshly written backdoor
+  invisible until it was already committed.
+- **The parse-error-looks-like-a-hang trap bit again, exactly as CLAUDE.md
+  warns.** `_sec_tracked_files` returned untyped `Array`, so every downstream
+  `var x := rel.to_lower()` failed to infer — a parse error, the autoload
+  failed to load, and the run sat on the menu for three minutes looking slow.
+  A `grep` on the output hid the cause, because the error is at the HEAD and
+  the verdict only ever prints at the END. **Return typed arrays, and read
+  the head of the raw log.**
+- **Rejected on purpose: scanning repo files for injection-shaped phrases.**
+  The realistic injection surface is content from OUTSIDE the repo, which a
+  repo scan cannot see, and the phrases false-positive against LORE.md. It
+  would have looked like protection while providing none.
 - **Commit messages still carry pre-renumber version numbers.** Only tags
   moved. `git log` shows "v0.6.76: menu housekeeping" on a commit whose tag
   is `v0.6.13`+. **Never read a version out of a commit subject** for
