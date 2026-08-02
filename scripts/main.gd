@@ -20,6 +20,11 @@ var _prompt: Label
 var _prompt_target: Node2D
 var _prompt_open := false
 var _uppers: Array = []
+var _environment: EnvironmentSystem
+var _grade_layer: CanvasLayer
+var _grade_mat: ShaderMaterial
+var _grade_night := -1.0        # last value pushed; the grade only updates
+                                # when the cycle actually moves it
 var _player_upper := -1        # index into _uppers while on a second story
 var _car_hint: RichTextLabel
 var _car_hint_until := 0.0
@@ -122,11 +127,34 @@ func _build_world() -> void:
 	# and the whole pause-menu UI each land on their own frame instead of
 	# stacking ~1000 node instantiations into one
 	var environment := EnvironmentSystem.new()
+	_environment = environment       # the screen grade reads the clock off it
 	add_child(environment)
 	await environment.setup(self, _floor_layer, info["puddle_spots"], _roofs,
 		info["fog_spots"], info["leaf_trees"],
 		info.get("leaf_trees_red", PackedVector2Array()),
 		info.get("leaf_trees_needle", PackedVector2Array()))
+	# dust in the air, riding the camera: one emitter, not one per lamp
+	var motes := Motes.new()
+	motes.name = "Motes"
+	ysort.add_child(motes)
+	motes.setup(_player)
+
+	# SCREEN GRADE: contrast, split-tone, a highlight lift and a vignette,
+	# in one pass over the finished frame. Engine-side, so it lifts every
+	# sprite at once and the art on disk is untouched (user's direction).
+	# Sits UNDER the dither film on purpose — the film's whole job is to
+	# break up smooth ramps, and the grade makes new ones.
+	_grade_layer = CanvasLayer.new()
+	_grade_layer.layer = 24
+	var grade := ColorRect.new()
+	grade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	grade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_grade_mat = ShaderMaterial.new()
+	_grade_mat.shader = load("res://scripts/grade.gdshader")
+	grade.material = _grade_mat
+	_grade_layer.add_child(grade)
+	add_child(_grade_layer)
+
 	# anti-banding film: breaks the day-cycle's uniform 8-bit tint steps into
 	# per-pixel grain (a slow full-screen fade otherwise visibly "clicks")
 	var dither_layer := CanvasLayer.new()
@@ -482,6 +510,14 @@ func _process(delta: float) -> void:
 		_deploy_time += delta
 		_deploy_label.text = "deploying to %s%s" % [
 			MAP_NAME, ".".repeat(1 + int(_deploy_time * 3.0) % 3)]
+	# the grade follows the clock: shadows go colder and the split-tone
+	# firms up after dark. Only pushed when it actually moves — a uniform
+	# set every frame at 240 Hz is a wasted shader param upload.
+	if _grade_mat != null and _environment != null:
+		var n := float(_environment.get("night_amount"))
+		if absf(n - _grade_night) > 0.004:
+			_grade_night = n
+			_grade_mat.set_shader_parameter("night", n)
 	if _player == null or _floor_layer == null:
 		return
 	# This runs EVERY frame on purpose. It walks five node groups, which

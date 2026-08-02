@@ -3,6 +3,37 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.19] — 2026-08-02 — atmosphere
+
+More of the polish pass, still without redrawing anything.
+
+### Added
+- **A screen grade over the whole frame**: a contrast S-curve, a split
+  tone that cools the shadows and warms the lights, a highlight lift so
+  lamps, windows and sparks carry a glow without a blur pass, and an
+  elliptical vignette. It is driven by the clock, so 3am is graded
+  differently from noon rather than one look stretched across both.
+- **Dust in the air.** One emitter riding the camera rather than one per
+  lamp — the district has fifty lamps and fifty particle systems mostly
+  emitting off-screen for nobody would be a waste. Faint on purpose: the
+  job is to stop the air reading as flat empty colour, and the moment you
+  can pick out individual specks it reads as snow.
+
+### Notes
+- The grade sits UNDER the anti-banding dither film, deliberately. The
+  film exists because slow full-screen fades step visibly in 8-bit, and
+  the grade creates new ramps for it to break up.
+- Nothing scales or rotates: the motes are fixed at scale 1 and the
+  emitter follows the camera in whole world pixels, because a fractional
+  emitter hands every particle a fractional spawn point, which is
+  shimmer.
+- **Honest about strength:** in a daytime still this is subtle. It reads
+  in motion and at night, where the split tone pulls the shadows cold
+  against a warm flashlight cone. Say if you want it pushed harder — the
+  values are four uniforms in one file.
+- Perf unchanged: 240 fps, 4.54 ms worst, and the grade measured 4.49 vs
+  4.54 ms against a build without it, which is noise.
+
 ## [0.6.18] — 2026-08-02 — shaders compile once, quietly
 
 ### Added

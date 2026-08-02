@@ -246,8 +246,25 @@ to need matching work. Do it sample → sign-off → fleet.
 
 - **M2 — guns, tunnels, story.** The gunplay design is settled (below);
   it starts on their explicit go.
-- **Trailer concept.** Pitches were sent; they pick one before anything is
-  built. ffmpeg is **not installed** on the box.
+- **Trailer — PARKED, not dropped** (user, 2026-08-02: "were not dropping
+  it, just putting it aside for now"). Pick it back up after the polish
+  pass. State when it was parked:
+  - **ffmpeg IS NOW INSTALLED** (Gyan build 8.1.2 via winget, hash
+    verified). The old note in this file saying it wasn't is dead — the
+    pipeline is no longer blocked on tooling.
+  - **Concept (a) "the wire" is the one to build**, ~50 s: black + radio
+    crackle, lowercase cards ("six years since they sealed the districts"
+    / "one still answers"), dawn-fog pans, night lamp flicker, rain on the
+    courtyard, ONE sniper tracer, hard cut to black on the crack, title +
+    "loot. extract. survive." + date. It works before guns exist, which
+    (b) "one raid" does not — that one needs M2.
+  - Pipeline: godot `--write-movie` PNG frames at 640x360 -> 3x nearest ->
+    ffmpeg to 1080p60 with fades and a music bed -> mp4 plus a 9:16 crop.
+    Four tracks already in `assets/audio/music` to pull a bed from.
+  - **Render the title cards INSIDE godot** using the game's own bitmap
+    font, not ffmpeg's text drawing — it keeps the pixel look exact and
+    avoids a font mismatch between the cards and the footage.
+  - Nothing was built yet; no cinematic harness mode exists.
 - **Which menu backdrops to keep**, once all five are painted.
 
 ---
