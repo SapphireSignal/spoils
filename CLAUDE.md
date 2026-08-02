@@ -1,5 +1,12 @@
 # SPOILS — session handoff (read this first)
 
+> **MIGRATING FROM ANOTHER CHAT? Read `TASKS.md` after this file.** It
+> holds every open item and the whole milestone roadmap, each with the
+> diagnosis already done, so nothing is re-derived. This file is the
+> rules and the systems map; `TASKS.md` is the work; `CHANGELOG.md` is
+> what already shipped. The session task list does NOT survive a chat
+> migration — `TASKS.md` is the copy that does.
+
 2D isometric extraction shooter, pixel art, Godot 4.7, Windows. **Read
 `DESIGN.md` for the full game design & workflow contract** — it is the source
 of truth for what we're building. `CHANGELOG.md` records everything shipped.
