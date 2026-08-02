@@ -465,19 +465,45 @@ to actually FIRE** by planting a violation of each — a check that only ever
 passes is decoration.
 
 `godot_console --headless --path . -- --checkdocs` → must print `DOCS PASS`.
-It proves the handoff still matches the repo — every version claim in
-`CLAUDE.md`, `TASKS.md`, `CHANGELOG.md`, the in-game list and the newest git
-tag agree; all 90 renumbered tags still sit on the commits
-`docs/version_renumber_2026-08-02/tag_commits.json` pins them to; and no
-backticked `scripts/…`-style repo path names a file that does not exist.
-**Read that last one narrowly, it is the check's weak leg:** it scans only
-`CLAUDE.md`, `TASKS.md` and `HANDOFF.md` — never `DESIGN.md`, `README.md`,
-`LORE.md` or `CHANGELOG.md` — it only recognises a backticked path starting
-`scripts/ tools/ docs/ art/ assets/ scenes/`, so bare and root-level names
-(`HANDOFF.md`, `Play.bat`) are invisible to it, and it checks nothing about
-whether a documented COMMAND resolves. That last gap is how the migration
-block at the top of this file sat unrunnable while `--checkdocs` stayed
-green. It runs inside `--smoke` too, first and
+It proves the handoff still matches the repo, in five parts:
+
+0. **the docs it reads exist and are non-empty.** `_read_doc` returns `""`
+   for a missing file and `""` matches no pattern — so before this, deleting
+   a doc made every part below scan nothing and pass SILENTLY.
+1. **every version claim agrees** — `CLAUDE.md`, `TASKS.md`, `CHANGELOG.md`,
+   the in-game list, and the newest git tag. `DESIGN.md` is an **optional**
+   source: it states no version today so it never fires, but if anyone
+   re-adds one it must agree with the rest. Deliberate — making it mandatory
+   would add a fifth number to hand-bump every release, which is exactly how
+   it rotted to v0.6.6 for nineteen releases.
+2. **all 90 renumbered tags still sit on their recorded commits**
+   (`docs/version_renumber_2026-08-02/tag_commits.json`).
+3. **no backticked repo path names a file that does not exist**, now across
+   `CLAUDE.md`, `TASKS.md`, `HANDOFF.md`, `DESIGN.md`, `README.md`, `LORE.md`.
+4. **every executable the docs name resolves on disk**, and a
+   `godot_console` COMMAND is never left in a doc that no longer spells out
+   the real path. This part exists because the two commands at the TOP of
+   this file were unrunnable for a long time while both gates printed PASS.
+
+**ITS HONEST LIMITS — do not oversell them, to the user or to yourself:**
+it sees only BACKTICKED paths in two shapes (a `scripts/ tools/ docs/ art/
+assets/ scenes/` prefix, or a bare root-level `.md`/`.bat`/`.godot` name), so
+**backslash paths are invisible to it** — `python tools\gen_art.py`, the
+most-run command in these docs, is NOT covered. It resolves absolute `.exe`
+paths only, never bare command names. And **it cannot verify prose at all**:
+"3 rotating backdrops" when there are 2 passes forever. Prose is checked by
+reading, not by a gate — see SAFETY & TRUST.
+
+**Convention this imposes:** a path written in one of those two shapes is a
+claim that it exists NOW. Naming something PLANNED (milestone-2 work), or
+outside the repo (`user://`, `%APPDATA%`), or a file you are telling a reader
+to DELETE — write it so it does not match: unbackticked, or without the
+prefix. Several correct lines already do this on purpose; do not "fix" them
+into matching.
+
+**All five parts were verified to actually FIRE** by planting a real
+violation of each. Do the same for anything added later — writing a check and
+seeing green proves nothing. It runs inside `--smoke` too, first and
 before the world builds, so a stale handoff is a red build rather than
 something the next session discovers hours in. **If it fails, fix the docs
 before writing code** — that is the whole point of it.

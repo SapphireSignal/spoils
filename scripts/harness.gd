@@ -684,17 +684,56 @@ func _check_docs() -> Array[String]:
 	var fails: Array[String] = []
 	var root := _root_dir()
 
+	# --- 0. the docs this check reads must actually be readable -----------
+	# _read_doc() returns "" for a missing file, and "" matches no pattern.
+	# So without this, DELETING a doc makes every check below scan nothing
+	# and report nothing — a silent green. Same vacuous-pass class as the
+	# door smoke test that stayed green for three releases without ever
+	# touching a door.
+	#
+	# HONEST LIMIT — do not let a future session oversell this: it catches
+	# GONE or EMPTY. It does not catch gutted (one byte passes) and it does
+	# NOT catch stale, which is the failure this project has actually lived
+	# through. Nothing here can tell you a sentence is false.
+	var docs_required: Array[String] = ["CLAUDE.md", "TASKS.md", "HANDOFF.md",
+		"CHANGELOG.md", "DESIGN.md", "README.md", "LORE.md",
+		"scripts/main_menu.gd"]
+	var text := {}
+	var gone := {}
+	for doc in docs_required:
+		var body := _read_doc(doc)
+		text[doc] = body
+		if body.strip_edges() == "":
+			gone[doc] = true
+			fails.append("%s is missing or empty — this check reads it, and " % doc
+				+ "an unreadable doc makes the checks below vacuous")
+
 	# --- 1. what each source claims the current version is ----------------
-	var claims := {
-		"CLAUDE.md": _first_match(_read_doc("CLAUDE.md"),
-			"\\*\\*v(\\d+\\.\\d+\\.\\d+) shipped"),
-		"TASKS.md": _first_match(_read_doc("TASKS.md"),
-			"Current version: v(\\d+\\.\\d+\\.\\d+)"),
-		"CHANGELOG.md": _first_match(_read_doc("CHANGELOG.md"),
-			"(?m)^## \\[(\\d+\\.\\d+\\.\\d+)\\]"),
-		"the in-game list": _first_match(_read_doc("scripts/main_menu.gd"),
-			"\\[\"v(\\d+\\.\\d+\\.\\d+)\""),
-	}
+	var claims := {}
+	if not gone.has("CLAUDE.md"):
+		claims["CLAUDE.md"] = _first_match(str(text["CLAUDE.md"]),
+			"\\*\\*v(\\d+\\.\\d+\\.\\d+) shipped")
+	if not gone.has("TASKS.md"):
+		claims["TASKS.md"] = _first_match(str(text["TASKS.md"]),
+			"Current version: v(\\d+\\.\\d+\\.\\d+)")
+	if not gone.has("CHANGELOG.md"):
+		claims["CHANGELOG.md"] = _first_match(str(text["CHANGELOG.md"]),
+			"(?m)^## \\[(\\d+\\.\\d+\\.\\d+)\\]")
+	if not gone.has("scripts/main_menu.gd"):
+		claims["the in-game list"] = _first_match(str(text["scripts/main_menu.gd"]),
+			"\\[\"v(\\d+\\.\\d+\\.\\d+)\"")
+	# DESIGN.md is an OPTIONAL claim, and that is deliberate. It carried
+	# v0.6.6 for nineteen releases precisely because nothing read it — but
+	# making it a fifth MANDATORY source would add a fifth number to hand-bump
+	# every release, which is how numbers go stale in the first place. So:
+	# state no version there and this never fires; state one and it must agree
+	# with everyone else. That turns re-adding a hardcoded version from silent
+	# rot into an enforced claim. The anchor cannot cross a newline ([ \t]*,
+	# not \s*) so reflowing the paragraph cannot make it fire.
+	var design_claim := _first_match(str(text.get("DESIGN.md", "")),
+		"Current project state:[ \\t]*\\*\\*v(\\d+\\.\\d+\\.\\d+)")
+	if design_claim != "":
+		claims["DESIGN.md"] = design_claim
 	var newest_tag := ""
 	if DirAccess.dir_exists_absolute(root + ".git"):
 		var described := _git(PackedStringArray(
@@ -762,17 +801,89 @@ func _check_docs() -> Array[String]:
 	# the exact bug that shipped: CLAUDE.md pointed at the renumber undo-map
 	# in a session temp folder, so a new chat found a dead reference to the
 	# one artefact that can reverse the renumbering.
+	#
+	# SCOPE, stated honestly because CLAUDE.md used to overclaim this: it sees
+	# only BACKTICKED references, and only two shapes — a repo path under one
+	# of the six known dirs, or a bare root-level doc/config filename. It is
+	# blind to BACKSLASH paths, so `python tools\gen_art.py` — the most-run
+	# command in the docs — is NOT covered by this.
+	#
+	# CONVENTION this check imposes, and it is not "backticks mean it exists":
+	# a path in one of those two shapes is checked. If you are naming a file
+	# that is PLANNED (milestone-2 work in DESIGN.md/TASKS.md), or one that
+	# lives outside the repo (user://, %APPDATA%), or one you are telling a
+	# reader to DELETE, write it so it does not match — unbackticked, or
+	# without the checked prefix. Several correct lines in these docs already
+	# do exactly that; do not "fix" them into matching.
+	var docs_with_paths: Array[String] = ["CLAUDE.md", "TASKS.md", "HANDOFF.md",
+		"DESIGN.md", "README.md", "LORE.md"]
 	var path_re := RegEx.new()
-	path_re.compile("`((?:scripts|tools|docs|art|assets|scenes)/[A-Za-z0-9_./-]+)`")
-	for doc in ["CLAUDE.md", "TASKS.md", "HANDOFF.md"]:
-		for m in path_re.search_all(_read_doc(doc)):
-			var named := m.get_string(1)
-			var abs := root + named
-			if FileAccess.file_exists(abs):
+	if path_re.compile("`((?:(?:scripts|tools|docs|art|assets|scenes)/[A-Za-z0-9_./-]+)"
+			+ "|(?:[A-Za-z0-9_-]+\\.(?:md|bat|godot)))`") != OK:
+		fails.append("the doc-path regex failed to COMPILE — this check has "
+			+ "been silently inert, which is worse than absent")
+	else:
+		for doc in docs_with_paths:
+			if gone.has(doc):
 				continue
-			if DirAccess.dir_exists_absolute(abs.trim_suffix("/")):
+			for m in path_re.search_all(str(text[doc])):
+				var named := m.get_string(1)
+				var abs := root + named
+				if FileAccess.file_exists(abs):
+					continue
+				if DirAccess.dir_exists_absolute(abs.trim_suffix("/")):
+					continue
+				fails.append("%s names `%s`, which does not exist" % [doc, named])
+
+	# --- 4. every executable the docs tell you to RUN actually resolves ----
+	# The bug this exists for: the two commands at the TOP of CLAUDE.md — the
+	# first thing a migrating session is told to run — were `godot_console …`
+	# for a long time, and that token resolves to nothing on this machine. No
+	# alias, no shim, not on PATH. Both gates printed PASS the entire time,
+	# because nothing here had ever checked that a documented command RUNS.
+	#
+	# Deliberately NOT done: resolving arbitrary command names. That needs a
+	# PATH search, is platform-specific, and would fire on prose that quotes a
+	# dead command on purpose (the docs do this in at least three places, to
+	# record what used to be broken). Two narrow, robust rules instead.
+	var exe_re := RegEx.new()
+	if exe_re.compile("(?i)([A-Za-z]:[\\\\/][^\\s`\"'<>|]*\\.exe)") != OK:
+		fails.append("the exe regex failed to COMPILE — check 4 was inert")
+	else:
+		for doc in docs_with_paths:
+			if gone.has(doc):
 				continue
-			fails.append("%s names `%s`, which does not exist" % [doc, named])
+			var body := str(text[doc])
+			# 4a. an absolute .exe the doc names must exist on disk. This is
+			# what catches an engine upgrade that leaves the docs behind.
+			# The path is never hardcoded here on purpose — that would make
+			# harness.gd a SEVENTH copy of a fact the docs already state six
+			# times, and copies drift. Disk is the authority.
+			var defined := false
+			for m in exe_re.search_all(body):
+				var exe := m.get_string(1)
+				if FileAccess.file_exists(exe):
+					defined = true
+				else:
+					fails.append("%s names the executable %s, which does not "
+						% [doc, exe] + "exist — a documented command that "
+						+ "cannot run is worse than no command")
+			# 4b. the `godot_console` SHORTHAND must never be left orphaned.
+			# It is not on PATH and never will be; it is only safe while the
+			# doc also spells out the real path somewhere. Lose the definition
+			# and every command in the file silently becomes unrunnable again.
+			#
+			# Fires on the COMMAND shape (`godot_console -…`) and NOT on a bare
+			# prose mention — because the docs deliberately quote dead commands
+			# to record what used to be broken, and HANDOFF.md does exactly
+			# that. This check fired on that line on its first run; that was a
+			# false positive, and a check that cries wolf is one a later
+			# session quietly weakens. Narrowed here rather than exempting the
+			# file, which would have made it lie instead.
+			if _first_match(body, "(godot_console)\\s+-") != "" and not defined:
+				fails.append("%s uses the godot_console shorthand but no " % doc
+					+ "longer names a real exe path defining it — that "
+					+ "shorthand resolves to NOTHING on this machine")
 	return fails
 
 

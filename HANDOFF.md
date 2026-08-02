@@ -87,9 +87,24 @@ is best"*.
   starting `scripts/ tools/ docs/ art/ assets/ scenes/`, and tests nothing
   about whether a documented COMMAND resolves.
 
-**Picked up at:** Hardening `--checkdocs` (fail on a hardcoded version in
-DESIGN.md; assert documented commands resolve; widen the path scan) — each
-one to be **fire-tested by planting a violation** before it ships. Then the
+**Then `--checkdocs` was hardened, and every part fire-tested.** It is now
+five parts: (0) the docs it reads exist and are non-empty — before this,
+DELETING a doc made every check scan nothing and pass silently; (1) DESIGN.md
+as an **optional** version claim — state none and it never fires, state one
+and it must agree, so re-adding a version is safe instead of silent rot, and
+no fifth number has to be hand-bumped each release; (2) tags unchanged;
+(3) the path scan widened to DESIGN.md/README.md/LORE.md and to bare
+root-level `.md`/`.bat`/`.godot` names; (4) every `.exe` the docs name must
+resolve on disk, and a `godot_console` COMMAND may not sit in a doc that no
+longer defines the shorthand. **All six planted violations FIRED.**
+Two things worth keeping: the exe path is never hardcoded in `harness.gd` —
+disk is the authority, a copy would be a seventh place to drift. And 4b
+fires on the COMMAND shape only, not a prose mention: it false-positived on
+this very entry's first run, because the entry quotes `godot_console` to say
+it is dead. Narrowed the rule rather than exempting the file — exempting is
+what makes a gate lie.
+
+**Picked up at:** The
 user's autosave: a prompt-submit hook appending their messages verbatim to a
 docs/sessions/ folder (unbackticked deliberately — it does not exist yet, and
 `--checkdocs` fired on the backticked form while this entry was being written,
