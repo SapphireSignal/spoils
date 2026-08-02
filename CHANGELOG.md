@@ -3,6 +3,29 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.62] — 2026-08-01 — the grid
+
+### Added
+- **Power lines across the district** (user spec). A line of lattice
+  towers marches the width of the map with real catenary strung
+  between them — the sag is deepest mid-span, and the wires hang
+  *above* everything, so they cross roads, sidewalks and shelters the
+  way overhead lines do.
+- **A good deal of it is down.** Towers come in four states: two
+  standing designs, one leaning with a bent arm, and one snapped off
+  above the waist with its cables trailing. Spans go missing outright,
+  and some are **snapped** — they leave a tower, sag, and end in
+  mid-air where the rest came down.
+- **The yellow cabinet by the relay.** The run walks to the comms
+  relay and goes underground into a utility box on the back of the
+  last tower, with a toolbox, drums and a crate left on the ground
+  around it. Not a POI — just a thing that's there, as asked.
+- Towers are one design repeated with wear, per the standing rule for
+  municipal infrastructure, and every standing tower is exactly the
+  same height so the spans always meet the crossarms.
+- The whole run is rolled from the side RNG, so adding it didn't move
+  anything else in the district.
+
 ## [0.6.61] — 2026-08-01 — dying ends the raid
 
 ### Changed

@@ -189,6 +189,7 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 	await _place_lamps()
 	await _place_traffic_lights()
 	await _place_street_furniture()
+	await _place_power_line()
 	await _dress_pois()
 	await _place_barricades()
 	await _place_trees()
@@ -2582,6 +2583,72 @@ func _dress_spot(area: Rect2i, families: Array, count: int) -> void:
 			continue
 		_add_prop_at_cell(_pick_variant_varied(family), cell, Vector2(9, 4))
 		placed += 1
+
+
+const PYLON_SPAN := 6        # cells between towers — the wire art's span
+const PYLON_ARM_Y := -52.0   # where the crossarms sit above the base
+
+func _place_power_line() -> void:
+	## THE GRID, marching across the district: one line of lattice towers
+	## with catenary strung between them, and a good deal of it down —
+	## missing spans, snapped runs left hanging (user: "some broken ones
+	## too ... snapped for the overrun aesthetic"). The whole run walks to
+	## the relay, where it goes underground into a yellow cabinet.
+	if _comms_rect.size.x <= 0:
+		return
+	var line_y := clampi(_comms_rect.position.y - 5, BARRIER_INSET + 6,
+		MAP_H - BARRIER_INSET - 6)
+	var x := BARRIER_INSET + 4
+	var last_stood := false
+	while x < MAP_W - BARRIER_INSET - 4:
+		await _tick()
+		var cell := Vector2i(x, line_y + _side_rng.randi_range(-1, 1))
+		var blocked := _occupied.has(cell) or _near_a_door(cell) \
+			or _rail_cells.has(cell)
+		for plot in _plots:
+			if (plot["rect"] as Rect2i).grow(1).has_point(cell):
+				blocked = true
+				break
+		var stood := false
+		if not blocked:
+			# 0-1 stand, 2 leans, 3 is snapped off — the odd one is down
+			var pick := 3 if _side_rng.randf() < 0.16 else \
+				(2 if _side_rng.randf() < 0.22 else _side_rng.randi_range(0, 1))
+			_add_prop_at_cell("pylon_%d" % pick, cell, Vector2.ZERO)
+			stood = pick != 3
+		# the span back to the tower behind this one
+		if stood and last_stood and _side_rng.randf() > 0.18:
+			var snapped := 1 if _side_rng.randf() < 0.28 else 0
+			var wire := _add_prop("power_wire_%d" % snapped,
+				_floor_layer.map_to_local(cell - Vector2i(PYLON_SPAN, 0))
+				+ Vector2(0.0, PYLON_ARM_Y))
+			wire.z_index = 5          # overhead: it hangs above everything
+		last_stood = stood
+		x += PYLON_SPAN
+	_place_utility_spot(line_y)
+
+
+func _place_utility_spot(line_y: int) -> void:
+	## Not a POI, just a thing that's there (user spec): the tower beside
+	## the relay with the yellow cabinet on its back where the district's
+	## lines come up out of the ground, and the gear left around it.
+	var base := Vector2i(_comms_rect.position.x - 3,
+		clampi(line_y + 3, BARRIER_INSET + 2, MAP_H - BARRIER_INSET - 2))
+	for probe in 8:
+		var cell := base + Vector2i(probe % 3, probe / 3)
+		if _occupied.has(cell) or _on_road(cell) or _near_a_door(cell):
+			continue
+		_add_prop_at_cell("pylon_%d" % _side_rng.randi_range(0, 1), cell,
+			Vector2.ZERO)
+		# the cabinet sits on the BACK of the tower, toward the relay
+		var box_cell := cell + Vector2i(1, 0)
+		_add_prop("utility_box", _floor_layer.map_to_local(box_cell)
+			+ Vector2(0.0, -2.0))
+		_occupied[box_cell] = true
+		# ...and the gear whoever last worked on it left on the ground
+		await _dress_spot(Rect2i(cell - Vector2i(1, 1), Vector2i(4, 3)),
+			["toolbox", "cylinder", "barrel", "crate"], 4)
+		return
 
 
 func _dress_pois() -> void:

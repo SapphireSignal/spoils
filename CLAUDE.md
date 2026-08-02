@@ -220,13 +220,15 @@ next session's work**:
   related question
   "how does saving work?" — nothing persists between raids yet; the
   stash is M4.)
-- **H. POWER LINES ACROSS THE DISTRICT** — still TODO. Pylons with
-  catenary, some broken, some lines SNAPPED and hanging (overrun
-  look). They run UNDERGROUND to a YELLOW utility box on the BACK of a
-  power tower beside the comms relay — not a POI, just a small spot
-  with power boxes and tools scattered on the ground. Reuse the flat
-  decal layer (`_flat`) for anything lying on the ground and the
-  `_side_rng` trick if the layout must stay put.
+- ~~H. power lines across the district~~ **DONE v0.6.62**:
+  `_place_power_line()` + `_place_utility_spot()`. Art: `pylon_0..3`
+  (two standing, one leaning, one snapped) and `power_wire_0/1`
+  (intact / snapped), plus `utility_box`. KEY CONSTRAINTS if you touch
+  it: every STANDING tower is exactly 56px tall and the spans hang off
+  `PYLON_ARM_Y` (-52) — vary the height and the wires stop meeting the
+  crossarms; the wire art spans exactly `PYLON_SPAN` (6) cells; wires
+  are `z_index = 5` because they are overhead. Rolled from
+  `_side_rng`, so it moved nothing else.
 
 - ~~clock vs light disagreed~~ **RESOLVED v0.6.56** (user: "yes re-time
   it, dusk at 21:00 and dawn at 06:00"). The gradient stops are real

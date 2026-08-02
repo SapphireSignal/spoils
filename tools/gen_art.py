@@ -4487,6 +4487,11 @@ def prop_inventory() -> tuple[dict, dict]:
         fam("crate", i, art)
     for i in range(4):
         fam("toolbox", i, make_toolbox(i))
+    for i in range(4):                  # the grid: towers, spans, the cabinet
+        fam("pylon", i, make_pylon(i))
+    for i in range(2):
+        fam("power_wire", i, make_power_wire(i))
+    props["utility_box"] = make_utility_box()
     for i in range(4):
         rng = random.Random(f"{SEED}:cyl:{i}")
         color = ("steel", "red", "gray", "steel")[i]
@@ -6169,6 +6174,105 @@ def make_fog_puffs() -> list[Image.Image]:
                     px[x, y] = (168, 181, 178, int(200 * a))
         out.append(img)
     return out
+
+
+def make_pylon(variant: int) -> tuple[Canvas, tuple, list | None]:
+    """A lattice power pylon. 0-1 stand, 2 leans with a bent arm, 3 is
+    snapped off above the waist — the grid went down with everything else
+    (user: "some broken ones too"). The wires themselves are their own
+    sprites so a span can be missing without moving the towers."""
+    rng = random.Random(f"{SEED}:pylon:{variant}")
+    broken = variant == 3
+    lean = variant == 2
+    # a standing tower is ALWAYS this tall: the spans hang off a fixed
+    # crossarm height, and a municipal line is one design repeated with
+    # wear, never per-piece variety (standing rule)
+    h = 56 if not broken else rng.randint(24, 30)
+    half_base, half_top = 11, 4
+    steel, dark = C("577277"), C("394a50")
+    # generous margins: the lean pushes the top sideways and the crossarms
+    # reach 14px either side, and the clip audit fails the build on contact
+    c = Canvas(56, h + 20)
+    ox, oy = 26, h + 12
+    def shift(y: int) -> int:            # the lean grows toward the top
+        return int((oy - y) * 0.14) if lean else 0
+    for y in range(oy - h, oy + 1):
+        f = (oy - y) / float(h)
+        half = int(half_base + (half_top - half_base) * f)
+        s = shift(y)
+        c.set(ox - half + s, y, steel)   # the two legs
+        c.set(ox + half + s, y, steel)
+        if (oy - y) % 6 == 0:            # horizontal braces
+            for x in range(ox - half + s, ox + half + s + 1):
+                c.set(x, y, dark)
+        if (oy - y) % 3 == 0:            # the cross bracing between them
+            span = max(1, half)
+            for k in range(-span, span + 1):
+                yy = y - abs(k) // 2
+                if oy - h <= yy <= oy:
+                    c.set(ox + k + s, yy, dark)
+    if not broken:                        # the crossarms that carry the wires
+        for arm_y in (oy - h + 4, oy - h + 12):
+            s = shift(arm_y)
+            for x in range(ox - 14 + s, ox + 15 + s):
+                c.set(x, arm_y, steel)
+            for x in (ox - 14 + s, ox - 7 + s, ox + 7 + s, ox + 14 + s):
+                c.set(x, arm_y - 1, dark)     # the insulators
+                c.set(x, arm_y - 2, C("819796"))
+    else:                                 # a torn-off top, cables trailing
+        for k in range(6):
+            c.set(ox + rng.randint(-6, 6), oy - h - rng.randint(0, 3), C("241527"))
+    c.outline_auto()
+    cropped, origin = crop_canvas(c, (ox, oy))
+    return cropped, origin, ["diamond", 7, 4]
+
+
+def make_power_wire(variant: int) -> tuple[Canvas, tuple, list | None]:
+    """One span of catenary between two pylons, drawn along the map's +x
+    axis (screen down-right). Variant 1 is SNAPPED: it leaves one tower,
+    sags, and ends in mid-air where the rest of it came down."""
+    span_cells = 6
+    w = span_cells * 32
+    c = Canvas(w + 20, 130)
+    ox, oy = 8, 20
+    snapped = variant == 1
+    end = int(w * 0.42) if snapped else w
+    for line, droop in ((0, 9.0), (1, 13.0)):
+        for i in range(end):
+            f = i / float(w)
+            # a real catenary: the sag is deepest mid-span
+            sag = droop * (1.0 - (2.0 * f - 1.0) ** 2)
+            y = oy + int(i * 0.5 + sag) + line * 7
+            c.set(ox + i, y, C("241527"))
+    if snapped:                           # the broken end hangs and frays
+        f = end / float(w)
+        for k in range(10):
+            y = oy + int(end * 0.5 + 9.0 * (1.0 - (2.0 * f - 1.0) ** 2)) + k
+            c.set(ox + end + k // 3, y, C("241527"))
+    c.outline_auto()
+    cropped, origin = crop_canvas(c, (ox, oy))
+    return cropped, origin, None
+
+
+def make_utility_box() -> tuple[Canvas, tuple, list | None]:
+    """The yellow cabinet on the back of the tower by the relay: where the
+    district's lines come up out of the ground (user spec)."""
+    c = Canvas(30, 44)
+    ox, oy = 6, 36
+    w, d, h = 16, 8, 18
+    body, dark, lite = C("de9e41"), C("884b2b"), C("e8c170")
+    bottoms = iso_prism(c, ox, oy - d - h, w, d, h, body, dark, lite)
+    for x in range(ox + 2, ox + w - 1):        # the door seam and its hinges
+        c.set(x, max(bottoms) + h // 2, dark)
+    c.set(ox + w - 3, max(bottoms) + h // 2 - 3, C("241527"))
+    for k in range(3):                          # hazard flash across the door
+        c.set(ox + 4 + k * 2, max(bottoms) + 4 + k, C("241527"))
+    # the conduit going down into the ground
+    for y in range(max(bottoms) + h, max(bottoms) + h + 4):
+        c.set(ox + w // 2, y, C("394a50"))
+    c.outline_auto()
+    cropped, origin = crop_canvas(c, (ox + w // 2, max(bottoms) + h + 3))
+    return cropped, origin, ["diamond", 7, 4]
 
 
 def make_toolbox(variant: int) -> tuple[Canvas, tuple, list | None]:

@@ -608,6 +608,103 @@
         3
       ]
     },
+    "pylon_0": {
+      "size": [
+        33,
+        63
+      ],
+      "origin": [
+        16,
+        60
+      ],
+      "collider": [
+        "diamond",
+        7,
+        4
+      ]
+    },
+    "pylon_1": {
+      "size": [
+        33,
+        59
+      ],
+      "origin": [
+        16,
+        56
+      ],
+      "collider": [
+        "diamond",
+        7,
+        4
+      ]
+    },
+    "pylon_2": {
+      "size": [
+        36,
+        58
+      ],
+      "origin": [
+        13,
+        55
+      ],
+      "collider": [
+        "diamond",
+        7,
+        4
+      ]
+    },
+    "pylon_3": {
+      "size": [
+        27,
+        33
+      ],
+      "origin": [
+        13,
+        30
+      ],
+      "collider": [
+        "diamond",
+        7,
+        4
+      ]
+    },
+    "power_wire_0": {
+      "size": [
+        196,
+        107
+      ],
+      "origin": [
+        2,
+        2
+      ],
+      "collider": null
+    },
+    "power_wire_1": {
+      "size": [
+        88,
+        64
+      ],
+      "origin": [
+        2,
+        2
+      ],
+      "collider": null
+    },
+    "utility_box": {
+      "size": [
+        20,
+        33
+      ],
+      "origin": [
+        10,
+        30
+      ],
+      "collider": [
+        "diamond",
+        7,
+        4
+      ]
+    },
     "cylinder_0": {
       "size": [
         16,
@@ -8700,6 +8797,16 @@
       "toolbox_1",
       "toolbox_2",
       "toolbox_3"
+    ],
+    "pylon": [
+      "pylon_0",
+      "pylon_1",
+      "pylon_2",
+      "pylon_3"
+    ],
+    "power_wire": [
+      "power_wire_0",
+      "power_wire_1"
     ],
     "cylinder": [
       "cylinder_0",

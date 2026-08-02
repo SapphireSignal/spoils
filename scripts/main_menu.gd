@@ -70,6 +70,12 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.62", ["the grid runs across the district: lattice towers with",
+		"the wires sagging between them, spans missing, whole",
+		"runs snapped and left hanging in the air. it walks to",
+		"the relay and goes underground into a yellow cabinet on",
+		"the back of the last tower, with the gear somebody left",
+		"on the ground around it"]],
 	["v0.6.61", ["dying ends the raid now. three rounds and you get the",
 		"same debrief walking out gives you - the doll, what you",
 		"lost, who did it and where they hit you. no more waking",
