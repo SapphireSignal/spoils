@@ -222,12 +222,20 @@ next session's work**:
   decal layer (`_flat`) for anything lying on the ground and the
   `_side_rng` trick if the layout must stay put.
 
-**OPEN QUESTION FOR THE USER (raised by G):** the clock and the
-lighting curve disagree with real-world intuition — nightfall lands at
-15:22 and dawn at 04:05, so map select can read "04:19 — day". The
-freight's 24:00 arrival IS at peak darkness, so their spec is met;
-re-timing the gradient (dusk ~21:00, dawn ~06:00) is a small change
-awaiting their call.
+- ~~clock vs light disagreed~~ **RESOLVED v0.6.56** (user: "yes re-time
+  it, dusk at 21:00 and dawn at 06:00"). The gradient stops are real
+  hours now — dawn 06:00, day 07:30, warm from 20:00, dusk 21:00,
+  deep night 22:15..05:00; `_night_amount_for`, the dawn fog window
+  and `Raid.NIGHT_FROM/NIGHT_UNTIL` all track the same stops, and a
+  raid starts at 07:12. **If you touch any of these, move ALL of
+  them** — the visible clock makes any drift obvious now.
+- ~~master volume at 0 still played music~~ **v0.6.56**: master scales
+  every CHANNEL bus as well as Master. NOTE: the bus graph was already
+  correct when measured (`--audiodebug` proves it), so if the user
+  still hears audio at master 0, the cause is elsewhere — run
+  `--audiodebug` first, it drives the real slider and dumps every
+  bus and player.
+- Blue sparks thrown off broken power boxes (v0.6.56, user request).
 
 **THE OVERNIGHT BATCH IS DONE** (all five user asks shipped as
 v0.6.45–48 — detail in "Where we are" above). What remains below is

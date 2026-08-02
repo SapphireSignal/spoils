@@ -16,12 +16,43 @@ var _shot_backdrop := -1
 var _shot_face := ""
 
 
+func _audio_debug() -> void:
+	## --audiodebug: drop the master to zero and dump the bus graph, so a
+	## "the slider does nothing" report gets measured instead of guessed
+	await get_tree().process_frame
+	# drive the REAL panel, not the setter behind it: the report is "the
+	# slider does nothing", so the slider is what has to be tested
+	var panel := VolumePanel.new()
+	get_tree().root.add_child(panel)
+	await get_tree().process_frame
+	var sliders := panel.find_children("", "HSlider", true, false)
+	print("PANEL sliders=%d" % sliders.size())
+	if not sliders.is_empty():
+		(sliders[0] as HSlider).value = 0.0
+	await get_tree().process_frame
+	print("AFTER master=%.2f music=%.2f" % [Settings.volume_master,
+		Settings.volume_music])
+	panel.queue_free()
+	for i in AudioServer.bus_count:
+		print("BUS %d %-8s vol=%6.1f mute=%s send=%s" % [i,
+			AudioServer.get_bus_name(i), AudioServer.get_bus_volume_db(i),
+			AudioServer.is_bus_mute(i), AudioServer.get_bus_send(i)])
+	for node in get_tree().root.get_children():
+		for child in node.get_children():
+			if child is AudioStreamPlayer:
+				var p := child as AudioStreamPlayer
+				print("PLAYER %s/%s bus=%s playing=%s db=%.1f" % [
+					node.name, p.name, p.bus, p.playing, p.volume_db])
+
+
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	var args := OS.get_cmdline_user_args()
 	for arg in args:
 		if arg.begins_with("--seed="):
 			world_seed = arg.trim_prefix("--seed=")
+		elif arg == "--audiodebug":
+			_audio_debug.call_deferred()
 		elif arg.begins_with("--menu="):
 			_shot_menu = arg.trim_prefix("--menu=")
 		elif arg.begins_with("--scene="):

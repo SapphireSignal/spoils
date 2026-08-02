@@ -3,6 +3,37 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.56] — 2026-08-01 — the clock and the light agree
+
+### Changed
+- **The day/night gradient is re-timed to real hours** (user call):
+  dawn at **06:00**, full day 07:30, the light going warm from 20:00,
+  **dusk at 21:00**, deep night by 22:15 and still dark at 05:00 —
+  night is now about nine hours of the cycle. Both endpoints stay
+  DEEP_NIGHT so midnight can't snap. `_night_amount_for` (lamps,
+  interior lights, the flashlight) tracks the same stops, the dawn fog
+  window moved with dawn (04:48 → 09:00), and a raid now starts at
+  07:12 instead of 04:19. The freight's 24:00 arrival sits deeper in
+  the dark than before.
+
+### Fixed
+- **Master volume at 0 didn't silence music.** Measured first: the
+  master bus *was* muting correctly (-80 dB, muted, with the music
+  player routed through it), so the reported symptom didn't match the
+  bus graph. Master now scales **every channel bus** as well as the
+  master, so a master of zero mutes music, effects and ambient
+  directly — belt and braces, whatever slipped through before.
+- Added `--audiodebug` to the harness: it drives the real volume panel
+  slider and dumps the bus graph and every player's bus, so audio
+  reports get measured instead of guessed.
+
+### Added
+- **Blue sparks off the broken power boxes** (user request): two to
+  four thrown clear of the housing on each burst, arcing out, falling
+  and burning out. Blue because that's what a real short throws, and
+  it reads against the warm arc inside the box. *Worth a look in
+  motion — bursts are brief and a screenshot rarely catches one.*
+
 ## [0.6.55] — 2026-08-01 — the district's clock, on the way in
 
 ### Added

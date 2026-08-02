@@ -22,11 +22,12 @@ var haul: Array[Dictionary] = []     # {name, count} — the stash lands in M4
 # call), and it keeps running while you sit in the menu — the district
 # does not wait for you. The environment owns the real length and pushes
 # it here on setup, so there is still ONE source for the day length.
-var world_time := 0.18
+var world_time := 0.30          # a raid starts mid-morning, 07:12
 var day_seconds := 1080.0
-# nightfall / dawn, mirroring environment_system's gradient stops
-const NIGHT_FROM := 0.64
-const NIGHT_UNTIL := 0.08
+# dusk / dawn, mirroring environment_system's gradient stops
+const NIGHT_FROM := 0.875       # 21:00, dusk — the light starts closing
+const NIGHT_UNTIL := 0.229      # 05:30, halfway up the dawn ramp: before
+                                # that it still reads dark on screen
 
 var _started_ms := 0
 var _ended_at := 0.0

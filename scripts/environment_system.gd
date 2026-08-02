@@ -33,7 +33,7 @@ const DROP_FALL_MAX := 360.0
 const SPLASH_LIFE := 0.34
 const SPLASH_FRAMES := 4
 
-var day_time := 0.18                # 0..1, start in the morning
+var day_time := 0.30                # 0..1, start in the morning (07:12)
 var rain_intensity := 0.0           # 0..1, ramps in and out
 var night_amount := 0.0             # 0 day .. 1 deep night
 var _last_night_broadcast := -1.0   # last value sent to the lamp group
@@ -215,8 +215,21 @@ func setup(root: Node2D, floor_layer: TileMapLayer, puddle_spots: Array,
 	_tint_gradient = Gradient.new()
 	# night owns ~26% of the clock now (was ~14%) and dusk lands earlier —
 	# a raid that starts at dawn reaches real darkness in the same sitting
-	_tint_gradient.offsets = PackedFloat32Array(
-		[0.0, 0.08, 0.17, 0.26, 0.52, 0.62, 0.74, 0.82, 1.0])
+	# THE CLOCK AND THE LIGHT AGREE (user call 2026-08-01, once the time
+	# became visible on the map-select screen): every stop below is a real
+	# hour of the day, dawn at 06:00 and dusk at 21:00. The endpoints are
+	# both DEEP_NIGHT — they MUST match or midnight snaps (hard rule).
+	_tint_gradient.offsets = PackedFloat32Array([
+		0.0,      # 00:00  deep night
+		0.208,    # 05:00  still deep night
+		0.25,     # 06:00  DAWN
+		0.3125,   # 07:30  full day
+		0.708,    # 17:00  late day
+		0.833,    # 20:00  the light goes warm
+		0.875,    # 21:00  DUSK
+		0.927,    # 22:15  deep night again
+		1.0,      # 24:00  (== 00:00)
+	])
 	_tint_gradient.colors = PackedColorArray([
 		DEEP_NIGHT, DEEP_NIGHT,
 		Color(0.85, 0.72, 0.72),   # dawn
@@ -340,27 +353,30 @@ func _strike() -> void:
 
 
 func _night_amount_for(t: float) -> float:
-	# tracks the retuned gradient: lamps and the flashlight matter from
-	# nightfall (0.64) all the way to the deep-dark plateau (0.80..0.08)
-	if t < 0.08:
+	# tracks the gradient above, in clock terms: full dark from 22:15
+	# right through 05:00, lifting to nothing by dawn at 06:00, and
+	# closing back in from dusk at 21:00. Lamps, interior lights and the
+	# flashlight all ride this.
+	if t < 0.208:                       # 05:00
 		return 1.0
-	if t < 0.17:
-		return 1.0 - smoothstep(0.08, 0.17, t)
-	if t < 0.64:
+	if t < 0.25:                        # ...light by 06:00
+		return 1.0 - smoothstep(0.208, 0.25, t)
+	if t < 0.875:                       # daylight until 21:00
 		return 0.0
-	if t < 0.80:
-		return smoothstep(0.64, 0.80, t)
+	if t < 0.927:                       # ...dark by 22:15
+		return smoothstep(0.875, 0.927, t)
 	return 1.0
 
 
 func _morning_amount(t: float) -> float:
-	# the dawn fog window ("out before the fog lifts" — it's canon)
-	if t < 0.10 or t > 0.38:
+	# the dawn fog window ("out before the fog lifts" — it's canon), moved
+	# with dawn: it gathers before 06:00 and burns off through the morning
+	if t < 0.20 or t > 0.375:           # 04:48 .. 09:00
 		return 0.0
-	if t < 0.14:
-		return smoothstep(0.10, 0.14, t)
-	if t > 0.30:
-		return 1.0 - smoothstep(0.30, 0.38, t)
+	if t < 0.25:                        # thickening into dawn
+		return smoothstep(0.20, 0.25, t)
+	if t > 0.31:                        # burning off after 07:26
+		return 1.0 - smoothstep(0.31, 0.375, t)
 	return 1.0
 
 

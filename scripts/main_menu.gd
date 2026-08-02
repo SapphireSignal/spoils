@@ -70,6 +70,13 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.56", ["the clock and the light agree now: dawn at 06:00, dusk",
+		"at 21:00, dark by 22:15 and still dark at 05:00. the",
+		"dawn fog moved with it, and a raid starts at 07:12",
+		"master volume at zero silences everything - it now",
+		"pulls every channel down with it, not just the master",
+		"the broken power boxes throw blue sparks that arc off",
+		"the housing and burn out"]],
 	["v0.6.55", ["the map select screen shows the districts clock and",
 		"whether its day or night, ticking, before you commit -",
 		"and the time you read there is the time you deploy",

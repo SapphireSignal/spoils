@@ -94,10 +94,15 @@ func _ensure_audio_buses() -> void:
 
 
 func apply_volumes() -> void:
+	# MASTER SCALES THE CHANNELS TOO, not just the master bus. Muting
+	# Master alone should be enough — measured, it is — but the user
+	# reported music still audible at master 0, so the master now bites
+	# on every channel directly as well: anything that ever slips onto a
+	# channel bus is still silenced when the master is down.
 	_apply_bus("Master", volume_master)
-	_apply_bus("music", volume_music)
-	_apply_bus("sfx", volume_sfx)
-	_apply_bus("ambient", volume_ambient)
+	_apply_bus("music", volume_master * volume_music)
+	_apply_bus("sfx", volume_master * volume_sfx)
+	_apply_bus("ambient", volume_master * volume_ambient)
 
 
 func _apply_bus(bus_name: String, v: float) -> void:
