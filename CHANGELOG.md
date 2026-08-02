@@ -3,6 +3,21 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.71] — 2026-08-02 — doors get out of your way
+
+### Changed
+- **A door now swings away from whoever opens it** (user). Stand
+  outside and it opens into the room; stand inside and it opens out to
+  the street. You are never pushed backwards by a door you just opened.
+- Both swings live in ONE sheet — frames 0–3 inward, 4–7 outward — so
+  it stays a single texture and a single prop. The generator emits a
+  second open-state collider for the outward leaf, and whichever leaf
+  is actually swinging is the solid one, so the "never a ghost"
+  guarantee from v0.6.68 holds in both directions.
+- The smoke asserts a door opened from outside does **not** swing
+  toward the player, and places the player deliberately first so the
+  rest of the door checks stay deterministic.
+
 ## [0.6.70] — 2026-08-02 — the upstairs floor stays inside the house
 
 ### Fixed

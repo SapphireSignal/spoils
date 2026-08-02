@@ -1479,7 +1479,8 @@ func _add_door(door_name: String, pos: Vector2) -> void:
 	door.setup(load("res://art/gen/%s.png" % door_name),
 		Vector2(float(origin[0]), float(origin[1])),
 		_door_points(info["collider"] as Array),
-		_door_points(info["collider_open"] as Array), jambs)
+		_door_points(info["collider_open"] as Array),
+		_door_points(info["collider_open_out"] as Array), jambs)
 
 
 func _pick_variant(family: String) -> String:

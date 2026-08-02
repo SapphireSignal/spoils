@@ -3016,11 +3016,111 @@ def make_sniper_round() -> Image.Image:
         px[p] = (warm[0], warm[1], warm[2], 70)
     return img
 
-DOOR_FRAMES = 4
+
+# the eight character facings, in sheet order E,SE,S,SW,W,NW,N,NE. These are
+# exact 45 degree steps in SCREEN space (player.gd derives facing_angle the
+# same way), so muzzle art can be drawn straight down them.
+GUN_DIRS = ["e", "se", "s", "sw", "w", "nw", "n", "ne"]
+
+
+def make_muzzle_flash(dir_index: int, frame: int) -> Image.Image:
+    """Muzzle flash for one facing (effect: alpha-graded, not palette-locked).
+
+    ONE SPRITE PER FACING because runtime rotation is banned — it breaks the
+    pixel grid. Frame 0 is the full bloom, frame 1 the decay."""
+    size = 24
+    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    px = img.load()
+    cx = cy = size // 2
+    ang = math.radians(45.0 * dir_index)
+    dx, dy = math.cos(ang), math.sin(ang)
+    sx, sy = -dy, dx                      # across the barrel
+    core = C("ebede9")
+    warm = C("e8c170")
+    deep = C("de9e41")
+    rng = random.Random(f"{SEED}:muzzle:{dir_index}:{frame}")
+    reach = 9.0 if frame == 0 else 5.0
+    spread = 2.6 if frame == 0 else 1.6
+    # the cone: brightest at the barrel, widening and cooling as it goes
+    steps = int(reach * 2)
+    for i in range(steps + 1):
+        t = i / float(steps)
+        along = t * reach
+        half = spread * (0.35 + t * 0.65)
+        j = -int(half)
+        while j <= int(half):
+            x = int(round(cx + dx * along + sx * j))
+            y = int(round(cy + dy * along + sy * j))
+            if not (0 < x < size - 1 and 0 < y < size - 1):
+                j += 1
+                continue
+            edge = abs(j) >= max(int(half), 1)
+            if t < 0.35 and not edge:
+                col = core + (255,)
+            elif edge:
+                col = deep + (150 if frame == 0 else 90,)
+            else:
+                col = warm + (225 if frame == 0 else 150,)
+            px[x, y] = col
+            j += 1
+    # a couple of stray sparks thrown clear of the cone
+    for _ in range(rng.randint(2, 4) if frame == 0 else rng.randint(1, 2)):
+        d = reach * rng.uniform(0.7, 1.25)
+        off = rng.uniform(-2.5, 2.5)
+        x = int(round(cx + dx * d + sx * off))
+        y = int(round(cy + dy * d + sy * off))
+        if 0 < x < size - 1 and 0 < y < size - 1:
+            px[x, y] = warm + (200,)
+    return img
+
+
+def make_tracer() -> Image.Image:
+    """The player's round in flight — smaller and warmer than the sniper's,
+    so the two are never confused (effect: alpha-graded)."""
+    img = Image.new("RGBA", (4, 4), (0, 0, 0, 0))
+    px = img.load()
+    core = C("ebede9")
+    warm = C("e8c170")
+    px[1, 1] = core + (255,)
+    px[2, 1] = core + (255,)
+    px[1, 2] = warm + (220,)
+    px[2, 2] = warm + (220,)
+    for p in ((0, 1), (3, 1), (1, 0), (1, 3)):
+        px[p] = warm + (90,)
+    return img
+
+
+def make_impact_frames() -> list:
+    """Three frames of grit kicked off whatever the round hits. Chips and
+    dust, no dot noise — each frame is a handful of solid flecks that thin
+    out as it settles (effect: alpha-graded)."""
+    out = []
+    for f in range(3):
+        rng = random.Random(f"{SEED}:impact:{f}")
+        size = 14
+        img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+        px = img.load()
+        cx = cy = size // 2
+        grey = [C("a8b5b2"), C("819796"), C("577277")]
+        fade = [255, 190, 110][f]
+        for _ in range(rng.randint(5, 7) - f):
+            ang = rng.uniform(0.0, math.tau)
+            dist = (1.4 + f * 1.9) * rng.uniform(0.6, 1.4)
+            x = int(round(cx + math.cos(ang) * dist))
+            y = int(round(cy + math.sin(ang) * dist * 0.6))   # iso squash
+            if 0 < x < size - 1 and 0 < y < size - 1:
+                px[x, y] = grey[rng.randrange(3)] + (fade,)
+        if f == 0:
+            px[cx, cy] = C("ebede9") + (255,)
+        out.append(img)
+    return out
+
+
+DOOR_FRAMES = 4     # frames per swing; the strip holds TWO swings
 DOOR_LEAF = 20      # leaf length along the edge, px
 DOOR_H = 34         # leaf height
-DOOR_HINGE = (23, 50)       # hinge inside a frame; sized so no swing clips
-DOOR_FRAME_SIZE = (54, 66)
+DOOR_HINGE = (22, 50)       # hinge inside a frame; sized so no swing clips
+DOOR_FRAME_SIZE = (54, 68)
 
 # the open-state colliders, keyed by prop name. The GENERATOR knows where the
 # swung leaf ends up, so it says so — the game must never re-derive it (a
@@ -3028,23 +3128,25 @@ DOOR_FRAME_SIZE = (54, 66)
 # release, and you could stroll through every open south door).
 DOOR_COLLIDERS: dict[str, dict] = {}
 
-# closed / open unit step per axis, in screen px per px of leaf run. 'x' fits
-# south (yp) walls and swings toward -y cells; 'y' fits east (xp) walls and
-# swings toward -x cells. Both open INTO the room.
+# closed / open-inward / open-outward unit step per axis, in screen px per px
+# of leaf run. 'x' fits south (yp) walls, 'y' fits east (xp) walls. A door
+# swings AWAY from whoever opens it (user call), so every door needs BOTH
+# perpendiculars drawn: inward is toward the room, outward is the street.
 _DOOR_DIRS = {
-    "x": ((1.0, 0.5), (1.0, -0.5)),
-    "y": ((1.0, -0.5), (-1.0, -0.5)),
+    "x": ((1.0, 0.5), (1.0, -0.5), (-1.0, 0.5)),
+    "y": ((1.0, -0.5), (-1.0, -0.5), (1.0, 0.5)),
 }
 
 
-def _door_leaf_vec(axis: str, t: float) -> tuple[float, float]:
+def _door_leaf_vec(axis: str, t: float, outward: bool = False) -> tuple[float, float]:
     """Screen offset from hinge to the leaf's free end, t = 0 shut, 1 open.
     The panel turns 90 degrees in the GROUND plane, so this is NOT a lerp of
     the two end states: projected into iso a door standing at 45 degrees is
     WIDER on screen than either the shut or the fully open one. Lerping the
     step (what the first cut did) under-samples the middle frames — the east
     doors lost most of their leaf and all of their handle."""
-    closed, opened = _DOOR_DIRS[axis]
+    closed, in_dir, out_dir = _DOOR_DIRS[axis]
+    opened = out_dir if outward else in_dir
     ang = math.radians(90.0 * t)
     cs, sn = math.cos(ang), math.sin(ang)
     return (DOOR_LEAF * (cs * closed[0] + sn * opened[0]),
@@ -3063,15 +3165,19 @@ def make_door_strip(kind: str, axis: str) -> tuple[Canvas, tuple, list]:
         else (C("577277"), C("394a50"))
     frame_w, frame_h = DOOR_FRAME_SIZE
     hx, hy = DOOR_HINGE
-    strip = Canvas(frame_w * DOOR_FRAMES, frame_h)
+    # TWO swings in one strip: 0..3 open inward, 4..7 open outward. The game
+    # picks the half that swings away from whoever is opening it.
+    strip = Canvas(frame_w * DOOR_FRAMES * 2, frame_h)
     edge_dy = 0.5 if axis == "x" else -0.5
-    for f in range(DOOR_FRAMES):
+    for f in range(DOOR_FRAMES * 2):
+        outward = f >= DOOR_FRAMES
         c = Canvas(frame_w, frame_h)
         # The leaf goes down FIRST: it swings into the room, which is away
         # from the camera, so the wall it hangs in has to occlude it. Drawn
         # the other way round the panel swallows its own jamb mid-swing.
         # Sampled along its SCREEN run, not per leaf-px, so no frame is gappy.
-        ex, ey = _door_leaf_vec(axis, f / float(DOOR_FRAMES - 1))
+        ex, ey = _door_leaf_vec(axis,
+            float(f % DOOR_FRAMES) / float(DOOR_FRAMES - 1), outward)
         steps = max(int(round(max(abs(ex), abs(ey)))), 1)
         for i in range(steps + 1):
             u = i / float(steps)
@@ -3124,8 +3230,13 @@ def make_door_strip(kind: str, axis: str) -> tuple[Canvas, tuple, list]:
     hinge = (-sx * 0.5, -sy * 0.5)
     shut_end = (hinge[0] + sx, hinge[1] + sy)
     ox, oy = _door_leaf_vec(axis, 1.0)
+    ux, uy = _door_leaf_vec(axis, 1.0, True)
+    # the outward panel is the mirror of the inward one, so its thickness
+    # runs the other way across the leaf
+    n_out = (n_open[0], -n_open[1]) if axis == "x" else (-n_open[0], n_open[1])
     DOOR_COLLIDERS[f"door_{kind}_{axis}"] = {
         "open": ["poly", quad(hinge, (hinge[0] + ox, hinge[1] + oy), n_open)],
+        "open_out": ["poly", quad(hinge, (hinge[0] + ux, hinge[1] + uy), n_out)],
         # the jambs are drawn solid, so they ARE solid — otherwise an open
         # door lets you walk through the boards beside the opening
         "jambs": [["poly", quad(a, hinge, n)], ["poly", quad(shut_end, b, n)]],
@@ -6589,6 +6700,7 @@ def main() -> None:
             manifest["props"][name]["lights"] = entry[3]
     for name, extra in DOOR_COLLIDERS.items():
         manifest["props"][name]["collider_open"] = extra["open"]
+        manifest["props"][name]["collider_open_out"] = extra["open_out"]
         manifest["props"][name]["collider_jambs"] = extra["jambs"]
     manifest["families"] = families
 

@@ -264,7 +264,15 @@ func _smoke() -> void:
 			# the swing is 4 frames at 0.06s — wait it OUT, not a fixed
 			# frame count (at 240 fps twelve frames is a twentieth of it,
 			# and the door was still open when the next check ran)
-			swung.toggle()
+			# stand OUTSIDE and open it: a door swings away from whoever
+			# opens it, so from out here the leaf goes into the room and the
+			# swing is deterministic for everything below
+			player.position = swung.doorway_center() \
+				- swung.doorway_through() * 22.0
+			await get_tree().process_frame
+			swung.toggle(player.global_position)
+			if swung.swings_out():
+				failures.append("a door opened TOWARD the player")
 			# MID-SWING the doorway is still shut. _shove takes no frames, so
 			# this lands inside the 0.24s animation: a door that still looks
 			# closed must not be walkable.
@@ -659,6 +667,21 @@ func _shot(shot_name: String) -> void:
 				Raid.record_kill("stray", "head")
 				Raid.record_kill("magpie", "leg", true)
 				screen.call("show_debrief", arg.trim_prefix("--extract="))
+		if arg.begins_with("--door="):
+			# --door=inside|outside: stand on that side of a door and open
+			# it. The leaf must swing AWAY from wherever you are standing.
+			var side := arg.trim_prefix("--door=")
+			var d := get_tree().get_first_node_in_group("doors") as Door
+			var pl2 := _find_player()
+			if d != null and pl2 != null:
+				var thru := d.doorway_through()
+				var sign_in := 1.0 if side == "inside" else -1.0
+				pl2.global_position = d.doorway_center() + thru * 22.0 * sign_in
+				await get_tree().process_frame
+				d.toggle(pl2.global_position)
+				await get_tree().create_timer(0.45).timeout
+				print("DOOR side=%s swings_out=%s open=%s"
+					% [side, str(d.swings_out()), str(d.is_open())])
 		if arg.begins_with("--upstairs="):
 			# put the player on a second story and look at it. The reported
 			# bug is "furniture floats, no floor" and the slab is MEASURABLY

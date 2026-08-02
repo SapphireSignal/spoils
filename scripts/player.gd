@@ -353,7 +353,8 @@ func _interact() -> void:
 	if best == null or not is_instance_valid(best):
 		return
 	if best is Door:
-		(best as Door).toggle()
+		# pass where we're standing: the leaf swings away from us
+		(best as Door).toggle(global_position)
 	elif best is Stairs:
 		(best as Stairs).use()
 	elif best is DriveableCar:
