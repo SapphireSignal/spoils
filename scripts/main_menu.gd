@@ -68,6 +68,11 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.53", ["houses have lights inside now. they come on with the",
+		"dark, a third of them flicker, and every one has a",
+		"cable you can follow across the floor to the power box",
+		"on the outside wall. the safehouse is wired the same",
+		"way but stays dark - its box is the broken one"]],
 	["v0.6.52", ["pines shed now. they drop needles, not leaves - a",
 		"thinner sprite that falls straight down instead of",
 		"fluttering, because a needle has no blade to catch",

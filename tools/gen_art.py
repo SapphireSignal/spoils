@@ -4593,6 +4593,10 @@ def prop_inventory() -> tuple[dict, dict]:
     buffer_art = make_buffer_stop()
     fam("buffer_stop", 0, buffer_art)
     fam("buffer_stop", 1, mirror_prop(buffer_art))
+    # the lit rooms and the flex that feeds them
+    props["interior_lamp"] = make_interior_lamp()
+    props["cable_x"] = make_cable("x")
+    props["cable_y"] = make_cable("y")
     # two-story interiors
     props["stairs"] = make_stairs()
     for i, art in enumerate(clutter_variants(
@@ -6163,6 +6167,57 @@ def make_fog_puffs() -> list[Image.Image]:
                     px[x, y] = (168, 181, 178, int(200 * a))
         out.append(img)
     return out
+
+
+def make_interior_lamp() -> tuple[Canvas, tuple, list | None]:
+    """A room's ceiling fixture: a tin shade on a short flex with the bulb
+    showing under it. It hangs INSIDE, so it only reads once the roof fades
+    — which is exactly when a lit room should matter. No collider: you walk
+    under a light, not into it."""
+    c = Canvas(20, 26)
+    ox, oy = 10, 24
+    top, bot = 7, 12
+    # the flex starts clear of the canvas edge — outline_auto needs a
+    # margin, and the clip audit fails the build if content touches it
+    for y in range(2, top):                       # the flex into the ceiling
+        c.set(ox, y, C("241527"))
+    for y in range(top, bot + 1):                 # the shade, a tin cone
+        half = 2 + (y - top)
+        for x in range(ox - half, ox + half + 1):
+            col = C("577277")
+            if x <= ox - half + 1:
+                col = C("819796")                 # lit north-west face
+            elif x >= ox + half - 1:
+                col = C("394a50")                 # shaded east face
+            c.set(x, y, col)
+    rim = 2 + (bot - top)
+    for x in range(ox - rim, ox + rim + 1):       # the rim under the cone
+        c.set(x, bot + 1, C("394a50"))
+    for (dx, dy) in ((0, 2), (-1, 3), (0, 3), (1, 3), (0, 4)):
+        c.set(ox + dx, bot + dy, C("e8c170"))     # the bulb
+    c.outline_auto()
+    cropped, origin = crop_canvas(c, (ox, oy))
+    return cropped, origin, None
+
+
+def make_cable(axis: str) -> tuple[Canvas, tuple, list | None]:
+    """One cell of flex pinned along the floor. STANDING RULE: anything
+    powered has to SHOW where its power comes from, so a room light's cable
+    is a real object running cell by cell to the wall its box is bolted to.
+    'x' runs screen down-right, 'y' screen down-left — the two iso axes."""
+    c = Canvas(38, 24)
+    ox, oy = 19, 11
+    # grey flex over a black shadow: dark enough to read on a concrete
+    # floor, light enough to read on a dark wood one — a near-black cable
+    # simply vanished into both
+    for i in range(-16, 17):
+        x = ox + i
+        rise = i // 2 if axis == "x" else -(i // 2)
+        y = oy + rise
+        c.set(x, y, C("394a50") if i % 6 else C("577277"))   # cleats
+        c.set(x, y + 1, C("10141f"))              # the shadow it casts
+    cropped, origin = crop_canvas(c, (ox, oy))
+    return cropped, origin, None
 
 
 def make_leaves() -> list[Image.Image]:

@@ -65,6 +65,7 @@ var _families: Dictionary = {}
 var _wall_h := 40
 var _story_h := 32
 var _floor_layer: TileMapLayer
+var _flat: Node2D                    # flat decals (cables) over the tiles
 var _ysort: Node2D
 var _roofs: Array[RoofReveal] = []
 var _occupied: Dictionary = {}
@@ -148,6 +149,14 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 	_floor_layer.name = "Floor"
 	_floor_layer.tile_set = _make_tileset()
 	root.add_child(_floor_layer)
+
+	# FLAT DECALS (cables): above the floor, under everything that stands on
+	# it. This needs its own layer — a z_index of -1 inside the y-sorted
+	# world sorts GLOBALLY within the canvas layer, which put the cables
+	# behind the floor tilemap entirely (they rendered as nothing at all).
+	_flat = Node2D.new()
+	_flat.name = "Flat"
+	root.add_child(_flat)
 
 	_ysort = Node2D.new()
 	_ysort.name = "World"
@@ -2523,6 +2532,68 @@ func _place_power_boxes() -> void:
 			_map_marks.append([box_cell, "spark"])
 		else:
 			_add_prop(box_name, pos)
+		# the room this box feeds: a light in the middle of the floor and
+		# the flex running back to the wall the box is bolted to (standing
+		# rule — a powered thing must SHOW where its power comes from)
+		_place_room_light(interior, box_cell, broken)
+
+
+func _place_room_light(interior: Rect2i, box_cell: Vector2i,
+		dead_supply: bool) -> void:
+	## One fixture per house, hung mid-room, wired back to the box. The
+	## house whose box is hanging open and arcing gets NO working light —
+	## that is the whole reason its box is a repair job.
+	if interior.size.x <= 0 or interior.size.y <= 0:
+		return
+	var lamp_cell := interior.get_center()
+	# push the fixture AWAY from its own box until the flex has room to
+	# cross the floor. Hung at the room's centre it often landed a cell or
+	# two from the box, and those cells sit behind the wall sprite — the
+	# cable was there and rendered, and you could not see a pixel of it.
+	var away := Vector2i(signi(lamp_cell.x - box_cell.x),
+		signi(lamp_cell.y - box_cell.y))
+	if away == Vector2i.ZERO:
+		away = Vector2i(-1, -1)
+	while absi(lamp_cell.x - box_cell.x) + absi(lamp_cell.y - box_cell.y) < 4:
+		var next := lamp_cell + away
+		if not interior.has_point(next):
+			break
+		lamp_cell = next
+	if _occupied.has(lamp_cell):        # don't hang it inside the furniture
+		for off in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+			if interior.has_point(lamp_cell + off) and not _occupied.has(lamp_cell + off):
+				lamp_cell += off
+				break
+	# the flex first, so the fixture y-sorts over its own cable
+	var cursor := lamp_cell
+	while cursor.x != box_cell.x:
+		cursor.x += signi(box_cell.x - cursor.x)
+		_add_cable(cursor, "x")
+	while cursor.y != box_cell.y:
+		cursor.y += signi(box_cell.y - cursor.y)
+		_add_cable(cursor, "y")
+	if dead_supply:
+		return                          # wired, but nothing comes down it
+	var info: Dictionary = _manifest["props"]["interior_lamp"]
+	var origin: Array = info["origin"]
+	var light := InteriorLight.new()
+	light.position = _floor_layer.map_to_local(lamp_cell).round()
+	_ysort.add_child(light)
+	light.setup(Vector2(-float(origin[0]), -float(origin[1])),
+		_rng.randi(), _rng.randf() < 0.35)
+
+
+func _add_cable(cell: Vector2i, axis: String) -> void:
+	# flat on the floor: over the tiles, under everything that stands on
+	# them, and it never claims the cell (you walk over a cable)
+	var info: Dictionary = _manifest["props"]["cable_%s" % axis]
+	var origin: Array = info["origin"]
+	var sprite := Sprite2D.new()
+	sprite.texture = load("res://art/gen/cable_%s.png" % axis)
+	sprite.centered = false
+	sprite.offset = Vector2(-float(origin[0]), -float(origin[1]))
+	sprite.position = _floor_layer.map_to_local(cell).round()
+	_flat.add_child(sprite)
 
 
 func _place_lamps() -> void:

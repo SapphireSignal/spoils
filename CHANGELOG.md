@@ -3,6 +3,32 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.53] — 2026-08-01 — lit rooms, and the cable that feeds them
+
+### Added
+- **Every house has a room light.** A tin shade on a short flex, hung
+  mid-room; it comes on with the dark off the same broadcast the
+  street lamps ride, and about a third of them flicker and drop out
+  the way a bad supply does. The pool is deliberately tight — a wide
+  one washed straight through the walls and lit the street.
+- **The cable is real** (standing rule: a powered thing must SHOW
+  where its power comes from). The builder lays flex cell by cell from
+  the fixture to the wall its exterior power box is bolted to, and you
+  can follow it across the floor.
+- **The safehouse is wired and dark.** Its box is the broken, arcing
+  one, so the flex is there and nothing comes down it — which is the
+  whole reason it's a repair job later.
+
+### Notes from getting it working
+- Flat decals needed **their own layer** between the floor tilemap and
+  the y-sorted world. A `z_index` of -1 inside the y-sorted node sorts
+  globally within the canvas layer, so the cables rendered *behind the
+  floor* — present, positioned correctly, and completely invisible.
+- The fixture is pushed **away from its own box** until the run has
+  room to cross open floor. Hung at the room's centre it often landed
+  a cell or two from the box, and those cells sit behind the wall
+  sprite — again, drawn and invisible.
+
 ## [0.6.52] — 2026-08-01 — pines shed needles
 
 ### Added
