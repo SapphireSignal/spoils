@@ -3,6 +3,42 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.51] — 2026-08-01 — the roads stop somewhere
+
+A deliberate **map revision** of transit-01, approved by the user
+("yes its ok to change the map up a bit"), not a re-roll: the fixed
+district keeps its seed and every place stays put.
+
+### Changed
+- **Roads no longer all cross the whole district.** Each road now
+  carries a span, and most of them stop short — the council never
+  finished this district. This seed's network: the middle vertical
+  (the toll crossing, kept whole on purpose) and two crosstown roads
+  run edge to edge; the other five stop, one of them at both ends.
+  The north-west and north-east corners now have **no road at all**,
+  which is the point (user: "some areas with no roads").
+- **Broken ends.** Where a road gives up, its last three cells crack
+  and pothole, and the cut is buried under rubble with the odd barrel
+  and stick spilling two or three cells past the last slab.
+- Sidewalks, crosswalks, traffic lights, street lamps and level-
+  crossing signals all follow the spans — no walkway running off past
+  a road that was never built, no zebra crossing to nowhere, no lit
+  pole standing on unpaved ground.
+- The **map screen** draws the real network, stubs and all, instead of
+  a tidy grid the district doesn't have.
+
+### How the revision was kept surgical
+The spans are rolled from a **side RNG** seeded off the district seed,
+so they consume zero draws from the layout RNG: blocks, buildings,
+zones, POIs, the rail line, the toll crossing and the safehouse spawn
+are bit-identical (verified: `POI safehouse=[127,170,7,6]`,
+`POI toll gate=[145,187,5,5]`, unchanged). Only decoration placed
+*after* the road passes (lamps, furniture, scatter) shifts, because
+skipping a crossing that no longer exists changes what those passes
+roll. Road-end dressing spends the side RNG too.
+
+Perf: 240 avg, worst frame 5.53 ms, ~7.6k nodes.
+
 ## [0.6.50] — 2026-08-01 — first-open hitches, prewarmed
 
 User confirmed the dip is **first open only** — the changelog panel,

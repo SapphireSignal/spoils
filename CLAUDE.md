@@ -201,10 +201,16 @@ marked; don't attempt them without them.
    against +y on `_h` ones, so one shared edge condition can't serve
    both orientations. Any future edge-hugging tile art must measure
    the owned region (`max/min` of p) instead of assuming ±16.
-2. **Roads shouldn't be a symmetrical grid** — NEEDS THE USER (it's a
-   deliberate layout revision of the fixed district: re-audition +
-   their sign-off): some areas with no roads, broken road ends with
-   rubble where they cut off.
+2. ~~Roads shouldn't be a symmetrical grid~~ **DONE v0.6.51** (user
+   approved the revision). Roads carry SPANS now (`_road_v_span` /
+   `_road_h_span`); most stop short, ends break up + rubble
+   (`_dress_road_ends`). KEY TECHNIQUE, reuse it: the spans roll from
+   a **side rng** (`_side_rng`, seeded off DISTRICT_SEED) so they cost
+   ZERO draws from the layout rng — buildings/POIs/safehouse stayed
+   bit-identical. Anything touching roads must respect spans
+   (`_on_road` does it centrally); the map screen reads spans from
+   `map_vec.roads_v/h` = [x, width, from, to]. `--probe-world` prints
+   ROADS_V / ROADS_H.
 3. ~~Bus shelters half in the road at crossings~~ **DONE v0.6.48**
    (_shelter_overhangs: crossing road within 2 cells along the run →
    the piece is dropped, rolls burn identically).

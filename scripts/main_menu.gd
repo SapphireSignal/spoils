@@ -68,6 +68,14 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.51", ["transit is not laid out on graph paper any more.",
+		"half the roads stop somewhere - the council never",
+		"finished this district - and where the paving gives",
+		"up it breaks apart and disappears under rubble.",
+		"whole corners have no road at all now. every building,",
+		"every place and your safehouse are exactly where they",
+		"were; only the road network changed",
+		"the map screen draws the real network, stubs and all"]],
 	["v0.6.50", ["the stutter on first opening the changelog and the",
 		"first time you open the map is gone. both were doing",
 		"all their work in the frame you asked for them - the",

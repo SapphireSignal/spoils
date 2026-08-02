@@ -538,8 +538,11 @@ func _draw_district() -> void:
 	for r in (_vec["roads_v"] as Array):
 		var x := float(r[0])
 		var rw := float(r[1]) * z
-		var top := _cell_to_screen(Vector2(x, inset))
-		var bot := _cell_to_screen(Vector2(x, h - inset))
+		# a road that stops short is drawn stopping short (v0.6.51)
+		var from_y := float(r[2]) if r.size() > 3 else inset
+		var to_y := float(r[3]) if r.size() > 3 else h - inset
+		var top := _cell_to_screen(Vector2(x, maxf(from_y, inset)))
+		var bot := _cell_to_screen(Vector2(x, minf(to_y, h - inset)))
 		var mid := top.x + rw * 0.5
 		_canvas.draw_line(Vector2(mid, top.y), Vector2(mid, bot.y),
 			ROAD_EDGE, rw + 2.0, true)
@@ -548,8 +551,10 @@ func _draw_district() -> void:
 	for r in (_vec["roads_h"] as Array):
 		var y := float(r[0])
 		var rw2 := float(r[1]) * z
-		var left := _cell_to_screen(Vector2(inset, y))
-		var right := _cell_to_screen(Vector2(w - inset, y))
+		var from_x := float(r[2]) if r.size() > 3 else inset
+		var to_x := float(r[3]) if r.size() > 3 else w - inset
+		var left := _cell_to_screen(Vector2(maxf(from_x, inset), y))
+		var right := _cell_to_screen(Vector2(minf(to_x, w - inset), y))
 		var mid2 := left.y + rw2 * 0.5
 		_canvas.draw_line(Vector2(left.x, mid2), Vector2(right.x, mid2),
 			ROAD_EDGE, rw2 + 2.0, true)

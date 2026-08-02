@@ -598,6 +598,11 @@ func _probe_world() -> void:
 	var poi: Dictionary = info.get("poi", {})
 	for poi_name in poi:
 		print("POI %s=%s" % [poi_name, poi[poi_name]])
+	# roads carry [x, width, span_from, span_to] — a road that stops short
+	# has a span narrower than the playable band (v0.6.51)
+	var vec: Dictionary = info.get("map_vec", {})
+	print("ROADS_V %s" % [vec.get("roads_v", [])])
+	print("ROADS_H %s" % [vec.get("roads_h", [])])
 	var stairs_cells: Array[Vector2i] = []
 	for s in get_tree().get_nodes_in_group("stairs"):
 		stairs_cells.append(floor_layer.local_to_map((s as Node2D).global_position))

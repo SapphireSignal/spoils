@@ -74,6 +74,13 @@ var _deadline_us := 0
 # plan state
 var _roads_v: Array[Vector2i] = []   # (x_start, width)
 var _roads_h: Array[Vector2i] = []
+# a road does not have to cross the whole district: (from, to) inclusive,
+# in cell y for the verticals and cell x for the horizontals
+var _road_v_span: Array[Vector2i] = []
+var _road_h_span: Array[Vector2i] = []
+var _road_ends: Array[Dictionary] = []   # stubs to break up and bury in rubble
+var _side_rng := RandomNumberGenerator.new()  # NEVER the layout rng — see
+                                              # _plan_road_spans
 var _forest: Dictionary = {}         # Vector2i -> true
 var _dirt_path: Dictionary = {}
 var _plots: Array[Dictionary] = []   # {rect, kind, style, tone, ruined, door_side, door_out}
@@ -176,6 +183,7 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 	await _place_trees()
 	await _place_lone_trees()
 	await _place_road_vehicles()
+	await _dress_road_ends()
 	await _scatter_props()
 	await _place_foliage()
 	await _fill_dead_spots()
@@ -315,19 +323,80 @@ func _plan_roads() -> void:
 		var base := lo + span * i / (ROAD_COUNT - 1)
 		_roads_h.append(Vector2i(clampi(base + _rng.randi_range(-4, 4),
 			lo - 2, MAP_H - lo - 2), 4))
+	_plan_road_spans()
+
+
+func _plan_road_spans() -> void:
+	## A grid where every road reaches every edge reads as graph paper
+	## (user: "roads shouldnt be a symmetrical grid ... some areas with no
+	## roads"). So some of these roads STOP: the council never finished
+	## this district, and the stubs end broken, in rubble.
+	##
+	## Rolled from a SIDE rng seeded off the district seed — this consumes
+	## ZERO draws from the layout rng, so every block, building, POI and
+	## spawn sits exactly where it did before. The revision is the road
+	## network and nothing else.
+	_side_rng.seed = hash("%s:road-spans" % DISTRICT_SEED)
+	var lo := BARRIER_INSET
+	var hi_x := MAP_W - 1 - BARRIER_INSET
+	var hi_y := MAP_H - 1 - BARRIER_INSET
+	# two roads stay whole: the middle vertical carries the toll crossing
+	# out through the wire, and one crosstown route keeps the district
+	# drivable end to end
+	var keep_v: int = _roads_v.size() / 2
+	for i in _roads_v.size():
+		_road_v_span.append(_roll_road_span(lo, hi_y, i == keep_v, true, i))
+	for i in _roads_h.size():
+		_road_h_span.append(_roll_road_span(lo, hi_x, i == 1, false, i))
+
+
+func _roll_road_span(lo: int, hi: int, keep_full: bool, vertical: bool,
+		index: int) -> Vector2i:
+	var span := Vector2i(lo, hi)
+	if keep_full or _side_rng.randf() < 0.35:
+		return span
+	var full := hi - lo
+	# cuts land in the outer third: a road severed through the middle
+	# would cut the district in half rather than leave a quiet corner
+	for pass_ in 2:
+		var low_end := _side_rng.randf() < 0.5 if pass_ == 0 else pass_ == 1
+		if pass_ == 1 and _side_rng.randf() > 0.35:
+			break                      # most stubs stop at ONE end only
+		var reach := int(full * _side_rng.randf_range(0.16, 0.32))
+		if low_end and span.x == lo:
+			span.x = lo + reach
+			_road_ends.append({"vertical": vertical, "index": index,
+				"at": span.x, "toward": -1})
+		elif not low_end and span.y == hi:
+			span.y = hi - reach
+			_road_ends.append({"vertical": vertical, "index": index,
+				"at": span.y, "toward": 1})
+	return span
+
+
+func _side_variant(family: String) -> String:
+	# variant pick that spends the SIDE rng, so road-end dressing cannot
+	# shift the layout rng's sequence
+	var names: Array = _families[family]
+	return names[_side_rng.randi_range(0, names.size() - 1)]
 
 
 func _road_v_at(cell: Vector2i) -> int:
-	for r in _roads_v:
+	for i in _roads_v.size():
+		var r := _roads_v[i]
 		if cell.x >= r.x and cell.x < r.x + r.y:
-			return r.x
+			# the band is right, but this road may not REACH here
+			var span: Vector2i = _road_v_span[i]
+			return -1 if cell.y < span.x or cell.y > span.y else r.x
 	return -1
 
 
 func _road_h_at(cell: Vector2i) -> int:
-	for r in _roads_h:
+	for i in _roads_h.size():
+		var r := _roads_h[i]
 		if cell.y >= r.x and cell.y < r.x + r.y:
-			return r.x
+			var span: Vector2i = _road_h_span[i]
+			return -1 if cell.x < span.x or cell.x > span.y else r.x
 	return -1
 
 
@@ -523,9 +592,14 @@ func _plan_sidewalks() -> void:
 	# road looks odd — a slab band always separates them). Wear comes from
 	# the broken tiles, not gaps; a sidewalk even EVICTS forest cells,
 	# because the slabs were poured first and the green came later.
-	for r in _roads_v:
+	for i in _roads_v.size():
+		var r := _roads_v[i]
+		var span: Vector2i = _road_v_span[i]
 		for side_x in [r.x - 1, r.x + r.y]:
-			for y in range(BARRIER_INSET, MAP_H - BARRIER_INSET):
+			# a walkway only exists where its road does (a slab band running
+			# off past a road that stopped read as a path to nowhere)
+			for y in range(maxi(BARRIER_INSET, span.x),
+					mini(MAP_H - BARRIER_INSET, span.y + 1)):
 				var cell := Vector2i(side_x, y)
 				if _on_road(cell) or _dirt_path.has(cell) \
 						or _rail_cells.has(cell) or _ballast.has(cell) \
@@ -533,9 +607,12 @@ func _plan_sidewalks() -> void:
 					continue
 				_forest.erase(cell)
 				_sidewalk[cell] = "v"
-	for r in _roads_h:
+	for i in _roads_h.size():
+		var r := _roads_h[i]
+		var span: Vector2i = _road_h_span[i]
 		for side_y in [r.x - 1, r.x + r.y]:
-			for x in range(BARRIER_INSET, MAP_W - BARRIER_INSET):
+			for x in range(maxi(BARRIER_INSET, span.x),
+					mini(MAP_W - BARRIER_INSET, span.y + 1)):
 				var cell := Vector2i(x, side_y)
 				if _on_road(cell) or _dirt_path.has(cell) \
 						or _rail_cells.has(cell) or _ballast.has(cell) \
@@ -547,14 +624,22 @@ func _plan_sidewalks() -> void:
 
 func _crosswalk_at(cell: Vector2i, road_v: int, road_h: int) -> String:
 	# zebra tiles on the road arms right before a crossing
+	# ...and only where the crossing road actually reaches: a zebra on the
+	# approach to a road that was never built is a crossing to nowhere
 	if road_v >= 0 and road_h < 0:
-		for r in _roads_h:
+		for i in _roads_h.size():
+			var r := _roads_h[i]
 			if cell.y == r.x - 1 or cell.y == r.x + r.y:
-				return "v"
+				var span: Vector2i = _road_h_span[i]
+				if cell.x >= span.x and cell.x <= span.y:
+					return "v"
 	elif road_h >= 0 and road_v < 0:
-		for r in _roads_v:
+		for i in _roads_v.size():
+			var r := _roads_v[i]
 			if cell.x == r.x - 1 or cell.x == r.x + r.y:
-				return "h"
+				var span: Vector2i = _road_v_span[i]
+				if cell.y >= span.x and cell.y <= span.y:
+					return "h"
 	return ""
 
 
@@ -2440,12 +2525,15 @@ func _place_power_boxes() -> void:
 
 func _place_lamps() -> void:
 	# sparse and mostly dead: a lamp every 14-22 tiles, well under half working
+	# ...and only along a road that exists there: a lit pole standing on a
+	# stretch the council never paved reads as a mistake
 	for r in _roads_v:
 		var y := EDGE_FOREST + _rng.randi_range(2, 8)
 		while y < MAP_H - EDGE_FOREST:
 			var cell := Vector2i(r.x - 1, y)
-			if not _occupied.has(cell) and not _forest.has(cell) \
-					and not _on_road(cell) and not _near_a_door(cell):
+			if _on_road(Vector2i(r.x, y)) and not _occupied.has(cell) \
+					and not _forest.has(cell) and not _on_road(cell) \
+					and not _near_a_door(cell):
 				_add_lamp(cell)
 			y += _rng.randi_range(14, 22)
 			await _tick()
@@ -2453,8 +2541,9 @@ func _place_lamps() -> void:
 		var x := EDGE_FOREST + _rng.randi_range(2, 8)
 		while x < MAP_W - EDGE_FOREST:
 			var cell := Vector2i(x, r.x + r.y)
-			if not _occupied.has(cell) and not _forest.has(cell) \
-					and not _on_road(cell) and not _near_a_door(cell):
+			if _on_road(Vector2i(x, r.x)) and not _occupied.has(cell) \
+					and not _forest.has(cell) and not _on_road(cell) \
+					and not _near_a_door(cell):
 				_add_lamp(cell)
 			x += _rng.randi_range(14, 22)
 			await _tick()
@@ -2468,6 +2557,9 @@ func _place_traffic_lights() -> void:
 	for rv in _roads_v:
 		for rh in _roads_h:
 			await _tick()
+			# no crossing where one of the two roads stops short of it
+			if not _on_road(Vector2i(rv.x, rh.x)):
+				continue
 			var count_roll := _rng.randf()
 			var count := 0 if count_roll < 0.30 else (1 if count_roll < 0.75 else 2)
 			if count == 0:
@@ -2683,6 +2775,8 @@ func _dress_rail_line() -> void:
 	# signals: one at each level crossing approach, one at the yard throat
 	var signal_spots: Array[Vector2i] = []
 	for road in _roads_v:
+		if not _on_road(Vector2i(road.x, _rail_row)):
+			continue          # no level crossing here: this road stops short
 		signal_spots.append(Vector2i(road.x - 3, _rail_row - 2))
 	signal_spots.append(Vector2i(_freight_cell.x - 9, _rail_row - 2))
 	for spot in signal_spots:
@@ -2823,6 +2917,55 @@ func _dress_buffer() -> void:
 		if _toll_reserve.has(cell):
 			junk_node.queue_free()
 		placed += 1
+
+
+func _dress_road_ends() -> void:
+	## Where a road just stops it stops BADLY (user spec): the last stretch
+	## of slab breaks up, and the cut end is buried under rubble with the
+	## odd barrel and stick thrown in. Everything here spends the SIDE rng,
+	## so dressing the stubs cannot shift the layout rng's sequence.
+	for road_end in _road_ends:
+		await _tick()
+		var vertical: bool = road_end["vertical"]
+		var index: int = road_end["index"]
+		var at: int = road_end["at"]
+		var toward: int = road_end["toward"]   # which way the road ran out
+		var r: Vector2i = _roads_v[index] if vertical else _roads_h[index]
+		# the last three cells crack up as they approach the end
+		for step in 3:
+			var along := at + toward * step
+			for k in r.y:
+				var cell := Vector2i(r.x + k, along) if vertical \
+					else Vector2i(along, r.x + k)
+				if not _on_road(cell):
+					continue
+				if _side_rng.randf() < 0.42 + 0.2 * float(2 - step):
+					_set_tile(cell, "asphalt_hole_%d" % _side_rng.randi_range(0, 1) \
+						if _side_rng.randf() < 0.35 \
+						else "asphalt_crack_%d" % _side_rng.randi_range(0, 1))
+		# ...and the rubble piled across the cut itself, spilling a cell or
+		# two past where the paving gave up
+		for k in r.y:
+			for out in 3:
+				var along: int = at + toward * (out + 1)
+				var cell := Vector2i(r.x + k, along) if vertical \
+					else Vector2i(along, r.x + k)
+				if _occupied.has(cell) or _cell_inset(cell) < BARRIER_INSET:
+					continue
+				var chance: float = [0.85, 0.5, 0.25][out]
+				if _side_rng.randf() > chance:
+					continue
+				var family := "rubble"
+				var roll := _side_rng.randf()
+				if roll > 0.82:
+					family = "barrel"
+				elif roll > 0.72:
+					family = "stick"
+				var pos := _floor_layer.map_to_local(cell) + Vector2(
+					_side_rng.randf_range(-9.0, 9.0),
+					_side_rng.randf_range(-5.0, 5.0))
+				_add_prop(_side_variant(family), pos)
+				_occupied[cell] = true
 
 
 func _place_bodies() -> void:
@@ -3169,12 +3312,16 @@ func _map_vectors() -> Dictionary:
 	# SHAPES, not pixels: the map screen draws the district with real
 	# strokes and fills (user: "vector drawn nice art, not pixel"), so it
 	# needs the plan itself, not a 1px-per-cell bake.
+	# roads carry their SPAN too, or the map screen would draw a tidy grid
+	# the district doesn't actually have
 	var roads_v: Array = []
-	for r in _roads_v:
-		roads_v.append([r.x, r.y])
+	for i in _roads_v.size():
+		roads_v.append([_roads_v[i].x, _roads_v[i].y,
+			_road_v_span[i].x, _road_v_span[i].y])
 	var roads_h: Array = []
-	for r in _roads_h:
-		roads_h.append([r.x, r.y])
+	for i in _roads_h.size():
+		roads_h.append([_roads_h[i].x, _roads_h[i].y,
+			_road_h_span[i].x, _road_h_span[i].y])
 	var blocks: Array = []
 	for b in _block_rects:
 		var br: Rect2i = _block_rects[b]
