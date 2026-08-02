@@ -38,18 +38,18 @@ var rain_intensity := 0.0           # 0..1, ramps in and out
 var night_amount := 0.0             # 0 day .. 1 deep night
 var _last_night_broadcast := -1.0   # last value sent to the lamp group
 
-## The four weathers. CLEAR is the baseline; FOG is its own spell, not
-## just the dawn effect; RAIN is wet with the rare distant flash; STORM
-## is heavier rain that actually throws lightning (user: "theres a
-## chance it can rain, chance it can be storming, which makes it have
-## more lightning strikes ... there should also be foggy too").
-enum { CLEAR, FOG, RAIN, STORM }
+## The weathers. CLEAR is the baseline; RAIN is wet with the rare
+## distant flash; STORM is heavier rain that actually throws lightning
+## (user asked, correctly, whether rain and storm were different — they
+## were not). There is deliberately NO fog spell: the dawn mist rolls in
+## every morning already, so a fog "weather" on top of it would say
+## nothing (user call).
+enum { CLEAR, RAIN, STORM }
 
 var weather := CLEAR
 var _raining := false               # RAIN or STORM — the wet states
 var _storm_tint := 0.0              # visual darkening, slower than the rain
 var _weather_timer := 0.0
-var _weather_fog := 0.0             # fog spell strength, 0..1
 var _lightning_timer := 999.0
 var _flash: ColorRect
 var _tint: CanvasModulate
@@ -263,14 +263,10 @@ func _roll_weather() -> void:
 	var roll := randf()
 	if weather != CLEAR and roll < 0.62:
 		weather = CLEAR
-	elif roll < 0.76:
+	elif roll < 0.82:
 		weather = RAIN
-	elif roll < 0.88:
-		weather = STORM
-	elif roll < 0.95:
-		weather = FOG
 	else:
-		weather = RAIN
+		weather = STORM
 	_raining = weather == RAIN or weather == STORM
 	_weather_timer = randf_range(240.0, 540.0) if weather == CLEAR \
 		else randf_range(140.0, 320.0)
@@ -290,8 +286,7 @@ func weather_label() -> String:
 	match weather:
 		STORM: return "storming"
 		RAIN: return "raining"
-		FOG: return "fog"
-	# a clear morning still has its mist
+	# the mist is a time of day, not a forecast — every morning has one
 	return "morning mist" if _morning_amount(day_time) > 0.25 else "clear"
 
 
@@ -350,12 +345,9 @@ func _process(delta: float) -> void:
 		_roll_weather()
 	rain_intensity = move_toward(rain_intensity,
 		_rain_target(), delta / 14.0)
-	# a fog spell rolls in and out as slowly as the rain does
-	_weather_fog = move_toward(_weather_fog,
-		1.0 if weather == FOG else 0.0, delta / 18.0)
 
 	_update_rain(delta)
-	var morning := maxf(_morning_amount(day_time), _weather_fog)
+	var morning := _morning_amount(day_time)
 	if morning > 0.0 and not _was_morning:
 		# a fresh morning rolls the wind: everything drifts one way today
 		_fog_wind = (1.0 if randf() < 0.5 else -1.0) * randf_range(6.0, 11.0)

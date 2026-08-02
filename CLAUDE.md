@@ -237,6 +237,32 @@ next session's work**:
   bus and player.
 - Blue sparks thrown off broken power boxes (v0.6.56, user request).
 
+**LATEST BATCH (v0.6.57–58), and what's left of it:**
+- ~~rain vs storm were the same thing~~ **v0.6.57**: CLEAR / RAIN /
+  STORM spells (`environment.weather`, `weather_label()`). Storm rains
+  full and flashes every 7–19 s; rain is lighter and flashes every
+  45–110 s. **NO fog spell** — the user rejected it: the dawn mist
+  comes every morning, so a fog forecast says nothing.
+- ~~map bar~~ **v0.6.57**: "07:12 morning — raining" (clock, part of
+  day, weather).
+- ~~court/depot names, unlabelled places~~ **v0.6.57**: "courtyard",
+  "bus depot"; lz/gallery/comms/trainyard/scrapyard/playground get
+  outlined rects via `map_vec.areas` (`_map_areas()`).
+- ~~freight in the wrong POI~~ **v0.6.58**: crates/shelves out of the
+  scrapyard (it keeps machines + the new `toolbox` family), warehouses
+  got yard stacks, loaded outside shelving, trucks with a load at the
+  tailgate, and packed halls (16–26 pieces, box-weighted).
+- **STILL TO DO — POI character props for the REST of the POIs**
+  (courtyard, bus depot, trainyard, playground, gallery, comms, lz,
+  toll gate). Keep it restrained: the user said "not too many objects
+  or else it will look odd". Detail per POI is in the session task
+  list.
+- **ASK THE USER FIRST:** they said "move all the boxes and shelves
+  AND WAREHOUSE from the scrapyard area". The scrapyard's own hall was
+  added deliberately in v0.6.22 *because* racks in the open read wrong
+  to them ("i know there used to be one there"). Only the stock was
+  moved; confirm before removing the building.
+
 **THE OVERNIGHT BATCH IS DONE** (all five user asks shipped as
 v0.6.45–48 — detail in "Where we are" above). What remains below is
 what the next session works, in order. Items needing THE USER are

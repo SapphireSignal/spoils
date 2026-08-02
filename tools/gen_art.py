@@ -4486,6 +4486,8 @@ def prop_inventory() -> tuple[dict, dict]:
             leans=(0.0, 1.1, -1.1, 0.6, -0.6, 0.0, 1.5, -1.5, 0.9, -0.9))):
         fam("crate", i, art)
     for i in range(4):
+        fam("toolbox", i, make_toolbox(i))
+    for i in range(4):
         rng = random.Random(f"{SEED}:cyl:{i}")
         color = ("steel", "red", "gray", "steel")[i]
         fam("cylinder", i, draw_cylinder(rng, color, rng.randint(30, 36), toppled=(i == 3)))
@@ -6167,6 +6169,37 @@ def make_fog_puffs() -> list[Image.Image]:
                     px[x, y] = (168, 181, 178, int(200 * a))
         out.append(img)
     return out
+
+
+def make_toolbox(variant: int) -> tuple[Canvas, tuple, list | None]:
+    """A tool chest left where somebody put it down. Iso box with a lit
+    top face, a carry handle, and on some of them an open lid with tools
+    showing — the scrapyard is where things get taken apart (user)."""
+    rng = random.Random(f"{SEED}:toolbox:{variant}")
+    w = rng.choice((12, 16))           # iso prisms want w == 2*d, d even
+    d = w // 2
+    h = rng.randint(6, 9)
+    body, dark, lite = (C(n) for n in
+                        [("cf573c", "a53030", "da863e"),
+                         ("577277", "394a50", "819796"),
+                         ("de9e41", "884b2b", "e8c170"),
+                         ("3c5e8b", "253a5e", "73bed3")][variant % 4])
+    c = Canvas(w + 10, h + d + 14)
+    ox, oy = 5, 6                      # top-left; the prism grows downward
+    bottoms = iso_prism(c, ox, oy, w, d, h, body, dark, lite)
+    hy = oy + d // 2                   # the top face's middle row
+    for i in range(w // 4, w - w // 4):     # the carry handle
+        c.set(ox + i, hy, C("241527"))
+    c.set(ox + w // 4, hy + 1, C("241527"))
+    c.set(ox + w - w // 4 - 1, hy + 1, C("241527"))
+    if variant % 2:                    # some stand open, tools showing
+        for i in range(w // 4, w - w // 4, 3):
+            c.set(ox + i, oy - 2, C("819796"))
+            c.set(ox + i, oy - 1, C("577277"))
+    c.outline_auto()
+    base = max(bottoms) + h
+    cropped, origin = crop_canvas(c, (ox + w // 2, base))
+    return cropped, origin, ["diamond", w // 2 - 1, max(2, d // 2)]
 
 
 def make_interior_lamp() -> tuple[Canvas, tuple, list | None]:

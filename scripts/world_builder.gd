@@ -1877,14 +1877,16 @@ func _furnish_warehouse(interior: Rect2i, pocket: Array[Vector2i],
 		collect.append(_add_prop_at_cell(_pick_variant_varied("rack"), cell, Vector2(8, 2)))
 		used.append(cell)
 	var cells := _interior_free_cells(interior, used)
+	# PACKED (user call): a warehouse full of freight, weighted hard toward
+	# boxes — the barrels and cylinders are what's left over between them
 	var stock_mix := [
-		["crate_stack", 0.24], ["crate", 0.22], ["pallet", 0.18],
-		["barrel", 0.20], ["cylinder", 0.16],
+		["crate_stack", 0.34], ["crate", 0.32], ["pallet", 0.16],
+		["barrel", 0.10], ["cylinder", 0.08],
 	]
 	var total := 0.0
 	for opt in stock_mix:
 		total += opt[1]
-	for i in _rng.randi_range(8, 14):  # halls are big now — stock to match
+	for i in _rng.randi_range(16, 26):  # halls are big — stock to match
 		if cells.is_empty():
 			break
 		var cell := _take_random_cell(cells)
@@ -2415,16 +2417,27 @@ func _place_scrapyard() -> void:
 			and not _forest.has(crane_cell) and not _on_road(crane_cell):
 		_add_prop_at_cell("crane", crane_cell, Vector2(3, 2))
 		_map_marks.append([crane_cell, "crane"])
-	var rack_y := r.end.y - 2                    # rack line along the south
-	var rack_x := r.position.x + 2
-	while rack_x < r.end.x - 3:
+	# MORE MACHINES, not more storage (user call): the racks and crates
+	# that used to line the south edge belong to the warehouses — a
+	# scrapyard is where things get taken APART. Forklifts, a second
+	# crane's worth of gear, cable drums, barrels and the tools left where
+	# somebody put them down.
+	var machine_y := r.end.y - 2
+	var machine_x := r.position.x + 2
+	while machine_x < r.end.x - 3:
 		await _tick()
-		var cell := Vector2i(rack_x, rack_y)
+		var cell := Vector2i(machine_x, machine_y)
 		if not _occupied.has(cell) and not _forest.has(cell) \
 				and not _on_road(cell) and not _near_a_door(cell) \
 				and not _rail_cells.has(cell) and not _sidewalk.has(cell):
-			_add_prop_at_cell(_pick_variant_varied("rack"), cell, Vector2(4, 2))
-		rack_x += _rng.randi_range(3, 5)
+			var kit: String = ["forklift", "barrel", "cylinder", "tires",
+				"toolbox"][_rng.randi_range(0, 4)]
+			if kit == "forklift":
+				_add_prop_at_cell("forklift_%d" % _rng.randi_range(0, 1),
+					cell, Vector2(5, 2))
+			else:
+				_add_prop_at_cell(_pick_variant_varied(kit), cell, Vector2(5, 2))
+		machine_x += _rng.randi_range(3, 5)
 	for i in 12:                                 # the junk between everything
 		await _tick()
 		var cell := Vector2i(
@@ -2434,9 +2447,10 @@ func _place_scrapyard() -> void:
 				or _rail_cells.has(cell) or _ballast.has(cell) \
 				or _near_a_door(cell) or _sidewalk.has(cell):
 			continue
-		# the scrapyard is where things get DUMPED — heaps, not placements
-		var junk: String = ["tires", "rubble", "barrel", "pallet", "crate",
-			"crate_stack"][_rng.randi_range(0, 5)]
+		# the scrapyard is where things get DUMPED — heaps, not placements.
+		# No crates: freight is the warehouses' business (user call).
+		var junk: String = ["tires", "rubble", "barrel", "cylinder",
+			"toolbox", "rubble"][_rng.randi_range(0, 5)]
 		if _rng.randf() < 0.55:
 			_place_pile(junk, cell, _rng.randi_range(2, 5), 15.0)
 		else:
@@ -3315,20 +3329,68 @@ func _scatter_props() -> void:
 
 
 func _scatter_warehouse_stock() -> void:
-	# spilled stock hugs the warehouses it fell off of
+	## FREIGHT LIVES HERE (user call — the crates and racks used to pile up
+	## in the scrapyard, which is where things get taken apart, not stored).
+	## A working yard: pallets and stacks spilling out of the doors, a rack
+	## line stood against the wall outside, and a truck or two backed up to
+	## collect it.
 	for plot in _plots:
 		if plot["kind"] != "warehouse":
 			continue
 		await _tick()
-		var ring: Rect2i = (plot["rect"] as Rect2i).grow(_rng.randi_range(2, 4))
-		for i in _rng.randi_range(3, 6):
+		var rect: Rect2i = plot["rect"]
+		var ring: Rect2i = rect.grow(_rng.randi_range(3, 5))
+		for i in _rng.randi_range(9, 14):
 			var cell := Vector2i(_rng.randi_range(ring.position.x, ring.end.x - 1),
 				_rng.randi_range(ring.position.y, ring.end.y - 1))
 			if _occupied.has(cell) or _forest.has(cell) or _on_road(cell) \
-					or _near_a_door(cell) or (plot["rect"] as Rect2i).has_point(cell):
+					or _near_a_door(cell) or rect.has_point(cell):
 				continue
-			var item := _pick_variant(["crate", "crate_stack", "pallet"][_rng.randi_range(0, 2)])
-			_add_prop_at_cell(item, cell, Vector2(8, 4))
+			var item := _pick_variant_varied(["crate", "crate_stack", "pallet",
+				"crate", "crate_stack"][_rng.randi_range(0, 4)])
+			if _rng.randf() < 0.35:
+				_place_pile("crate", cell, _rng.randi_range(2, 4), 13.0)
+			else:
+				_add_prop_at_cell(item, cell, Vector2(8, 4))
+		# shelving stood outside along one wall, still loaded
+		var shelf_y: int = rect.end.y + 1
+		var shelf_x: int = rect.position.x + _rng.randi_range(0, 2)
+		while shelf_x < rect.end.x - 1:
+			await _tick()
+			var scell := Vector2i(shelf_x, shelf_y)
+			if not _occupied.has(scell) and not _on_road(scell) \
+					and not _near_a_door(scell) and not _forest.has(scell) \
+					and not _sidewalk.has(scell) and _cell_inset(scell) >= BARRIER_INSET:
+				_add_prop_at_cell(_pick_variant_varied("rack"), scell, Vector2(3, 1))
+				if _rng.randf() < 0.6:      # ...with its boxes beside it
+					var bcell := scell + Vector2i(0, 1)
+					if not _occupied.has(bcell) and not _on_road(bcell):
+						_add_prop_at_cell(_pick_variant_varied("crate"),
+							bcell, Vector2(7, 3))
+			shelf_x += _rng.randi_range(3, 5)
+		# and the trucks that came for the load
+		for i in _rng.randi_range(1, 2):
+			await _tick()
+			var tcell := Vector2i(
+				_rng.randi_range(rect.position.x, rect.end.x - 1),
+				rect.end.y + _rng.randi_range(2, 4))
+			if _occupied.has(tcell) or _on_road(tcell) or _forest.has(tcell) \
+					or _near_a_door(tcell) or _cell_inset(tcell) < BARRIER_INSET:
+				continue
+			var fam: String = "vehicle_%s" % ["nw", "ne", "se", "sw"][_rng.randi_range(0, 3)]
+			var variant := _pick_variant(fam)
+			var pos := _floor_layer.map_to_local(tcell) + _clutter_offset(6.0)
+			if variant.ends_with("_5") or variant.ends_with("_6"):
+				_add_prop(variant, pos)
+			else:
+				var truck := _spawn_driveable(variant,
+					fam.trim_prefix("vehicle_"), pos)
+				_maybe_arm_car(variant, truck)
+			_occupied[tcell] = true
+			# the load it came for, stacked at the tailgate
+			var load_cell := tcell + Vector2i(_rng.randi_range(-1, 1), 1)
+			if not _occupied.has(load_cell) and not _on_road(load_cell):
+				_place_pile("crate", load_cell, _rng.randi_range(2, 3), 10.0)
 
 
 func _bake_map_image() -> Image:

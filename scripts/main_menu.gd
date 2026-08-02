@@ -70,6 +70,15 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.58", ["freight moved to where freight belongs: the crates and",
+		"shelves are out of the scrapyard and piled around the",
+		"warehouses instead - stacks in the yard, loaded racks",
+		"against the outside wall, trucks backed up with their",
+		"load at the tailgate, and halls packed inside",
+		"the scrapyard keeps the machines: forklifts, drums,",
+		"cylinders and toolboxes left where somebody put them",
+		"no more foggy on the weather line - the mist comes",
+		"every morning, so it isnt a forecast"]],
 	["v0.6.57", ["rain and storms are actually different weather now. a",
 		"storm rains harder and throws lightning several times",
 		"as often; plain rain only rarely flashes. fog is its",

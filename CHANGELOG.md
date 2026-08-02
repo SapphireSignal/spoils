@@ -3,6 +3,26 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.58] — 2026-08-01 — freight belongs to the warehouses
+
+### Changed
+- **The crates and shelves left the scrapyard** (user call). A
+  scrapyard is where things get taken *apart*, so it keeps the
+  machines: the vehicle rows, the crane, forklifts, drums, gas
+  cylinders and a new **toolbox** family (four variants, some standing
+  open with tools showing) left where somebody put them down. The rack
+  line along its south edge is now a machine line.
+- **The warehouses got all of it, and more.** Their yards carry two to
+  three times the stock they did: stacks and pallets spilling out of
+  the doors, a line of loaded shelving stood against the outside wall
+  with boxes beside it, and one or two trucks backed up with their
+  load piled at the tailgate. Inside, the halls are packed — 16–26
+  pieces weighted hard toward boxes instead of 8–14 spread evenly.
+- **"foggy" is gone from the weather line.** The mist rolls in every
+  morning, so reporting it as a forecast said nothing (user call).
+  The spells are clear, rain and storm; the morning still reads
+  "morning mist" because that's a time of day, not weather.
+
 ## [0.6.57] — 2026-08-01 — real weather, and a map that names things
 
 ### Changed
