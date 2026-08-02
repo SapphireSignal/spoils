@@ -188,6 +188,18 @@ This file carries everything a fresh session needs that isn't in those two.
 
 ## THE QUEUE (as of v0.6.44 — work straight down it)
 
+**FLAT PROPS DRAW OVER THE PLAYER (user, 2026-08-01, screenshot):** a
+small flat ground thing (orange-brown diamond) renders ON TOP of the
+raider standing on it, so walking over it looks like walking THROUGH
+it. It is NOT a collision problem — they confirmed it does not block.
+THE LAYER ALREADY EXISTS: `_flat` (added v0.6.53 for the cables) sits
+between the floor tilemap and `_ysort`; route every genuinely flat
+prop through it via a helper mirroring `_add_cable`. NEVER use a
+negative z_index inside `_ysort` for this — z sorts globally in the
+canvas layer and the sprite vanishes behind the floor. Sweep the
+catalogue for others that read as ground (spilled trash, paint, spray
+cans, painted markers); anything with real height stays y-sorted.
+
 **BUG WITH A REPRO — DO THIS FIRST (user, 2026-08-01):** a two-story
 house AT THE COURTYARD shows its upper FURNITURE but no upper FLOOR
 when you climb — the furniture floats. Must hold for every two-story
