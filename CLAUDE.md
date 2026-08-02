@@ -754,6 +754,15 @@ then `godot_console --headless --path . --import`.
   and shaded faces, per-instance wear, its own slight lean. Audit variant
   counts per family before assuming it's fine; SINGLE-sprite families are
   the worst offenders and are invisible until they're side by side.
+- **HUD BELONGS TO THE WINDOW STACK** (v0.6.64, standing rule): any
+  world-space label — interaction prompts, hints, notices, mara's radio
+  — must join the group **"hud"** and implement
+  `set_hud_hidden(hidden)`. A label CANNOT hide itself when a menu
+  opens, because most windows pause the tree and its owner stops
+  processing at that exact moment (this is why "press f to open" sat
+  behind the pause menu). `Ui.open/close/clear` calls the group.
+  Non-pausing windows (the map) additionally need a
+  `Ui.blocks_gameplay()` check in the per-frame path.
 - **VISIBLE POWER CABLES** (user call 2026-08-01, standing rule): anything
   in the world that needs electricity must SHOW where it gets it — a
   cable pathed from the fixture to the building's exterior power box.
