@@ -70,6 +70,11 @@ var _ms_transit_frame: PanelContainer
 
 # readable in-game summary; the full detail lives in CHANGELOG.md
 const CHANGELOG_ENTRIES := [
+	["v0.6.66", ["the black lines running down every building are gone.",
+		"each wall piece was drawing its own outline, so every",
+		"join between them became a dark seam - and the gap",
+		"between two of those outlines is what let you see your",
+		"own arm through the wall. walls read as one surface now"]],
 	["v0.6.65", ["the freight only runs three nights out of seven now,",
 		"and which nights is different every week - two together",
 		"and one at the far end, or spread out, you have to",

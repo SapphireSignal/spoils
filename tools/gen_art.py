@@ -82,12 +82,18 @@ class Canvas:
     def vline(self, x: int, y0: int, y1: int, c) -> None:
         self.rect(x, y0, x, y1, c)
 
-    def outline_auto(self, c=OUTLINE) -> set:
+    def outline_auto(self, c=OUTLINE, sides: bool = True) -> set:
+        """sides=False skips the LEFT/RIGHT neighbours. Pieces that tile
+        edge to edge — the wall segments — must not outline the joins, or
+        every seam becomes a black line down the building and the gap
+        between two outlines lets whatever is behind show through (user
+        saw their own arm through the wall)."""
         opaque = {(x, y) for y in range(self.h) for x in range(self.w)
                   if self.px[x, y][3] > 0}
         painted: set = set()
+        steps = ((1, 0), (-1, 0), (0, 1), (0, -1)) if sides else ((0, 1), (0, -1))
         for (x, y) in list(opaque):
-            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            for dx, dy in steps:
                 nx, ny = x + dx, y + dy
                 if (nx, ny) not in opaque and 0 <= nx < self.w and 0 <= ny < self.h:
                     if (nx, ny) not in painted:
@@ -750,7 +756,7 @@ def make_wall_segment(style: str, axis: str, window_variant: int = -1,
             up_h = min(h, STORY_H - 12)
             _draw_seg_window(c, ox, oy, axis, face_h, wi, 7, w, up_h, False)
 
-    c.outline_auto()
+    c.outline_auto(sides=False)   # tiles edge to edge: no seam lines
     origin = (ox + 16, oy)
     # thin collision parallelogram along the base line
     if axis == "x":
@@ -780,7 +786,7 @@ def make_wall_post(style: str, stories: int = 1) -> tuple[Canvas, tuple, list]:
         for y in range(bottoms[x] + 2, bottoms[x] + post_h, 4):
             if rng.random() < 0.6:
                 c.set(2 + x, y, dark if x < 6 else darker)
-    c.outline_auto()
+    c.outline_auto(sides=False)   # tiles edge to edge: no seam lines
     return c, (8, 1 + post_h + 3), ["circle", 4.0]
 
 def wall_piece_inventory() -> dict[str, tuple[Canvas, tuple, list]]:

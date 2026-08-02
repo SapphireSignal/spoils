@@ -3,6 +3,29 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.66] — 2026-08-01 — walls are one surface
+
+### Fixed
+- **The black lines running down every building are gone.** Each wall
+  segment ran the automatic outline pass, which draws a dark border on
+  every side — including the left and right edges, where segments tile
+  against each other. So every join became a black seam, and the whole
+  building read as blocks stacked together instead of a wall.
+- **That seam is also what showed the player through the wall.** Two
+  outlines meeting leave a hairline the wall's own brick never fills,
+  and standing close on the far side put an arm through it (user
+  screenshot). Tiling pieces now outline their silhouette only —
+  `outline_auto(sides=False)` — so there is no seam and nothing to see
+  through.
+
+### On the door report
+The door's collider is **byte-identical to a wall segment's**
+(`[-13.6,-12.8, 18.4,3.2, 13.6,12.8, -18.4,-3.2]`) — a closed door is
+exactly as solid as the wall it sits in, and the v0.6.65 smoke test
+confirms it blocks from every offset across the leaf. The see-through
+above is the most likely thing that was actually being seen. If a door
+still lets you pass after this, a circled screenshot pins it down.
+
 ## [0.6.65] — 2026-08-01 — a timetable worth learning
 
 ### Changed

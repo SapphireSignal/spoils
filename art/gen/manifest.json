@@ -611,11 +611,11 @@
     "pylon_0": {
       "size": [
         33,
-        63
+        61
       ],
       "origin": [
         16,
-        60
+        58
       ],
       "collider": [
         "diamond",
@@ -626,11 +626,11 @@
     "pylon_1": {
       "size": [
         33,
-        59
+        61
       ],
       "origin": [
         16,
-        56
+        58
       ],
       "collider": [
         "diamond",
@@ -640,12 +640,12 @@
     },
     "pylon_2": {
       "size": [
-        36,
-        58
+        37,
+        61
       ],
       "origin": [
         13,
-        55
+        58
       ],
       "collider": [
         "diamond",
