@@ -228,12 +228,20 @@ func setup(root: Node2D, floor_layer: TileMapLayer, puddle_spots: Array,
 	# became visible on the map-select screen): every stop below is a real
 	# hour of the day, dawn at 06:00 and dusk at 21:00. The endpoints are
 	# both DEEP_NIGHT — they MUST match or midnight snaps (hard rule).
+	# THE DAY HAS TO MOVE. 07:30 -> 17:00 used to be a single straight line
+	# from white to almost-white: 39.5% of the clock with no visible change
+	# at all, so standing outside at 12:40 looked identical to 09:00 (user:
+	# "it also doesnt even look like the time of day changed"). The sun now
+	# swings warm-low -> neutral-high -> warm-low across the daylight hours.
 	_tint_gradient.offsets = PackedFloat32Array([
 		0.0,      # 00:00  deep night
 		0.208,    # 05:00  still deep night
 		0.25,     # 06:00  DAWN
-		0.3125,   # 07:30  full day
-		0.708,    # 17:00  late day
+		0.3125,   # 07:30  early morning, sun still low and warm
+		0.4375,   # 10:30  climbing, colour draining out of it
+		0.5208,   # 12:30  NOON: highest, brightest, neutral
+		0.625,    # 15:00  past the peak, warming again
+		0.708,    # 17:00  late day, properly golden now
 		0.833,    # 20:00  the light goes warm
 		0.875,    # 21:00  DUSK
 		0.927,    # 22:15  deep night again
@@ -242,8 +250,11 @@ func setup(root: Node2D, floor_layer: TileMapLayer, puddle_spots: Array,
 	_tint_gradient.colors = PackedColorArray([
 		DEEP_NIGHT, DEEP_NIGHT,
 		Color(0.85, 0.72, 0.72),   # dawn
-		Color(1.0, 1.0, 1.0),      # day
-		Color(1.0, 0.98, 0.94),    # late day
+		Color(0.93, 0.87, 0.79),   # early morning: low warm sun
+		Color(0.99, 0.96, 0.92),   # mid morning
+		Color(1.0, 1.0, 1.0),      # noon, the only neutral point in the day
+		Color(1.0, 0.96, 0.90),    # mid afternoon
+		Color(0.97, 0.88, 0.78),   # late day, golden
 		Color(0.88, 0.72, 0.68),   # dusk
 		Color(0.36, 0.38, 0.60),   # nightfall, deeper than before
 		DEEP_NIGHT, DEEP_NIGHT,

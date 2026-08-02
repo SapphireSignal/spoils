@@ -3,6 +3,40 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.21] — 2026-08-02 — the day actually moves
+
+### Fixed
+- **The time of day barely changed for most of the day.** 07:30 to 17:00
+  was a single straight line from white to almost-white — **39.5% of the
+  clock with no visible change at all** — and 12:40 sits dead in the
+  middle of it (user: "it also doesnt even look like the time of day
+  changed"). The sun now swings warm-and-low in the morning, neutral and
+  brightest at noon, then back to gold through the afternoon. Measured
+  warmth across the middle of the frame: −14 at 07:30, −29 at 12:30,
+  −11 at 17:00, −31 at 21:00.
+- **Faint concentric rings following the player** (user). That was the
+  vignette: a radial ramp that gradual quantises into visible contours in
+  8-bit, and it is centred on the screen, which is why it tracked the
+  character. It is dithered **inside the grade now**, before the frame is
+  quantised — the dither film on the layer above could never fix it,
+  because the banding is created by this pass. Vignette also eased from
+  0.30 to 0.16.
+
+### Added
+- **Rain and thunder are muffled indoors** (user). Weather moved to its
+  own audio bus with a low-pass that opens and closes as you go through
+  a doorway — 20 kHz outside, 1.25 kHz in, ducked 7 dB, eased over about
+  a third of a second so it fades rather than switches. Deliberately NOT
+  the whole effects group: your own footsteps and the door beside you are
+  not muffled by the wall you are standing behind. It is driven by the
+  same interior test that reveals the roof, so the sound can never
+  disagree with what you are looking at.
+
+### Notes
+- There is no sunbeam in the game; the user asked and it has simply never
+  existed. Sun shafts are a real feature, not a bug — noted for the
+  polish pass.
+
 ## [0.6.20] — 2026-08-02 — the grade stopped turning the lights down
 
 ### Fixed

@@ -28,10 +28,22 @@ var _car_engine_start: AudioStream
 var _car_engine_off: AudioStream
 var _car_engine_loop: AudioStreamOggVorbis
 
+## how open the weather sounds. Outdoors is effectively unfiltered; indoors
+## the wall eats the top end, which is what "muffled" actually is.
+const OUTDOOR_CUTOFF := 20000.0
+const INDOOR_CUTOFF := 1250.0
+const INDOOR_DUCK_DB := -7.0
+const MUFFLE_SPEED := 3.5        # per second — a doorway is a fast fade, but
+                                 # never an instant switch
+
 var _players: Array[AudioStreamPlayer] = []
 var _next := 0
 var _step_player: AudioStreamPlayer
 var _rain_player: AudioStreamPlayer
+var _weather_bus := -1
+var _weather_lowpass: AudioEffectLowPassFilter
+var _indoor := 0.0               # 0 outside .. 1 fully inside
+var _indoor_want := 0.0
 var _thunder_player: AudioStreamPlayer
 var _heavy_thread: Thread
 
@@ -69,9 +81,22 @@ func _ready() -> void:
 	_step_player = AudioStreamPlayer.new()
 	_step_player.bus = "sfx"
 	add_child(_step_player)
+	# WEATHER GETS ITS OWN BUS so it can be muffled from indoors (user).
+	# Rain and thunder only — NOT the whole sfx group: your own footsteps
+	# and the door beside you are not muffled by the wall you are stood
+	# behind, and dulling those would just sound broken.
+	var weather_bus := AudioServer.bus_count
+	AudioServer.add_bus(weather_bus)
+	AudioServer.set_bus_name(weather_bus, "weather")
+	AudioServer.set_bus_send(weather_bus, "ambient")
+	_weather_lowpass = AudioEffectLowPassFilter.new()
+	_weather_lowpass.cutoff_hz = OUTDOOR_CUTOFF
+	AudioServer.add_bus_effect(weather_bus, _weather_lowpass)
+	_weather_bus = weather_bus
+
 	_rain_player = AudioStreamPlayer.new()
 	_rain_player.volume_db = -80.0
-	_rain_player.bus = "ambient"
+	_rain_player.bus = "weather"
 	add_child(_rain_player)
 	_engine_player = AudioStreamPlayer.new()
 	_engine_player.volume_db = -80.0
@@ -103,7 +128,7 @@ func _ready() -> void:
 	_radio_open = _synth_squelch(true)
 	_radio_close = _synth_squelch(false)
 	_thunder_player = AudioStreamPlayer.new()
-	_thunder_player.bus = "ambient"
+	_thunder_player.bus = "weather"
 	add_child(_thunder_player)
 	_heavy_thread = Thread.new()
 	_heavy_thread.start(_render_heavy)
@@ -254,7 +279,20 @@ func set_engine(intensity: float) -> void:
 		_engine_player.play()
 
 
+func set_indoors(inside: bool) -> void:
+	## main.gd already knows which interior cells the player is standing in
+	## (it drives the roof reveal off the same test), so this just follows it.
+	_indoor_want = 1.0 if inside else 0.0
+
+
 func _process(delta: float) -> void:
+	# the weather muffle, eased so a doorway is a quick fade and never a
+	# switch — audio that snaps reads as a bug even when it is correct
+	if _weather_bus >= 0 and not is_equal_approx(_indoor, _indoor_want):
+		_indoor = move_toward(_indoor, _indoor_want, delta * MUFFLE_SPEED)
+		_weather_lowpass.cutoff_hz = lerpf(OUTDOOR_CUTOFF, INDOOR_CUTOFF,
+			_indoor)
+		AudioServer.set_bus_volume_db(_weather_bus, INDOOR_DUCK_DB * _indoor)
 	if _engine_player == null or not _engine_player.playing:
 		return
 	var want_on := _engine_target > 0.02

@@ -23,7 +23,7 @@ uniform float contrast : hint_range(0.0, 0.5) = 0.13;
 // instead of collapsing into one flat silhouette
 uniform float shadow_lift : hint_range(0.0, 0.2) = 0.035;
 uniform float lift : hint_range(0.0, 0.5) = 0.10;      // highlight bloom-ish
-uniform float vignette : hint_range(0.0, 1.0) = 0.30;
+uniform float vignette : hint_range(0.0, 1.0) = 0.16;
 uniform float night : hint_range(0.0, 1.0) = 0.0;
 uniform vec3 shadow_tint : source_color = vec3(0.09, 0.13, 0.22);
 uniform vec3 light_tint : source_color = vec3(1.00, 0.96, 0.86);
@@ -68,8 +68,22 @@ void fragment() {
     // vignette off the frame centre, elliptical so it suits a wide window
     vec2 d = SCREEN_UV - vec2(0.5);
     d.x *= 1.25;
-    float v = 1.0 - vignette * smoothstep(0.24, 0.78, dot(d, d) * 2.0);
+    float v = 1.0 - vignette * smoothstep(0.24, 0.92, dot(d, d) * 2.0);
     c *= v;
+
+    // DITHER, in here, before the frame is quantised to 8 bits.
+    //
+    // A ramp this gradual steps into visible concentric RINGS otherwise —
+    // the user saw them straight away and described them as faint circles
+    // following the character (they follow the character because the
+    // vignette is centred on the screen and the camera is welded to him).
+    // The dither film on the layer above cannot fix this: it is a fixed
+    // tiled texture, and the banding is created here, by this pass.
+    // A per-pixel hash of roughly half a level is enough to break the
+    // contours without being visible as noise.
+    float n = fract(sin(dot(SCREEN_UV * vec2(1920.0, 1080.0),
+        vec2(12.9898, 78.233))) * 43758.5453);
+    c += (n - 0.5) / 255.0;
 
     COLOR = vec4(clamp(c, vec3(0.0), vec3(1.0)), src.a);
 }

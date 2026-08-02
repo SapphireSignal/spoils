@@ -73,6 +73,11 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.21", [
+		"the time of day actually changes now. half past seven to five in the afternoon used to be one flat unchanging light - nearly forty percent of the day looking identical. the sun is low and warm in the morning, high and neutral at noon, and golden again by late afternoon",
+		"the faint rings that followed you around the screen are gone. that was the darkening at the edges of the picture stepping in visible bands instead of fading smoothly",
+		"rain and thunder are muffled when youre inside. the wall takes the top off them as you step through a door, and comes back as you step out. your own footsteps stay clear, because a wall you are standing behind doesnt muffle those",
+	]],
 	["v0.6.20", [
 		"the new grade was making everything darker, your character most of all, because the cold shadow colour it was blending in is itself dark. it shifts the colour now without touching the brightness, and dark sprites keep their detail instead of going flat",
 	]],

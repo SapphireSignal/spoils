@@ -540,9 +540,15 @@ func _process(delta: float) -> void:
 	if cell == _last_roof_cell:
 		return
 	_last_roof_cell = cell
+	var indoors := false
 	for roof in _roofs:
 		var reveal := roof as RoofReveal
-		reveal.set_inside(reveal.cells.has_point(cell))
+		var here := reveal.cells.has_point(cell)
+		reveal.set_inside(here)
+		indoors = indoors or here
+	# a roof over your head muffles the weather (user). Same test that
+	# reveals the interior, so the sound can never disagree with the view.
+	Sfx.set_indoors(indoors)
 
 
 func abandon_raid() -> void:
