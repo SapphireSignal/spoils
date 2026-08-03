@@ -31,6 +31,23 @@ Everything here is an **object**, not another light — that was the whole note.
   deliberately keeps as room rather than person. Four frames, legs
   alternating, body dropping a pixel on each contact.
 
+### Removed again, same day
+- **The rain "splash marks" on the ground.** User: *"i meant like the actual
+  raindrops coming down on the screen should physically hit something on the
+  screen, so remove that water stuff on the ground and do what i wanted"*.
+  A second particle system of splashes sitting on the ground band has no
+  relationship to any individual streak, so it reads as decoration lying on
+  the floor. Pulled out entirely rather than left in half-right. The real
+  job — hand-rolled drops that die on a per-column ground row and splash at
+  that exact point — is **TASKS.md B0a**, written up with the approach.
+
+### Fixed after the user looked
+- **The rat was invisible.** Drawn in 090a14 on a counter top of
+  241527/341c27 — about 20 values apart. It was rendering perfectly and
+  reading as nothing (*"i dont see any rat"*). Repainted pale, 7a4841 with an
+  ad7757 ridge. Same lesson as the far signal's eye and the underpass drip: a
+  thing has to beat its BACKGROUND, and this background is dark.
+
 ### Note on the numbers
 `yard` and `counter` still measure ~0.3% mean change. **That is the metric
 failing, not the scenes** — a bird is 7×5 px and a rat 11×8, which is

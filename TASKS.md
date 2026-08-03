@@ -125,7 +125,31 @@ Also asked for: **upgrade the two existing backdrops** (den, drain).
 
 # B. GAMEPLAY THE USER HAS ASKED FOR
 
-## B0. Mara's arms and pencil *(user, 2026-08-03)* — NEXT UP
+## B0a. Rain must actually LAND *(user, 2026-08-03)* — NEXT UP
+
+*"i meant like the actual raindrops coming down on the screen should
+physically hit something on the screen, so remove that water stuff on the
+ground and do what i wanted"*.
+
+**What was tried and REMOVED in v0.6.39:** a second `CPUParticles2D` of splash
+marks sitting on the ground band. It reads as decoration lying on the floor,
+not as a drop landing, because the splash has no relationship to any
+individual streak — the user spotted that immediately.
+
+**What it actually needs:** drop the particle system for menu rain and
+hand-roll it. An array of drops, each with its own x / y / speed and a
+**per-column ground row**; a drop falls until it reaches that row, then dies
+and leaves a splash AT THAT EXACT POINT for ~0.2 s. ~40 lines in
+`main_menu.gd`, and the splash art already exists (`rain_splash.png`, the
+world's own). The ground row is not flat — the yard recedes to a vanishing
+point and the warden's road slopes — so each scene needs a small function
+mapping x to the row where its ground starts, sampled off the bake the way
+the window and wire anchors were.
+
+Applies to the **trainyard** and the **warden**. Do it before adding rain to
+any other backdrop.
+
+## B0b. Mara's arms and pencil *(user, 2026-08-03)*
 
 *"in maras counter, shes not holding the pencil right, like its not in her
 hands. also make her arms not square and a bit smaller"*.

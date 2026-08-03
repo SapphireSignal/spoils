@@ -17308,6 +17308,12 @@ def make_scene_counter() -> tuple:
     # keeps as room rather than person. Near-black on lit wood, so it reads as
     # a silhouette the way the birds do against the sunset. 4 frames: the legs
     # alternate and the body drops a pixel on each contact.
+    # IT HAS TO BE LIGHTER THAN THE WOOD, NOT DARKER. The first cut drew it in
+    # 090a14 on a counter top of 241527/341c27 — a difference of about 20
+    # values, and the user's report was simply "i dont see any rat". It was
+    # rendering perfectly and reading as nothing. Same lesson as the far
+    # signal's eye and the underpass drip: a thing must beat its BACKGROUND,
+    # and this background is dark, so the rat is pale.
     rat = Canvas(48, 8)
     for f in range(4):
         ox = f * 12
@@ -17315,16 +17321,19 @@ def make_scene_counter() -> tuple:
         for x in range(2, 9):                        # the body, a low hump
             h = 2 if 3 <= x <= 7 else 1
             for y in range(4 - h + bob, 6 + bob):
-                rat.set(ox + x, y, C("090a14"))
-        rat.set(ox + 8, 3 + bob, C("241527"))        # the head end, lifted
-        rat.set(ox + 9, 4 + bob, C("090a14"))
-        rat.set(ox + 3, 3 + bob, C("241527"))        # a lit ridge along the back
-        rat.set(ox + 5, 3 + bob, C("241527"))
-        for k in range(3):                           # the tail, trailing
-            rat.set(ox + 1 - k // 2, 5 + bob - k // 3, C("090a14"))
-        legs = (2, 7) if f % 2 == 0 else (4, 9)      # alternating
+                rat.set(ox + x, y, C("7a4841"))
+        for x in range(3, 8):                        # the lit ridge on its back
+            rat.set(ox + x, 4 - (2 if 3 <= x <= 7 else 1) + bob, C("ad7757"))
+        rat.set(ox + 8, 3 + bob, C("ad7757"))        # the head end, lifted
+        rat.set(ox + 9, 4 + bob, C("7a4841"))
+        rat.set(ox + 9, 3 + bob, C("4d2b32"))        # the ear
+        rat.set(ox + 2, 5 + bob, C("4d2b32"))        # under-shadow
+        rat.set(ox + 7, 5 + bob, C("4d2b32"))
+        for k in range(4):                           # the tail, trailing
+            rat.set(ox + 1 - k // 2, 5 + bob - k // 3, C("4d2b32"))
+        legs = (3, 7) if f % 2 == 0 else (4, 8)      # alternating
         for lx in legs:
-            rat.set(ox + lx, 6 + bob, C("090a14"))
+            rat.set(ox + lx, 6 + bob, C("4d2b32"))
 
     return c, box_glow, lamp_glow, arc, flare, dust, rat
 

@@ -205,7 +205,7 @@ const CHANGELOG_ENTRIES := [
 	# sentence across several entries put a dash on every line (user).
 	["v0.6.39", [
 		"the trainyard and mara's counter have things that actually move in them now, not just more light. birds cross the sunset, the sparks off the pole lines are bigger and there are five of them going much more often, and there are little lit windows on the far buildings that flicker",
-		"and a rat runs along the empty end of mara's counter",
+		"and a rat runs along the empty end of mara's counter - it was there before but painted almost the same colour as the counter, so it was invisible. its lighter now",
 	]],
 	["v0.6.38", [
 		"backdrops change every fifteen seconds now instead of ten",
@@ -1198,7 +1198,6 @@ func _build_scenes() -> void:
 	# SPARKS OFF THE POLE LINES (user's own example). Both points are wire
 	# pixels read out of the bake, not eyeballed.
 	# the yard's ground runs from the far shoulder down to the near four-foot
-	_add_rain_splashes(yard, Vector2(470, 452), Vector2(470, 86), 46)
 	# THREE BIRDS, on their own staggered clocks, crossing the sunset band —
 	# the one bright thing in the frame, so they read as hard silhouettes.
 	for i in YARD_WINDOWS.size():
@@ -1280,8 +1279,6 @@ func _build_scenes() -> void:
 	wrain.color = Color(1, 1, 1, 0.58)
 	wrain.color_ramp = _fade_ramp()
 	warden.add_child(wrain)
-	# the toll road and its verge
-	_add_rain_splashes(warden, Vector2(430, 492), Vector2(430, 46), 40)
 	# the isolator on the shift lamp's conduit — a real fitting, and the only
 	# thing in the booth's dead upper-left that could plausibly arc
 	_add_arc(warden, Vector2(813, 147), add_mat, 2.7)
@@ -1744,32 +1741,6 @@ func _tick_counter(delta: float) -> void:
 			_ctr_flare.visible = true
 			_ctr_flare.frame = 0
 			_ctr_flare_age = 0.0
-
-
-func _add_rain_splashes(parent: Node2D, at: Vector2, extents: Vector2,
-		amount: int) -> void:
-	## Rain has to LAND. Falling streaks with nothing at the bottom read as
-	## rain in front of a photograph — the world rain has always splashed
-	## (environment_system drops to real ground points), and the menu rain
-	## did not. These sit on the ground band and just appear and fade; the
-	## eye pairs them with the streaks above without them having to be the
-	## same particles.
-	var sp := CPUParticles2D.new()
-	sp.texture = TEX_RAINSPLASH
-	sp.amount = amount
-	sp.lifetime = 0.34
-	sp.preprocess = 0.34
-	sp.position = PC + at
-	sp.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
-	sp.emission_rect_extents = extents
-	sp.direction = Vector2(0, -1)
-	sp.spread = 0.0
-	sp.gravity = Vector2.ZERO
-	sp.initial_velocity_min = 0.0
-	sp.initial_velocity_max = 0.0
-	sp.color = Color(1, 1, 1, 0.55)
-	sp.color_ramp = _fade_ramp()
-	parent.add_child(sp)
 
 
 func _add_arc(parent: Node2D, at: Vector2, add_mat: CanvasItemMaterial,
