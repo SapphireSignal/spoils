@@ -3,6 +3,39 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.36] — 2026-08-03 — the door check was flaky, and that is worse than broken
+
+**No game change.** `harness.gd` only. Found because v0.6.35's smoke printed
+`walked through closed doors: #0 off -8 side 1`, then **passed on a re-run of
+the identical binary** — and the commit had changed no world art at all (only
+`menu_counter_*` overlays were added). Measured at roughly **2 failures in 5
+runs**, on a different door each time.
+
+### Fixed
+- **The closed-door check measured the wrong frame.** It shoved the player at
+  a door, `await`ed a frame, and only then read the position. But
+  `player.gd:311` runs `move_and_slide()` **every rendered frame**, and that
+  depenetrates a body left flush against a collider — so the read was of the
+  player's own recovery, not of the shove, and which side it popped out on
+  came down to float error in a sub-pixel overlap. `_shove` uses
+  `move_and_collide`, which writes `global_position` synchronously, so the
+  answer is ready the moment it returns. It is read there now.
+  **8 consecutive passes** after the change.
+
+### Also fixed, but it was NOT the cause
+- **The "spawn is clear" guard was a no-op.** `test_move(xform, Vector2.ZERO)`
+  with `recovery_as_collision` left at its default `false` reports *clear* for
+  a body already inside geometry — a zero-length sweep does not count
+  depenetration as a collision. So the check that the comment above it
+  describes ("only measure from a start that is actually CLEAR") never
+  rejected anything. Now passes `true`. **Changing this alone did not stop the
+  flake** — it failed again on the next run — which is how the real cause got
+  found. Kept because the guard should do what it says.
+
+### The lesson, in one line
+A flaky mandatory gate is worse than no gate: it teaches whoever hits it to
+run it again instead of reading it. Which is exactly what happened here first.
+
 ## [0.6.35] — 2026-08-03 — mara's counter, and all six are moving
 
 Last of the four. Every menu backdrop now has a living layer, and all four

@@ -136,6 +136,9 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.36", [
+		"the test that checks you cant walk through a closed door was giving a different answer on different runs, on the same build. it was measuring where you ended up one frame AFTER the shove, and by then the player's own movement had nudged them back out of the door - so which way they popped came down to rounding. it reads the result straight away now. no change to the game itself",
+	]],
 	["v0.6.35", [
 		"mara's counter is alive now, and that's all six menu backgrounds moving. here it's the COLD light that breathes - the light box under her map - while the work lamp holds steady, which is the opposite way round to every other scene and is the whole point of this one",
 		"the taped splice up in the corner swells just before it lets an ember go, and the ember drops into the parts tin and flares on the scorch ring thats been baked into that tin all along",

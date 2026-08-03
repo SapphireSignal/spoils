@@ -167,6 +167,34 @@ with no white showing, so there is nothing to close.
   scenes out of four where the pitch note's coordinates did not survive
   contact with the code.
 
+**Then v0.6.36 — THE SMOKE TEST WAS FLAKY, and I nearly shipped past it.**
+v0.6.35's smoke printed `walked through closed doors: #0 off -8 side 1`. The
+commit had changed **no world art at all** (verified with `git show
+--name-only`), so I re-ran it and it PASSED — and my first instinct was to
+treat that as the answer. The user asked "smoke fail why?", which is the only
+reason it got chased. **~2 failures in 5 runs, a different door each time.**
+
+**The cause:** the check shoved the player at a door, `await`ed a frame, and
+only then read the position. `player.gd:311` runs `move_and_slide()` **every
+rendered frame**, and that depenetrates a body the shove left flush against a
+collider — so the read was of the player's own recovery, and which side it
+popped out on came down to float error in a sub-pixel overlap. `_shove` uses
+`move_and_collide` and writes `global_position` synchronously, so the answer
+is ready the instant it returns. It is read there now. **8 consecutive passes**
+after the change (0.6^8 ≈ 1.7% by luck at the old rate).
+
+**A second real bug found on the way, which was NOT the cause:**
+`test_move(xform, Vector2.ZERO)` with `recovery_as_collision` left at its
+default `false` reports *clear* for a body already inside geometry — a
+zero-length sweep does not count depenetration as a collision. So the
+"only measure from a start that is actually CLEAR" guard directly above it
+had never rejected anything. Fixed too. **Fixing it alone did not stop the
+flake**, and that failed run is what sent me looking at the right thing.
+
+**The lesson, and it is the sharpest one of the session:** a flaky mandatory
+gate is worse than no gate — it teaches whoever hits it to run it again
+instead of reading it. I did exactly that for one run.
+
 **Picked up at:** **nothing is in progress.** A1 in TASKS.md is now DONE — all
 six backdrops exist and all six live. The next items in that list are the
 in-game map screen and the map-select tile; **M2 (guns) still waits on the

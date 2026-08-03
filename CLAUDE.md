@@ -35,7 +35,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
 	 form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.35 shipped, 2026-08-03.** Milestone 1 (a walkable world) is DONE.
+**v0.6.36 shipped, 2026-08-03.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 
@@ -731,6 +731,19 @@ then `godot_console --headless --path . --import`.
   went stale at the v0.6.6 figures for nineteen releases.**
   ORPHANS is the sharpest signal — a node out of the tree and unfreed is a
   leak with no excuse.
+- **MEASURE A SHOVE'S RESULT BEFORE YOU YIELD A FRAME.** `player.gd`'s
+  `_process` runs `move_and_slide()` EVERY RENDERED FRAME, and that
+  depenetrates a body the shove left flush against a collider — so a position
+  read after an `await` is the player's own recovery, not the shove. That made
+  the closed-door check answer differently on different runs of the SAME
+  binary (~2 failures in 5, a different door each time) until v0.6.36.
+  `_shove` writes `global_position` synchronously; read it the instant it
+  returns.
+- **`test_move(xform, Vector2.ZERO)` DOES NOT DETECT AN EXISTING OVERLAP**
+  unless you pass `recovery_as_collision = true`. A zero-length sweep does not
+  count depenetration as a collision, so an "is this spawn clear?" guard
+  written that way silently passes everything. There was one in `harness.gd`
+  doing nothing for a long time.
 - **NEVER test "can the player walk through X" with `velocity` +
   `move_and_slide()`.** move_and_slide scales by the frame delta and headless
   runs uncapped, so the player advances a fraction of a pixel per call and

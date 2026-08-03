@@ -324,15 +324,43 @@ func _smoke() -> void:
 					# overlap — which can put it the far side of the door and
 					# read as walking through one. That is the test spawning
 					# badly, not the door leaking.
-					if player.test_move(player.global_transform, Vector2.ZERO):
+					#
+					# recovery_as_collision MUST be true here and it was not,
+					# which made this guard a NO-OP for its own stated purpose.
+					# A zero-length sweep with recovery off reports "clear"
+					# for a body that is already inside geometry — depenetration
+					# is not counted as a collision — so a bad spawn sailed
+					# straight past the check, and whether the ejection then
+					# happened to cross the wall plane came down to float
+					# ordering. That is exactly how this check FAILED ONCE AND
+					# PASSED ON RE-RUN with an identical binary at v0.6.35.
+					# A flaky mandatory gate is worse than no gate: it teaches
+					# whoever hits it to run it again instead of reading it.
+					if player.test_move(player.global_transform, Vector2.ZERO,
+							null, 0.08, true):
 						continue
 					# which side of the wall PLANE we set off from —
 					# crossing it is the only thing that counts as through
 					var side_before: float = signf(
 						(player.position - at).dot(shut_norm))
 					_shove(player, shut_thru * face, 34.0)
+					# MEASURE BEFORE YIELDING. _shove uses move_and_collide,
+					# which writes global_position synchronously, so the answer
+					# is ready the instant it returns — and it has to be read
+					# there, because player.gd's own _process runs
+					# move_and_slide() EVERY RENDERED FRAME (player.gd:311).
+					# The shove parks the body flush against the leaf; that
+					# next move_and_slide then depenetrates it, and which way
+					# it pops out depends on float error in an overlap of a
+					# fraction of a pixel. Reading the position after an await
+					# measured that recovery instead of the shove, which is why
+					# this check failed on one run and passed on the next with
+					# an identical binary — at v0.6.35, and on a DIFFERENT door
+					# each time.
+					var crossed: bool = (player.position - at).dot(shut_norm) \
+						* side_before < -1.0
 					await get_tree().process_frame
-					if (player.position - at).dot(shut_norm) * side_before < -1.0:
+					if crossed:
 						leaky_doors.append("#%d off %d side %d"
 							% [di, int(lateral), int(face)])
 						break
