@@ -229,6 +229,35 @@ way silently deleted `_tick_yard`, `_tick_warden`, `_tick_underpass` and
 checked the START of the block. It was caught by a parse error and restored
 from HEAD. Assert on what you are DELETING, not on what you are looking for.
 
+**Then v0.6.38 — the user's playtest of v0.6.37, taken point by point.** The
+drain leaks from the MANHOLE now (four drips off the rim, one fat and slow,
+every landing blowing a bubble — two bubble sizes DRAWN, because runtime
+scaling of pixel art stays banned); the sluice sheet reaches the channel
+instead of stopping in mid-air; the water chop fades out at its edges because
+it read as a literal RECTANGLE; rain LANDS in the yard and at the gate, reusing
+the world's own `rain_splash.png`; and SCENE_SECONDS went 10 → 15.
+
+**The bad half hour: a duplicate `make_rain_splash()`.** gen_art already had
+one — the world rain's ground splash — and Python silently keeps the LATER
+definition, so my copy was dead and `assert_palette` got an `Image`. The build
+died AFTER `main()` had purged `art/gen`, which leaves the project unloadable
+until you fix it and re-run. **In a 17,000-line generator, grep for the name
+before writing a new one**, and remember gen_art deletes before it writes.
+
+**STILL QUIET AND THE USER SAYS SO: `counter` and `yard`.** Both measure
+~0.25-0.30% mean change, ~50 still frames in 59. Their additions were rain and
+sparks, which the metric under-reports — but the user's eye is the authority
+and their read is that these two are the quietest. **Next for them: a real
+moving OBJECT each, not another light** — the counter's hanging tag row is the
+obvious one, and the yard wants something crossing it.
+
+**AN OPEN COMPOSITION NOTE, NOT ACTED ON:** *"the drain and the underpass are
+really similar, like the shot angle, i dont know but just seems a bit odd"*.
+They are right — both are side-on tunnels with water along the bottom and a
+light source high on the right. That is a BASE-ART problem, not a living-layer
+one, and fixing it means repainting one of them to a different camera. It
+needs their call before anyone starts.
+
 **Picked up at:** **nothing is in progress.** A1 in TASKS.md is now DONE — all
 six backdrops exist and all six live. The next items in that list are the
 in-game map screen and the map-select tile; **M2 (guns) still waits on the

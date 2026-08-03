@@ -6996,7 +6996,7 @@ def make_scene_drain() -> tuple:
     # than a lit shape. Streaks are dashed and each dash rides its own period,
     # because an unbroken column reads as a bar of metal, not as water.
     srng = random.Random("spoils:drain:sluice")
-    SW, SH, SF = 60, 76, 6
+    SW, SH, SF = 60, 98, 6      # 98, not 76: it stopped short of the water
     sheet = Image.new("RGBA", (SW * SF, SH), (0, 0, 0, 0))
     sp = sheet.load()
     streaks = []
@@ -7014,7 +7014,7 @@ def make_scene_drain() -> tuple:
                 if ((y + shift + ph) % per) < ln:
                     # thins and brightens as it falls, and dies into the foam
                     t = y / float(SH)
-                    if t > 0.86:
+                    if t > 0.90:
                         continue
                     col = C("a8b5b2") if (y + shift + ph) % per < 3 else C("577277")
                     sp[ox + sx, y] = (col[0], col[1], col[2],
@@ -7026,10 +7026,12 @@ def make_scene_drain() -> tuple:
         # standing no-dot-noise rule. Churn is drawn the way this project
         # draws every other water surface: short horizontal runs.
         frng = random.Random("spoils:drain:foam:%d" % f)
-        for k in range(14):
-            fy = SH - 14 + k
-            spread = int(5 + k * 2.0)
-            aa = int(150 * (1.0 - k / 14.0))
+        for k in range(18):
+            fy = SH - 18 + k
+            # spreads WIDE at the surface: the sheet has to look like it is
+            # landing IN the channel, not stopping above it
+            spread = int(5 + k * 2.6)
+            aa = int(160 * (1.0 - k / 20.0))
             col = C("a8b5b2") if k < 5 else C("577277")
             fx = SW // 2 - spread
             while fx < SW // 2 + spread:
@@ -7056,6 +7058,15 @@ def make_scene_drain() -> tuple:
     # THE POOL'S SURFACE, in the water's own dashed language. 6 frames.
     crng = random.Random("spoils:drain:chop")
     CW, CH, CF = 300, 66, 6
+
+    def _edge(x: int, y: int) -> float:
+        """Fade to nothing at every edge. Without this the overlay's own
+        RECTANGLE is the hardest line in the water — the user saw exactly
+        that: "it looks like its a rectangle, make it smooth like blended
+        in". Cosine on both axes, so there is no corner either."""
+        u = abs(x - CW / 2.0) / (CW / 2.0)
+        v = abs(y - CH / 2.0) / (CH / 2.0)
+        return (max(0.0, 1.0 - u ** 3.0) ** 1.2) * (max(0.0, 1.0 - v ** 2.2) ** 1.1)
     chop = Image.new("RGBA", (CW * CF, CH), (0, 0, 0, 0))
     cp = chop.load()
     for f in range(CF):
@@ -7071,9 +7082,10 @@ def make_scene_drain() -> tuple:
             for xx in range(x0, x0 + ln):
                 t = min(xx - x0, x0 + ln - 1 - xx) / max(1.0, ln * 0.3)
                 for k in range(th):
-                    if 0 <= y + k < CH:
-                        cp[ox + xx, y + k] = (col[0], col[1], col[2],
-                                              int(a * min(1.0, t)))
+                    yy = y + k
+                    if 0 <= yy < CH:
+                        cp[ox + xx, yy] = (col[0], col[1], col[2],
+                                           int(a * min(1.0, t) * _edge(xx, yy)))
 
     # a slow band of damp air off the pool — the same trick that took the
     # underpass from 38 still frames in 47 to 3: something has to be moving on
@@ -7089,7 +7101,45 @@ def make_scene_drain() -> tuple:
             if d < 1.0:
                 mp[x, y] = (mr, mg, mb, int(30 * (1.0 - d) ** 2.2))
 
-    return c, ray, strip, sheet, lant, chop, mist
+    # THE BUBBLE a drop pushes up when it lands. EIGHT frames of 18x12 in one
+    # sheet: 0-3 is the small dome, 4-7 the big one, because a pixel-art
+    # sprite may never be SCALED at runtime and "a bigger drop with a bigger
+    # bubble" needs two sizes drawn, not one stretched.
+    bub = Canvas(144, 12)
+    SMALL = ((2, 1), (3, 3), (4, 4), (5, 2))
+    BIG = ((3, 2), (5, 5), (7, 7), (8, 3))
+    for f, (rx, ry) in enumerate(SMALL + BIG):
+        ox = f * 18 + 9
+        cy = 9
+        if f % 4 < 3:                                # the dome rising
+            for a in range(180, 361, 5):
+                bub.set(int(ox + math.cos(math.radians(a)) * rx),
+                        int(cy + math.sin(math.radians(a)) * ry),
+                        C("a8b5b2") if f % 4 < 2 else C("c7cfcc"))
+            if f % 4 == 2:
+                bub.set(ox - rx // 2, cy - ry + 1, C("e7d5b3"))   # highlight
+        else:                                        # it bursts
+            for a in range(0, 360, 20):
+                bub.set(int(ox + math.cos(math.radians(a)) * rx),
+                        int(cy + math.sin(math.radians(a)) * ry * 0.5),
+                        C("577277"))
+        bub.hline(ox - rx - 1, ox + rx + 1, cy + 1, C("394a50"))
+
+    # TWO DROP SIZES, same reason. Frame 0 is an ordinary drip, frame 1 the
+    # fat one that comes off the manhole rim and earns the big bubble.
+    drop = Canvas(12, 14)
+    for y in range(3, 14):
+        t = (y - 3) / 11.0
+        drop.set(2, y, C("a8b5b2") if t > 0.5 else C("577277"))
+        drop.set(3, y, C("c7cfcc") if t > 0.6 else C("a8b5b2"))
+    for y in range(0, 14):
+        t = y / 13.0
+        w = 1 if t < 0.45 else 2
+        for k in range(-w, w + 1):
+            drop.set(8 + k, y, C("a8b5b2") if abs(k) == w else C("c7cfcc"))
+    drop.set(8, 13, C("e7d5b3"))
+
+    return c, ray, strip, sheet, lant, chop, mist, bub, drop
 
 
 def make_scene_den() -> tuple[Canvas, Image.Image, Canvas]:
@@ -14884,6 +14934,13 @@ def make_scene_underpass() -> tuple:
     #    rather than as a texture sliding over it.
     crng = random.Random("spoils:underpass:chop")
     CW, CH, CF = 300, 150, 6
+
+    def _edge(x: int, y: int) -> float:
+        """see the drain's copy: an overlay rectangle's own bounds read as
+        the hardest edge in the water unless it fades out at them."""
+        u = abs(x - CW / 2.0) / (CW / 2.0)
+        v = abs(y - CH / 2.0) / (CH / 2.0)
+        return (max(0.0, 1.0 - u ** 3.0) ** 1.2) * (max(0.0, 1.0 - v ** 2.2) ** 1.1)
     chop = Image.new("RGBA", (CW * CF, CH), (0, 0, 0, 0))
     cp = chop.load()
     for f in range(CF):
@@ -14901,10 +14958,11 @@ def make_scene_underpass() -> tuple:
             for xx in range(x0, x0 + ln):
                 # fade the ends so no dash has a hard cap
                 t = min(xx - x0, x0 + ln - 1 - xx) / max(1.0, ln * 0.30)
-                aa = int(a * min(1.0, t))
                 for k in range(th):
-                    if 0 <= y + k < CH:
-                        cp[ox + xx, y + k] = (col[0], col[1], col[2], aa)
+                    yy = y + k
+                    if 0 <= yy < CH:
+                        cp[ox + xx, yy] = (col[0], col[1], col[2],
+                                           int(a * min(1.0, t) * _edge(xx, yy)))
 
     # 3. THE DEAD PENDANT ON THE LEFT. The whole left half of this picture
     #    does not move at all, and hanging in the middle of it is a conical
@@ -17781,7 +17839,8 @@ def main() -> None:
 
     # rotating main-menu backdrops (+ their animated overlay layers)
     (drain_base, drain_ray, drain_ripple, drain_sheet,
-     drain_lant, drain_chop, drain_mist) = make_scene_drain()
+     drain_lant, drain_chop, drain_mist, drain_bub,
+     drain_drop) = make_scene_drain()
     assert_palette(drain_base.img, "menu_drain")
     assert_palette(drain_ripple.img, "menu_drain_ripple")
     drain_base.img.save(OUT / "menu_drain.png")
@@ -17791,6 +17850,10 @@ def main() -> None:
     drain_lant.save(OUT / "menu_drain_lant.png")       # light: soft alpha
     drain_chop.save(OUT / "menu_drain_chop.png")       # 6 frames, soft alpha
     drain_mist.save(OUT / "menu_drain_mist.png")       # light: soft alpha
+    assert_palette(drain_bub.img, "menu_drain_bubble")
+    assert_palette(drain_drop.img, "menu_drain_drop")
+    drain_bub.img.save(OUT / "menu_drain_bubble.png")  # 8: small + big
+    drain_drop.img.save(OUT / "menu_drain_drop.png")   # 2: thin + fat
     den_base, den_glow, den_needles = make_scene_den()
     assert_palette(den_base.img, "menu_den")
     assert_palette(den_needles.img, "menu_den_needles")

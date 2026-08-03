@@ -3,6 +3,49 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.38] — 2026-08-03 — the drain leaks from the hole, and rain lands
+
+All of this is the user's playtest of v0.6.37, taken point by point.
+
+### Fixed
+- **The chop read as a RECTANGLE** (*"it looks like its a rectangle, make it
+  smooth like blended in"*). It filled a rect with dashes at UNIFORM density,
+  so the overlay's own bounds were the hardest edge in the water. Both the
+  drain's and the underpass's now fade to nothing on both axes.
+- **The sluice poured into mid-air** (*"make that water connected with the
+  water on the ground"*). The sheet was 76 px and stopped ~15 px above the
+  channel; it is 98 now and its foam spreads wide ON the surface.
+- **Rain vanished instead of landing** (*"all of the rain in the backdrops
+  should actually hit the scene, like how it is in game"*). The yard and the
+  warden get splash marks across their ground bands — **reusing the world's
+  own `rain_splash.png`**, which is what the raid has always used.
+
+### Added
+- **The manhole leaks** (*"water coming from the top of the hole, like where
+  it opens up ... a couple drops and maybe a bigger drop with a bigger
+  bubble"*). Four of the five drips now hang off the manhole rim, and one of
+  them is FAT: its own 2-frame drop sprite, a slower fall, and the big half
+  of an 8-frame bubble sheet. Two sizes are DRAWN, not scaled — runtime
+  scaling of pixel art stays banned.
+- **Every landing blows a bubble** — dome rises, tops out with a highlight,
+  bursts.
+- **`SCENE_SECONDS` 10 → 15** (user call).
+
+### Broke and fixed in the same pass
+- **A duplicate `make_rain_splash()`.** gen_art already had one — the world
+  rain's 4-frame ground splash — and Python silently kept the LATER
+  definition, so `assert_palette` got an `Image` and the build died *after*
+  `main()` had already purged `art/gen`, leaving the project unloadable. The
+  right answer was reuse, not a second asset. **Check for the name before
+  adding a generator to a 17,000-line file.**
+
+### Still quiet, and said plainly
+`counter` and `yard` measure ~0.25-0.30% mean change with ~50 still frames in
+59. Their additions are rain and sparks, which the metric under-reports — but
+the user's read is that they are still the two quietest, and that is the read
+that counts. Next for them: a real moving OBJECT each (the counter's hanging
+tag row; something crossing the yard), not another light.
+
 ## [0.6.37] — 2026-08-03 — the living layers, made noticeable
 
 User: *"these living layers are very minimal, can we add some more to it, to

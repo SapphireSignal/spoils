@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://blg1qaw83rcxm"
-path="res://.godot/imported/menu_drain_ripple.png-8f8269222c945cf26379ff00ab35147f.ctex"
+uid="uid://bfkiy26o4rf21"
+path="res://.godot/imported/menu_drain_bubble.png-30a55f98499dd03f93f18d81dde9b560.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/gen/menu_drain_ripple.png"
-dest_files=["res://.godot/imported/menu_drain_ripple.png-8f8269222c945cf26379ff00ab35147f.ctex"]
+source_file="res://art/gen/menu_drain_bubble.png"
+dest_files=["res://.godot/imported/menu_drain_bubble.png-30a55f98499dd03f93f18d81dde9b560.ctex"]
 
 [params]
 

@@ -10,7 +10,7 @@
 ##   5 counter   - mara's booth: the COLD light breathes here, and an ember drips
 ## (the storm scene retired 2026-08-01 — user call). DEPLOY starts the raid.
 
-const SCENE_SECONDS := 10.0
+const SCENE_SECONDS := 15.0   # 30 -> 10 (v0.6.31) -> 15, all user calls
 const FADE_SECONDS := 1.4
 
 # preloaded once for the process lifetime: re-entering the menu from the game
@@ -55,6 +55,13 @@ const TEX_DUST := preload("res://art/gen/dust.png")
 # SHARED. The same event on the yard's lines, the warden's isolator and
 # the counter's taped splice, so it is one asset and one helper.
 const TEX_SPARK := preload("res://art/gen/menu_spark.png")
+# THE WORLD RAIN'S OWN SPLASH, not a menu-only copy. gen_art already has a
+# make_rain_splash() and it is the 4-frame ground splash the raid uses — I
+# wrote a second one with the same name and Python silently kept the later
+# definition, which broke the whole build. The right answer was reuse.
+const TEX_RAINSPLASH := preload("res://art/gen/rain_splash.png")
+const TEX_DRAIN_BUBBLE := preload("res://art/gen/menu_drain_bubble.png")
+const TEX_DRAIN_DROP := preload("res://art/gen/menu_drain_drop.png")
 const TEX_VIGNETTE := preload("res://art/gen/vignette.png")
 const TEX_MAP_THUMB := preload("res://art/gen/menu_map_transit.png")
 const TEX_TITLE := preload("res://art/gen/title.png")
@@ -92,9 +99,18 @@ var _drain_mist: Sprite2D
 var _drain_anim := 0.0
 # FOUR leaks, and every one of them owns exactly one ripple at the same index.
 # Sources sit under the soffit; they land on the pool. See _tick_drain.
-const DRAIN_DRIP_X := [498.0, 560.0, 608.0, 672.0]
-const DRAIN_DRIP_TOP := [168.0, 152.0, 110.0, 158.0]
-const DRAIN_DRIP_Y := [512.0, 508.0, 510.0, 516.0]
+# FIVE leaks, and FOUR of them hang off the manhole's own rim — user:
+# "the drain backdrop should have the water coming from the top of the hole,
+# like where it opens up, like water is leaking from there and hitting the
+# water on the ground, which should show a bubble ... a couple drops and maybe
+# a bigger drop with a bigger bubble". Index 2 is the FAT one: it falls
+# slower, rings wider and pushes up the big bubble.
+const DRAIN_DRIP_X := [596.0, 608.0, 618.0, 630.0, 672.0]
+const DRAIN_DRIP_TOP := [126.0, 110.0, 118.0, 132.0, 158.0]
+const DRAIN_DRIP_Y := [510.0, 510.0, 511.0, 512.0, 516.0]
+const DRAIN_DRIP_BIG := [false, false, true, false, false]
+var _bubbles: Array[Sprite2D] = []
+var _bubble_age: Array[float] = []
 # yard life
 var _yard_halo: Sprite2D
 var _yard_glint: Sprite2D
@@ -136,7 +152,8 @@ var _ctr_arc: Sprite2D
 var _ctr_flare: Sprite2D
 var _ctr_flare_age := -1.0
 var _ctr_ember: Sprite2D
-var _ctr_ember_t := 1.4    # long enough for the arc's swell to read first
+var _ctr_ember_t := 1.4
+var _ctr_haze: Sprite2D    # long enough for the arc's swell to read first
 const CTR_SPLICE := Vector2(837, 254)      # the live pilot bead in _cables
 const CTR_TIN_Y := 399.0                   # the parts tin's baked scorch ring
 
@@ -171,6 +188,12 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.38", [
+		"backdrops change every fifteen seconds now instead of ten",
+		"the drain: water leaks from the manhole opening itself now, four drips off the rim including one fat slow one, and every drop blows a bubble on the water when it lands - a bigger bubble for the big drop. the sheet from the sluice gate reaches the channel instead of stopping in mid air",
+		"the shimmer on the drain water was a visible rectangle - it fades out at every edge now so it blends into the pool",
+		"rain actually lands. the trainyard and the toll gate now splash where it hits the ground, using the same splash the rain uses in game",
+	]],
 	["v0.6.37", [
 		"the menu backgrounds move a lot more now. you said the living layers were too minimal and you were right - i was being too careful with them",
 		"new things that move, rather than just more of the old ones: sparks arc off the telegraph lines in the trainyard, off the isolator box by the warden's booth and off the taped splice over mara's head. the dead hanging lamp in the underpass is lit now and failing badly, out of step with the sodium tube. its rain across the whole frame in the trainyard and at the toll gate. the candle in the den actually behaves like a flame instead of a lamp with a loose wire",
@@ -1012,7 +1035,9 @@ func _build_scenes() -> void:
 	_sluice = Sprite2D.new()
 	_sluice.texture = TEX_DRAIN_SLUICE
 	_sluice.hframes = 6
-	_sluice.position = PC + Vector2(822, 452)
+	# 463, not 452: the sheet is 98 tall now so its foam lands ON the
+	# channel surface (~y 505 at this column) instead of 15px above it
+	_sluice.position = PC + Vector2(822, 463)
 	drain.add_child(_sluice)
 	# OVER THE LIT WATER, not the dark half. The first placement centred this
 	# at y 512, which put two thirds of it below the pool's lit band — it
@@ -1047,13 +1072,23 @@ func _build_scenes() -> void:
 		drain.add_child(ripple)
 		_ripples.append(ripple)
 		_ripple_age.append(-1.0)
+		var bub := Sprite2D.new()
+		bub.texture = TEX_DRAIN_BUBBLE
+		bub.hframes = 8              # 0-3 small dome, 4-7 the big one
+		bub.position = PC + Vector2(DRAIN_DRIP_X[i], DRAIN_DRIP_Y[i] - 3.0)
+		bub.visible = false
+		drain.add_child(bub)
+		_bubbles.append(bub)
+		_bubble_age.append(-1.0)
 		var dr := Sprite2D.new()
-		dr.texture = TEX_RAIN
-		dr.modulate = Color("c7cfcc", 0.9)
+		dr.texture = TEX_DRAIN_DROP
+		dr.hframes = 2               # 0 thin, 1 the fat one off the rim
+		dr.frame = 1 if DRAIN_DRIP_BIG[i] else 0
+		dr.modulate = Color(1, 1, 1, 0.92)
 		dr.visible = false
 		drain.add_child(dr)
 		_drips.append(dr)
-		_drip_t.append(0.15 + i * 0.52)
+		_drip_t.append(0.15 + i * 0.34)
 	add_child(drain)
 	_scenes.append(drain)
 
@@ -1143,6 +1178,8 @@ func _build_scenes() -> void:
 	yard.add_child(_yard_drip)
 	# SPARKS OFF THE POLE LINES (user's own example). Both points are wire
 	# pixels read out of the bake, not eyeballed.
+	# the yard's ground runs from the far shoulder down to the near four-foot
+	_add_rain_splashes(yard, Vector2(470, 452), Vector2(470, 86), 46)
 	_add_arc(yard, Vector2(170, 175), add_mat, 1.1)
 	_add_arc(yard, Vector2(230, 205), add_mat, 4.6)
 	add_child(yard)
@@ -1203,6 +1240,8 @@ func _build_scenes() -> void:
 	wrain.color = Color(1, 1, 1, 0.58)
 	wrain.color_ramp = _fade_ramp()
 	warden.add_child(wrain)
+	# the toll road and its verge
+	_add_rain_splashes(warden, Vector2(430, 492), Vector2(430, 46), 40)
 	# the isolator on the shift lamp's conduit — a real fitting, and the only
 	# thing in the booth's dead upper-left that could plausibly arc
 	_add_arc(warden, Vector2(813, 147), add_mat, 2.7)
@@ -1330,6 +1369,14 @@ func _build_scenes() -> void:
 	_ctr_ember.material = add_mat
 	_ctr_ember.visible = false
 	counter.add_child(_ctr_ember)
+	# it measured the least motion of all six. A slow band of warm air over
+	# the counter, so this scene also has something moving on every frame
+	# rather than only when a timer fires.
+	_ctr_haze = Sprite2D.new()
+	_ctr_haze.texture = TEX_DRAIN_MIST     # a generic soft lobe, not drain-specific
+	_ctr_haze.modulate = Color("e8c170")
+	_ctr_haze.material = add_mat
+	counter.add_child(_ctr_haze)
 	_ctr_arc = Sprite2D.new()
 	_ctr_arc.texture = TEX_CTR_ARC
 	_ctr_arc.position = PC + CTR_SPLICE
@@ -1391,20 +1438,33 @@ func _tick_drain(delta: float) -> void:
 				_ripples[i].frame = rf
 		var dr := _drips[i]
 		_drip_t[i] -= delta
+		if _bubble_age[i] >= 0.0:
+			_bubble_age[i] += delta
+			var bf := int(_bubble_age[i] / 0.13)
+			if bf > 3:
+				_bubbles[i].visible = false
+				_bubble_age[i] = -1.0
+			else:
+				_bubbles[i].frame = bf + (4 if DRAIN_DRIP_BIG[i] else 0)
 		if _drip_t[i] <= 0.0 and not dr.visible:
-			_drip_t[i] = randf_range(1.5, 4.2)
+			_drip_t[i] = randf_range(0.9, 2.6) \
+				if not DRAIN_DRIP_BIG[i] else randf_range(3.0, 6.5)
 			dr.visible = true
 			dr.position = PC + Vector2(DRAIN_DRIP_X[i], DRAIN_DRIP_TOP[i])
 		if dr.visible:
 			# 470, not the old 900: at 900 px/s a drip crossed the whole frame
 			# in under half a second and you could watch this scene for a
 			# minute without ever catching one in the air
-			dr.position.y += 470.0 * delta
+			# the fat one is heavier and reads slower
+			dr.position.y += (380.0 if DRAIN_DRIP_BIG[i] else 470.0) * delta
 			if dr.position.y >= PC.y + DRAIN_DRIP_Y[i] - 2.0:
 				dr.visible = false
 				_ripples[i].visible = true
 				_ripples[i].frame = 0
 				_ripple_age[i] = 0.0
+				_bubbles[i].visible = true          # and it blows a bubble
+				_bubbles[i].frame = 4 if DRAIN_DRIP_BIG[i] else 0
+				_bubble_age[i] = 0.0
 
 
 func _tick_yard(delta: float) -> void:
@@ -1559,7 +1619,11 @@ func _tick_counter(delta: float) -> void:
 	if fmod(_time, 4.3) < 0.09:
 		bx *= 0.42
 	_ctr_box.modulate.a = clampf(bx, 0.0, 1.0)
-	_ctr_lamp.modulate.a = 0.88 + 0.04 * sin(_time * 1.3)
+	_ctr_lamp.modulate.a = 0.88 + 0.06 * sin(_time * 1.3) + 0.04 * sin(_time * 6.1)
+	_ctr_haze.position = PC + Vector2(
+		700.0 + sin(_time * 0.19) * 190.0,
+		352.0 + sin(_time * 0.33) * 14.0)
+	_ctr_haze.modulate.a = 0.34 + 0.16 * sin(_time * 0.61)
 	# the splice is LIVE and it knows it: the bead swells just before it lets
 	# an ember go, so the drip has a visible cause instead of arriving out of
 	# a dark ceiling.
@@ -1591,6 +1655,32 @@ func _tick_counter(delta: float) -> void:
 			_ctr_flare.visible = true
 			_ctr_flare.frame = 0
 			_ctr_flare_age = 0.0
+
+
+func _add_rain_splashes(parent: Node2D, at: Vector2, extents: Vector2,
+		amount: int) -> void:
+	## Rain has to LAND. Falling streaks with nothing at the bottom read as
+	## rain in front of a photograph — the world rain has always splashed
+	## (environment_system drops to real ground points), and the menu rain
+	## did not. These sit on the ground band and just appear and fade; the
+	## eye pairs them with the streaks above without them having to be the
+	## same particles.
+	var sp := CPUParticles2D.new()
+	sp.texture = TEX_RAINSPLASH
+	sp.amount = amount
+	sp.lifetime = 0.34
+	sp.preprocess = 0.34
+	sp.position = PC + at
+	sp.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	sp.emission_rect_extents = extents
+	sp.direction = Vector2(0, -1)
+	sp.spread = 0.0
+	sp.gravity = Vector2.ZERO
+	sp.initial_velocity_min = 0.0
+	sp.initial_velocity_max = 0.0
+	sp.color = Color(1, 1, 1, 0.55)
+	sp.color_ramp = _fade_ramp()
+	parent.add_child(sp)
 
 
 func _add_arc(parent: Node2D, at: Vector2, add_mat: CanvasItemMaterial,
