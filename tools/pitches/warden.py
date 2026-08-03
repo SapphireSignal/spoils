@@ -1314,20 +1314,239 @@ def _queue(c: Canvas, rng: random.Random) -> None:
             for q in range(wr.randint(2, 4)):
                 if int(sill(px)) - 1 <= py + q:
                     c.set(px, py + q, C("151d28"))
-    # a tarp lashed over a roof load — the reason it was at the gate at all
-    for x in range(272, 314):
-        u = (x - 293) / 21.0
-        h = int(11.0 * (1.0 - u * u) + 0.5)
-        if h < 1:
+    # ------------------------------------------------------------ the tarp --
+    # A SHEET THROWN OVER A LOAD AND TIED DOWN — the reason it was at the
+    # gate at all. What stood here was `h = 11*(1-u*u)`: ONE mathematically
+    # perfect parabola across the whole span, with the lashings drawn as
+    # plain vertical lines laid on top of it. At zoom it read as a canopy
+    # arch — a bandstand roof, a covered wagon — with painted stripes.
+    #
+    # Two separate causes, and it needed both fixed:
+    #
+    # (a) THE SILHOUETTE WAS A 3px BAND. The old fill was 151d28 under
+    #     202e37 — and the sky behind the roof here is ALSO 151d28, so the
+    #     bottom two thirds of the tarp were the same value as the sky and
+    #     simply were not there. All that survived was a thin curved rib,
+    #     which is exactly the shape of a shell. THAT is the trap in this
+    #     spot and it caught three separate cuts of this rewrite: 151d28
+    #     is invisible here, so nothing in the object is FILLED with it —
+    #     it only ever appears where a fold or a cord steps a 202e37 crest
+    #     down one, deep inside the mass where it cannot touch the sky.
+    #     The sheet is a four-value ladder instead — see the draw loop.
+    #     Total light spent went DOWN: the region is 24.4 mean luminance
+    #     against the old 29.4, and the whole car with it (25.6 vs 26.1).
+    #
+    # (b) THE PROFILE IS AUTHORED CARGO, NOT A CURVE — flat runs joined by
+    #     near-vertical steps, walked from the KNOTS table below. Two
+    #     earlier cuts of this same fix built it from smooth lump
+    #     functions instead and both came back as a MOUNTAIN RANGE; the
+    #     note on the table says why, and it is the single most useful
+    #     thing learned here.
+    #
+    # The lashings BITE: each rope subtracts a local notch from that
+    #     profile before anything is drawn, so the cloth pinches in under
+    #     it, and creases radiate down the fabric from the pinch. No two
+    #     ropes share a depth, a width, a lean or a crease count.
+    #
+    # WHAT THIS BLOCK MAY TOUCH: pixels above the car's roof line, and
+    #     nothing else. Verified by rendering `git show HEAD` and diffing:
+    #     335 pixels changed, bounding box x 267-314, y 473-486. The body,
+    #     wheels, open door, rust, tail-light, boom, booth and road are
+    #     signed off and are bit-identical. The five rng draws the old
+    #     lashing loop took are still taken and thrown away at the bottom,
+    #     which is what keeps the rust and the tail-light identical.
+    tr = random.Random("spoils:pitch:warden:tarp-cargo")
+    TL, TR = 270, 316                     # the sheet's own span, not the car's
+    # THE PROFILE IS AUTHORED AS FLAT RUNS AND STEPS, not as bumps. Two
+    # earlier cuts built it from smooth lump functions — first three, then
+    # four with a broad slab under them — and BOTH rendered as a mountain
+    # range: a smooth function has a single highest point, and a single
+    # highest point in a 10px-tall silhouette is a PEAK. Crates do not have
+    # peaks. They have a flat top and a corner. So the top line is a
+    # piecewise-linear walk through these knots: long near-level runs (the
+    # tops of the things underneath) joined by 2-3px near-vertical steps
+    # (their corners), with the sag between them authored in as a run that
+    # dips and comes back. No two runs are the same length or height and
+    # none of the steps is the same size.
+    KNOTS = ((270, 0.0), (271, 6.0), (274, 6.2), (278, 5.4),   # over the back
+             (279, 9.1), (283, 9.2), (287, 8.6),               # a crate
+             (288, 5.2), (291, 3.9), (293, 4.4), (294, 5.0),   # slack between
+             (295, 9.9), (301, 10.1), (305, 9.4),              # the tall one
+             (306, 7.2), (308, 7.6), (309, 5.0),               # a step down
+             (313, 4.7), (314, 1.4), (316, 0.0))               # over the front
+    LASH = (                              # (x, bite, reach left, reach right)
+        (275, 1.2, 2.6, 1.8),             # each rope pulls a different depth
+        (284, 1.8, 1.8, 2.9),             # over a different width and leans
+        (299, 1.4, 2.2, 1.7),             # its own way. NARROW AND SHALLOW:
+        (309, 1.0, 1.6, 2.4),             # the first cut bit 2.7px out of an
+    )                                     # 8.8px crate and split it into two
+                                          # humps, which put the mountain range
+                                          # straight back. A rope dents cloth,
+                                          # it does not cut the load in half.
+    SLACK = tuple(range(288, 296)) + tuple(range(311, 316))
+    span = list(range(TL, TR + 1))
+    prof = {}
+    for x in span:
+        for i in range(len(KNOTS) - 1):
+            (ax, av), (bx, bv) = KNOTS[i], KNOTS[i + 1]
+            if ax <= x <= bx:
+                t = (x - ax) / float(bx - ax)
+                prof[x] = av + (bv - av) * t
+                break
+    knots, kx = [], TL - 2               # a low-frequency wander so no run is
+    while kx < TR + 8:                   # dead level — knots every 4-7px,
+        knots.append((kx, tr.uniform(-0.30, 0.26)))   # smoothstepped between.
+        kx += tr.randint(4, 7)                        # NOT per-pixel noise.
+    for x in span:
+        for i in range(len(knots) - 1):
+            (ax, av), (bx, bv) = knots[i], knots[i + 1]
+            if ax <= x <= bx:
+                t = (x - ax) / float(bx - ax)
+                prof[x] += av + (bv - av) * (t * t * (3.0 - 2.0 * t))
+                break
+    for (lx, bite, lw, rw) in LASH:                # the bite, before drawing
+        for x in span:
+            d = (x - lx) / (rw if x > lx else lw)
+            if abs(d) < 1.0:
+                prof[x] -= bite * (1.0 - abs(d)) ** 1.35
+    sm = dict(prof)           # CLOTH ROUNDS A CORNER. One light pass, which
+    for x in span[1:-1]:      # chamfers every convex corner by about a pixel
+        sm[x] = 0.18 * prof[x - 1] + 0.64 * prof[x] + 0.18 * prof[x + 1]
+    prof = sm                 # and leaves a 3px step nearly 3px steep. Without
+                              # it the steps were dead-square and the object
+                              # read as a row of BUILDINGS, not a covered load;
+                              # at 0.25/0.5/0.25 it ate the sag between the two
+                              # crates down to a single pixel and they merged.
+    for x in span:            # ceiling y=473 is where the OLD crest topped out
+        prof[x] = max(0.0, min(float(int(roof(x)) - 473), prof[x]))
+                              # and the boom's belly is 2px above that. Clamping
+                              # in ROOF space, not to a constant, keeps the gap
+                              # even though the roof line climbs 5px across here
+    # THE FACES, AND THE OBJECT STAYS DARK. A column's values are decided
+    # by the STEP between it and the column to its left, not by how high up
+    # the pixel sits — where the top line falls away rightward that column
+    # is the lit side of whatever is under the cloth and gets as many lit
+    # rows as the step is deep; where it climbs rightward the column is the
+    # shaded side and goes black. Light is the booth window, stage right,
+    # the same key the flank uses.
+    #
+    # The rim is ALWAYS dark and always one pixel: the sky is 151d28 and
+    # the object has to hold its own outline against it. The value goes
+    # UNDER the rim instead. Putting the light ON the rim of every level
+    # run came back as a LIT SKYLINE — pale rooftops standing on black
+    # walls — and that is the second-worst thing this object read as.
+    for x in span:
+        hv = prof[x]
+        if hv < 0.9:
             continue
         r = int(roof(x))
-        for y in range(r - h, r):
-            c.set(x, y, C("151d28") if y > r - h + 2 else C("202e37"))
-        c.set(x, r - h, C("394a50"))
-    for k in range(5):                                # its lashings
-        xx = 276 + k * rng.randint(7, 10)
-        if xx < 312:
-            c.vline(xx, int(roof(xx)) - 7, int(roof(xx)) - 1, C("090a14"))
+        top = int(round(r - hv))
+        step = prof.get(x - 1, hv) - hv            # + = falls away to the right
+        band = 1 + int(min(hv - 2.0, max(0.0, step) * 1.6))
+        deep = top + max(2, int(hv * 0.55))        # four values, top to bottom:
+        for y in range(top, r):                    # a black rim, the lit face
+            c.set(x, y, C("10141f") if y < deep else C("090a14"))
+        c.set(x, top, C("090a14"))                 # under it, the body, and the
+                                                   # skirt going black where the
+                                                   # cloth turns under toward
+                                                   # the roof. A tarp filled
+                                                   # flat in ONE value read as
+                                                   # murk whichever value it
+                                                   # was — 10141f vanished into
+                                                   # the sky, 090a14 into the
+                                                   # car. It needs the ladder.
+        if step < -0.7:                            # a shade face: nothing but
+            for k in range(0, band + 2):           # black, the sheet is turned
+                c.set(x, top + k, C("090a14"))     # away from the window
+        elif hv > 2.6:
+            for k in range(1, band + 1):           # the lit crest, as deep as
+                c.set(x, top + k, C("202e37"))     # the step under it is deep.
+                                                   # NOT 151d28: that is the
+                                                   # sky value, so a lit face
+                                                   # painted in it left the rim
+                                                   # as a dark stripe floating
+                                                   # between two identical
+                                                   # greys and read as nothing.
+    def fold(xi, yy, n):
+        """a crease is a STEP ON THE LADDER the cloth already sits on, never
+        a fixed colour. Painted as a flat 090a14 the first cut vanished the
+        moment it crossed the lower half of the sheet, which is 090a14 too —
+        half of every fold in the object simply was not drawn."""
+        if TL <= xi <= TR and int(roof(xi)) - prof[xi] <= yy < int(roof(xi)):
+            c.set(xi, yy, bump(c.get(xi, yy), n))
+    # SLACK WRINKLES — short soft folds lying across the two spans where the
+    # sheet has nothing under it. They are what separates loose cloth from a
+    # taut skin, and they go nowhere else.
+    for _ in range(5):
+        wx = tr.choice(SLACK)
+        wy = int(round(roof(wx) - prof[wx])) + tr.randint(1, 3)
+        run, sdir = tr.randint(3, 6), tr.choice((-1, 1))
+        for k in range(run):
+            xi = wx + k * sdir
+            yy = wy + (k * tr.choice((0, 0, 1))) // 2
+            fold(xi, yy, -1)                       # DARK ONLY. Giving each
+                                                   # fold a lit shoulder a step
+                                                   # up scattered single light
+                                                   # pixels across the sheet and
+                                                   # came back as dot noise,
+                                                   # which is banned outright.
+    for (lx, bite, lw, rw) in LASH:
+        rtop = int(round(roof(lx) - prof[lx]))
+        for _ in range(tr.randint(2, 3)):          # creases OUT OF the pinch
+            sx = tr.uniform(0.32, 1.15) * tr.choice((-1.0, 1.0))
+            fx, ln = float(lx), int(prof[lx] * tr.uniform(0.6, 1.05)) + 2
+            for k in range(ln):
+                fx += sx
+                xi, yy = int(round(fx)), rtop + 2 + k  # never rtop+1: that row
+                                                       # is the lit crest, and
+                                                       # starting there chewed
+                                                       # the top line to a comb
+                if not (TL <= xi <= TR) or prof[xi] < 1.0:
+                    break
+                fold(xi, yy, -1)
+        lean = tr.uniform(-0.34, 0.30)             # the rope itself, leaning
+        fx = float(lx)                             # its own way, and lifted a
+        for yy in range(rtop, int(roof(lx))):      # step off whatever it
+            xi = int(round(fx))                    # crosses: a cord over dark
+            here = c.get(xi, yy)                   # cloth catches more light
+            c.set(xi, yy, bump(here, 1 if here == C("090a14") else -1))
+            if yy == rtop + 2 and bite > 1.6:      # ONE lit pixel, and only on
+                c.set(xi + 1, yy, C("202e37"))     # the cord pulled tightest
+            fx += lean
+    for j in range(3):        # THE one bright edge in the object, and it is
+        xx = 304 + j          # three pixels long: the tall crate's right-hand
+        yy = int(round(roof(xx) - prof[xx])) + 1   # shoulder, the only face
+        if prof[xx] > prof[xx + 1] + 0.3:          # square-on to the window.
+            c.set(xx, yy, C("394a50"))             # Everything else is dark;
+                                                   # the booth is the subject.
+    # ONE CORNER WORKED LOOSE, at the rear-left where nobody re-tied it: a
+    # peeled flap standing off the load, with sky under it and a torn edge.
+    # It is the cheapest pixel in the object and it does the most — a shell
+    # cannot do this, only cloth can. NOTHING in it may be 151d28: that is
+    # the sky value behind it, and the first cut painted the tip in it and
+    # the flap simply was not there.
+    # It only works if there is SKY UNDER IT. The first cut hung it two
+    # pixels off the cloth and it read as a lump on the same mass; the gap
+    # under the lifted half is now 2-3px of open sky, so the eye can see
+    # daylight where the sheet has come away, and the flap is anchored to
+    # the tarp only at its right-hand end — which is what "untied at one
+    # corner" looks like.
+    FLAP = ((269, -11, -10), (270, -12, -10), (271, -12, -9),
+            (272, -11, -8), (273, -10, -7), (274, -9, -6),
+            (275, -8, -5), (276, -7, -5))
+    for (xx, ya, yb) in FLAP:
+        r = int(roof(xx))
+        for y in range(r + ya, r + yb + 1):
+            c.set(xx, y, C("090a14"))              # its underside, turned away
+        c.set(xx, r + ya + 1, C("10141f"))
+        c.set(xx, r + ya, C("202e37") if xx > 270 else C("10141f"))
+        for y in range(r + yb + 1, min(r, r + yb + 3)):
+            if xx > 273:                           # the shadow it throws on the
+                c.set(xx, y, C("090a14"))          # cloth it has peeled off
+    for (xx, dy) in ((268, -11), (268, -10), (267, -11)):     # the torn teeth,
+        c.set(xx, int(roof(xx)) + dy, C("10141f"))            # two unequal
+    for _ in range(5):        # the old lashing loop's five rolls, spent and
+        rng.randint(7, 10)    # thrown away so the shared stream never moved
     # rust eating the sill, and the dead tail-light glass on the rear face
     for k in range(rng.randint(14, 22)):
         xx = 204 + k
