@@ -41,380 +41,82 @@ chat that dies mid-session still leaves a record.
 
 ---
 
-## 2026-08-02 — the living layers, one scene at a time
+## 2026-08-02 → 08-03 — every backdrop made to move, and four bugs that hid
 
-**Shipped:** **v0.6.32** — the trainyard's living layer, the first of the four
-promoted paintings to get one. Migration re-verified first: `--checksec` and
-`--checkdocs` both green at v0.6.31, tree clean, newest tag matching.
+**Shipped: v0.6.32 → v0.6.44, thirteen releases, plus a README rewrite.**
+Living layers for all six menu backdrops (yard, warden, underpass, counter —
+den and drain already had one), then a second pass making them **noticeable**
+on the user's push. Menu rain rebuilt on the raid's own model. The underpass
+door, its wired glass and two lore notices. Mara's arms, pencil and den
+silhouette; kettle's beard. A new `--film` harness mode. `gen_art` made
+crash-safe. Every base painting stayed byte-identical except where a change
+was explicitly asked for, and each of those diffs is quoted in `CHANGELOG.md`.
 
-**The user's words:** *"im here for the migration, then let's do the living
-layers for backdrops 2-5"*.
+**The user's words** (the whole day is in `docs/sessions/2026-08-03.md`):
+- *"these living layers are very minimal, can we add some more to it, to every
+  backdrop, i want it to be noticable"*
+- *"dont just amp up the current ones, find new ones on the screen and create
+  some, like some flcikering lights, or some pole lines sparks coming off
+  them"* — **this is the sharper half of the brief and the one to keep.**
+- *"i dont see any rat"* / *"the birds arent moving, they are in the same spot
+  the whole time"* / *"they are on the thing on the right, they should be in
+  the sky"*
+- *"i meant like the actual raindrops coming down on the screen should
+  physically hit something on the screen, so remove that water stuff on the
+  ground and do what i wanted"* — *"we already have that system in our raids"*
+- *"lets keep both the backdrops for now, no harm"* (on the drain/underpass
+  camera angles being similar — they ARE, it is a base-art issue, not acted on)
+- *"and about that rule, what if the fix needs more rebuild in order to work?"*
+  → answered: **the rule is not "never rebuild more", it is "never rebuild more
+  SILENTLY". Say what will move, get a yes, then prove the rest did not.**
+- *"also make mara skinnier in the den backdrop"*, *"give kettle a beard"*,
+  *"make a rectangle see through glass on there and show some blood splatter"*
+- *"ill tell you when to be scarce"* — do not self-ration context unasked.
 
-**How it was done, and this is the pattern for the remaining three:** the
-overlays are built at the END of `make_scene_yard()`, after every base draw
-and **taking no rng draw**, so the approved painting comes out bit-identical —
-proven by hashing all six backdrops before and after the regen, not assumed.
-Every anchor came out of the docstring's own landmark list (`SIGNAL_LENS`,
-`CAB_LED`, `FAR_LED`, `PUDDLE`, `DRIP_SRC`), and each was confirmed against
-the actual pixels before anything was built.
+**Learned. Every one of these is now a standing rule in `CLAUDE.md`** — go
+there for the full text, this is the index:
+- **Never round a position you then read back to accumulate.** Killed the birds
+  AND the rat: at 240 fps a 34 px/s walk is 0.14 px a frame and the round puts
+  it straight back. Both read as "it isn't there", not as a rounding bug.
+- **Every new element must beat the background it lands on — measured.** Failed
+  four times in a day (far signal eye, underpass drip, rat, birds).
+- **Check whether the UI is on top of it.** The birds flew at screen row 464,
+  inside the "play" button.
+- **`modulate` MULTIPLIES**, so "force it bright to see if it renders" does not
+  work on a dark sprite. Swap the TEXTURE instead.
+- **Do not answer "why is X not showing" with a theory. Measure.** I gave two
+  confident wrong answers about the birds and the user rejected both, correctly.
+  And you cannot diff a shot against the BAKE for this — the vignette darkens
+  everything and swamps the signal. Diff CONSECUTIVE FILM FRAMES.
+- **Delete the indirection rather than bisecting it.** The birds only worked
+  once the two-state + gate logic was thrown away for one flat loop.
+- **Release order: bump docs → commit → TAG → smoke → push** (user's call).
+- **`gen_art` deletes before it writes** — fixed in v0.6.44 so it purges at the
+  END, proven by planting a crash (528 PNGs before, 528 after).
 
-**Learned — five things the render caught that the code could not:**
-- **A GLOW'S SIZE IS THE WHOLE READ.** 72 px with a 210-alpha core painted a
-  pale disc bigger than the signal head: it read as a MOON rising behind it.
-  34 px with a 2 px core reads as a lamp. Same maths, same colours.
-- **`CPUParticles2D.color` MULTIPLIES the texture.** `rain_streak` is already
-  a 3c5e8b at 20-76% alpha; tinting it 577277 as well took it to (20,42,65)
-  at a quarter alpha and the drizzle rendered *invisible*. Use white.
-- **ADD CANNOT MAKE A WARM THING WARM OVER A BLUE ONE.** The puddle glint is
-  additive gold over a baked 253a5e, and every pixel of it measured warm
-  while the streak as a whole read as a cold grey smudge — because addition
-  can only push a blue base toward grey. Normal alpha REPLACES, so the gold
-  survives. Add is light in air; a reflection on a surface is not that.
-- **AN ODD-SIZED SPRITE LANDS ONE PIXEL UP-AND-LEFT.** `dust.png` is 3×3, and
-  a sprite centred on P rasterises its middle texel onto P-1. Both indicator
-  lamps sat a pixel off their own baked lenses. Measured, corrected, measured
-  again — the anchors in the script are now the docstring's plus that offset,
-  and it is commented so nobody "fixes" it back.
-- **A LIGHT MUST BEAT ITS OWN BACKGROUND, NOT ITS OWN COLOUR.** The far
-  signal's eye is baked 752438 against a `de9e41` SUNSET, so a red lamp there
-  is *darker than its sky* and reads as a speck of dirt. It is additive; the
-  cabinet's lens, on grey steel, is not. Check a light against what is BEHIND
-  it — the same lesson the car tarp taught, in the other direction.
+**What went wrong that is worth saying plainly:** the birds cost most of a
+session — four wrong explanations, an invalid test, and several scans that
+measured wires and rain instead of birds — before anyone cropped the flight
+path and looked at it. **Looking should have been the first move, not the
+fifth.**
 
-**Also worth knowing:** the drizzle is confined to the LEFT of the frame and
-leans only 0.06, because at the wires' 0.16 the bottom-most streaks drifted
-94 px right over their fall and walked into the button band. And a shot is
-taken 40 frames in, so the eave drip is always caught mid-flight — the SPLASH
-was proven separately by temporarily flying the drip at 2600 px/s, shooting,
-and reverting (verified reverted by grep, not by memory).
+**And the docs lied twice while both gates printed PASS** (third session
+running): `DESIGN.md` still described a TWO-backdrop menu with the others as
+unwired pitches, thirteen releases out of date; `CLAUDE.md`'s menu node count
+still read ~818 when it is 1717 (not a leak — ~740 of those are rain sprites).
+Both fixed. A check cannot verify a sentence.
 
-**Then v0.6.33 — THE WARDEN'S GATE.** His desk lamp and the pool of light out
-on the wet road breathe on **one shared value**, which is what finally makes
-that pool read as light coming out of his window (the review note on this
-painting was that nothing joined the two). A moth works the lampshade on a
-rounded elliptical orbit with three wing frames, and the lamp **guts for
-0.16 s when it touches**, every 5-11 s rather than every pass. The fuse box
-pilot, dead in the bake at (810, 268), wakes on a period that divides into
-nothing else in the frame. **And he blinks** — a 28×3 overlay laid exactly
-over rows 253-255, x 662-668 and 683-689, the pixels his open eyes occupy,
-with the bridge of his nose left transparent between them. Verified by
-forcing it on, shooting, and comparing against the bake; reverted by file
-restore and confirmed by grep.
-
-**Two more things learned on the warden:**
-- **`dust.png` IS A PLUS, not a dot** — full-alpha centre, four neighbours at
-  90, empty corners. Dense and overlapping it reads as smoke (the den); ringed
-  round a lens it reads as a glow (every LED so far). But SIX of them drifting
-  alone over the ledger each read as a little four-pointed **star**. The dust
-  field was cut after seeing it, not before. If you want sparse motes anywhere,
-  you need a different texture.
-- **A HARNESS SHOT LANDS ~0.17 s IN, and that is close enough to t=0 to catch
-  a blink.** His eyes were shut in the first two shots and I read the frames
-  as "open" without checking. The blink phase now carries a +2.0 so the scene
-  opens with his eyes open — and the lesson is that comparing two SHOTS is
-  worthless when a breathing light is in frame, because everything lit differs
-  between them. Compare a shot against the BAKE.
-
-**Then v0.6.34 — THE UNDERPASS.** The sodium tube is failing: a steady burn
-with a short **stammer** punched through it every 7.4 s, and the bar, the wall
-halo behind it and the pool on the walkway all take **one value**, because a
-lamp whose reflection keeps burning while the lamp is out is two lamps. Three
-ceiling leaks drip from the portal beam (y 108) into the flood (y 406) and push
-a broken 3-frame ring out of the water.
-
-**Two things worth carrying forward:**
-- **THE PITCH NOTE'S THIRD DRIP COLUMN WAS WRONG and the code said so.** It
-  proposed x = 300, 596 and **736** — but the walkway starts at x 604, so a
-  drip at 736 lands on the kerb and the sandbags and would push a ripple ring
-  out of concrete. Moved to 262 / 372 / 592, all over open water (the sunken
-  car owns x < 230), all outside the button box. **A docstring's suggestion is
-  a suggestion; check it against the geometry the same file computes.**
-- **I HIT THE MODULATE-MULTIPLIES TRAP AGAIN, two versions after writing it
-  down.** The drip was tinted 577277 over `rain_streak`'s own 3c5e8b, giving
-  (20,42,65) — darker than the 202e37 wall it falls down, so it rendered as
-  nothing. Knowing a rule is not the same as applying it.
-- **And most of an hour went on a verification that was wrong, not a bug.**
-  The overlays looked absent because the shot happened to land inside the
-  tube's 0.44 s stammer, so every light in the scene was at 16%. The fix was a
-  `print` in the tick — three lights, alpha 0.90, ring age 0.11 — followed by
-  a FULL-FRAME diff that found them all exactly where they belonged. **When a
-  point-sample says an overlay is missing, diff the whole frame before
-  believing it**, and remember anything on a stutter has phases where it is
-  legitimately invisible.
-
-**Then v0.6.35 — MARA'S COUNTER, and that is ALL SIX BACKDROPS MOVING.** Here
-the **COLD** light is the one that breathes — the drafting box under her map —
-while the work lamp holds steady, which is the opposite way round to every
-other lit scene and is the whole point of this one. The taped splice's pilot
-bead swells over the 1.2 s before it lets an ember go, so the drip has a
-visible cause, and the ember falls slowly, **dimming as it goes**, into the
-parts tin, where it flares on a scorch ring the bake has carried all along.
-**She does not blink** — her eyes are drawn looking DOWN at the map, lid lines
-with no white showing, so there is nothing to close.
-
-**Learned here:**
-- **`_build_scenes()` IS ONE SCOPE, TOP TO BOTTOM.** `var motes` for the
-  counter collided with the drain's emitter 300 lines above and the whole
-  script failed to parse. It was caught only because the run printed
-  `Failed to load script` — the shot still saved, and the frame still looked
-  plausible. **Read the run's output, not just the picture.**
-- **ADDITIVE IS NOT AUTOMATICALLY RIGHT FOR A HOT THING.** The ember's flare
-  is the one light in this scene that is NOT additive: added over the tin's
-  baked 602c2c, `e8c170` clips to a near-white c9c9c1 and reads as an
-  electrical spark. Drawn normally it stays gold and reads as hot metal.
-- **A DOC ANCHOR WAS WRONG AGAIN** — the docstring put the live pilot bead at
-  (838, 246); `_cables` sets it at (837, 252). Fixed in place. That is three
-  scenes out of four where the pitch note's coordinates did not survive
-  contact with the code.
-
-**Then v0.6.36 — THE SMOKE TEST WAS FLAKY, and I nearly shipped past it.**
-v0.6.35's smoke printed `walked through closed doors: #0 off -8 side 1`. The
-commit had changed **no world art at all** (verified with `git show
---name-only`), so I re-ran it and it PASSED — and my first instinct was to
-treat that as the answer. The user asked "smoke fail why?", which is the only
-reason it got chased. **~2 failures in 5 runs, a different door each time.**
-
-**The cause:** the check shoved the player at a door, `await`ed a frame, and
-only then read the position. `player.gd:311` runs `move_and_slide()` **every
-rendered frame**, and that depenetrates a body the shove left flush against a
-collider — so the read was of the player's own recovery, and which side it
-popped out on came down to float error in a sub-pixel overlap. `_shove` uses
-`move_and_collide` and writes `global_position` synchronously, so the answer
-is ready the instant it returns. It is read there now. **8 consecutive passes**
-after the change (0.6^8 ≈ 1.7% by luck at the old rate).
-
-**A second real bug found on the way, which was NOT the cause:**
-`test_move(xform, Vector2.ZERO)` with `recovery_as_collision` left at its
-default `false` reports *clear* for a body already inside geometry — a
-zero-length sweep does not count depenetration as a collision. So the
-"only measure from a start that is actually CLEAR" guard directly above it
-had never rejected anything. Fixed too. **Fixing it alone did not stop the
-flake**, and that failed run is what sent me looking at the right thing.
-
-**The lesson, and it is the sharpest one of the session:** a flaky mandatory
-gate is worse than no gate — it teaches whoever hits it to run it again
-instead of reading it. I did exactly that for one run.
-
-**Then v0.6.37 — THE LIVING LAYERS WERE TOO MINIMAL, and the user said so.**
-*"these living layers are very minimal, can we add some more to it, to every
-backdrop, i want it to be noticable"*, then the sharper half: *"dont just amp
-up the current ones, find new ones on the screen and create some, like some
-flcikering lights, or some pole lines sparks coming off them"*.
-
-**THE MOST USEFUL THING BUILT THIS SESSION IS `--film`.** A living layer is
-MOTION and a still cannot show it — I judged all four of v0.6.32-35 off single
-frames and every one of them was too static. The first film settled it in one
-number: **the underpass changed under 0.5% of the screen in 38 of 47 frames.**
-It was a photograph with a lamp in it. Frames go to `shots/film_<name>/`
-(gitignored), ffmpeg turns them into a GIF, and the user can actually see it.
-**Send GIFs for anything animated from now on, never a screenshot.**
-
-**Also learned about that metric, the hard way:** it downsamples bilinearly,
-which averages 2 px rain streaks away — so the four scenes whose main addition
-is rain or sparks barely moved on the number while the rain is plainly visible
-in the frames. **It detects a dead scene reliably and does not grade a live
-one.** Do not tune to it.
-
-**A real bug the user found before I did:** rings appeared on the drain's water
-with nothing falling into them. The two ripples had their own random timers and
-only one was ever caused by a drip. Now four drips, four ripples, PAIRED BY
-INDEX — a ring is only ever something landing. The drip also fell at 900 px/s,
-crossing the frame in under half a second; you could watch for a minute and
-never catch one. Now 470.
-
-**And a self-inflicted one worth remembering: NEVER "replace everything
-between marker A and marker B" WITH A SCRIPT.** Rewriting `_tick_drain` that
-way silently deleted `_tick_yard`, `_tick_warden`, `_tick_underpass` and
-`_tick_counter`, because they lived in that range. The assert I wrote only
-checked the START of the block. It was caught by a parse error and restored
-from HEAD. Assert on what you are DELETING, not on what you are looking for.
-
-**Then v0.6.38 — the user's playtest of v0.6.37, taken point by point.** The
-drain leaks from the MANHOLE now (four drips off the rim, one fat and slow,
-every landing blowing a bubble — two bubble sizes DRAWN, because runtime
-scaling of pixel art stays banned); the sluice sheet reaches the channel
-instead of stopping in mid-air; the water chop fades out at its edges because
-it read as a literal RECTANGLE; rain LANDS in the yard and at the gate, reusing
-the world's own `rain_splash.png`; and SCENE_SECONDS went 10 → 15.
-
-**The bad half hour: a duplicate `make_rain_splash()`.** gen_art already had
-one — the world rain's ground splash — and Python silently keeps the LATER
-definition, so my copy was dead and `assert_palette` got an `Image`. The build
-died AFTER `main()` had purged `art/gen`, which leaves the project unloadable
-until you fix it and re-run. **In a 17,000-line generator, grep for the name
-before writing a new one**, and remember gen_art deletes before it writes.
-
-**STILL QUIET AND THE USER SAYS SO: `counter` and `yard`.** Both measure
-~0.25-0.30% mean change, ~50 still frames in 59. Their additions were rain and
-sparks, which the metric under-reports — but the user's eye is the authority
-and their read is that these two are the quietest. **Next for them: a real
-moving OBJECT each, not another light** — the counter's hanging tag row is the
-obvious one, and the yard wants something crossing it.
-
-**AN OPEN COMPOSITION NOTE, NOT ACTED ON:** *"the drain and the underpass are
-really similar, like the shot angle, i dont know but just seems a bit odd"*.
-They are right — both are side-on tunnels with water along the bottom and a
-light source high on the right. That is a BASE-ART problem, not a living-layer
-one, and fixing it means repainting one of them to a different camera. It
-needs their call before anyone starts.
-
-**Then v0.6.39 — OBJECTS, not more light, on the two scenes that stayed quiet.**
-The user kept both tunnel backdrops (*"lets keep both the backdrops for now, no
-harm"*) and said *"yes continue with maras counter and trainyard"*. The yard
-gets three birds crossing the sunset on staggered clocks, FIVE arcs on the pole
-lines instead of two (bigger sheet, hotter core, firing every 1.4-4.5 s — *"make
-the trainyards sparks from the poles more noticable, and make more of them"*),
-and nine 2×2 lit windows flickering on the far skyline (*"maybe some little
-windows on some buildings in the background of the trainyard, and have them
-flicker a bit"*). The counter gets a rat crossing its empty left third.
-
-**Every window cell and every arc point was read OUT OF THE BAKE** — silhouette
-with sunset behind it, or an actual wire pixel. A lit window floating in open
-sky is precisely the "anchor points at nothing" failure this project keeps
-repeating.
-
-**The motion metric now lies in the other direction.** The yard and counter
-still measure ~0.3% mean change, because a bird is 7×5 px and a rat 11×8 —
-0.006% of the frame each. It under-reports small objects exactly as it
-under-reports rain. **It detects a dead scene and grades nothing.** Judge these
-off the films.
-
-**OPEN AND NEXT: TASKS.md B0, mara's arms and the pencil.** *"in maras counter,
-shes not holding the pencil right, like its not in her hands. also make her
-arms not square and a bit smaller"*. That is BASE ART — `make_scene_counter`,
-and its hash will change, which is fine because it is asked for. **Constrain it
-to the complaint and prove the rest with a diff**: only the pencil grip and the
-arms' width profile may move; face, hair, headset, jacket, ledger, light box,
-counter and both light pools must come out pixel-identical. A pass that
-rebuilt more than was complained about has already been rejected once here.
-
-**Then v0.6.40 — RAIN THAT LANDS, and two wrong answers.** The menu rain is
-now built on `environment_system.gd`'s model rather than a particle system:
-each drop carries its own ground row, falls to it, dies there and splashes at
-that exact spot. The user's phrasing was the spec — *"the actual raindrops
-coming down on the screen should physically hit something on the screen"* —
-and the v0.6.39 attempt (a second particle system of splash marks lying on the
-ground band) was removed entirely because it had no relationship to any
-individual streak. **The yard went from 61 still frames in 71 to ZERO.**
-
-**The part worth carrying: I gave the user two confident wrong answers in a
-row** about why the trainyard's birds had stopped showing — first that they
-were drawn against too similar a value, then that the rain was out-competing
-them. They rejected both, correctly. A ten-line check then showed the birds
-rendering and moving in **93 of 95 frames**. Neither theory survived contact
-with a measurement that took two minutes. Both lessons are now standing rules
-in CLAUDE.md, including the technique: **you cannot answer "why is X not
-showing" by diffing a shot against the BAKE**, because the vignette darkens
-every pixel and swamps the signal — diff CONSECUTIVE FILM FRAMES instead.
-
-**The other standing rule added:** every new element must beat the background
-it lands on, MEASURED. That failed four times in one day — the far signal's
-eye, the underpass drip, the rat, the birds — and every time the code was
-perfect and the thing was invisible.
-
-**Then v0.6.41 — THE BIRDS WERE BEHIND THE BUTTONS.** They flew at painting
-y 234, which is screen row 464, which is inside the "play" button. Most of
-every crossing happened behind the menu; only the gap on the right ever showed
-one. They fly at y 219-227 now, above the button band and over the skyline
-whose windows flicker.
-
-**This cost far more than it should have, and the reasons are all recorded in
-CLAUDE.md now:** I offered two theories the user correctly rejected, then ran
-a "force the sprite magenta" test that proved nothing **because `modulate`
-MULTIPLIES — magenta over a near-black sprite is still near-black**. The same
-multiply had already hidden the drizzle, the underpass drip and the rat. What
-finally found it was cropping the flight path and LOOKING at it, which should
-have been the first move rather than the fifth.
-
-**Also v0.6.41 — mara's pencil and forearms, and the constraint was PROVEN.**
-The pencil is drawn BEFORE the hand now so her fingers close over the shaft;
-it used to be drawn after, up and right of her hand, pointing away, touching
-nothing. `limb()` stamped an axis-aligned `c.rect` at every step, which is
-literally why the arms read as planks — it sweeps a rounded section now, wrist
-8 -> 6, bulge 2.2 -> 1.2. **Diffed against the previous commit: the only
-changed region is x 597-766, y 345-417. Her face and hair/headset diff to
-None.** That is what the "constrain the fix and prove the rest" rule asks for,
-and the user's own question about it — *"what if the fix needs more rebuild in
-order to work?"* — has a straight answer: **the rule is not "never rebuild
-more", it is "never rebuild more SILENTLY". Say what will move, get a yes,
-then prove everything else did not.**
-
-**Then v0.6.42 — THE UNDERPASS DOOR, AND THE BUG BEHIND TWO "I CAN'T SEE IT"
-REPORTS.** `position = roundf(position + speed * delta)`. At 240 fps a 34 px/s
-walk is **0.14 px a frame**, so the round put it straight back and the sprite
-never moved at all. The counter's rat did this and sat off-screen at painting
-x 24 forever; the birds did it and hung in the sky. Neither looked like a
-rounding bug — they looked like "it isn't there" and "it isn't moving", and
-between them they cost most of a session. **This is rule 1 restated** and it
-is now in CLAUDE.md in those words: keep the TRUE position in its own float
-and round only what you assign to `position`. `_tick_rain` and the moth were
-already correct and were the only two that were.
-
-**The door was always a door.** `dx0, dx1 = 826, 898` — a bricked-up service
-doorway, which is exactly why the user read it as one and then found nothing
-door-like in it. It has a leaf, ribs, hinges, a kick plate and a lever handle
-now. **The brick infill is left in place and painted over**, because its loop
-takes two rng draws per course and deleting it would have re-rolled the chalk
-dog and the whole soffit downstream.
-
-**Two lore notices beside it** — a transit shelter sign pointing down into the
-underworks (LORE 4) and a wardens' cordon notice (LORE 2). **And a placement
-trap worth keeping: I measured a patch of wall as empty and drew on it, and it
-was entirely OFF SCREEN.** The viewport shows painting x 60-900 of a 960-wide
-painting — 60px is cropped off each side. Measure for empty AND check it is
-inside the visible window.
-
-**Then v0.6.43 — glass in the underpass door with blood on the far side, and
-kettle's beard.** The glass works by ORDER: room-dark, then spatter on the far
-face, then the mesh, then the reflection LAST — that final layer is what puts
-the blood behind the glass. Kettle's beard was always drawn and always read as
-a bare chin; what fixed it was a shadow against the cheek, a ragged bottom and
-strands, not a different colour. Both diffs are confined and quoted in the
-changelog.
-
-**`x ** 0.5` RETURNS A COMPLEX NUMBER FOR NEGATIVE x**, and that killed the
-build *after* `main()` had purged `art/gen` — the second unloadable-project
-crash of the session, both from a generator raising mid-run. **gen_art deletes
-before it writes**, so any exception in it leaves nothing on disk. Clamp the
-bracket.
-
-**Then v0.6.44 — A BAD DRAWING CAN NO LONGER EMPTY `art/gen`.** `main()` used
-to delete every PNG up front and then regenerate, so any exception part way
-through left the folder empty and the project unloadable. It happened TWICE in
-one day, both times from a two-line art bug (a duplicate function name; then
-`x ** 0.5` on a negative x returning a complex number). The run now writes
-everything and purges untouched files at the END. **Proven by planting a
-RuntimeError mid-run and counting: 528 PNGs before, 528 after.** The user's
-question — "it would just break the game for the user?" — has a clear answer
-and it is worth repeating to them: no. `art/gen` is committed, players never
-run the generator, and a build with missing art does not load, so `--smoke`
-fails and it cannot be pushed. The cost was a dev loop stopping dead.
-
-**A DOC AUDIT ON THE WAY OUT, because the user asked "everything updated?"
-and that is the one question this project has learned not to answer from
-memory.** All 13 releases (v0.6.32-v0.6.44) check out in the in-game list, in
-CHANGELOG.md and as git tags, and both gates are green. **Two prose claims
-were stale and neither gate could see either:**
-- **DESIGN.md still described a TWO-backdrop menu**, called the other four
-  "pitches ... NOT wired in", and gave `--backdrop` as valid 0-1. True at
-  v0.6.29, wrong from v0.6.30 on — thirteen releases of drift in the document
-  that is supposed to be the source of truth for what we are building.
-- **CLAUDE.md's menu node count** still read ~818 nodes / 3362 objects at
-  v0.6.26. Measured today: **1717 / 4410**. Not a leak — the living layers
-  added ~740 rain sprites alone — but a number nobody could reproduce is
-  exactly what that section warns against, and it had doubled.
-
-Both fixed and the reason written into each. **This is the third audit in
-three sessions to find prose defects while both gates printed PASS.** Stop
-expecting that to change: a check cannot verify a sentence.
-
-**Picked up at:** **nothing is in progress.** A1 in TASKS.md is now DONE — all
-six backdrops exist and all six live. The next items in that list are the
-in-game map screen and the map-select tile; **M2 (guns) still waits on the
-user's explicit "go"**. `tools/pitches/` can be deleted whenever — the
-promoted copies in gen_art.py are what ship. All gates green.
+**Picked up at: NOTHING IS IN PROGRESS.** Tree clean, everything pushed, all
+gates green at v0.6.44, leaks flat, 240 fps in a raid and 245 on every menu
+backdrop. `TASKS.md` is accurate and is the work list. The two most useful
+next moves are **B4, the smoker on the bench** (small, queued longest) or
+**real 2D shadows** (biggest visual change left, and it kills the
+flashlight-through-walls bug at the same time). **M2 — guns — still waits on
+the user's explicit "go".** One open note nobody has acted on: the drain and
+the underpass share a camera angle and the user has parked it deliberately.
 
 ---
+
 
 ## 2026-08-02 — four backdrops auditioned, and the den and drain repainted
 
@@ -573,212 +275,24 @@ backrest, move the ground item off his head. Then the LZ green smoke (B4b).
 
 ## 2026-08-02 — the migration works; the docs still lied in ~50 places
 
-**Shipped:** No game changes, no version bump — still v0.6.25, all five
-version sources agree. A migration re-verification that turned into the
-second docs audit in two days. **~45 unique defects fixed across 16 files**
-(CLAUDE.md 10, gen_art.py 8, DESIGN.md 7, environment_system.gd 2,
-world_builder.gd 4, harness.gd 4, TASKS.md 3, LORE.md 2, plus README,
-CHANGELOG, extraction/authority/interior_light/night_freight/radio and the
-autosave log's header note). New **TASKS.md C5**. Art regenerated to a
-byte-identical manifest, proving no rng draw was disturbed.
-
-**The user's words:** *"im here for migration"*, then *"yes go, do the
-smoker"* — which they interrupted twice to ask instead for *"verify again
-that the migration all worked and everything is good"*. On the audit taking
-a while: *"critic is taking a long time, whats going on"*. Offered a choice
-between fixing the load-bearing subset or all of them, they chose **fix all
-~50 first**, ahead of the smoker.
-
-**Learned:**
-- **BOTH GATES PRINTED PASS THROUGHOUT. AGAIN.** Second audit, second time.
-  `--checksec`, `--checkdocs` and `--smoke` were green before, during and
-  after. Treat green as "nothing mechanical is broken", never as "the docs
-  are true".
-- **The last session fixed the .md files and some comments, and missed a
-  third copy of the camera-clamp lie** at `world_builder.gd:3822` — 3,800
-  lines below the header it did fix. Same lie, same file, still claiming a
-  clamp the user had explicitly removed.
-- **"FIX ONE COPY, LEAVE THE TWIN" IS THE DOMINANT FAILURE MODE, and I did
-  it myself mid-session.** I corrected DESIGN.md's render model in one place
-  and left its twin at line 185 saying "letterboxed" — creating a fresh
-  self-contradiction while fixing a contradiction. The weather statistic
-  lived in CLAUDE.md *and* CHANGELOG.md. **Every number in these docs
-  exists in two or three places: grep the VALUE across all seven docs and
-  the .gd/.py comments before calling a fix done.**
-- **The old entry below has the RENUMBERING ORDER INVERTED.** It says
-  v0.6.15→v0.6.25 shipped and "then" the history was renumbered. Verified
-  the opposite: `f8e83ae` ("renumber the whole release history, evenly") is
-  the direct PARENT of `3831421` (v0.6.15). The renumber came **first**, and
-  those eleven releases were minted on numbers it had just freed. **So
-  v0.6.15…v0.6.25 exist TWICE in this history** — as pre-renumber tags
-  (remapped to v0.2.13…v0.3.8) and as today's live releases. Do NOT look
-  today's v0.6.15+ up in `tag_commits.json`. Corrected here, not edited
-  there — the chain is append-only.
-- **The leak baseline had drifted and no gate could see it.** CLAUDE.md
-  claimed 932 nodes / 3585 objects; measured 814 / 3354. The *conclusion*
-  (no leaks, orphans 0, flat) held — only the figures rotted, in the one
-  place the file insists numbers live so they "cannot drift apart".
-- **Wrong-fact, not wrong-action.** Nothing found would destroy data — no
-  repeat of the phantom "stash file". The danger this time was traps that
-  waste a session: a `--extract=` flag that does not extract, a `Q engine`
-  key that does not exist, `~62% of sidewalks` whose 0.62 grep lands on
-  trainyard boxcar spacing.
-- **Three things the docs OVERCLAIMED about `--checksec`**, now written
-  down: only 2 of its 7 lists are allowlists that fail closed (the rest are
-  denylists that fail open); `harness.gd` is exempt from the network scan;
-  and with no `.git` it returns `SEC PASS` having asserted **nothing**.
-- **TASKS.md C1 was work that no longer existed** — the changelog rewrap
-  shipped in v0.6.16. Parsed all 100 entries: zero wrapped fragments remain.
-  Its stated proof ("v0.2.4's three bullets become two") is unreproducible;
-  v0.2.4 has two bullets and the first is 269 characters.
-- **A 66-agent audit is not self-certifying.** 50 of 55 candidates survived
-  adversarial verification — a rate high enough to distrust. Two findings
-  looked contradictory on weather; working the Markov chain out by hand
-  showed they measured different things (branch weights vs time-share) and
-  both were right. **Spot-check the audit before believing the audit.**
-
-**Picked up at:** **The smoker on the bench (TASKS.md B4)** — untouched,
-nothing blocked. Rebuild him from the PLAYER's character sheet so his
-shading matches, black hat to tell him apart, bigger smoke, seat him on the
-bench BELOW facing away from the backrest, and move the ground item over his
-head. Then the LZ green smoke (B4b). All gates green, tree clean at v0.6.25.
-
----
+*(compressed — the ritual says entries older than the newest three drop to a
+few lines, and every fix below is in the repo now.)* No version bump, still
+v0.6.25. **~45 unique defects fixed across 16 files.** Both gates printed PASS
+throughout — second audit running. Dominant failure mode: **"fix one copy,
+leave the twin"** — the same false fact repeated in another file. All of it was
+wrong-FACT, never wrong-ACTION; nothing found could have destroyed data.
 
 ## 2026-08-02 — the migration was broken and both gates said PASS
 
-**Shipped:** No game changes. A migration session that turned into a docs
-audit. Fixed **14 confirmed defects** across `CLAUDE.md`, `DESIGN.md`,
-`TASKS.md`, `README.md` and the `sfx.gd` header, plus a new **DOCS THAT LIE
-ARE THE LIVE RISK** section in CLAUDE.md's SAFETY & TRUST block. No version
-bump — nothing in the game changed, so all five version sources still agree
-at v0.6.25.
-
-**The user's words:** *"i want my game to be secure, and the migrations to
-work"*. On persisting it: *"ok, so make sure thats saved somewhere"*, then
-the autosave idea — *"cant we just save everything in real time in the repo
-so we will always have it? like this message i send you right now cant it be
-instantly logged somewhere in the repo, its like an auto save"*. On the
-hardening: *"yes go, make it fail"*. Finally *"yes just do whatever you think
-is best"*.
-
-**Learned:**
-- **`godot_console` RESOLVES TO NOTHING on this machine.** Not on PATH, no
-  alias, no shim, no shell profile exists. It appeared 12x, including as the
-  **first two commands at the top of `CLAUDE.md`** — so the documented
-  migration was unrunnable, and had been for a long time. The top block is
-  now the full exe path; the shorthand is defined once beneath it. PowerShell
-  needs backslashes and the Bash tool needs forward slashes, because
-  `.claude/settings.json` allowlists them as two separate rules.
-- **BOTH GATES PRINTED PASS THROUGHOUT.** That is the headline. A green
-  `--checkdocs` never meant the docs were true.
-- **A check cannot verify prose, ever.** `DESIGN.md` said the boot scene is
-  the menu (it is the splash), said the map is 320×320 (it is 256×256), said
-  4 menu backdrops and `CLAUDE.md` said 3 (there are **2**; the storm was
-  retired 2026-08-01). All claims, none testable by a script.
-- **One doc instruction would have destroyed user data.** `DESIGN.md` told
-  every session that smoke runs "pollute the persisted stash file" under
-  `%APPDATA%\Godot\app_userdata\` and to clean up after test batches. **There
-  is no stash file** — that folder holds the user's real keybinds, resolution
-  and volumes. No adversary needed.
-- `TASKS.md` B3 sent a grep to `WALL_STYLES`, which does not exist. It is
-  `BRICK_STYLES` (gen_art.py ~621).
-- **The last session's open permissions question is ANSWERED: `git tag -f`
-  works now.** Tested on a throwaway local tag, then deleted. Project
-  allowlist covers force ops; no need for `bypassPermissions`.
-- **`--checkdocs` HAD a real hole** — it scanned only 3 of 7 docs for bad
-  paths and tested nothing about whether a documented COMMAND resolves, which
-  is how the top-of-file migration block stayed unrunnable behind a green
-  gate. **Closed later in this same session; see the hardening below.** What
-  is still true, and is now stated honestly in CLAUDE.md rather than
-  overclaimed: it is blind to BACKSLASH paths (`python tools\gen_art.py` is
-  not covered), it resolves absolute `.exe` paths only, and it cannot verify
-  prose at all.
-
-**Then `--checkdocs` was hardened, and every part fire-tested.** It is now
-five parts: (0) the docs it reads exist and are non-empty — before this,
-DELETING a doc made every check scan nothing and pass silently; (1) DESIGN.md
-as an **optional** version claim — state none and it never fires, state one
-and it must agree, so re-adding a version is safe instead of silent rot, and
-no fifth number has to be hand-bumped each release; (2) tags unchanged;
-(3) the path scan widened to ALL SEVEN docs and to bare root-level
-`.md`/`.bat`/`.godot` names (CHANGELOG.md was held out at first as "frozen
-history names deleted files" — measured: 4 refs, 0 dead, and HANDOFF.md is
-append-only too and was always scanned, so the hole was unearned); (4) every `.exe` the docs name must
-resolve on disk, and a `godot_console` COMMAND may not sit in a doc that no
-longer defines the shorthand. **All six planted violations FIRED.**
-Two things worth keeping: the exe path is never hardcoded in `harness.gd` —
-disk is the authority, a copy would be a seventh place to drift. And 4b
-fires on the COMMAND shape only, not a prose mention: it false-positived on
-this very entry's first run, because the entry quotes `godot_console` to say
-it is dead. Narrowed the rule rather than exempting the file — exempting is
-what makes a gate lie.
-
-**Then the autosave shipped** — the user's idea: *"cant it be instantly
-logged somewhere in the repo, its like an auto save"*. A `UserPromptSubmit`
-hook runs `.claude/autosave.py`, appending every message they send, verbatim,
-to a docs/sessions/ log. Two things the research caught that would have
-bitten us badly: **the published hook docs are WRONG about the field name**
-(they say `user_prompt`; the shipped binary emits `prompt` — the script reads
-both), and **exit code 2 on this event ERASES the user's typed message**, so
-the script exits 0 on every path including failure. On this event alone hook
-stdout is injected into Claude's context, so it prints nothing — verified
-stdout length 0, UTF-8 intact, zero CR bytes. A settings change needs a
-RESTART to take effect.
-
-**Then the migration was COLD-TESTED** — three fresh sessions with no context
-each followed CLAUDE.md's onboarding literally (one maximally literal, one
-verifying prose against code, one trying to start work). **All three ran the
-top-of-file commands verbatim first try and correctly named the version,
-the milestone and the next task. All three rated readiness 8/10.** So
-migration works. But they confirmed **10 more false claims**, and the lesson
-is sharper than the count:
-
-- **The morning's fixes stopped at the `.md` files.** `world_builder.gd:3`
-  still said "320x320" and `player.gd:6` + `world_builder.gd:11` still
-  described a camera "clamped to an inset diamond" — which `player.gd:379`
-  contradicts in its own file, and which the user had explicitly removed.
-  That header even supplied a plausible *reason* for the clamp, so a session
-  trusting it would have reintroduced exactly what the user asked to be taken
-  out. **Fix the code comments in the same pass as the docs; nothing scans
-  them.**
-- **`BARRIER_INSET` is 66, not the 72 CLAUDE.md claimed** — a value the ring
-  never held. Load-bearing: placement maths off by 6 cells. CLAUDE.md's own
-  safehouse [174, 73] only computes from 66, so the file contradicted itself.
-- **15 buildings, not "~34"** (`--probe-world`: DOORS total=15, one door per
-  building). **Three shaders, not "one"**. `DESIGN.md` claimed RoofReveal
-  fades walls to 30% — walls are NEVER faded, the user rejected that.
-- All ten sat behind `SEC PASS` + `DOCS PASS`. Prose again.
-
-Also fixed: `--smoke` is now written out in full (it is mandatory before every
-push and was the one shorthand command a new session could not paste), and its
-alarming-but-normal headless output is documented so the ~50 display-server
-ERRORs and the exit-time leak warnings stop reading as failures next to the
-"Leaks: none" baseline.
-
-**Picked up at:** **The smoker on the bench (TASKS.md B4)** — nothing is
-blocked and nothing is half-done. Rebuild him from the PLAYER's character
-sheet so his shading matches everything else, give him a black hat to tell
-him apart, bigger smoke, and seat him on the bench BELOW facing away from the
-backrest. Then the LZ green smoke (B4b).
-
-Everything from this session shipped and is pushed: the 14 doc fixes, the
-five-part `--checkdocs`, and the autosave. All gates green, tree clean, still
-v0.6.25. The session logs live in `docs/sessions/` and stay **inside**
-`--checksec`'s secret scan — the user's explicit call and mine, because a
-noisy gate beats a blind one. Verified on the most adversarial input it will
-see: a log containing this whole conversation about keys and secret patterns
-still passes.
-
-**Two things in this entry were WRONG while it was being written, and both
-are corrected above rather than quietly edited away.** It claimed
-`--checkdocs` scans only 3 of 7 docs — true when written, closed hours later
-in the same session. And its "picked up at" described the autosave as
-outstanding after it had already shipped. A handoff entry written in stages
-rots exactly like any other doc; read the whole entry before trusting its
-last paragraph.
-
----
+*(compressed.)* No game changes. A docs audit after the user asked for the
+migration and the security to be solid. **The two commands at the TOP of
+`CLAUDE.md` resolved to nothing on this machine** — `godot_console` was never
+on PATH — so the documented workflow was unrunnable while both gates were
+green. **One doc instruction would have destroyed user data**: `DESIGN.md`
+claimed smoke runs pollute a stash file under `%APPDATA%` and told sessions to
+clean it up; that folder holds the user's real keybinds, resolution and
+volumes, and there is no stash file. The permanent lesson — **a check cannot
+verify prose** — is now its own section in `CLAUDE.md`.
 
 ## 2026-08-02 — migration hardening
 
@@ -799,36 +313,6 @@ trap bit again: return TYPED arrays, and read the HEAD of the log.
 
 ## 2026-08-02 — overcast, and the docs rebuilt
 
-*(Compressed per entry rule 6 on 2026-08-02. Reconstructed originally from
-the outgoing chat's summary plus the commits.)*
-
-**v0.6.15 → v0.6.25 in one long session**, on top of the renumbering: the
-harness stopped pretending (a smoke test vacuous for three releases), a
-readable changelog, then the whole engine-side polish layer — impact, shader
-warm-up, colour grade, dust motes, a real day-arc, sun shafts, a second tiny
-font, the safehouse move, and **overcast weather**. Then `CLAUDE.md` was cut
-from 977 lines to ~500 and `TASKS.md` rewritten against reality.
-
-**Its ORDER claim was wrong and is corrected in the newest entry:** the
-renumber came FIRST (`f8e83ae` is the parent of v0.6.15), not after these
-releases — so v0.6.15…v0.6.25 name two different things in this history.
-
-Every lesson it recorded now lives in `CLAUDE.md`: the vacuous smoke test
-and `_shove`, parse-error-looks-like-a-hang, a colour grade must not change
-brightness, ramps dither themselves, sort position ≠ draw position, never
-skip an rng draw. User quotes kept: *"keep the base art as-is, just use
-godot's visual toolkit to turn up the atmosphere"*; on the trailer *"were
-not dropping it, just putting it aside for now"*.
-
----
-
-## Before the chain
-
-Everything earlier is in `CHANGELOG.md` (every release, what and why) and
-`docs/version_renumber_2026-08-02/` (the release-history remap). The project
-started 2026-07-31; v0.1.0 → v0.6.14 covers the first three days, and the
-renumbering means **any version number quoted in a chat log from before
-2026-08-02 is wrong** — check the mapping rather than trusting a transcript.
-
-No per-session record exists before the two entries above, because this file
-did not exist. That is the gap this file closes.
+*(compressed.)* **v0.6.15 → v0.6.25**: OVERCAST weather, a real day-arc, the
+boot shader warm-up, indoor weather muffling, and the docs rebuilt around
+them. Its renumbering-ORDER claim was wrong and is corrected in a later entry.
