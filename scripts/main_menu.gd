@@ -179,6 +179,10 @@ const CTR_TIN_Y := 399.0                   # the parts tin's baked scorch ring
 # splice whose pilot bead is already painted live.
 var _arcs: Array[Array] = []
 
+# MENU RAIN, simulated the way the raid's is. Each field is one scene's
+# weather: parallel arrays, one sprite per drop, one splash sprite per drop.
+var _rain: Array[Dictionary] = []
+
 var _title: TextureRect
 var _title_base_y := 0.0
 var _shine_clip: Control
@@ -203,6 +207,10 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.40", [
+		"rain lands properly now. every drop knows where its own ground is, falls to it, dies there and leaves a splash on that exact spot - the same way rain already works in the raids. the ground splash marks from last version are gone, they were a separate thing lying on the floor and you were right that it wasnt what you meant",
+		"the birds in the trainyard are bigger, there are five of them, and they cross slower so theyre easier to catch",
+	]],
 	["v0.6.39", [
 		"the trainyard and mara's counter have things that actually move in them now, not just more light. birds cross the sunset, the sparks off the pole lines are bigger and there are five of them going much more often, and there are little lit windows on the far buildings that flicker",
 		"and a rat runs along the empty end of mara's counter - it was there before but painted almost the same colour as the counter, so it was invisible. its lighter now",
@@ -902,6 +910,7 @@ func _process(delta: float) -> void:
 		if stamp != _ms_clock_stamp:      # relabel only when it changes
 			_ms_clock_stamp = stamp
 			_ms_clock.text = stamp
+	_tick_rain(delta)
 	_tick_arcs(delta)
 	_rotate_timer += delta
 	if _rotate_timer >= SCENE_SECONDS:
@@ -1150,40 +1159,6 @@ func _build_scenes() -> void:
 			led.material = add_mat
 		yard.add_child(led)
 		_yard_leds.append(led)
-	# DRIZZLE, AND IT HAS TO RUN THE WHOLE HEIGHT. A patch of rain hanging in
-	# the sky is a rectangle of rain stopping in mid-air — the first cut sat
-	# it on the signal, on the theory that you only see rain where a light
-	# catches it, and 88px of dashes over a 34px halo read as scattered ticks
-	# instead. So it falls top to bottom, and it is confined to the LEFT of
-	# the frame instead: that is where the boxcar, the poles and the eave
-	# runoff already are, and it keeps every streak out of the button band at
-	# x 400-560. Sparse enough (26 over 380x560) that the right-hand edge of
-	# the veil cannot be perceived as an edge.
-	# The lean is small ON PURPOSE — at the wires' 0.16 the bottom-most
-	# streaks drifted 94px right over their fall and walked into the buttons.
-	var drizzle := CPUParticles2D.new()
-	drizzle.texture = TEX_RAIN
-	drizzle.amount = 130
-	drizzle.lifetime = 3.4                     # ~2.9s of it inside the frame
-	drizzle.preprocess = 3.4
-	drizzle.position = PC + Vector2(430, -20)
-	drizzle.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
-	drizzle.emission_rect_extents = Vector2(500, 8)
-	drizzle.direction = Vector2(0.06, 1)
-	drizzle.spread = 3.0
-	drizzle.gravity = Vector2(2, 30)
-	drizzle.initial_velocity_min = 130.0
-	drizzle.initial_velocity_max = 160.0
-	# WHITE, not a tint. `color` MULTIPLIES the texture, and rain_streak is
-	# already a 3c5e8b at 20-76% alpha — tinting it 577277 as well took it to
-	# (20,42,65) at a quarter alpha and the drizzle rendered invisible.
-	# it crosses the button band now, and that is a deliberate reversal: the
-	# bands are kept clear of STRUCTURE, and rain is not structure. At this
-	# alpha the labels stay perfectly legible and the alternative was a scene
-	# that measured 49 still frames out of 59.
-	drizzle.color = Color(1, 1, 1, 0.62)
-	drizzle.color_ramp = _fade_ramp()
-	yard.add_child(drizzle)
 	_yard_splash = Sprite2D.new()
 	_yard_splash.texture = TEX_YARD_SPLASH
 	_yard_splash.hframes = 3
@@ -1195,6 +1170,9 @@ func _build_scenes() -> void:
 	_yard_drip.modulate = Color("a8b5b2", 0.75)
 	_yard_drip.visible = false
 	yard.add_child(_yard_drip)
+	# the yard's ground: nothing lands above the middle distance at y 300,
+	# and the near four-foot runs off the bottom of the frame
+	_add_rain(yard, 2, -30.0, 990.0, 300.0, 540.0, 200)
 	# SPARKS OFF THE POLE LINES (user's own example). Both points are wire
 	# pixels read out of the bake, not eyeballed.
 	# the yard's ground runs from the far shoulder down to the near four-foot
@@ -1206,14 +1184,14 @@ func _build_scenes() -> void:
 		w.position = PC + (YARD_WINDOWS[i] as Vector2)
 		yard.add_child(w)
 		_yard_wins.append(w)
-	for i in 3:
+	for i in 5:
 		var bd := Sprite2D.new()
 		bd.texture = TEX_YARD_BIRD
 		bd.hframes = 3
 		bd.visible = false
 		yard.add_child(bd)
 		_birds.append(bd)
-		_bird_t.append(0.4 + i * 2.3)
+		_bird_t.append(0.3 + i * 1.5)
 	# FIVE points, all on wire pixels sampled out of the bake, and they fire
 	# every 1.4-4.5s instead of every 3.5-9 — user: "make the trainyards
 	# sparks from the poles more noticable, and make more of them".
@@ -1263,22 +1241,9 @@ func _build_scenes() -> void:
 	_w_blink.position = PC + Vector2(676, 255)
 	_w_blink.visible = false
 	warden.add_child(_w_blink)
-	var wrain := CPUParticles2D.new()
-	wrain.texture = TEX_RAIN
-	wrain.amount = 120
-	wrain.lifetime = 3.2
-	wrain.preprocess = 3.2
-	wrain.position = PC + Vector2(470, -20)
-	wrain.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
-	wrain.emission_rect_extents = Vector2(500, 8)
-	wrain.direction = Vector2(0.08, 1)
-	wrain.spread = 3.0
-	wrain.gravity = Vector2(3, 34)
-	wrain.initial_velocity_min = 140.0
-	wrain.initial_velocity_max = 175.0
-	wrain.color = Color(1, 1, 1, 0.58)
-	wrain.color_ramp = _fade_ramp()
-	warden.add_child(wrain)
+	# the toll road: the verge starts around y 430 and the tarmac runs out
+	# of frame at the bottom
+	_add_rain(warden, 3, -30.0, 990.0, 430.0, 540.0, 170)
 	# the isolator on the shift lamp's conduit — a real fitting, and the only
 	# thing in the booth's dead upper-left that could plausibly arc
 	_add_arc(warden, Vector2(813, 147), add_mat, 2.7)
@@ -1548,17 +1513,22 @@ func _tick_yard(delta: float) -> void:
 		if not bd.visible:
 			if _bird_t[i] <= 0.0:
 				bd.visible = true
-				bd.position = PC + Vector2(700.0 + i * 26.0, 196.0 + i * 13.0)
+				# y 232-244, NOT 196: a black silhouette only reads against the
+				# SUNSET band (roughly y 230-260). At 196 they were crossing the
+				# dark purple cloud and were invisible — the user: "i dont see
+				# any birds flying in the back on trainyard anymore". Third time
+				# this session a thing was drawn against its own value.
+				bd.position = PC + Vector2(700.0 + i * 26.0, 232.0 + i * 6.0)
 		else:
 			# whole pixels only, and they climb slightly as they go
 			var bp := bd.position
-			bp.x -= 62.0 * delta
-			bp.y -= 5.0 * delta
+			bp.x -= 46.0 * delta   # slower: longer on screen, easier to catch
+			bp.y -= 1.6 * delta   # barely climbs: it must stay in the lit band
 			bd.position = Vector2(roundf(bp.x), roundf(bp.y))
 			bd.frame = int(_time * (7.0 + i * 1.3)) % 3
 			if bd.position.x < PC.x + 250.0:
 				bd.visible = false
-				_bird_t[i] = randf_range(4.0, 11.0)
+				_bird_t[i] = randf_range(2.0, 6.0)
 	# runoff off the near boxcar's eave (x 100), bursting on the ballast
 	if _yard_splash_age >= 0.0:
 		_yard_splash_age += delta
@@ -1741,6 +1711,91 @@ func _tick_counter(delta: float) -> void:
 			_ctr_flare.visible = true
 			_ctr_flare.frame = 0
 			_ctr_flare_age = 0.0
+
+
+func _add_rain(parent: Node2D, scene_i: int, x0: float, x1: float,
+		gy0: float, gy1: float, count: int) -> void:
+	## RAIN THAT LANDS. User: "i meant like the actual raindrops coming down on
+	## the screen should physically hit something on the screen".
+	##
+	## This is `environment_system.gd`'s model, not a particle system: every
+	## drop carries its own GROUND ROW, falls to it, dies there and leaves a
+	## splash AT THAT SPOT — the raid has worked this way all along and the
+	## menu was the odd one out. A CPUParticles2D cannot do it, because a
+	## particle has no idea where the floor is; the splashes it fires are a
+	## second unrelated system, which is exactly what the user spotted.
+	##
+	## The ground row is ROLLED PER DROP between gy0 and gy1 rather than
+	## derived from x. In this projection a column is not one depth — a drop
+	## at any x can land anywhere from the middle distance to the near kerb —
+	## so a scatter is not an approximation here, it is the correct model.
+	var f := {
+		"scene": scene_i, "x0": x0, "x1": x1, "gy0": gy0, "gy1": gy1,
+		"drop": [], "splash": [], "pos": [], "gnd": [], "spd": [], "age": [],
+	}
+	for i in count:
+		var d := Sprite2D.new()
+		d.texture = TEX_RAIN
+		# 0.85, not 0.62: rain_streak is already a 3c5e8b at 20-76% of its own
+		# alpha, and over dark ballast the first cut measured but did not read
+		d.modulate = Color(1, 1, 1, 0.85)
+		parent.add_child(d)
+		(f["drop"] as Array).append(d)
+		var s := Sprite2D.new()
+		s.texture = TEX_RAINSPLASH
+		s.hframes = 4
+		s.modulate = Color(1, 1, 1, 0.9)
+		s.visible = false
+		parent.add_child(s)
+		(f["splash"] as Array).append(s)
+		# spread down the whole fall on the first frame, so it is already
+		# raining when the backdrop fades in rather than starting empty
+		(f["pos"] as Array).append(Vector2(randf_range(x0, x1),
+			randf_range(-60.0, gy1)))
+		(f["gnd"] as Array).append(randf_range(gy0, gy1))
+		(f["spd"] as Array).append(randf_range(150.0, 205.0))
+		(f["age"] as Array).append(-1.0)
+	_rain.append(f)
+
+
+func _tick_rain(delta: float) -> void:
+	for f in _rain:
+		if not _scenes[f["scene"]].visible:
+			continue
+		var drops: Array = f["drop"]
+		var splashes: Array = f["splash"]
+		var pos: Array = f["pos"]
+		var gnd: Array = f["gnd"]
+		var spd: Array = f["spd"]
+		var age: Array = f["age"]
+		for i in drops.size():
+			var p: Vector2 = pos[i]
+			p.y += (spd[i] as float) * delta
+			p.x += 13.0 * delta                     # the same lean as the wires
+			if p.y >= (gnd[i] as float):
+				# IT LANDED. The splash goes exactly where it stopped and does
+				# not move again; the drop starts over at the top.
+				var s := splashes[i] as Sprite2D
+				s.position = PC + Vector2(roundf(p.x), roundf(gnd[i]))
+				s.visible = true
+				s.frame = 0
+				age[i] = 0.0
+				p = Vector2(randf_range(f["x0"], f["x1"]),
+					randf_range(-70.0, -12.0))
+				gnd[i] = randf_range(f["gy0"], f["gy1"])
+				spd[i] = randf_range(150.0, 205.0)
+			pos[i] = p
+			# whole pixels: a pixel-art sprite on a fractional position crawls
+			(drops[i] as Sprite2D).position = PC + Vector2(roundf(p.x),
+				roundf(p.y))
+			if (age[i] as float) >= 0.0:
+				age[i] = (age[i] as float) + delta
+				var fr := int((age[i] as float) / 0.055)
+				if fr > 3:
+					(splashes[i] as Sprite2D).visible = false
+					age[i] = -1.0
+				else:
+					(splashes[i] as Sprite2D).frame = fr
 
 
 func _add_arc(parent: Node2D, at: Vector2, add_mat: CanvasItemMaterial,

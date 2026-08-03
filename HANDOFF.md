@@ -288,6 +288,30 @@ arms' width profile may move; face, hair, headset, jacket, ledger, light box,
 counter and both light pools must come out pixel-identical. A pass that
 rebuilt more than was complained about has already been rejected once here.
 
+**Then v0.6.40 — RAIN THAT LANDS, and two wrong answers.** The menu rain is
+now built on `environment_system.gd`'s model rather than a particle system:
+each drop carries its own ground row, falls to it, dies there and splashes at
+that exact spot. The user's phrasing was the spec — *"the actual raindrops
+coming down on the screen should physically hit something on the screen"* —
+and the v0.6.39 attempt (a second particle system of splash marks lying on the
+ground band) was removed entirely because it had no relationship to any
+individual streak. **The yard went from 61 still frames in 71 to ZERO.**
+
+**The part worth carrying: I gave the user two confident wrong answers in a
+row** about why the trainyard's birds had stopped showing — first that they
+were drawn against too similar a value, then that the rain was out-competing
+them. They rejected both, correctly. A ten-line check then showed the birds
+rendering and moving in **93 of 95 frames**. Neither theory survived contact
+with a measurement that took two minutes. Both lessons are now standing rules
+in CLAUDE.md, including the technique: **you cannot answer "why is X not
+showing" by diffing a shot against the BAKE**, because the vignette darkens
+every pixel and swamps the signal — diff CONSECUTIVE FILM FRAMES instead.
+
+**The other standing rule added:** every new element must beat the background
+it lands on, MEASURED. That failed four times in one day — the far signal's
+eye, the underpass drip, the rat, the birds — and every time the code was
+perfect and the thing was invisible.
+
 **Picked up at:** **nothing is in progress.** A1 in TASKS.md is now DONE — all
 six backdrops exist and all six live. The next items in that list are the
 in-game map screen and the map-select tile; **M2 (guns) still waits on the

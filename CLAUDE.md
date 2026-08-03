@@ -35,7 +35,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
 	 form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.39 shipped, 2026-08-03.** Milestone 1 (a walkable world) is DONE.
+**v0.6.40 shipped, 2026-08-03.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 
@@ -741,6 +741,30 @@ then `godot_console --headless --path . --import`.
   went stale at the v0.6.6 figures for nineteen releases.**
   ORPHANS is the sharpest signal — a node out of the tree and unfreed is a
   leak with no excuse.
+- **EVERY NEW ELEMENT MUST BEAT THE BACKGROUND IT LANDS ON — MEASURE IT, do
+  not eyeball it.** This failed FOUR SEPARATE TIMES on 2026-08-03 and each
+  time the code was perfect and the thing was invisible: the yard's far signal
+  eye (a53030 lamp on a de9e41 sunset — darker than its own sky), the
+  underpass drip (577277 tint over rain_streak's 3c5e8b = (20,42,65), darker
+  than the 202e37 wall it fell down), the counter's rat (090a14 on a 241527
+  counter top, ~20 values apart, and the user simply said "i dont see any
+  rat"), and the yard's birds (7x5 silhouettes lost once 400 rain sprites
+  went into the same frame). **Before drawing anything, sample the bake where
+  it will sit and pick values that clear it by a wide margin** — and remember
+  `modulate` MULTIPLIES, so a tint on an already-coloured texture almost
+  always goes darker than you expect. A one-line sample beats a re-render.
+- **DO NOT ANSWER "WHY IS X NOT SHOWING?" WITH A THEORY. MEASURE IT.**
+  2026-08-03, the yard's birds: I gave the user TWO confident explanations in
+  a row — that they were drawn against too similar a value, then that the new
+  rain was out-competing them — and the user rejected both, correctly. The
+  measurement that should have come first showed the birds rendering and
+  moving in **93 of 95 frames**. Neither theory survived contact with a
+  ten-line check. **Comparing a shot to the BAKE cannot answer this**, because
+  the menu's vignette darkens every pixel and swamps the signal; compare
+  CONSECUTIVE FILM FRAMES, where the vignette is identical and only motion
+  differs. And when the user says they saw it before, that is evidence, not
+  something to explain away — this project has been burned twice already by a
+  confident-and-wrong diagnosis written down as fact.
 - **MEASURE A SHOVE'S RESULT BEFORE YOU YIELD A FRAME.** `player.gd`'s
   `_process` runs `move_and_slide()` EVERY RENDERED FRAME, and that
   depenetrates a body the shove left flush against a collider — so a position

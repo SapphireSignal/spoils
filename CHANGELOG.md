@@ -3,6 +3,42 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.40] — 2026-08-03 — rain that lands, on the raid's own model
+
+### Added
+- **Menu rain is SIMULATED, not decorated.** `_add_rain` / `_tick_rain` in
+  `main_menu.gd`, built on `environment_system.gd`'s model: parallel arrays,
+  one sprite per drop, and **every drop carries its own ground row**. It falls
+  to that row, dies there, and leaves a splash AT THAT SPOT using the world's
+  own `rain_splash.png`. A `CPUParticles2D` cannot do this — a particle has no
+  idea where the floor is, so the splashes it fires are a second unrelated
+  system, which is exactly what the user saw and rejected.
+- The ground row is **rolled per drop** rather than derived from x. In this
+  projection a column is not one depth — a drop at any x can land anywhere
+  from the middle distance to the near kerb — so the scatter is the correct
+  model, not an approximation.
+- **Measured: the yard went from 61 still frames in 71 to ZERO.** Something
+  moves in every single frame now.
+
+### Changed
+- **The birds: 13×9 instead of 7×5, five instead of three, crossing slower.**
+
+### Two wrong answers, recorded because they matter more than the fix
+Asked why the birds had stopped showing, I gave two confident explanations —
+that they were drawn against too similar a value, then that the new rain was
+out-competing them — and the user rejected both, correctly. The measurement
+that should have come first showed the birds rendering and moving in **93 of
+95 frames**. Neither theory survived a ten-line check. Both the habit and the
+technique are now standing rules in `CLAUDE.md`: comparing a shot to the BAKE
+cannot answer "why is X not showing", because the vignette darkens every pixel
+and swamps the signal — compare **consecutive film frames**, where the
+vignette is identical and only motion differs.
+
+Also added there: **every new element must beat the background it lands on,
+measured, not eyeballed.** That failed four separate times on 2026-08-03 — the
+far signal's eye, the underpass drip, the rat, and the birds — and every time
+the code was perfect and the thing was invisible.
+
 ## [0.6.39] — 2026-08-03 — things that move, on the two quiet scenes
 
 The user kept both tunnel backdrops (*"lets keep both the backdrops for now,

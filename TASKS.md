@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.39.** The release history was renumbered evenly on
+**Current version: v0.6.40.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -158,7 +158,7 @@ the district wire, the tally, a transit-authority evacuation notice.
 **Check `--checkdocs` still passes** — the quiet button box is x 395-565 and
 none of this goes near it.
 
-## B0a. Rain must actually LAND *(user, 2026-08-03)* — NEXT UP
+## B0a. Rain must actually LAND — **DONE in v0.6.40**
 
 *"i meant like the actual raindrops coming down on the screen should
 physically hit something on the screen, so remove that water stuff on the

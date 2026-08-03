@@ -10409,17 +10409,28 @@ def make_scene_yard() -> tuple:
     # scenes were missing. A dusk trainyard gets birds, they read as hard
     # silhouettes against the one bright band in the picture, and they cross
     # 900px so they are moving for six seconds at a stretch.
-    bird = Canvas(24, 6)
-    for f, (tip, mid) in enumerate(((-2, -1), (0, 0), (2, 1))):
-        ox = f * 8 + 4
-        bird.set(ox, 3, C("090a14"))                 # the body
-        bird.set(ox - 1, 3, C("090a14"))
-        for k in (1, 2):                             # the two wings
-            bird.set(ox - 1 - k, 3 + (tip if k == 2 else mid), C("090a14"))
-            bird.set(ox + k, 3 + (tip if k == 2 else mid), C("090a14"))
-        if f != 1:
-            bird.set(ox - 3, 3 + tip, C("241527"))
-            bird.set(ox + 3, 3 + tip, C("241527"))
+    # 13x9, not 7x5. The first cut was correct in principle and too small in
+    # practice: once the yard carried 200 rain drops and 200 splashes, three
+    # tiny silhouettes stopped being noticed at all — the user saw them before
+    # the rain went in and not after. Not hidden; out-competed. A bird needs
+    # a readable wing SHAPE, not four pixels.
+    bird = Canvas(39, 9)
+    for f, (tip, mid) in enumerate(((-3, -1), (1, 1), (3, 2))):
+        ox = f * 13 + 6
+        cy = 4
+        for k in range(-1, 2):                       # the body
+            bird.set(ox + k, cy, C("090a14"))
+        bird.set(ox + 2, cy, C("241527"))            # the head end
+        for k in (2, 3, 4, 5):                       # each wing, curving away
+            dy = mid if k < 4 else tip
+            bird.set(ox - k, cy + dy, C("090a14"))
+            bird.set(ox + k - 1, cy + dy, C("090a14"))
+            if k in (3, 4):                          # thicken the shoulder
+                bird.set(ox - k, cy + dy + (1 if dy < 0 else -1), C("090a14"))
+                bird.set(ox + k - 1, cy + dy + (1 if dy < 0 else -1),
+                         C("090a14"))
+        bird.set(ox - 5, cy + tip, C("241527"))      # the tips soften
+        bird.set(ox + 4, cy + tip, C("241527"))
 
     # LIT WINDOWS ON THE FAR BUILDINGS (user: "maybe some little windows on
     # some buildings in the background of the trainyard, and have them flicker
