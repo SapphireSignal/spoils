@@ -8753,7 +8753,12 @@ def make_scene_den() -> tuple[Canvas, Image.Image, Canvas]:
     shoulder_top: dict = {}
     for y in range(344, D_FAR):
         t = (y - 344) / 40.0
-        half = int(19 + (t ** 0.45) * 17)
+        # SKINNIER (user, 2026-08-03: "make mara skinnier in the den
+        # backdrop"). Was 19 + t^0.45 * 17, i.e. 19 at the shoulder line
+        # flaring to 36 — a very broad red mass for someone sitting at a
+        # radio. 15 flaring to 27 keeps the same silhouette LANGUAGE and the
+        # same clip at the desk edge, just a narrower body.
+        half = int(15 + (t ** 0.45) * 12)
         for x in range(MX - half, MX + half + 1):
             u = (x - (MX - half)) / float(2 * half)
             c.set(x, y, C("752438") if 0.16 < u < 0.85 else C("411d31"))
@@ -10409,28 +10414,29 @@ def make_scene_yard() -> tuple:
     # scenes were missing. A dusk trainyard gets birds, they read as hard
     # silhouettes against the one bright band in the picture, and they cross
     # 900px so they are moving for six seconds at a stretch.
-    # 13x9, not 7x5. The first cut was correct in principle and too small in
-    # practice: once the yard carried 200 rain drops and 200 splashes, three
-    # tiny silhouettes stopped being noticed at all — the user saw them before
-    # the rain went in and not after. Not hidden; out-competed. A bird needs
-    # a readable wing SHAPE, not four pixels.
-    bird = Canvas(39, 9)
-    for f, (tip, mid) in enumerate(((-3, -1), (1, 1), (3, 2))):
-        ox = f * 13 + 6
-        cy = 4
-        for k in range(-1, 2):                       # the body
-            bird.set(ox + k, cy, C("090a14"))
-        bird.set(ox + 2, cy, C("241527"))            # the head end
-        for k in (2, 3, 4, 5):                       # each wing, curving away
-            dy = mid if k < 4 else tip
-            bird.set(ox - k, cy + dy, C("090a14"))
-            bird.set(ox + k - 1, cy + dy, C("090a14"))
-            if k in (3, 4):                          # thicken the shoulder
-                bird.set(ox - k, cy + dy + (1 if dy < 0 else -1), C("090a14"))
-                bird.set(ox + k - 1, cy + dy + (1 if dy < 0 else -1),
-                         C("090a14"))
-        bird.set(ox - 5, cy + tip, C("241527"))      # the tips soften
-        bird.set(ox + 4, cy + tip, C("241527"))
+    # 21x13 and SOLID. Two earlier cuts were correct in placement and wrong
+    # in weight: 7x5, then 13x9 drawn as a thin V of about twenty opaque
+    # pixels. Sampling the render proved they were on screen the whole time
+    # (090a14 against a 64,39,81 sky) — they were simply too slight to notice
+    # at a glance, which is the only thing that matters. Wings are 2px thick
+    # and the body is a solid mass, so each bird is ~70 opaque pixels.
+    bird = Canvas(63, 13)
+    for f, (tip, mid) in enumerate(((-4, -1), (1, 1), (4, 3))):
+        ox = f * 21 + 10
+        cy = 6
+        for k in range(-2, 3):                       # the body, a solid mass
+            for dy in (-1, 0, 1):
+                bird.set(ox + k, cy + dy, C("090a14"))
+        bird.set(ox + 3, cy, C("090a14"))            # head
+        bird.set(ox + 4, cy, C("241527"))
+        for k in range(3, 10):                       # each wing, 2px thick
+            t2 = (k - 3) / 6.0
+            dy = int(mid + (tip - mid) * t2)
+            for th in (0, 1):
+                bird.set(ox - k, cy + dy + th, C("090a14"))
+                bird.set(ox + k - 2, cy + dy + th, C("090a14"))
+        bird.set(ox - 9, cy + tip, C("241527"))      # the tips soften
+        bird.set(ox + 7, cy + tip, C("241527"))
 
     # LIT WINDOWS ON THE FAR BUILDINGS (user: "maybe some little windows on
     # some buildings in the background of the trainyard, and have them flicker

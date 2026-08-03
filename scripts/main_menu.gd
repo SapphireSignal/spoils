@@ -131,8 +131,9 @@ const YARD_WINDOWS := [Vector2(127, 253), Vector2(155, 253),
 	Vector2(484, 252)]
 var _yard_wins: Array[Sprite2D] = []
 var _birds: Array[Sprite2D] = []
-var _bird_t: Array[float] = []
-var _bird_fly: Array[bool] = []
+var _bird_age: Array[float] = []
+var _bird_life: Array[float] = []
+var _bird_spd: Array[float] = []
 # warden life
 var _w_lamp: Sprite2D
 var _w_spill: Sprite2D
@@ -209,8 +210,8 @@ const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
 	["v0.6.41", [
-		"the birds were flying at exactly the height of the menu buttons, so most of every crossing happened behind them and you only ever caught one in the gap on the right. they fly above the buttons now, over the buildings with the flickering windows",
-		"mara is holding her pencil properly - its drawn behind her hand now so her fingers close over it and the lead reaches the map. her forearms are slimmer and rounded instead of square slabs",
+		"the birds work now. they were flying at exactly the height of the menu buttons so most of every crossing happened behind them, and on top of that the code had them switching between two states and they were silently never drawing at all. theyre spread across the sky at their own heights and their own speeds now, and they fade in and out instead of popping",
+		"mara is holding her pencil properly - its drawn behind her hand now so her fingers close over it and the lead reaches the map. her forearms are slimmer and rounded instead of square slabs, and shes slimmer in the den painting too",
 	]],
 	["v0.6.40", [
 		"rain lands properly now. every drop knows where its own ground is, falls to it, dies there and leaves a splash on that exact spot - the same way rain already works in the raids. the ground splash marks from last version are gone, they were a separate thing lying on the floor and you were right that it wasnt what you meant",
@@ -1189,15 +1190,22 @@ func _build_scenes() -> void:
 		w.position = PC + (YARD_WINDOWS[i] as Vector2)
 		yard.add_child(w)
 		_yard_wins.append(w)
+	# FIVE BIRDS, each living its own life anywhere in the sky. They FADE IN
+	# rather than entering from behind anything — user: "it doesnt matter if
+	# they spawn in the sky, just make them fade in" — which is both simpler
+	# and the only way to guarantee they stay spread, because a shared entry
+	# point stacks them into a column the moment a fast one catches a slow one.
 	for i in 5:
 		var bd := Sprite2D.new()
 		bd.texture = TEX_YARD_BIRD
 		bd.hframes = 3
-		bd.visible = false
 		yard.add_child(bd)
 		_birds.append(bd)
-		_bird_t.append(0.3 + i * 0.55)   # a loose flock, not a queue
-		_bird_fly.append(false)
+		_bird_age.append(randf_range(0.0, 9.0))   # already mid-life at boot
+		_bird_life.append(randf_range(7.0, 15.0))
+		_bird_spd.append(randf_range(26.0, 78.0))
+		bd.position = PC + Vector2(randf_range(150.0, 660.0),
+			randf_range(204.0, 228.0))
 	# FIVE points, all on wire pixels sampled out of the bake, and they fire
 	# every 1.4-4.5s instead of every 3.5-9 — user: "make the trainyards
 	# sparks from the poles more noticable, and make more of them".
@@ -1510,47 +1518,30 @@ func _tick_yard(delta: float) -> void:
 		if i == 4:                              # one bad connection
 			on = on and fmod(_time * 7.3, 1.0) > 0.35
 		_yard_wins[i].visible = on
-	# the birds. Each crosses ~430px of sky in about 7 s, so at any moment at
-	# least one of them is usually in the air — that is the point of three on
-	# staggered clocks rather than one on a timer.
+	# THE BIRDS. One state, no gates: age, drift left, fade in and out, respawn
+	# somewhere else. Every extra piece of state between "should be on screen"
+	# and "is on screen" is another place for a sprite to silently not draw,
+	# and an earlier two-state version did exactly that for a long time.
+	#
+	# They fly at painting y 204-228, on the 752438 maroon band and ABOVE the
+	# menu buttons — at y 234 they flew at screen row 464, inside the "play"
+	# button, and spent most of every crossing behind the menu.
 	for i in _birds.size():
 		var bd := _birds[i]
-		_bird_t[i] -= delta
-		# `flying` is NOT `visible`: a bird is in the air the moment it leaves
-		# the building, but it is only DRAWN once it has cleared the edge.
-		if not _bird_fly[i]:
-			if _bird_t[i] <= 0.0:
-				_bird_fly[i] = true
-				# THEY SPAWN BEHIND THE RIGHT-HAND BUILDING AND STAY HIDDEN
-				# UNTIL THEY CLEAR IT. Sampling the bake at y 232-262 shows
-				# 151d28/10141f from x 700 rightward — that is the building,
-				# not sky, and the user saw exactly that: "they are on the
-				# thing on the right, they should be in the sky". The open
-				# sunset runs to about x 670, so they are invisible until they
-				# pass it and then emerge from behind its edge, which is a
-				# real entrance rather than a pop.
-				#
-				# AND THE HEIGHT MATTERED MORE THAN ANY OF THAT: at y 234 they
-				# flew at screen row 464, which is INSIDE the "play" button, so
-				# most of every crossing happened BEHIND THE MENU and only a
-				# glimpse in the gap on the right ever showed ("the birds are
-				# still on the right, and i only see one"). y 219-227 sits on
-				# the 752438 maroon band and clears the button top at row 229.
-				bd.position = PC + Vector2(748.0 + i * 30.0, 219.0 + i * 2.0)
-		else:
-			# whole pixels only. It holds its height: this band is the only
-			# lit sky in the frame and climbing out of it makes it vanish.
-			var bp := bd.position
-			bp.x -= 46.0 * delta   # slower: longer on screen, easier to catch
-			bp.y -= 0.35 * delta   # must not climb out of the maroon band
-			bd.position = Vector2(roundf(bp.x), roundf(bp.y))
-			bd.frame = int(_time * (7.0 + i * 1.3)) % 3
-			# hidden while it is still over the building's silhouette
-			bd.visible = bd.position.x < PC.x + 668.0
-			if bd.position.x < PC.x + 140.0:
-				bd.visible = false
-				_bird_fly[i] = false
-				_bird_t[i] = randf_range(2.0, 6.0)
+		_bird_age[i] += delta
+		bd.position = Vector2(roundf(bd.position.x - _bird_spd[i] * delta),
+			bd.position.y)
+		bd.frame = clampi(int(fmod(_time * (7.0 + i * 1.3), 3.0)), 0, 2)
+		var life: float = _bird_life[i]
+		var age: float = _bird_age[i]
+		# fade in over 1.1 s, out over the last 1.1 s, so nothing ever pops
+		bd.modulate.a = clampf(minf(age / 1.1, (life - age) / 1.1), 0.0, 1.0)
+		if age >= life or bd.position.x < PC.x + 110.0:
+			_bird_age[i] = 0.0
+			_bird_life[i] = randf_range(7.0, 15.0)
+			_bird_spd[i] = randf_range(26.0, 78.0)
+			bd.position = PC + Vector2(randf_range(170.0, 690.0),
+				randf_range(204.0, 228.0))
 	# runoff off the near boxcar's eave (x 100), bursting on the ballast
 	if _yard_splash_age >= 0.0:
 		_yard_splash_age += delta

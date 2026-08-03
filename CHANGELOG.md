@@ -21,6 +21,29 @@ that had already hidden the drizzle, the underpass drip and the rat — and a
 diff-against-the-bake that could not see it. What finally worked was cropping
 the flight path and looking at it.
 
+### The birds, properly this time
+The height fix above was necessary and not sufficient: the loop also carried a
+separate "flying" state and a visibility gate, and between them the sprites
+**silently never drew at all** — through four wrong theories, a magenta test
+that could not work, and several scans that measured wires and rain instead.
+Rewritten flat, then rewritten once more on the user's steer (*"it doesnt
+matter if they spawn in the sky, just make them fade in"*): each bird just
+ages, drifts left, **fades in over 1.1 s and out over 1.1 s**, and respawns
+somewhere else in the sky. No entry point, no gate, no second state. A shared
+entry point had stacked them into a vertical column the moment a fast one
+caught a slow one; random spawn plus a fade is both simpler and the only thing
+that keeps them spread. Speed is rolled per life, 26-78 px/s.
+
+**The lesson, and it is in `CLAUDE.md` now:** every extra piece of state
+between "should be on screen" and "is on screen" is another place for a thing
+to silently not draw. When something will not appear and the values all look
+right, delete the indirection rather than bisecting it.
+
+### Fixed — mara, in both paintings
+- **The den:** her jacket half-width went `19 + t^0.45*17` (19 flaring to 36)
+  to `15 + t^0.45*12` (15 to 27) — user: *"make mara skinnier in the den
+  backdrop"*. Diffed: the only changed region is **x 771-842, y 344-384**.
+
 ### Fixed — mara's pencil and arms *(base art)*
 User: *"shes not holding the pencil right, like its not in her hands. also
 make her arms not square and a bit smaller"*.
