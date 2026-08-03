@@ -1422,6 +1422,19 @@ func _shot(shot_name: String) -> void:
 							(reg["upper_props"] as Array).size()])
 		if arg.begins_with("--map="):
 			var wanted := arg.trim_prefix("--map=")
+			# REJECT AN UNKNOWN MODE. `_set_mode` shows the world root only for
+			# "world" and the transit root only for "transit", so ANY other
+			# string hides both and the shot comes out as an empty panel with
+			# no error anywhere — I lost a README screenshot to `--map=district`
+			# before noticing. Same class as the modifier flags that used to
+			# hang when passed alone: fail loudly, never produce a useless
+			# capture.
+			if wanted != "world" and wanted != "transit":
+				push_error("--map=%s is not a mode; use world or transit" % wanted)
+				print("HARNESS ERROR: --map=%s is not a mode (world|transit)"
+					% wanted)
+				get_tree().quit(1)
+				return
 			var map_view := get_tree().current_scene.get_node_or_null("MapView")
 			if map_view != null:
 				map_view.call("set_open", true)

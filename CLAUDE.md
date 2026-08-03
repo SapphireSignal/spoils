@@ -523,6 +523,16 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   that true. A seventh scene ticks nothing until it is listed in `_process`
   (v0.6.30 promoted the four; the storm scene was RETIRED
   2026-08-01, user call; painting coords via the PC offset const).
+  **The living layers are not just per-scene ticks any more** (v0.6.37-v0.6.43):
+  `_add_rain`/`_tick_rain` run a SIMULATED rain field on the yard and the
+  warden — parallel arrays, one sprite per drop, each drop carrying its own
+  ground row so it dies there and splashes on that spot, the same model as
+  `environment_system.gd` (a CPUParticles2D cannot do it: a particle has no
+  idea where the floor is). `_add_arc`/`_tick_arcs` fire a shared 5-frame
+  `menu_spark` sheet on the yard's overhead lines, the warden's isolator and
+  the counter's taped splice. The yard also carries five birds and nine
+  flickering skyline windows; the counter a rat. **That is why the menu node
+  count roughly doubled** — see the leak baseline above.
   **The order is a SHUFFLE BAG, not a cycle** (`_bag_next`/`_bag_reset`): each
   round draws all six once, and a refill that would put the on-screen scene up
   next swaps it away, so nothing ever repeats back to back. Deliberately
