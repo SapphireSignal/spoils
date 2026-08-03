@@ -258,6 +258,36 @@ light source high on the right. That is a BASE-ART problem, not a living-layer
 one, and fixing it means repainting one of them to a different camera. It
 needs their call before anyone starts.
 
+**Then v0.6.39 — OBJECTS, not more light, on the two scenes that stayed quiet.**
+The user kept both tunnel backdrops (*"lets keep both the backdrops for now, no
+harm"*) and said *"yes continue with maras counter and trainyard"*. The yard
+gets three birds crossing the sunset on staggered clocks, FIVE arcs on the pole
+lines instead of two (bigger sheet, hotter core, firing every 1.4-4.5 s — *"make
+the trainyards sparks from the poles more noticable, and make more of them"*),
+and nine 2×2 lit windows flickering on the far skyline (*"maybe some little
+windows on some buildings in the background of the trainyard, and have them
+flicker a bit"*). The counter gets a rat crossing its empty left third.
+
+**Every window cell and every arc point was read OUT OF THE BAKE** — silhouette
+with sunset behind it, or an actual wire pixel. A lit window floating in open
+sky is precisely the "anchor points at nothing" failure this project keeps
+repeating.
+
+**The motion metric now lies in the other direction.** The yard and counter
+still measure ~0.3% mean change, because a bird is 7×5 px and a rat 11×8 —
+0.006% of the frame each. It under-reports small objects exactly as it
+under-reports rain. **It detects a dead scene and grades nothing.** Judge these
+off the films.
+
+**OPEN AND NEXT: TASKS.md B0, mara's arms and the pencil.** *"in maras counter,
+shes not holding the pencil right, like its not in her hands. also make her
+arms not square and a bit smaller"*. That is BASE ART — `make_scene_counter`,
+and its hash will change, which is fine because it is asked for. **Constrain it
+to the complaint and prove the rest with a diff**: only the pencil grip and the
+arms' width profile may move; face, hair, headset, jacket, ledger, light box,
+counter and both light pools must come out pixel-identical. A pass that
+rebuilt more than was complained about has already been rejected once here.
+
 **Picked up at:** **nothing is in progress.** A1 in TASKS.md is now DONE — all
 six backdrops exist and all six live. The next items in that list are the
 in-game map screen and the map-select tile; **M2 (guns) still waits on the
