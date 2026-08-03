@@ -3,6 +3,43 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.35] — 2026-08-03 — mara's counter, and all six are moving
+
+Last of the four. Every menu backdrop now has a living layer, and all four
+were built to the same contract: base painting bit-identical (hashed either
+side of every regen), overlays built after every base draw, no rng draw taken,
+every anchor mapped off the bake.
+
+### Added
+- **`menu_counter_box`, `_lamp`, `_arc`, `_flare`, `_dust`** and
+  `_tick_counter()`.
+- **THE COLD LIGHT IS THE ONE THAT BREATHES.** The den, the warden and the
+  underpass all breathe their warm source; this room's key light is the
+  drafting box under her map, so the box wavers and the work lamp holds
+  steady against it. The inversion is the pitch.
+- **The taped splice arcs, then drops an ember.** The pilot bead swells over
+  the 1.2 s before release, so the drip has a visible cause instead of
+  arriving out of a dark ceiling. The ember falls slowly and **dims as it
+  goes** — it is dying on the way down — and flares in the parts tin, on the
+  scorch ring the bake has carried all along.
+- **A ROUND mote texture** (`menu_counter_dust`) for the dust over the warm
+  counter, because `dust.png` is a PLUS and sparse copies of it read as
+  four-pointed stars (the reason the warden's dust field was cut in v0.6.33).
+
+### Fixed during the pass
+- **A parse error: `motes` was already declared** by the drain's emitter —
+  `_build_scenes()` is one scope top to bottom. Caught because the run
+  printed `Failed to load script`, not because anything looked wrong.
+- **The flare is NOT additive**, unlike every other light in the scene. Added
+  over the tin's baked 602c2c, `e8c170` clips to a near-white c9c9c1 and
+  reads as an electrical spark; drawn normally it stays gold and reads as hot
+  metal landing in a tin.
+
+### Doc fix
+- `make_scene_counter`'s docstring put the live pilot bead at **(838, 246)**.
+  `_cables` sets it at **(837, 252)**; 838/246 is inside the splice block's
+  corner region, not the bead.
+
 ## [0.6.34] — 2026-08-03 — the flood, and a tube that is giving up
 
 Third of the four. Same contract: base painting bit-identical (hashed either

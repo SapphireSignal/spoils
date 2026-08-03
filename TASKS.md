@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.34.** The release history was renumbered evenly on
+**Current version: v0.6.35.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -77,7 +77,19 @@ Agreed order for the remaining art work:
 5. **The player model.**
 6. **World objects and textures.**
 
-## A1. Menu backdrops — FOUR pitches, the user picks a couple
+## A1. Menu backdrops — DONE (v0.6.29 - v0.6.35)
+
+**ALL SIX BACKDROPS NOW EXIST AND ALL SIX ARE LIVING.** The user kept all
+four pitches rather than two (*"let's add all 4 of those menu backdrops to the
+game, just like the den and drain"*), they were promoted in v0.6.30, the den
+and the drain were repainted to match in v0.6.29, and the living layers landed
+one version each: yard v0.6.32, warden v0.6.33, underpass v0.6.34, counter
+v0.6.35. `tools/pitches/` still holds the four source modules and can be
+deleted whenever — the promoted copies in gen_art.py are what ship.
+
+The history below is kept because it records what was decided and why.
+
+### the original item
 
 **THE OVERLOOK WAS DROPPED (user call 2026-08-02.)** It was the only pitch
 anyone had painted; the user looked at it and said *"yes just drop it"*.

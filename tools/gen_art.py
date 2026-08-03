@@ -14719,7 +14719,8 @@ def make_scene_underpass() -> tuple[Canvas, Image.Image, Image.Image,
     return c, tube, halo, pool, ring
 
 
-def make_scene_counter() -> Canvas:
+def make_scene_counter() -> tuple[Canvas, Image.Image, Image.Image,
+                                  Image.Image, Canvas, Image.Image]:
     """Menu 6 - MARA'S COUNTER: the transit booth at conversational distance,
     the job already yours. Promoted 2026-08-02 from the backdrop pitch the user
     chose to keep ("let's add all 4 of those menu backdrops to the game, just
@@ -14754,15 +14755,24 @@ def make_scene_counter() -> Canvas:
     the version label at bottom right get the counter's deliberately quiet
     front face.
 
-    STATIC BASE ONLY - no living layer is wired for it yet. Room was left for
-    one and the bake already carries its consequences: the taped splice at
-    (838, 246) has its cf573c pilot bead lit and the parts tin below it wears a
-    PERMANENT BAKED SCORCH RING, so the ember that will drip there has visibly
-    happened a thousand times already; the light box glass is baked in its
-    steady state so a soft-alpha wash can breathe on top of it (in the den the
-    WARM light breathes - here it is the cold one, the inversion again); and
-    the work lamp's bulb is baked lit but shielded by its shade, so a glow
-    overlay can go on later without the bake fighting it.
+    THE LIVING LAYER IS BUILT (v0.6.35) and the bake already carried its
+    consequences: the taped splice keeps its lit cf573c pilot bead (at 837,
+    252 - this docstring said 838, 246, which is the splice BLOCK's corner
+    region, not the bead `_cables` actually sets) and the parts tin below it
+    keeps its PERMANENT BAKED SCORCH RING, so the ember that drips there at
+    runtime has visibly been dripping for a thousand nights already; the light
+    box glass is still baked in its steady state with the wash breathing on
+    top; and the work lamp's bulb is still baked lit but shielded, so the warm
+    glow sits on it without the bake fighting.
+
+    THE COLD LIGHT IS THE ONE THAT BREATHES, and that is the pitch. The den,
+    the warden and the underpass all breathe their WARM source; this room's
+    key light is the box under her map, so the work lamp holds steady and the
+    cold plate is what moves.
+
+    SHE DOES NOT BLINK, unlike the warden. Her eyes are drawn LOOKING DOWN at
+    the map - each is a lid line with lashes under it, no white showing - so
+    there is nothing a blink overlay could close.
 
     Returns the base painting."""
     # ITS OWN STREAM, and it takes NO draw from any shared generator, so
@@ -16943,7 +16953,62 @@ def make_scene_counter() -> Canvas:
 
     _under_counter(c, rng)               # the counter's left third,
     _scale(c, rng)                       # top face and front face
-    return c
+
+    # ---------------------------------------------------- runtime overlays --
+    # Built after every base draw, taking NO rng draw.
+    # THE COLD ONE BREATHES HERE. The den, the warden and the underpass all
+    # breathe their WARM source; this room's key light is the light box under
+    # her map, and that inversion is the whole pitch — so the work lamp holds
+    # steady and the cold plate is what moves.
+
+    def _lobe(w: int, h: int, name: str, peak: int, power: float) -> Image.Image:
+        img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        px = img.load()
+        r, g, b, _ = C(name)
+        for y in range(h):
+            for x in range(w):
+                u = (x - w / 2 + 0.5) / (w / 2)
+                v = (y - h / 2 + 0.5) / (h / 2)
+                d = u * u + v * v
+                if d < 1.0:
+                    px[x, y] = (r, g, b, int(peak * (1.0 - d) ** power))
+        return img
+
+    # 160 wide and centred at 670, NOT at BOX's 662: the plate's own near edge
+    # spans 590-750 so 670 is its true middle, and the extra 8px keeps the
+    # lobe's left edge at 590 — clear of the reserved button rect, which ends
+    # at Q_X1 = 588. At BOX itself it would have reached into it.
+    box_glow = _lobe(160, 56, "73bed3", 40, 1.7)
+    lamp_glow = _lobe(160, 60, "e8c170", 44, 1.7)
+    arc = _lobe(18, 18, "cf573c", 130, 1.4)          # the taped splice, live
+
+    # the ember landing in the parts tin, on the scorch ring that is already
+    # baked there. 3 frames of 16x10 — a hot point, a spread, and the die-down.
+    flare = Canvas(48, 10)
+    for f, rows in enumerate((
+            ((4, "e8c170"), (5, "cf573c")),
+            ((3, "cf573c"), (4, "e8c170"), (5, "cf573c"), (6, "884b2b")),
+            ((4, "884b2b"), (5, "602c2c")))):
+        ox = f * 16
+        for (ry, col) in rows:
+            hw = (2 if f == 0 else (5 if f == 1 else 4)) - abs(ry - 4)
+            if hw < 0:
+                continue
+            flare.hline(ox + 8 - hw, ox + 8 + hw, ry, C(col))
+    for k in (-6, -3, 3, 6):                          # frame 1 throws sparks
+        flare.set(16 + 8 + k, 3 if abs(k) > 4 else 2, C("e8c170"))
+
+    # A ROUND MOTE, because dust.png is a PLUS and six of those drifting alone
+    # read as four-pointed stars (cut from the warden's lamp for exactly that).
+    dust = Image.new("RGBA", (5, 5), (0, 0, 0, 0))
+    dp = dust.load()
+    for y in range(5):
+        for x in range(5):
+            d = math.hypot(x - 2, y - 2) / 2.5
+            if d < 1.0:
+                dp[x, y] = (231, 213, 179, int(230 * (1.0 - d * d) ** 1.2))
+
+    return c, box_glow, lamp_glow, arc, flare, dust
 
 
 def make_menu_map_thumb() -> Canvas:
@@ -17547,9 +17612,16 @@ def main() -> None:
     up_halo.save(OUT / "menu_underpass_halo.png")       # light: soft alpha
     up_pool.save(OUT / "menu_underpass_pool.png")       # light: soft alpha
     up_ring.img.save(OUT / "menu_underpass_ring.png")
-    counter_base = make_scene_counter()
+    (counter_base, ctr_box, ctr_lamp,
+     ctr_arc, ctr_flare, ctr_dust) = make_scene_counter()
     assert_palette(counter_base.img, "menu_counter")
+    assert_palette(ctr_flare.img, "menu_counter_flare")
     counter_base.img.save(OUT / "menu_counter.png")
+    ctr_box.save(OUT / "menu_counter_box.png")          # light: soft alpha
+    ctr_lamp.save(OUT / "menu_counter_lamp.png")        # light: soft alpha
+    ctr_arc.save(OUT / "menu_counter_arc.png")          # light: soft alpha
+    ctr_flare.img.save(OUT / "menu_counter_flare.png")
+    ctr_dust.save(OUT / "menu_counter_dust.png")        # a ROUND mote, not a plus
 
     (OUT / "manifest.json").write_text(json.dumps(manifest, indent=2))
 

@@ -142,14 +142,36 @@ a broken 3-frame ring out of the water.
   believing it**, and remember anything on a stutter has phases where it is
   legitimately invisible.
 
-**Picked up at:** **the living layer for backdrop 5, the counter** — the last
-one. Its room is already documented in `make_scene_counter`'s docstring: the
-taped splice at (838, 246) has a permanent baked scorch ring under it, waiting
-for the ember that drips there; the light box glass is baked in its steady
-state so the **COLD** light is the one that breathes (the den, the warden and
-the underpass all breathe the warm one — the inversion IS the pitch); and the
-work lamp's bulb is baked lit but shielded, so a warm glow can go on top
-without the bake fighting it. Nothing is blocked. All gates green.
+**Then v0.6.35 — MARA'S COUNTER, and that is ALL SIX BACKDROPS MOVING.** Here
+the **COLD** light is the one that breathes — the drafting box under her map —
+while the work lamp holds steady, which is the opposite way round to every
+other lit scene and is the whole point of this one. The taped splice's pilot
+bead swells over the 1.2 s before it lets an ember go, so the drip has a
+visible cause, and the ember falls slowly, **dimming as it goes**, into the
+parts tin, where it flares on a scorch ring the bake has carried all along.
+**She does not blink** — her eyes are drawn looking DOWN at the map, lid lines
+with no white showing, so there is nothing to close.
+
+**Learned here:**
+- **`_build_scenes()` IS ONE SCOPE, TOP TO BOTTOM.** `var motes` for the
+  counter collided with the drain's emitter 300 lines above and the whole
+  script failed to parse. It was caught only because the run printed
+  `Failed to load script` — the shot still saved, and the frame still looked
+  plausible. **Read the run's output, not just the picture.**
+- **ADDITIVE IS NOT AUTOMATICALLY RIGHT FOR A HOT THING.** The ember's flare
+  is the one light in this scene that is NOT additive: added over the tin's
+  baked 602c2c, `e8c170` clips to a near-white c9c9c1 and reads as an
+  electrical spark. Drawn normally it stays gold and reads as hot metal.
+- **A DOC ANCHOR WAS WRONG AGAIN** — the docstring put the live pilot bead at
+  (838, 246); `_cables` sets it at (837, 252). Fixed in place. That is three
+  scenes out of four where the pitch note's coordinates did not survive
+  contact with the code.
+
+**Picked up at:** **nothing is in progress.** A1 in TASKS.md is now DONE — all
+six backdrops exist and all six live. The next items in that list are the
+in-game map screen and the map-select tile; **M2 (guns) still waits on the
+user's explicit "go"**. `tools/pitches/` can be deleted whenever — the
+promoted copies in gen_art.py are what ship. All gates green.
 
 ---
 

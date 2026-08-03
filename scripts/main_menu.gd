@@ -1,15 +1,13 @@
 ﻿extends Node2D
 ## Main menu. SIX generated backdrop scenes rotate with a slow crossfade, in a
 ## shuffle-bag order (see _bag_next) so no backdrop repeats until every one of
-## them has been shown. Five of them are ALIVE and tick every frame:
+## them has been shown. ALL SIX are ALIVE and tick every frame:
 ##   0 den       - the traders at home: candle vs radio glow, smoke, rig LEDs
 ##   1 drain     - the tunnel under the district: god-ray, motes, ringing drips
 ##   2 yard      - the trainyard: the signal ticks red, drizzle, eave runoff
 ##   3 warden    - the toll gate: lamp and road spill on one clock, a moth, a blink
 ##   4 underpass - the flood: a failing sodium tube, three leaks ringing the water
-## The last one is a STATIC painting for now — a living layer for it is the
-## next version's job, so do not assume one exists:
-##   5 counter   - the counter
+##   5 counter   - mara's booth: the COLD light breathes here, and an ember drips
 ## (the storm scene retired 2026-08-01 — user call). DEPLOY starts the raid.
 
 const SCENE_SECONDS := 10.0
@@ -38,6 +36,11 @@ const TEX_UP_HALO := preload("res://art/gen/menu_underpass_halo.png")
 const TEX_UP_POOL := preload("res://art/gen/menu_underpass_pool.png")
 const TEX_UP_RING := preload("res://art/gen/menu_underpass_ring.png")
 const TEX_COUNTER := preload("res://art/gen/menu_counter.png")
+const TEX_CTR_BOX := preload("res://art/gen/menu_counter_box.png")
+const TEX_CTR_LAMP := preload("res://art/gen/menu_counter_lamp.png")
+const TEX_CTR_ARC := preload("res://art/gen/menu_counter_arc.png")
+const TEX_CTR_FLARE := preload("res://art/gen/menu_counter_flare.png")
+const TEX_CTR_DUST := preload("res://art/gen/menu_counter_dust.png")
 const TEX_RAIN := preload("res://art/gen/rain_streak.png")
 const TEX_DUST := preload("res://art/gen/dust.png")
 const TEX_VIGNETTE := preload("res://art/gen/vignette.png")
@@ -98,6 +101,16 @@ var _up_ring_age: Array[float] = []
 const UP_DRIP_X := [262.0, 372.0, 592.0]   # over open water, clear of the box
 const UP_DRIP_TOP := 108.0                 # the portal beam's underside
 const UP_WATER := 406.0
+# counter life
+var _ctr_box: Sprite2D
+var _ctr_lamp: Sprite2D
+var _ctr_arc: Sprite2D
+var _ctr_flare: Sprite2D
+var _ctr_flare_age := -1.0
+var _ctr_ember: Sprite2D
+var _ctr_ember_t := 1.4    # long enough for the arc's swell to read first
+const CTR_SPLICE := Vector2(837, 254)      # the live pilot bead in _cables
+const CTR_TIN_Y := 399.0                   # the parts tin's baked scorch ring
 
 var _title: TextureRect
 var _title_base_y := 0.0
@@ -123,6 +136,11 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.35", [
+		"mara's counter is alive now, and that's all six menu backgrounds moving. here it's the COLD light that breathes - the light box under her map - while the work lamp holds steady, which is the opposite way round to every other scene and is the whole point of this one",
+		"the taped splice up in the corner swells just before it lets an ember go, and the ember drops into the parts tin and flares on the scorch ring thats been baked into that tin all along",
+		"the painting is untouched, checked byte for byte, same as the other three",
+	]],
 	["v0.6.34", [
 		"the flooded underpass is alive now. the sodium tube is failing - it stammers out and strikes again every few seconds, and the glow on the wall behind it and the pool of light on the walkway go out with it, because theyre the same lamp. three leaks in the deck overhead drip into the flood and push a broken ring out of the water where they land",
 		"the painting is untouched again, checked byte for byte",
@@ -820,8 +838,8 @@ func _process(delta: float) -> void:
 		_shine_clip.visible = false
 
 	# per-scene life (also during crossfades — anything visible stays alive).
-	# 0-4 are alive; 5 is still a painting and ticks nothing, so it is
-	# deliberately absent here rather than missing by accident.
+	# ALL SIX are alive as of v0.6.35. A seventh would tick nothing until it
+	# is listed here, so this is the place to add it.
 	if _scenes[0].visible:
 		_tick_den()
 	if _scenes[1].visible:
@@ -832,6 +850,8 @@ func _process(delta: float) -> void:
 		_tick_warden(delta)
 	if _scenes[4].visible:
 		_tick_underpass(delta)
+	if _scenes[5].visible:
+		_tick_counter(delta)
 
 
 func _menu_reset_windows() -> void:
@@ -1126,14 +1146,64 @@ func _build_scenes() -> void:
 	add_child(underpass)
 	_scenes.append(underpass)
 
-	# 6: STILL PAINTING — the counter's living layer is the next version.
-	# It rotates on exactly the same footing as the ones above; the only
-	# difference is that nothing in _process ticks it.
-	for texture in [TEX_COUNTER]:
-		var still := Node2D.new()
-		_backdrop(still, texture)
-		add_child(still)
-		_scenes.append(still)
+	# 6: MARA'S COUNTER — THE COLD LIGHT IS THE ONE THAT BREATHES here, and
+	# that is the whole pitch: every other lit scene breathes its warm source,
+	# and this room's key light is the box under her map. The work lamp holds
+	# steady against it. The taped splice arcs and drops an ember into the
+	# parts tin, onto a scorch ring the bake already carries.
+	var counter := Node2D.new()
+	_backdrop(counter, TEX_COUNTER)
+	_ctr_box = Sprite2D.new()
+	_ctr_box.texture = TEX_CTR_BOX
+	_ctr_box.position = PC + Vector2(670, 400)   # the plate's true middle
+	_ctr_box.material = add_mat
+	counter.add_child(_ctr_box)
+	_ctr_lamp = Sprite2D.new()
+	_ctr_lamp.texture = TEX_CTR_LAMP
+	_ctr_lamp.position = PC + Vector2(806, 404)  # LAMP, from the generator
+	_ctr_lamp.material = add_mat
+	counter.add_child(_ctr_lamp)
+	# NOT `motes` — the drain's emitter above already owns that name, and
+	# _build_scenes is ONE scope from top to bottom.
+	var ctr_motes := CPUParticles2D.new()        # dust over the warm counter
+	ctr_motes.texture = TEX_CTR_DUST             # ROUND, not dust.png's plus
+	ctr_motes.amount = 9
+	ctr_motes.lifetime = 9.0
+	ctr_motes.preprocess = 9.0
+	ctr_motes.position = PC + Vector2(806, 380)
+	ctr_motes.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	ctr_motes.emission_rect_extents = Vector2(66, 26)
+	ctr_motes.direction = Vector2(-0.35, -1)
+	ctr_motes.spread = 16.0
+	ctr_motes.gravity = Vector2(-1, -2)
+	ctr_motes.initial_velocity_min = 2.0
+	ctr_motes.initial_velocity_max = 6.0
+	ctr_motes.color = Color("e8c170", 0.22)
+	ctr_motes.color_ramp = _fade_ramp()
+	counter.add_child(ctr_motes)
+	_ctr_flare = Sprite2D.new()
+	_ctr_flare.texture = TEX_CTR_FLARE
+	_ctr_flare.hframes = 3
+	_ctr_flare.position = PC + Vector2(838, CTR_TIN_Y)
+	_ctr_flare.visible = false
+	# NOT additive, unlike every other light in this scene. Added over the
+	# tin's baked 602c2c scorch ring, e8c170 clips to a near-white c9c9c1 and
+	# reads as an electrical SPARK; drawn normally it stays gold and reads as
+	# what it is, a bit of hot metal landing in a tin.
+	counter.add_child(_ctr_flare)
+	_ctr_ember = Sprite2D.new()
+	_ctr_ember.texture = TEX_DUST                # a 3px plus IS right for an
+	_ctr_ember.modulate = Color("cf573c")        # ember: a point with a glow
+	_ctr_ember.material = add_mat
+	_ctr_ember.visible = false
+	counter.add_child(_ctr_ember)
+	_ctr_arc = Sprite2D.new()
+	_ctr_arc.texture = TEX_CTR_ARC
+	_ctr_arc.position = PC + CTR_SPLICE
+	_ctr_arc.material = add_mat
+	counter.add_child(_ctr_arc)
+	add_child(counter)
+	_scenes.append(counter)
 
 	for scene in _scenes:
 		scene.modulate.a = 0.0
@@ -1299,6 +1369,45 @@ func _tick_underpass(delta: float) -> void:
 				_up_rings[i].visible = true
 				_up_rings[i].frame = 0
 				_up_ring_age[i] = 0.0
+
+
+func _tick_counter(delta: float) -> void:
+	# THE COLD ONE MOVES. Every other lit scene in this menu breathes its warm
+	# source; here the key light is the box under her map, so the plate is
+	# what wavers and the work lamp holds steady against it.
+	_ctr_box.modulate.a = 0.78 + 0.16 * sin(_time * 0.9) + 0.06 * sin(_time * 2.7)
+	_ctr_lamp.modulate.a = 0.88 + 0.04 * sin(_time * 1.3)
+	# the splice is LIVE and it knows it: the bead swells just before it lets
+	# an ember go, so the drip has a visible cause instead of arriving out of
+	# a dark ceiling.
+	var due := clampf(1.0 - _ctr_ember_t / 1.2, 0.0, 1.0)
+	_ctr_arc.modulate.a = clampf(0.34 + 0.10 * sin(_time * 3.1) + due * 0.62,
+		0.0, 1.0)
+	if _ctr_flare_age >= 0.0:
+		_ctr_flare_age += delta
+		var f := int(_ctr_flare_age / 0.13)
+		if f > 2:
+			_ctr_flare.visible = false
+			_ctr_flare_age = -1.0
+		else:
+			_ctr_flare.frame = f
+	_ctr_ember_t -= delta
+	if _ctr_ember_t <= 0.0 and not _ctr_ember.visible:
+		_ctr_ember_t = randf_range(6.0, 13.0)
+		_ctr_ember.visible = true
+		_ctr_ember.position = PC + CTR_SPLICE
+	if _ctr_ember.visible:
+		# slower than a drip of water, and it dims as it falls — an ember is
+		# dying on the way down, not falling to a schedule
+		_ctr_ember.position.y += 210.0 * delta
+		var fall := (_ctr_ember.position.y - PC.y - CTR_SPLICE.y) / (CTR_TIN_Y - CTR_SPLICE.y)
+		_ctr_ember.modulate.a = clampf(1.0 - fall * 0.55, 0.0, 1.0)
+		if _ctr_ember.position.y >= PC.y + CTR_TIN_Y - 2.0:
+			_ctr_ember.visible = false
+			_ctr_ember.modulate.a = 1.0
+			_ctr_flare.visible = true
+			_ctr_flare.frame = 0
+			_ctr_flare_age = 0.0
 
 
 func _fade_ramp() -> Gradient:
