@@ -1397,12 +1397,27 @@ def _mara_body(c: Canvas, rng: random.Random) -> None:
     with no seam. They are separate masses now with a shadowed seam between.
     """
     # ---- torso, oxblood jacket (identity carried over from the den)
+    #
+    # THE SHOULDER LINE IS A CURVE OUT OF THE COLLAR, NOT A SHELF. The first
+    # cut started the torso at y 336 with a flat half-width of 25, so the
+    # silhouette left the collar sideways along 51 px of dead-level pixels and
+    # then fell away in steps: "her shoulders look cropped out". The mass now
+    # starts at y 332 exactly as wide as the collar and swells on a quarter
+    # sine, so the trapezius slopes out of the neck and the deltoid turns over
+    # BELOW the top of the shoulder. Below y 346 the half-widths are the OLD
+    # ones to the pixel — the arms hang off this and nothing about where they
+    # hang was in question.
+    def _torso_half(y: int) -> int:
+        if y > 346:                                     # the OLD profile, kept
+            return int(25.0 + (((y - 336) / 37.0) ** 0.45) * 21.0)
+        return int(17.5 + 19.0
+                   * math.sin(min(1.0, (y - 331.5) / 14.5) * math.pi / 2))
+
     shoulder_top = {}
-    for y in range(336, 373):
-        t = (y - 336) / 37.0
-        half = int(25 + (t ** 0.45) * 21)               # a ROUND shoulder — a
-        for x in range(MCX - half, MCX + half + 1):     # near-linear taper
-            lit = (x - (MCX - half)) / float(2 * half)  # read as a poncho
+    for y in range(332, 373):
+        half = _torso_half(y)
+        for x in range(MCX - half, MCX + half + 1):
+            lit = (x - (MCX - half)) / float(2 * half)
             col = C("752438")
             if lit < 0.15 or lit > 0.86:
                 col = C("411d31")
@@ -1424,7 +1439,14 @@ def _mara_body(c: Canvas, rng: random.Random) -> None:
             t = k / 139.0
             cx_ = MCX + sgn * (30.0 + 38.0 * t + 6.0 * math.sin(t * 2.2))
             cy_ = 344.0 + t * 68.0
+            # WIDTH ONLY — cx_/cy_ above are untouched, so the arm still runs
+            # exactly where it ran. The sleeve head used to appear at its full
+            # 30 px in one row, 10 px proud of the torso: a hard square corner
+            # where the shoulder should round over. It now grows into the
+            # deltoid over the first fifth of the sleeve.
             w = 15.0 - 3.0 * t
+            if t < 0.22:
+                w *= 0.40 + 0.60 * math.sin(t / 0.22 * math.pi / 2) ** 0.6
             roll = t > 0.86                     # the cuff is PART of the sleeve
             for dx in range(-int(w), int(w) + 1):
                 x = int(round(cx_ + dx))
@@ -1495,15 +1517,58 @@ def _mara_body(c: Canvas, rng: random.Random) -> None:
     for k in range(7):                                  # loose strands
         c.vline(MCX - 32 - rng.randrange(3), 276 + k * 8, 282 + k * 8, C("341c27"))
     # low ponytail over her right shoulder — a den identity marker
-    for k in range(70):
+    def _tail(k):
         t = k / 70.0
-        px = int(MCX - 34 - t * 10 + math.sin(t * 3.0) * 4)
-        w = int(10 - t * 5)
+        return (int(MCX - 34 - t * 10 + math.sin(t * 3.0) * 4), int(10 - t * 5))
+    for k in range(70):
+        px, w = _tail(k)
         c.rect(px - w, 296 + k, px + w, 297 + k, C("4d2b32"))
         c.vline(px - w, 296 + k, 297 + k, C("341c27"))
-        c.vline(px + w, 296 + k, 297 + k, C("602c2c") if t < 0.55 else C("4d2b32"))
-    c.rect(MCX - 52, 356, MCX - 39, 366, C("341c27"))   # its tie
-    c.hline(MCX - 52, MCX - 39, 356, C("4d2b32"))
+        c.vline(px + w, 296 + k, 297 + k,
+                C("602c2c") if k < 39 else C("4d2b32"))
+
+    # ---- the tie: a band WRAPPED round the hank, not a box laid on it.
+    # It was a 14x11 rectangle, and because it was placed by eye it sat six
+    # pixels to the LEFT of the hair it was supposed to be gathering — half of
+    # it hung over her shoulder as a dark brick with two square corners. It now
+    # takes its centre from the same curve the strand does, leans with the
+    # strand, and its depth is an ellipse across the hank: deepest through the
+    # middle, pinched to almost nothing where the band turns away at each edge.
+    # Every pixel is clipped to the hair's OWN span, so neither the ponytail's
+    # silhouette nor the shoulder under it moves.
+    def _tail_span(y):
+        lo, hi = 1 << 30, -(1 << 30)
+        for k in (y - 296, y - 297):
+            if 0 <= k < 70:
+                px, w = _tail(k)
+                lo, hi = min(lo, px - w), max(hi, px + w)
+        return lo, hi
+
+    tcx, tw = _tail(64)                                 # the band's own row
+    for dx in range(-tw - 1, tw + 2):
+        x = tcx + dx
+        u = dx / (tw + 0.6)
+        if abs(u) >= 1.0:
+            continue
+        h = 1.15 + 1.95 * (1.0 - u * u) ** 0.6          # the wrap, seen edge on
+        yc = 360.6 + dx * 0.28                          # leans with the strand
+        y0 = int(math.floor(yc - h + 0.5))
+        y1 = int(math.floor(yc + h + 0.5))
+        for y in range(y0, y1 + 1):
+            lo, hi = _tail_span(y)
+            if not lo <= x <= hi:
+                continue
+            d = (y - y0) / max(1.0, float(y1 - y0))
+            col = C("241527")                           # the strap's own body,
+            if d < 0.001:                               # darker than the hair
+                col = C("884b2b") if -0.5 < u < 0.22 else C("602c2c")
+            elif d < 0.30:
+                col = C("341c27")
+            elif d > 0.86:
+                col = C("151d28")                       # its shade beneath
+            if abs(u) > 0.70:                           # the ends turn away
+                col = C("241527") if d > 0.001 else C("341c27")
+            c.set(x, y, col)
 
     # ---- the headset, pushed up onto her crown: she is off-channel, talking
     # to you. Baked in its OFF state — no pilot lamp lit on the cup.
@@ -1686,10 +1751,19 @@ def _mara_arms(c: Canvas, rng: random.Random) -> None:
     the point its sleeve stopped and every hand STARTS at the point its forearm
     stopped: no piece of her floats free of the piece it hangs off."""
     def limb(x0, y0, x1, y1, w0, w1, core, up, dn):
+        """The CENTRELINE (x0,y0)->(x1,y1) is fixed and so are both end widths:
+        the sleeve cuff still meets the elbow on the same pixels and the hand
+        still meets the wrist on the same pixels. Only the width BETWEEN them
+        is shaped — the old straight lerp from w0 to w1 laid a constant-width
+        plank on the counter with no flexor mass past the elbow and no pinch
+        into the wrist."""
         n = 84
         for k in range(n + 1):
             t = k / float(n)
-            x, y, w = x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, w0 + (w1 - w0) * t
+            x, y = x0 + (x1 - x0) * t, y0 + (y1 - y0) * t
+            w = (w0 + (w1 - w0) * (t ** 1.4)
+                 + 2.2 * (1.0 - t)
+                 * math.sin(math.pi * min(max((t - 0.06) / 0.44, 0.0), 1.0)))
             c.rect(int(x - w), int(y - w * 0.62), int(x + w), int(y + w * 0.62),
                    core)
             c.hline(int(x - w), int(x + w), int(y - w * 0.62), up)

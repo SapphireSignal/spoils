@@ -101,7 +101,10 @@ a knife cut.  FIXED in two halves, and it needs both:
   is lying in or there is nothing to see.
   the wing mirror moved with it: it used to hang over open water on a long arm
   because the bonnet was under the flood.  the bonnet is not under the flood any
-  more, so it is back on the a-pillar, over the wing it is named after.
+  more, so it is back on the a-pillar, over the wing it is named after — and it
+  is a mirror now rather than a near-black box, on a LEVEL arm, with a lit glass
+  face inside a housing that is a value above the water.  see the block that
+  draws it for why each of those three is load-bearing.
   every roll in the submerged half happens AFTER the last float_wake(), so
   nothing already on the canvas re-rolls.  a pixel diff against the previous
   render is empty outside x 4-135, y 426-498 — the car, its nose and its wake.
@@ -1499,13 +1502,52 @@ def paint() -> Canvas:
                 q = car.get(xx, py_ + k)
                 if q[3] and q[:3] not in (GLS[:3], SIL[:3]):
                     car.set(xx, py_ + k, rc)
-    car.rect(50, 29, 57, 33, SIL)                           # the wing mirror,
-    car.rect(51, 30, 56, 32, FLKD)                          # pulled back onto the
-    car.rect(40, 23, 51, 33, SIL)                           # a-pillar and shrunk:
-    car.rect(41, 24, 50, 32, FLKD)                          # the bonnet used to
-    car.hline(41, 50, 24, TOPF)                             # be under the flood,
-    car.set(41, 32, TOPF)                                   # so the head hung out
-    # over open water on a long arm and now reads as a box loose in the frame.
+    # ------------------------------------------------------- the wing mirror --
+    # it read as a small dark BOX floating over the water, because that is what
+    # it was: a 12x11 090a14 square filled 151d28, with a second 090a14 square
+    # beside it, both painted out of the same near-black the flood is made of,
+    # and both hung clear of a car nothing joined them to.  three things carry a
+    # mirror at this size and it now has all three.
+    #   the ARM.  x 51-59 at car-row 30, dying inside the flank at the a-pillar's
+    #   foot, which is where a wing mirror bolts on.  it is LEVEL on purpose: the
+    #   a-pillar and the bonnet shoulder are both long diagonals through this
+    #   exact corner, and the first cut of this arm ran down-right parallel to
+    #   them and disappeared into them — the same lesson the front bumper and the
+    #   headlamp forty lines up already learned.  lit 394a50 along the top with
+    #   090a14 under it, so it is a bar with a top face and not a scratch.
+    #   the LEAN.  10 wide, 8 tall at the outer end and 7 at the inner: the top
+    #   edge climbs 2px across the head and the bottom 3px, so it is a
+    #   parallelogram tilted up toward the car and never square-on.  the outer
+    #   end is the end nearer the camera, so it is the taller one.
+    #   the GLASS.  a 577277 catch across the outer-top corner falling to 394a50
+    #   on the diagonal, inset on all four sides in a 202e37 housing with 090a14
+    #   under its sill.  the housing is 202e37 and NOT the 151d28 it started as:
+    #   against 10141f water a near-black housing has no silhouette at all, only
+    #   its lit pixels read, and losing the silhouette is precisely how the old
+    #   one ended up a box.
+    MX0, MX1 = 42, 51                       # the head, out over the front wing
+
+    def m_top(x):
+        return 27 - int((x - MX0) * 0.25)
+
+    def m_bot(x):
+        return 34 - int((x - MX0) * 0.35)
+
+    for x in range(MX0, MX1 + 1):
+        t, b = m_top(x), m_bot(x)
+        car.rect(x, t, x, b, FLK)                   # the housing, a SOLID form: a
+        car.set(x, t, TOPF)                         # near-black one had no shape
+        car.set(x, b, SIL)                          # against near-black water, so
+        if x <= MX0 or x >= MX1 - 1:                # only the lit bits ever read
+            continue
+        for y in range(t + 1, b):                   # the glass, inset on all four
+            k = (x - MX0 - 1) + (y - t - 1)         # sides: the brightest mark in
+            car.set(x, y, TOPE if k <= 4 else TOPF) # this corner, split on the
+        # diagonal so the face falls away toward the inner bottom corner instead
+        # of sitting there as one flat lozenge of light.
+    for x in range(MX1, 60):                        # the arm, back into the flank
+        car.set(x, 30, TOPF)                        # at the pillar foot: LEVEL,
+        car.set(x, 31, SIL)                         # lit on top, shade under
     car.outline_auto(SIL)
     c.img.alpha_composite(car.img, (6, 404))
     c.px = c.img.load()

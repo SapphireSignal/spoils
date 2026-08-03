@@ -1917,8 +1917,14 @@ def _warden(c: Canvas, rng: random.Random) -> None:
     # brown wings across the whole interior that read as a cloak — and it
     # darkened exactly the strip of wall his dark tunic has to silhouette
     # against, so the shoulders disappeared.
+    # THE BOUND IS 286, THE ROW HIS TUNIC STARTS ON, and it has to be: it
+    # used to say 292, so the top six rows of tunic were casting after all
+    # and the comment above was describing an intent the loop did not keep.
+    # It cost almost nothing while the shoulders were narrow wedges; with a
+    # shoulder that runs out to the sleeve it smeared a dark band across
+    # exactly the strip of wall the new silhouette has to be read against.
     for (ox, oy) in ((7, -8), (3, -4)):
-        for y in range(196, 292):
+        for y in range(196, 286):
             for x in range(630, 730):
                 if s.get(x, y)[3] == 0:
                     continue
@@ -1936,11 +1942,46 @@ def _warden_figure(c: Canvas, rng: random.Random) -> None:
     """46px of face, lit from BELOW by the ledger lamp. Bands run: peak
     shadow (near black) -> brow -> cheeks -> lit jaw -> hot chin rim."""
     # ---- tunic and shoulders (drawn first, the head sits over the neck) ----
-    for y in range(286, 344):
-        t = (y - 286) / 20.0
-        hl = 12 + int(min(1.0, t) * 34)          # his right shoulder, lower
-        hr = 12 + int(min(1.0, (y - 280) / 18.0) * 50)   # elbow side, higher
-        hr = min(hr, 62)
+    # THE SHOULDER LINE IS A CURVE, and it is ONLY a width profile: the whole
+    # change here is how wide the tunic is on rows 283-291, and nothing about
+    # the sleeve or the hand is touched. Both shoulders used to begin on the
+    # same flat row 286 and run out on a straight diagonal, which read as two
+    # square blocks pushed out from under his chin; on the elbow side the
+    # silhouette then stepped 20px sideways in ONE row, where the sleeve's own
+    # flat top begins, and that corner is what read as cropped off. Each side
+    # now eases out of the neck and rounds over — the outer edge moves 9px on
+    # the first row of the round and 1px on the last, so the WIDEST point is
+    # the BOTTOM of the round, not the top, which is what makes a shoulder
+    # read as turned rather than chamfered. The elbow side runs all the way
+    # out to the sleeve's own outer edge (CX+62) so the two meet instead of
+    # stepping across to each other.
+    #
+    # HIS RIGHT SHOULDER IS THE LOW ONE and it does not rise at all: the top
+    # of it stays on row 286 where it always was, and it gets a DELTOID BULGE
+    # laid over the old taper instead — max() of the two, so the width can
+    # only ever grow, never step back in. The bulge is 7px at its fullest and
+    # has closed again by row 298, which is where the open ledger takes the
+    # rest of that side, so every row from 298 down is untouched. It buys the
+    # ease at the neck without eating the lamp's wash on the wall behind him.
+    #
+    # FROM y 292 DOWN ON THE ELBOW SIDE, AND 298 DOWN ON THIS ONE, EVERY
+    # WIDTH IS THE WIDTH IT ALWAYS WAS.
+    def _hl(y: int) -> int:                  # his right, the LOWER shoulder
+        base = 12 + int(min(1.0, max(0.0, (y - 286) / 20.0)) * 34)
+        v = min(1.0, max(0.0, (y - 286) / 11.0))
+        return max(base, 12 + int(20.0 * (1.0 - (1.0 - v) ** 2.4)))
+    def _hr(y: int) -> int:                  # the elbow side, held higher
+        if y >= 292:
+            return min(62, 12 + int(min(1.0, (y - 280) / 18.0) * 50))
+        v = min(1.0, max(0.0, (y - 282) / 9.0))
+        return 12 + int(50.0 * (1.0 - (1.0 - v) ** 2.0))
+    for y in range(283, 344):
+        hl = _hl(y)                              # his right shoulder, lower
+        hr = _hr(y)                              # elbow side, higher
+        # the rim that turns away from the lamp is 7px over the round and the
+        # sleeve's own is 6, so they read as one surface; below the sleeve it
+        # stays the 12 it always was.
+        rim = 12 if y >= 292 else 7
         for x in range(CX - hl, CX + hr + 1):
             dx = x - CX
             lv = 2
@@ -1950,9 +1991,17 @@ def _warden_figure(c: Canvas, rng: random.Random) -> None:
                 lv = 4
             if y > 318:
                 lv = 5
-            if dx > hr - 12:
+            if dx > hr - rim:
                 lv -= 1
             if dx > hr - 5:
+                lv -= 1
+            # THE CROWN OF THE ROUND IS THE DARK SIDE, because the only lamp
+            # in the room is below him: a pixel within three rows of the top
+            # of its own column is on the part of the shoulder tipped away
+            # from the ledger, so it drops a step and the surface lifts as it
+            # turns down under the light. Held to y < 292 so the sleeve, and
+            # everything the sleeve and the ledger cover, keeps its old value.
+            if y < 292 and (dx > _hr(y - 3) or -dx > _hl(y - 3)):
                 lv -= 1
             if dx < -hl + 4:
                 lv -= 1
