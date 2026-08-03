@@ -131,6 +131,8 @@ const YARD_WINDOWS := [Vector2(127, 253), Vector2(155, 253),
 	Vector2(484, 252)]
 var _yard_wins: Array[Sprite2D] = []
 var _birds: Array[Sprite2D] = []
+var _bird_x: Array[float] = []      # TRUE positions, kept continuous
+var _bird_y: Array[float] = []
 var _bird_age: Array[float] = []
 var _bird_life: Array[float] = []
 var _bird_spd: Array[float] = []
@@ -170,7 +172,8 @@ var _ctr_ember: Sprite2D
 var _ctr_ember_t := 1.4
 var _ctr_haze: Sprite2D
 var _ctr_rat: Sprite2D
-var _ctr_rat_t := 2.2    # long enough for the arc's swell to read first
+var _ctr_rat_t := 2.2
+var _ctr_rat_x := 0.0   # TRUE position; only the draw rounds    # long enough for the arc's swell to read first
 const CTR_SPLICE := Vector2(837, 254)      # the live pilot bead in _cables
 const CTR_TIN_Y := 399.0                   # the parts tin's baked scorch ring
 
@@ -209,6 +212,11 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.42", [
+		"the thing on the right of the underpass was a bricked-up service door all along - its a real door now, with a frame, ribs, hinges and a handle. and two notices on the wall beside it: a transit shelter sign pointing down into the underworks, and a wardens cordon notice",
+		"the birds and the rat werent moving at all. both of them were rounding their position every frame, and at 240fps thats less than half a pixel of movement, so it got rounded straight back and they sat still. they move now",
+		"the rat actually looks like a rat - snout, ear, arched back and a long tail - and it fades in and out instead of blinking out of existence halfway across the counter",
+	]],
 	["v0.6.41", [
 		"the birds work now. they were flying at exactly the height of the menu buttons so most of every crossing happened behind them, and on top of that the code had them switching between two states and they were silently never drawing at all. theyre spread across the sky at their own heights and their own speeds now, and they fade in and out instead of popping",
 		"mara is holding her pencil properly - its drawn behind her hand now so her fingers close over it and the lead reaches the map. her forearms are slimmer and rounded instead of square slabs, and shes slimmer in the den painting too",
@@ -1204,8 +1212,9 @@ func _build_scenes() -> void:
 		_bird_age.append(randf_range(0.0, 9.0))   # already mid-life at boot
 		_bird_life.append(randf_range(7.0, 15.0))
 		_bird_spd.append(randf_range(26.0, 78.0))
-		bd.position = PC + Vector2(randf_range(150.0, 660.0),
-			randf_range(204.0, 228.0))
+		_bird_x.append(randf_range(150.0, 660.0))
+		_bird_y.append(randf_range(206.0, 226.0))
+		bd.position = PC + Vector2(_bird_x[i], _bird_y[i])
 	# FIVE points, all on wire pixels sampled out of the bake, and they fire
 	# every 1.4-4.5s instead of every 3.5-9 — user: "make the trainyards
 	# sparks from the poles more noticable, and make more of them".
@@ -1395,7 +1404,7 @@ func _build_scenes() -> void:
 	counter.add_child(_ctr_haze)
 	_ctr_rat = Sprite2D.new()
 	_ctr_rat.texture = TEX_CTR_RAT
-	_ctr_rat.hframes = 4
+	_ctr_rat.hframes = 4   # 15x9 each
 	_ctr_rat.visible = false
 	counter.add_child(_ctr_rat)
 	_ctr_arc = Sprite2D.new()
@@ -1529,19 +1538,26 @@ func _tick_yard(delta: float) -> void:
 	for i in _birds.size():
 		var bd := _birds[i]
 		_bird_age[i] += delta
-		bd.position = Vector2(roundf(bd.position.x - _bird_spd[i] * delta),
-			bd.position.y)
+		# THE TRUE POSITION STAYS CONTINUOUS AND ONLY THE DRAWN ONE ROUNDS.
+		# Writing roundf(position.x - spd * delta) back into position was a
+		# real bug and a straight violation of rule 1: at 240 fps and 26-78
+		# px/s a bird moves 0.11-0.33 px per frame, so the round snapped it
+		# back to where it started and they hung in the sky, motionless
+		# ("the birds arent moving, they are in the same spot the whole time").
+		_bird_x[i] -= _bird_spd[i] * delta
+		bd.position = PC + Vector2(roundf(_bird_x[i]),
+			roundf(_bird_y[i] + sin(_time * (1.3 + i * 0.29) + i * 2.1) * 2.5))
 		bd.frame = clampi(int(fmod(_time * (7.0 + i * 1.3), 3.0)), 0, 2)
 		var life: float = _bird_life[i]
 		var age: float = _bird_age[i]
 		# fade in over 1.1 s, out over the last 1.1 s, so nothing ever pops
 		bd.modulate.a = clampf(minf(age / 1.1, (life - age) / 1.1), 0.0, 1.0)
-		if age >= life or bd.position.x < PC.x + 110.0:
+		if age >= life or _bird_x[i] < 110.0:
 			_bird_age[i] = 0.0
 			_bird_life[i] = randf_range(7.0, 15.0)
 			_bird_spd[i] = randf_range(26.0, 78.0)
-			bd.position = PC + Vector2(randf_range(170.0, 690.0),
-				randf_range(204.0, 228.0))
+			_bird_x[i] = randf_range(170.0, 690.0)
+			_bird_y[i] = randf_range(206.0, 226.0)
 	# runoff off the near boxcar's eave (x 100), bursting on the ballast
 	if _yard_splash_age >= 0.0:
 		_yard_splash_age += delta
@@ -1698,15 +1714,29 @@ func _tick_counter(delta: float) -> void:
 	if not _ctr_rat.visible:
 		if _ctr_rat_t <= 0.0:
 			_ctr_rat.visible = true
-			_ctr_rat.position = PC + Vector2(24.0, 402.0)
+			# 66, not 24: the viewport shows painting x 60-900, so a rat that
+			# starts at 24 starts OFF SCREEN — and since it never moved (see
+			# below) it stayed there. It now walks in from just inside the
+			# left edge.
+			_ctr_rat_x = 40.0
+			_ctr_rat.position = PC + Vector2(_ctr_rat_x, 402.0)
 	else:
-		var rp := _ctr_rat.position
-		rp.x += 34.0 * delta
-		_ctr_rat.position = Vector2(roundf(rp.x), rp.y)
-		_ctr_rat.frame = int(_time * 9.0) % 4
-		if _ctr_rat.position.x > PC.x + 352.0:
+		# THE TRUE POSITION IS KEPT SEPARATELY. Writing roundf(x + 34*delta)
+		# back into position rounded the step away entirely: at 240 fps that
+		# is 0.14 px a frame, so the rat never moved from where it spawned and
+		# the user simply never saw one. Identical bug to the birds, same day.
+		_ctr_rat_x += 34.0 * delta
+		_ctr_rat.position = Vector2(PC.x + roundf(_ctr_rat_x), PC.y + 402.0)
+		_ctr_rat.frame = clampi(int(fmod(_time * 9.0, 4.0)), 0, 3)
+		# FADE IN AND OUT over the first and last 26px of the run. It used to
+		# blink out of existence in the middle of an empty counter — user:
+		# "the rat just dissapeared". Same fix as the birds.
+		var run := _ctr_rat_x - 40.0
+		_ctr_rat.modulate.a = clampf(minf(run / 26.0, (368.0 - _ctr_rat_x) / 26.0),
+			0.0, 1.0)
+		if _ctr_rat_x > 368.0:
 			_ctr_rat.visible = false
-			_ctr_rat_t = randf_range(7.0, 16.0)
+			_ctr_rat_t = randf_range(4.0, 10.0)
 	_ctr_ember_t -= delta
 	if _ctr_ember_t <= 0.0 and not _ctr_ember.visible:
 		_ctr_ember_t = randf_range(6.0, 13.0)

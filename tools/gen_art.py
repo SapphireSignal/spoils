@@ -13798,6 +13798,136 @@ def make_scene_underpass() -> tuple:
         by += h
     c.vline(dx0 + 3, 238, 385, C("602c2c"))
 
+    # ---- A REAL DOOR IN IT (user, 2026-08-03: "is that a door on the right?
+    # if so make it look more like a door and add a handle on it").
+    #
+    # It always WAS a door — a bricked-up service doorway — and the user read
+    # the opening correctly and then found nothing door-like inside it. The
+    # brick infill above is deliberately LEFT INTACT and painted over rather
+    # than deleted: its loop takes two rng draws per course, and dropping them
+    # would re-roll the chalk dog, the soffit girders and everything else
+    # downstream. Same rule as the world builder — take the roll and throw it
+    # away.
+    #
+    # THE LIGHT COMES FROM THE LEFT. The sodium tube sits at x 636-768 and
+    # this door is at 826-898, so its left stile is the lit one and its right
+    # is in shade; hinges go on the LIT side and the handle on the shade side,
+    # which is also simply where a handle belongs.
+    lx0, lx1 = dx0 + 6, dx1 - 6                      # the leaf, recessed 6px
+    ly0, ly1 = 241, 383
+    c.rect(lx0 - 2, ly0 - 2, lx1 + 2, ly1, C("151d28"))       # the reveal
+    c.rect(lx0, ly0, lx1, ly1, C("202e37"))                   # the leaf
+    for x in range(lx0, lx1 + 1):                             # a top drip lip
+        c.set(x, ly0, C("394a50"))
+    # SIX VERTICAL RIBS. A flat slab reads as a panel, not a door; ribs are
+    # what a steel service door actually has, and they carry the left light.
+    rib = (lx1 - lx0) / 6.0
+    for k in range(1, 6):
+        rx = int(lx0 + rib * k)
+        c.vline(rx, ly0 + 2, ly1 - 1, C("151d28"))
+        c.vline(rx + 1, ly0 + 2, ly1 - 1, C("394a50"))        # lit edge, left
+    c.vline(lx0, ly0, ly1, C("577277"))                       # lit stile
+    c.vline(lx0 + 1, ly0 + 1, ly1, C("394a50"))
+    c.vline(lx1, ly0, ly1, C("090a14"))                       # shade stile
+    c.vline(lx1 - 1, ly0 + 1, ly1, C("151d28"))
+    # TWO HINGES on the lit side, plates and knuckles
+    for hy in (ly0 + 18, ly1 - 26):
+        c.rect(lx0 - 1, hy, lx0 + 7, hy + 9, C("394a50"))
+        c.rect(lx0, hy + 1, lx0 + 6, hy + 8, C("202e37"))
+        c.vline(lx0 - 1, hy, hy + 9, C("577277"))
+        for kn in range(hy + 1, hy + 9, 3):
+            c.set(lx0 - 1, kn, C("a8b5b2"))
+    # THE HANDLE: a backplate and a lever, at 4/10 of the leaf's height, on
+    # the shade side. It is the one thing the user asked for by name, so it
+    # gets the brightest metal in the door and its own cast shadow.
+    hx, hy = lx1 - 9, ly0 + int((ly1 - ly0) * 0.40)
+    c.rect(hx - 2, hy - 5, hx + 3, hy + 8, C("151d28"))       # backplate shade
+    c.rect(hx - 2, hy - 6, hx + 3, hy + 7, C("394a50"))       # backplate
+    c.rect(hx - 1, hy - 5, hx + 2, hy + 6, C("202e37"))
+    c.set(hx, hy - 3, C("090a14"))                            # the keyway
+    c.set(hx, hy - 2, C("090a14"))
+    for k in range(9):                                        # the lever, out
+        c.set(hx - 3 - k, hy + 1, C("a8b5b2"))                # and slightly down
+        c.set(hx - 3 - k, hy + 2, C("577277"))
+        c.set(hx - 3 - k, hy + 3, C("202e37"))
+    c.set(hx - 12, hy + 2, C("c7cfcc"))                       # the tip catches
+    # a kick plate, scuffed, and one dent — a door this old is not flat
+    # 172038, NOT 253a5e: a navy kick plate read as a blue stripe painted on
+    # the door rather than a scuffed steel plate bolted to it.
+    c.rect(lx0 + 2, ly1 - 20, lx1 - 2, ly1 - 1, C("172038"))
+    c.hline(lx0 + 2, lx1 - 2, ly1 - 20, C("394a50"))
+    for (px_, py_, pw, ph) in ((lx0 + 9, ly1 - 15, 7, 3),
+                               (lx1 - 18, ly1 - 9, 9, 2),
+                               (lx0 + 22, ly0 + 46, 6, 4)):
+        c.rect(px_, py_, px_ + pw, py_ + ph, C("172038"))
+    # the tube's warm light just reaches the reveal on the lit side. SOLID —
+    # stepping every other row drew a dashed orange line down the door and
+    # read as a defect, not as light.
+    c.vline(lx0 - 2, ly0, ly1 - 1, C("602c2c"))
+    c.vline(lx0 - 3, ly0 + 2, ly1 - 3, C("4d2b32"))
+
+    # ---- TWO NOTICES, one either side of the door (user: "add a poster or
+    # two on the walls near the door, make sure it doesnt cover anything
+    # already on the wall though, make the posters show something about our
+    # games lore").
+    #
+    # Both patches were measured before drawing: 770-822 and 906-956, y
+    # 244-330, are five-colour flat wall with nothing on them. Both are LIT
+    # FROM THE LEFT like everything else here, and both carry a torn corner
+    # and a curled edge, because paper that has been on a wet tunnel wall for
+    # six years does not lie flat.
+    #
+    # NO READABLE TEXT. The font has a 5px x-height and a legible poster at
+    # this scale would be enormous; lines of ink stand in for it, which is how
+    # every other sign in this project is drawn.
+    def _notice(x0: int, y0: int, w: int, h: int, header) -> None:
+        c.rect(x0 + 1, y0 + 1, x0 + w, y0 + h, C("090a14"))   # its shadow
+        c.rect(x0, y0, x0 + w - 1, y0 + h - 1, C("c09473"))   # the sheet
+        c.rect(x0, y0, x0 + w - 6, y0 + h - 1, C("d7b594"))   # lit half
+        c.vline(x0, y0, y0 + h - 1, C("e7d5b3"))              # the lit edge
+        c.rect(x0 + 2, y0 + 2, x0 + w - 4, y0 + 7, C(header)) # header band
+        for k in range(3):                                    # the curled foot
+            c.hline(x0 + 2 + k * 2, x0 + w - 3 - k, y0 + h - 1 - k, C("ad7757"))
+        for k in range(5):                                    # torn top corner
+            c.hline(x0 + w - 5 + k, x0 + w - 1, y0 + k, C("151d28"))
+
+    def _lines(x0: int, y0: int, w: int, rows, rng_: random.Random) -> None:
+        for r in rows:
+            run = w - 6 - rng_.randrange(0, 7)
+            c.hline(x0 + 3, x0 + 3 + run, y0 + r, C("241527"))
+
+    prng = random.Random("spoils:underpass:notices")
+
+    # LEFT — a transit authority shelter notice. The underworks behind this
+    # door are the war-years shelter cellars (LORE 4), so an official sign
+    # pointing DOWN into them is the one notice that belongs on this wall.
+    nx, ny, nw, nh = 776, 252, 40, 54
+    _notice(nx, ny, nw, nh, "253a5e")
+    for k in range(9):                                        # the down arrow
+        c.hline(nx + 18 - k // 2, nx + 21 + k // 2, ny + 13 + k, C("241527"))
+    c.rect(nx + 17, ny + 13, nx + 22, ny + 24, C("241527"))
+    c.rect(nx + 13, ny + 22, nx + 26, ny + 25, C("241527"))
+    for k in range(4):
+        c.hline(nx + 16 + k, nx + 23 - k, ny + 25 + k, C("241527"))
+    _lines(nx, ny, nw, (36, 40, 44, 48), prng)
+
+    # RIGHT — the wardens' cordon notice. LORE 2: "nobody crosses. nothing
+    # comes out." Lattice panel across the top, then a red bar through it.
+    # 716, NOT 912. The viewport shows painting x 60-900 only — 60px of the
+    # 960 wide painting is cropped off each side — so the first placement, on
+    # measured-empty wall at 912-950, was entirely OFF SCREEN. Measure a patch
+    # for emptiness AND check it is inside 60-900.
+    mx_, my_, mw, mh = 716, 256, 38, 50
+    _notice(mx_, my_, mw, mh, "752438")
+    for gx in range(mx_ + 4, mx_ + mw - 4, 5):                # the lattice
+        c.vline(gx, my_ + 12, my_ + 27, C("4d2b32"))
+    for gy2 in range(my_ + 13, my_ + 28, 5):
+        c.hline(mx_ + 4, mx_ + mw - 5, gy2, C("4d2b32"))
+    for k in range(16):                                       # the red bar
+        c.set(mx_ + 5 + k, my_ + 26 - k, C("a53030"))
+        c.set(mx_ + 6 + k, my_ + 26 - k, C("752438"))
+    _lines(mx_, my_, mw, (33, 37, 41), prng)
+
     # the hounds' chalk dog — the one mark a person left, small and faint.
     # CRITIC FIX 1: moved to (610, 296); at y 240 it sat level with the top
     # two buttons.
@@ -17346,32 +17476,45 @@ def make_scene_counter() -> tuple:
     # keeps as room rather than person. Near-black on lit wood, so it reads as
     # a silhouette the way the birds do against the sunset. 4 frames: the legs
     # alternate and the body drops a pixel on each contact.
-    # IT HAS TO BE LIGHTER THAN THE WOOD, NOT DARKER. The first cut drew it in
-    # 090a14 on a counter top of 241527/341c27 — a difference of about 20
-    # values, and the user's report was simply "i dont see any rat". It was
-    # rendering perfectly and reading as nothing. Same lesson as the far
-    # signal's eye and the underpass drip: a thing must beat its BACKGROUND,
-    # and this background is dark, so the rat is pale.
-    rat = Canvas(48, 8)
+    # A RAT, and it has to READ as one (user: "can you make it look more like
+    # a rat"). The first cut was a hump with two dots for legs. A rat is a
+    # SNOUT, an arched back, a visible ear and a long bare tail — take any of
+    # those away and it is a slipper.
+    #
+    # It is also PALE, not dark: drawn in 090a14 on a counter top of
+    # 241527/341c27 it was about twenty values from its background and the
+    # user simply said "i dont see any rat". A thing must beat its background,
+    # and this background is dark.
+    rat = Canvas(60, 9)
     for f in range(4):
-        ox = f * 12
+        ox = f * 15
         bob = 1 if f % 2 else 0
-        for x in range(2, 9):                        # the body, a low hump
-            h = 2 if 3 <= x <= 7 else 1
-            for y in range(4 - h + bob, 6 + bob):
+        # the body: an arch, highest over the haunches at x 5
+        for x in range(2, 11):
+            u = (x - 2) / 8.0
+            top = 3 + bob + int(abs(u - 0.42) * 3.4)
+            for y in range(top, 7 + bob):
                 rat.set(ox + x, y, C("7a4841"))
-        for x in range(3, 8):                        # the lit ridge on its back
-            rat.set(ox + x, 4 - (2 if 3 <= x <= 7 else 1) + bob, C("ad7757"))
-        rat.set(ox + 8, 3 + bob, C("ad7757"))        # the head end, lifted
-        rat.set(ox + 9, 4 + bob, C("7a4841"))
-        rat.set(ox + 9, 3 + bob, C("4d2b32"))        # the ear
-        rat.set(ox + 2, 5 + bob, C("4d2b32"))        # under-shadow
-        rat.set(ox + 7, 5 + bob, C("4d2b32"))
-        for k in range(4):                           # the tail, trailing
-            rat.set(ox + 1 - k // 2, 5 + bob - k // 3, C("4d2b32"))
-        legs = (3, 7) if f % 2 == 0 else (4, 8)      # alternating
+            rat.set(ox + x, top, C("ad7757"))            # lit ridge along it
+            rat.set(ox + x, 6 + bob, C("4d2b32"))        # belly in shade
+        # the head tapers to a point, and the snout is the brightest bit
+        rat.set(ox + 11, 4 + bob, C("7a4841"))
+        rat.set(ox + 11, 5 + bob, C("7a4841"))
+        rat.set(ox + 12, 4 + bob, C("ad7757"))
+        rat.set(ox + 12, 5 + bob, C("7a4841"))
+        rat.set(ox + 13, 5 + bob, C("c09473"))           # the snout tip
+        rat.set(ox + 10, 3 + bob, C("ad7757"))           # the ear
+        rat.set(ox + 10, 2 + bob, C("7a4841"))
+        rat.set(ox + 11, 3 + bob, C("241527"))           # the eye
+        # the tail: long, bare, and curling UP behind — the giveaway
+        for k in range(6):
+            rat.set(ox + 1 - k // 3, 5 + bob - int(k * 0.62), C("4d2b32"))
+        rat.set(ox - 1, 2 + bob, C("7a4841"))
+        # four legs, alternating in pairs so it reads as a walk
+        legs = ((3, 9) if f % 2 == 0 else (5, 7))
         for lx in legs:
-            rat.set(ox + lx, 6 + bob, C("4d2b32"))
+            rat.set(ox + lx, 7 + bob, C("4d2b32"))
+            rat.set(ox + lx, 8 + bob, C("241527"))
 
     return c, box_glow, lamp_glow, arc, flare, dust, rat
 

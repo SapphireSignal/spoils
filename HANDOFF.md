@@ -339,6 +339,31 @@ order to work?"* — has a straight answer: **the rule is not "never rebuild
 more", it is "never rebuild more SILENTLY". Say what will move, get a yes,
 then prove everything else did not.**
 
+**Then v0.6.42 — THE UNDERPASS DOOR, AND THE BUG BEHIND TWO "I CAN'T SEE IT"
+REPORTS.** `position = roundf(position + speed * delta)`. At 240 fps a 34 px/s
+walk is **0.14 px a frame**, so the round put it straight back and the sprite
+never moved at all. The counter's rat did this and sat off-screen at painting
+x 24 forever; the birds did it and hung in the sky. Neither looked like a
+rounding bug — they looked like "it isn't there" and "it isn't moving", and
+between them they cost most of a session. **This is rule 1 restated** and it
+is now in CLAUDE.md in those words: keep the TRUE position in its own float
+and round only what you assign to `position`. `_tick_rain` and the moth were
+already correct and were the only two that were.
+
+**The door was always a door.** `dx0, dx1 = 826, 898` — a bricked-up service
+doorway, which is exactly why the user read it as one and then found nothing
+door-like in it. It has a leaf, ribs, hinges, a kick plate and a lever handle
+now. **The brick infill is left in place and painted over**, because its loop
+takes two rng draws per course and deleting it would have re-rolled the chalk
+dog and the whole soffit downstream.
+
+**Two lore notices beside it** — a transit shelter sign pointing down into the
+underworks (LORE 4) and a wardens' cordon notice (LORE 2). **And a placement
+trap worth keeping: I measured a patch of wall as empty and drew on it, and it
+was entirely OFF SCREEN.** The viewport shows painting x 60-900 of a 960-wide
+painting — 60px is cropped off each side. Measure for empty AND check it is
+inside the visible window.
+
 **Picked up at:** **nothing is in progress.** A1 in TASKS.md is now DONE — all
 six backdrops exist and all six live. The next items in that list are the
 in-game map screen and the map-select tile; **M2 (guns) still waits on the

@@ -3,6 +3,54 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.42] — 2026-08-03 — the underpass door, and two things that never moved
+
+### Fixed — the bug behind BOTH "I can't see it" reports
+`position = roundf(position + speed * delta)`. At 240 fps a 34 px/s walk is
+**0.14 px per frame**, so the round put it straight back and the sprite never
+moved. The counter's rat did this and sat off-screen at painting x 24 forever;
+the birds did it and hung in the sky. Neither looked like a rounding bug from
+the outside — they looked like "it isn't there" and "it isn't moving".
+
+**This is rule 1 restated** — the player's true position stays continuous and
+only the drawn position snaps to the grid — and it is now a standing rule in
+`CLAUDE.md` in those words. `_tick_rain` and the moth were already correct;
+they were the only two that were.
+
+### Added — the underpass door *(base art)*
+It was **already a bricked-up service doorway** (`dx0, dx1 = 826, 898`), which
+is why the user read it as a door and then found nothing door-like in it. Now
+it has a recessed leaf, six vertical ribs, two hinges on the LIT side, a kick
+plate, and a lever handle with a backplate and keyway at 4/10 height on the
+shade side. The tube is at x 636-768, i.e. to its left, so the lit and shade
+stiles follow that.
+
+**The brick infill is left intact underneath and painted over.** Its loop
+takes two rng draws per course; deleting it would have re-rolled the chalk
+dog, the soffit girders and everything downstream. Take the roll and throw it
+away.
+
+### Added — two notices, from the lore
+A transit authority **shelter sign** pointing down into the underworks (LORE 4
+— the war-years shelter cellars are what is behind that door) and a **wardens'
+cordon notice**, lattice panel with a red bar through it (LORE 2 — *"nobody
+crosses. nothing comes out."*). No readable text: the font has a 5 px x-height
+and a legible poster would be enormous, so lines of ink stand in, as every
+other sign in this project does.
+
+**Both patches were measured for emptiness before drawing** — and the second
+one had to be moved after that: 912-950 was genuinely empty wall and entirely
+**off screen**, because the viewport shows painting x 60-900 only. Measure for
+empty AND check it is inside the visible window.
+
+### Also
+- The rat is redrawn at 15×9 with a snout, an ear, an arched back and a long
+  bare tail, and **fades in and out** instead of blinking out of existence in
+  the middle of an empty counter.
+- The door's kick plate went `253a5e` → `172038` (a navy plate read as a blue
+  stripe painted on) and its warm edge light is solid, not every-other-row —
+  stepped, it drew a dashed orange line that read as a defect.
+
 ## [0.6.41] — 2026-08-03 — the birds were behind the buttons, and mara's grip
 
 ### Fixed — the birds, after two wrong answers and a real measurement

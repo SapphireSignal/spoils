@@ -35,7 +35,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
 	 form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.41 shipped, 2026-08-03.** Milestone 1 (a walkable world) is DONE.
+**v0.6.42 shipped, 2026-08-03.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 
@@ -753,6 +753,15 @@ then `godot_console --headless --path . --import`.
   it will sit and pick values that clear it by a wide margin** — and remember
   `modulate` MULTIPLIES, so a tint on an already-coloured texture almost
   always goes darker than you expect. A one-line sample beats a re-render.
+- **NEVER ROUND A POSITION YOU THEN READ BACK TO ACCUMULATE.** This is rule 1
+  restated, and it silently killed TWO things on 2026-08-03: the menu's birds
+  and the counter's rat both did `position = roundf(position + speed * delta)`
+  and therefore **never moved at all** — at 240 fps a 34 px/s walk is 0.14 px
+  per frame, and the round puts it straight back. The user reported both as
+  "not moving" and "I don't see any rat", and neither looked like a rounding
+  bug. Keep the TRUE position in its own float and round only what you assign
+  to `position` — exactly what `player.gd` does with the camera grid, and what
+  `_tick_rain` does with its `pos` array.
 - **CHECK WHETHER THE UI IS ON TOP OF IT.** The menu's buttons occupy screen
   rows ~460-620 and the backdrops are painted UNDER them. The yard's birds
   were given painting y 234 = screen row 464 and spent most of every crossing

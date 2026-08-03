@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.41.** The release history was renumbered evenly on
+**Current version: v0.6.42.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -125,7 +125,7 @@ Also asked for: **upgrade the two existing backdrops** (den, drain).
 
 # B. GAMEPLAY THE USER HAS ASKED FOR
 
-## B0c. The underpass: a real door, a handle, and lore posters *(user, 2026-08-03)*
+## B0c. The underpass door and posters — **DONE in v0.6.42**
 
 *"in the underpass backdrop is that a door on the right? if so make it look
 more like a door and add a handle on it, and add a poster or two on the walls
