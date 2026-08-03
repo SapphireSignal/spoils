@@ -12,7 +12,7 @@
 ##   5 counter   - the counter
 ## (the storm scene retired 2026-08-01 — user call). DEPLOY starts the raid.
 
-const SCENE_SECONDS := 30.0
+const SCENE_SECONDS := 10.0
 const FADE_SECONDS := 1.4
 
 # preloaded once for the process lifetime: re-entering the menu from the game
@@ -85,6 +85,9 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.31", [
+		"the menu now changes backdrop every ten seconds instead of thirty",
+	]],
 	["v0.6.30", [
 		"the four new menu paintings are in the game. six backgrounds now instead of two - the den, the drain, the trainyard, the warden at his gate, the underpass and the counter. the four new ones are still pictures for the moment, the moving parts come next",
 		"they change every thirty seconds instead of twenty, and the order is random now rather than the same loop every time. you cant get the same one twice in a row, and you wont see one come back until youve been shown all six",

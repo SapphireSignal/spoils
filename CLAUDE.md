@@ -35,7 +35,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
 	 form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.30 shipped, 2026-08-02.** Milestone 1 (a walkable world) is DONE.
+**v0.6.31 shipped, 2026-08-02.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 
@@ -494,7 +494,8 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   built, and in ordinary play never fires; this line said "death fade →
   respawn", which DESIGN.md had already corrected in its own copy.
   `scripts/main_menu.gd` — 6
-  rotating backdrops, one every 30 s (`SCENE_SECONDS`): 0=den (the traders +
+  rotating backdrops, one every 10 s (`SCENE_SECONDS`; it was 30 for one
+  release, user call): 0=den (the traders +
   job board), 1=drain, 2=yard, 3=warden, 4=underpass, 5=counter. **Only 0 and
   1 are LIVING** — per-scene ticks drive candle/needles/LEDs/smoke and
   ray/motes/drips; **2-5 are STATIC paintings** until a living layer is built

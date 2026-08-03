@@ -56,7 +56,8 @@ point of it.)*
 **On the six:** all four were promoted **byte-identical** to the versions the
 user approved — hashes checked both ways, because a promotion that quietly
 re-rolls a painting would undo many rounds of their review. Rotation is a
-**shuffle bag at 30 s** (`_bag_next`/`_bag_reset` in `main_menu.gd`), with the
+**shuffle bag at 10 s** (`_bag_next`/`_bag_reset` in `main_menu.gd`; shipped
+at 30 s in v0.6.30, dropped to 10 on a user call in v0.6.31), with the
 seam case closed: a refill that would put the on-screen scene up next swaps it
 away, so nothing repeats back to back. Hand-rolled Fisher-Yates because
 `Array.shuffle()` is banned project-wide, and deliberately UNSEEDED — the menu

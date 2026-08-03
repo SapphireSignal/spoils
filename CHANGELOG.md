@@ -3,6 +3,15 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.31] — 2026-08-02 — the menu changes scene faster
+
+### Changed
+- **`SCENE_SECONDS` 30 → 10** (user call, the release after it shipped at 30).
+  With the 1.4 s crossfade each backdrop now holds still for about 8.6 s, and
+  a full pass through all six takes a minute. The shuffle bag is unchanged —
+  still no repeat until every scene has been shown, and none across the join
+  between two bags.
+
 ## [0.6.30] — 2026-08-02 — six backdrops, drawn from a bag
 
 The four auditioned menu paintings promoted into the rotation. User call:
