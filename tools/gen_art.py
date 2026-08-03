@@ -5675,390 +5675,1993 @@ def make_title() -> tuple[Image.Image, Image.Image, Image.Image]:
 SCENE_W, SCENE_H = 960, 544
 
 def make_scene_drain() -> tuple[Canvas, Image.Image, Canvas]:
-    """Menu 1 — THE DRAIN, side-on like a stage (the one-point perspective
-    version never stopped reading as floating rings and a black pyramid):
-    a flat brick wall the full width of the frame, a ceiling line, one
-    shaft of light falling from an open manhole to the walkway, black
-    water along the bottom, the tunnel swallowing itself into a dark
-    arch at the left edge. Returns (base, god-ray overlay (soft alpha),
-    3-frame drip-ripple strip)."""
+    """Menu 1 - THE DRAIN, side-on like a stage.  REDESIGNED 2026-08-02 (user:
+    "a redesign would be good too for these"), against the four backdrop
+    pitches (yard / warden / underpass / counter) as the bar.
+
+    WHAT THE OLD ONE GOT WRONG, and what replaced it:
+      * THE LIGHT WAS A POINT.  one radial falloff on a smooth wall painted
+        three or four soft nested ellipses and the picture read as flat rings
+        floating on brick.  the shaft is not a point, it is a SLOT: the wall
+        term is now distance to a VERTICAL SEGMENT that splays as it falls,
+        plus a separate ground BOUNCE off the pool that hugs the benching.
+        neither term is ever seen unbroken, because every band edge is cut by
+        the wall's own structure - bed joints, perpends and a per-brick tone
+        mosaic.  this is the lesson tools/pitches/underpass.py paid for.
+      * THE BRICK WAS A PERFECT GRID.  identical bricks at identical pitch,
+        which is the visible-grid problem the user complains about most.  now:
+        rolled course heights, a rolled pitch PER COURSE, per-brick jitter, a
+        no-repeat tone mosaic (no offset repeats beside or above itself),
+        wavering courses, chipped corners, replacement bricks from a redder
+        batch, a patched section in a different bond, and lime runs out of the
+        joints that have lost their mortar.
+      * TWO THIRDS OF THE FRAME WAS EMPTY BLACK with one crate in it.  the
+        ceiling is a real barrel soffit now (ring courses compressing toward
+        the crown, radial joints running to a vanishing point); the left is
+        the main drain continuing through a voussoired arch with the channel
+        running away into it; the right carries a pipe run on brackets and a
+        cast-iron penstock with its headstock, spindle and handwheel, leaking
+        a sheet into the channel; and a raider's lantern burns at a cache on
+        the benching - the scene's SECOND light source, warm against the cold
+        shaft, and the reason the left third is worth looking at.
+      * THE LADDER was identical rungs at identical pitch.  the pitch is real
+        so it stays regular, but every rung now rolls its own wear, two are
+        bent, one is gone to its stubs, the bottom of the run is eaten, and
+        the stiles carry a lit face and a shade face.
+      * THE WATER was a flat band with random dashes.  it is a reflecting
+        plane: a chop whose strokes grow from 1px and tight at the far edge to
+        4px and broken at the near one, a cold specular cone under the shaft,
+        a warm one under the lantern, and three things floating in it that the
+        waterline cuts dead level and that each push a broken ring out.
+
+    THE LIVING-LAYER ANCHORS ARE UNMOVED (scripts/main_menu.gd hardcodes
+    them, and an anchor pointing at nothing is animation playing in mid-air):
+      (615, 287) the god-ray sprite centre - the shaft is still at x 615.
+      (615, 200) the mote emitter, a 40x300 rect - inside the beam.
+      (608, 110) where a drip spawns, falling straight down x 608 - open air
+        inside the shaft throat.
+      (608, 508) where it lands: water_top(608) == 508, asserted at the end of
+        this function so a re-roll can never quietly move it.
+      (608, 514) and (646, 524) the two ripple sprites - open water, kept
+        clear of every floating object.
+
+    THE QUIET ZONE behind the menu buttons (x 400-560, y 290-390, and the
+    wordmark's own box up at y 60-175) is held by a two-box wobbled TROUGH
+    that damps BOTH light sources.  nothing structural and nothing warm is
+    allowed into either box.
+
+    Returns (base, god-ray overlay (soft alpha), 3-frame drip-ripple strip)."""
     rng = random.Random(f"{SEED}:scene:drain")
     c = Canvas(SCENE_W, SCENE_H)
+
     SHAFT_X = 615
-    CEIL_Y = 92
-    WALK_Y = 468
-    WATER_Y = 506
+    SPRING_Y = 96            # the barrel soffit springs off the wall here
+    WALL_TOP = 108           # the first bed joint, clear of the arced springing
+    WALK_Y = 452             # the wall meets the benching
+    KERB_Y = 486             # the benching's front nosing
+    WATER_Y = 507            # the channel surface - the drip lands on it
+    LANT = (250, 456)        # the raider's lantern, the second light source
 
-    ramp = [C("090a14"), C("10141f"), C("151d28"), C("202e37"), C("394a50")]
+    COLD = [C("090a14"), C("10141f"), C("151d28"), C("202e37"),
+            C("394a50"), C("577277"), C("819796"), C("a8b5b2")]
+    WARM = [C("090a14"), C("241527"), C("341c27"), C("4d2b32"),
+            C("602c2c"), C("884b2b"), C("ad7757"), C("de9e41")]
 
-    def lit(x: int, y: int, boost: float = 0.0):
-        d = ((x - SHAFT_X) ** 2 + ((y - (WALK_Y - 60)) * 1.9) ** 2) ** 0.5
-        lv = boost + max(0.0, 1.0 - d / 420.0) * 4.4
-        # banded, never dithered — dot noise is banned everywhere
+    BRICK = [C("090a14"), C("241527"), C("341c27"), C("4d2b32"),
+             C("602c2c"), C("884b2b"), C("ad7757")]
+
+    AMB = 1.55                # the darkest a wall face is ever allowed to go
+
+    def band(ramp, lv):
         return ramp[max(0, min(len(ramp) - 1, int(lv + 0.5)))]
 
-    # the brick wall, full frame: rolled course heights + staggered joints
-    wy = CEIL_Y
-    while wy < WALK_Y:
-        row_h = rng.randint(9, 12)
-        joints = []
-        jx = -rng.randint(0, 30)
-        while jx < SCENE_W:
-            jx += rng.randint(22, 46)
-            joints.append(jx)
-        for y in range(wy, min(WALK_Y, wy + row_h)):
-            for x in range(SCENE_W):
-                col = lit(x, y)
-                if y == wy:
-                    col = C("090a14")               # mortar line
-                elif x in joints and y > wy + 1:
-                    col = C("090a14")               # brick joint
-                c.set(x, y, col)
-        wy += row_h
-    # ceiling: dark slab + beams
-    for y in range(0, CEIL_Y):
+    # ------------------------------------------------------------- light ----
+    def trough(x, y):
+        """the two boxes the ui sits in.  wobbled so the clamp's own edge is
+        never a straight line, and linear to zero so it is a gradient and not
+        a rectangle of darkness."""
+        t1 = 0.46 * max(0.0, 1.0 - max(abs(x - 480) / 126.0,
+                                       abs(y - 118 + 3.0 * math.sin(x / 31.0)) / 70.0))
+        t2 = 0.78 * max(0.0, 1.0 - max(abs(x - 478) / 140.0,
+                                       abs(y - 316 + 4.0 * math.sin(y / 23.0)) / 104.0))
+        return max(t1, t2)
+
+    def lev(x, y):
+        """(cold level in ramp steps, warm amount 0..1).  the ambient floor
+        sits OUTSIDE the trough: the buttons want a dark wall, not a black
+        one, or the brick stops existing behind them."""
+        t = min(1.0, max(0.0, (y - 10) / float(WALK_Y - 10)))
+        half = 21.0 + 30.0 * t * t                 # the beam splays as it falls
+        dx = max(0.0, abs(x - SHAFT_X) - half)
+        # a NARROW core with a long tail.  the first cut used a wide splay and
+        # a hard falloff, which drew a clean-edged triangle on the brick and
+        # read as a searchlight cone rather than as light grazing a wall.
+        beam = max(0.0, 1.0 - dx / 215.0) ** 2.3 * (0.30 + 0.70 * t)
+        bx = abs(x - SHAFT_X)
+        by = abs(y - (WALK_Y + 4)) * 1.8           # the bounce hugs the floor
+        bounce = max(0.0, 1.0 - (bx * bx + by * by) ** 0.5 / 480.0) ** 1.45
+        floor = max(0.0, (y - 140.0) / (WALK_Y - 140.0)) ** 2.0
+        lx = abs(x - LANT[0])
+        ly = abs(y - LANT[1]) * 1.12
+        warm = max(0.0, 1.0 - (lx * lx + ly * ly) ** 0.5 / 132.0) ** 1.9
+        warm *= min(1.0, max(0.0, (374 - x) / 48.0))   # never near a button
+        w = (0.230 * math.sin(x / 47.0 + y / 61.0)
+             + 0.150 * math.sin(y / 29.0 - x / 23.0)
+             + 0.090 * math.sin(x / 13.0 + y / 9.0)
+             + 0.055 * math.sin(y / 6.0 - x / 5.0))
+        f = 1.0 - trough(x, y)
+        return (AMB + max(0.0, beam * 3.0 + bounce * 2.3 + floor * 1.0 + w) * f,
+                warm * f)
+
+    # --------------------------------------------------------- the courses --
+    def spring(x):
+        return SPRING_Y + int(round(8.0 * ((x - 480) / 480.0) ** 2))
+
+    bounds = []
+    y = WALL_TOP
+    while y < WALK_Y:
+        ph, ph2 = rng.uniform(0, 6.3), rng.uniform(0, 6.3)
+        amp = 2.3 if rng.random() < 0.17 else 0.9      # one course in six sags
+        bounds.append([y + int(round(amp * math.sin(x / 83.0 + ph)
+                                     + 0.7 * math.sin(x / 29.0 + ph2)))
+                       for x in range(SCENE_W)])
+        y += rng.randint(7, 10)
+    bounds.append([WALK_Y + 2] * SCENE_W)
+
+    # no offset may repeat beside itself or above itself: a mosaic with
+    # duplicates lines back up into stripes, which is the grid all over again
+    STEPS = (-0.52, -0.31, -0.13, 0.0, 0.17, 0.38)
+    courses = []
+    for ci in range(len(bounds) - 1):
+        pitch = rng.randint(18, 30)
+        e, jx = [], -rng.randint(0, pitch)
+        while jx < SCENE_W + 60:
+            e.append(jx)
+            jx += pitch + rng.randint(-5, 7)
+        offs, prev = [], courses[ci - 1][2] if ci else []
+        for k in range(len(e) + 1):
+            ban = {offs[-1] if offs else None,
+                   prev[k] if k < len(prev) else None}
+            offs.append(rng.choice([s for s in STEPS if s not in ban]))
+        red = {k for k in range(len(e)) if rng.random() < 0.011}
+        idx, k = [0] * (SCENE_W + 2), 0
+        for x in range(SCENE_W + 2):
+            while k < len(e) and x >= e[k]:
+                k += 1
+            idx[x] = k
+        courses.append((set(e), e, offs, red, idx, rng.uniform(-0.28, 0.28)))
+
+    NOWALL = 255
+    course_at = bytearray(b"\xff" * (SCENE_W * SCENE_H))
+    kind = bytearray(SCENE_W * SCENE_H)     # 0 face 1 bed 2 perp 3 arris 4 lip
+    for ci, (eset, e, offs, red, idx, cb) in enumerate(courses):
+        top, bot = bounds[ci], bounds[ci + 1]
         for x in range(SCENE_W):
-            c.set(x, y, C("090a14"))
-    for bx in range(70, SCENE_W, 150):
-        jx = bx + rng.randint(-12, 12)
-        if abs(jx - SHAFT_X) < 44:
-            continue                                 # not through the shaft
-        c.rect(jx, CEIL_Y - 10, jx + 8, CEIL_Y, C("10141f"))
-        c.vline(jx + 8, CEIL_Y - 10, CEIL_Y, C("151d28"))
-    c.hline(0, SCENE_W - 1, CEIL_Y, C("10141f"))
+            y0 = max(WALL_TOP - 2, top[x])
+            y1 = min(WALK_Y, bot[x])
+            perp = x in eset
+            for yy in range(y0, y1):
+                o = yy * SCENE_W + x
+                course_at[o] = ci
+                if yy <= top[x]:
+                    kind[o] = 1
+                elif perp and yy > top[x] + 1:
+                    kind[o] = 2
+                elif yy == top[x] + 1:
+                    kind[o] = 3
+                elif yy == y1 - 1:
+                    kind[o] = 4
 
-    # the manhole shaft: a gap in the ceiling, faint baked light column
-    for y in range(0, CEIL_Y):
-        for x in range(SHAFT_X - 28, SHAFT_X + 29):
-            c.set(x, y, C("10141f"))                 # shaft throat
-    for dx in range(-24, 25):                        # the open cover ring
-        dy = int((1.0 - (dx / 24.0) ** 2) ** 0.5 * 6)
-        for y in range(12 - dy, 12 + dy):
-            c.set(SHAFT_X + dx, y, C("172038"))      # night sky up there
-        c.set(SHAFT_X + dx, 12 + dy, C("577277"))
-        c.set(SHAFT_X + dx, 12 - dy, C("394a50"))
-    c.set(SHAFT_X - 7, 8, C("c7cfcc"))               # one star
-    c.rect(SHAFT_X + 26, 6, SHAFT_X + 44, 10, C("151d28"))  # slid-aside cover
-    c.hline(SHAFT_X + 27, SHAFT_X + 43, 6, C("202e37"))
-    # (no baked dot-column: the wall's banded lit() carries the brightness
-    # and the runtime god-ray overlay provides the soft beam)
+    def wall_col(x, y, bias=0.0):
+        if not (0 <= x < SCENE_W and 0 <= y < SCENE_H):
+            return C("090a14")
+        o = y * SCENE_W + x
+        ci = course_at[o]
+        cl, wm = lev(x, y)
+        s = 1.0 - trough(x, y)
+        bo, redbrick = 0.0, False
+        if ci != NOWALL:
+            eset, e, offs, red, idx, cb = courses[ci]
+            k = idx[x]
+            bo = offs[min(k, len(offs) - 1)] + cb
+            redbrick = k in red
+            kk = kind[o]
+            if kk == 1:
+                bias -= 2.5
+            elif kk == 2:
+                bias -= 2.0
+            elif kk == 3:
+                bias += 0.7
+            elif kk == 4:
+                bias -= 0.8
+        if redbrick:
+            # a redder BATCH of brick, not a paint chip: it has to track the
+            # light without ever climbing off the top of its own ramp, or a
+            # lit one comes back as a solid orange rectangle on a grey wall
+            return band(BRICK, min(2.9, 0.95 + (cl - AMB) * 0.52 + wm * 2.4
+                                   + bias * 1.0 + bo * 0.7))
+        if wm > 0.055 and wm * 5.2 > cl - AMB + 0.22:
+            return band(WARM, 0.9 + wm * 5.4 + bias + bo * 0.7)
+        return band(COLD, cl + bias + bo * s)
 
-    # the ladder, bolted inside the shaft line
-    for ry in range(CEIL_Y - 60, WALK_Y - 2, 13):
-        if ry > 4:
-            c.hline(SHAFT_X + 8, SHAFT_X + 20, ry, C("577277"))
-            c.set(SHAFT_X + 8, ry + 1, C("202e37"))
-            c.set(SHAFT_X + 20, ry + 1, C("202e37"))
-    c.vline(SHAFT_X + 7, 20, WALK_Y, C("394a50"))
-    c.vline(SHAFT_X + 21, 20, WALK_Y, C("394a50"))
-    c.vline(SHAFT_X + 6, 22, WALK_Y - 1, C("151d28"))
+    RAMP_AT = {}
+    for r in (COLD, WARM, BRICK):
+        for i, col in enumerate(r):
+            RAMP_AT.setdefault(col, (r, i))
 
-    # the tunnel mouth at the left edge: an arch into nothing, solid
-    for x in range(0, 150):
-        e = 1.0 - (x / 150.0) ** 2
-        ay = int(CEIL_Y + 40 - 36 * (e ** 0.5))
-        for y in range(ay, WALK_Y):
-            if x < 118 or y > ay + (x - 118) * 8:
-                c.set(x, y, C("090a14"))
-        c.set(x, ay, C("151d28"))                    # faint arch rim
-        c.set(x, ay - 1, C("10141f"))
+    def dim(x, y, n=1):
+        hit = RAMP_AT.get(c.get(x, y))
+        if hit is not None:
+            r, i = hit
+            c.set(x, y, r[max(0, min(len(r) - 1, i - n))])
 
-    # pipes on the wall, right side, with brackets and rust
-    for x in range(SHAFT_X + 60, SCENE_W):
-        py = 180 + (x - SHAFT_X - 60) // 14
-        c.set(x, py - 1, lit(x, py - 1, 1.0))
-        c.set(x, py, C("394a50"))
-        c.set(x, py + 1, C("202e37"))
-        c.set(x, py + 2, C("151d28"))
-        c.set(x, py + 3, C("090a14"))
-        if x % 61 < rng.randint(3, 6) and x % 61 > 0:  # rust runs, not dots
-            c.set(x, py + 1, C("884b2b"))
-            c.set(x, py, C("602c2c"))
-        if x % 52 == 0:
-            c.vline(x, py + 3, py + 9, C("151d28"))
-    for a in range(0, 360, 30):                      # valve wheel
-        c.set(int(SHAFT_X + 170 + math.cos(math.radians(a)) * 6),
-              int(188 + math.sin(math.radians(a)) * 6), C("577277"))
-    # cables sagging along the left half
-    for k in range(160):
-        t = k / 160.0
-        sag = math.sin(t * math.pi) * 18
-        c.set(int(140 + t * 330), int(120 + sag), C("10141f"))
-        c.set(int(150 + t * 320), int(132 + sag * 0.8), C("151d28"))
+    # ----------------------------------------------------------- the fill ---
+    for yy in range(SCENE_H):
+        for x in range(SCENE_W):
+            c.set(x, yy, C("090a14"))
+    for yy in range(WALL_TOP - 2, WALK_Y):
+        for x in range(SCENE_W):
+            c.set(x, yy, wall_col(x, yy))
 
-    # wet streaks + moss patches on the wall (solid, structural)
-    for i in range(14):
-        wx = rng.randrange(130, SCENE_W - 10)
-        wy_ = rng.randrange(CEIL_Y + 4, 200)
-        ln = rng.randint(12, 60)
-        c.vline(wx, wy_, wy_ + ln, C("10141f"))
-        c.set(wx, wy_ + ln + 1, C("172038"))
-    wall_low = {(x, y) for y in range(WALK_Y - 30, WALK_Y)
-                for x in range(130, SCENE_W)}
-    for i in range(7):
-        patch = blob(rng, rng.randrange(150, SCENE_W - 20),
-                     WALK_Y - rng.randrange(4, 24), rng.randint(8, 26), wall_low)
-        for (qx, qy) in patch:
+    # --------------------------------------------------- the barrel soffit --
+    # ring courses compressing toward the crown, radial joints running back to
+    # a vanishing point below the ceiling.  the old scene had flat black here.
+    rings, ry, rh = [], 0.0, 2.6
+    while ry < SPRING_Y - 5:
+        rings.append(ry)
+        ry += rh
+        rh *= 1.30
+    rings.append(float(SPRING_Y))
+    nring = len(rings) - 1
+    VPY = 320.0
+    joint_sets, ring_bias = [], []
+    for k in range(nring):
+        pick = [v for v in (-0.46, -0.22, 0.0, 0.24, 0.50)
+                if not ring_bias or v != ring_bias[-1]]
+        ring_bias.append(rng.choice(pick))
+    for k in range(nring):
+        p = 13 + int(50 * (k / float(nring - 1)) ** 1.4)
+        js, jx = [], -rng.randint(0, p)
+        while jx < SCENE_W + 80:
+            js.append(jx)
+            jx += p + rng.randint(-4, 5)
+        joint_sets.append(js)
+    for k in range(nring):
+        y0f, y1f = rings[k], rings[k + 1]
+        lo = 0.75 + 1.30 * ((k + 1) / float(nring)) ** 2.1 + ring_bias[k]
+        for x in range(SCENE_W):
+            bw = 19.0 * ((x - 480) / 480.0) ** 2
+            y0 = int(round(y0f + bw))
+            y1 = int(round(y1f + bw))
+            cl, _ = lev(x, min(SPRING_Y, y1))
+            s = 1.0 - trough(x, max(2, y0))
+            for yy in range(max(0, y0), min(SPRING_Y + 8, y1)):
+                b = 0.0
+                if yy == y0:
+                    b -= 2.9                        # the ring's bed joint
+                elif yy == y0 + 1:
+                    b += 0.60
+                elif yy == y1 - 1:
+                    b -= 0.55
+                c.set(x, yy, band(COLD, lo + (cl - AMB) * 0.60 * s + b))
+    for k in range(nring):
+        y0f, y1f = rings[k], rings[k + 1]
+        for jx in joint_sets[k]:
+            n = max(1, int(round(y1f - y0f)))
+            for i in range(n):
+                fy = y0f + i
+                sp = (fy - VPY) / (y0f - VPY) if abs(y0f - VPY) > 1 else 1.0
+                px = int(round(480 + (jx - 480) * sp))
+                bw = 19.0 * ((px - 480) / 480.0) ** 2
+                yy = int(round(fy + bw))
+                if 0 <= px < SCENE_W and 0 <= yy < SPRING_Y + 8:
+                    cl, _ = lev(px, min(SPRING_Y, yy))
+                    s = 1.0 - trough(px, max(2, yy))
+                    lo = 0.75 + 1.30 * ((k + 1) / float(nring)) ** 2.1 + ring_bias[k]
+                    c.set(px, yy, band(COLD, lo + (cl - AMB) * 0.55 * s - 2.0))
+
+    # the corbelled string course the vault springs off: three offsets, each
+    # with a lit top edge and its own shadow underneath
+    # THE SPRINGING COURSE.  the first cut lit its top edge across all 960 px
+    # and painted a bright rail straight through the middle of the frame -
+    # exactly the "flat ring" failure one axis over.  it is a SHADOW LINE now
+    # with only a hint of a lit arris, and it is broken by its own unit joints.
+    for x in range(SCENE_W):
+        sy = spring(x)
+        cl, _ = lev(x, sy + 6)
+        base = cl - 0.55
+        c.set(x, sy, band(COLD, base - 2.0))         # the offset's undershadow
+        c.set(x, sy + 1, band(COLD, base + 0.45))
+        c.set(x, sy + 2, band(COLD, base - 0.25))
+        c.set(x, sy + 3, band(COLD, base - 1.6))
+        c.set(x, sy + 4, band(COLD, base + 0.25))
+        c.set(x, sy + 5, band(COLD, base - 0.35))
+        for yy in range(sy + 6, WALL_TOP - 2):
+            c.set(x, yy, band(COLD, base - 1.5))
+    ux = -rng.randint(0, 30)
+    while ux < SCENE_W:                              # corbel unit joints
+        ux += rng.randint(34, 74)
+        sy = spring(ux)
+        for yy in range(sy + 1, WALL_TOP - 2):
+            c.set(ux, yy, band(COLD, lev(ux, yy)[0] - 2.6))
+        c.set(ux + 1, sy + 1, band(COLD, lev(ux, sy)[0] + 0.3))
+
+    # ------------------------------------------------------- wall defects ---
+    # a patched section in a different bond - blockwork shoved into a hole in
+    # the brick, mortar smeared, the edge ragged where it was cut in
+    px0, px1 = 352, 470
+    py0, py1 = 404, 448
+    for x in range(px0, px1):
+        rag = int(round(2.5 * math.sin(x / 9.0) + 1.5 * math.sin(x / 21.0)))
+        for yy in range(py0 + rag, py1):
+            cl, _ = lev(x, yy)
+            u = ((x - px0) // 29) * 7 + ((yy - py0) // 15) * 3
+            b = (-0.35, 0.0, 0.28, -0.18)[u % 4]
+            if (x - px0) % 29 == 0 or (yy - py0) % 15 == 0:
+                b -= 1.9
+            c.set(x, yy, band(COLD, cl + b - 0.45))
+        c.set(x, py0 + rag - 1, band(COLD, lev(x, py0)[0] - 2.4))
+    for i in range(9):                               # smeared mortar over it
+        bx = rng.randrange(px0 + 4, px1 - 8)
+        by = rng.randrange(py0 + 4, py1 - 6)
+        for (qx, qy) in blob(rng, bx, by, rng.randint(7, 18),
+                             {(a, b) for b in range(py0 + 4, py1)
+                              for a in range(px0, px1)}):
+            c.set(qx, qy, band(COLD, lev(qx, qy)[0] + 0.55))
+
+    # chipped corners: a SOLID wedge gone, the dark bedding showing behind it
+    for i in range(34):
+        ci = rng.randrange(1, len(courses) - 1)
+        el = courses[ci][1]
+        ex = el[rng.randrange(1, len(el) - 2)]
+        if not (6 < ex < SCENE_W - 12) or trough(ex, bounds[ci][ex]) > 0.30:
+            continue
+        sz = rng.randint(3, 8)
+        low = rng.random() < 0.5
+        for k in range(sz):
+            yy = (bounds[ci + 1][ex] - 2 - k) if low else (bounds[ci][ex] + 2 + k)
+            if not (bounds[ci][ex] < yy < bounds[ci + 1][ex] - 1):
+                continue
+            c.hline(ex + 1, ex + 1 + (sz - k), yy, band(COLD, lev(ex, yy)[0] - 2.3))
+            c.set(ex + 2 + (sz - k), yy, band(COLD, lev(ex, yy)[0] + 0.5))
+
+    # lost mortar: whole runs of a bed joint eaten out, one step deeper again
+    for i in range(26):
+        ci = rng.randrange(1, len(courses) - 1)
+        x0 = rng.randrange(0, SCENE_W - 40)
+        ln = rng.randint(14, 70)
+        for x in range(x0, min(SCENE_W, x0 + ln)):
+            yy = bounds[ci][x]
+            c.set(x, yy, band(COLD, lev(x, yy)[0] - 3.4))
+            c.set(x, yy + 1, band(COLD, lev(x, yy)[0] - 1.0))
+
+    # lime runs out of the joints that lost it - solid runs that WIDEN, never
+    # 1px scratches (a wall of hairlines reads as damage to the picture)
+    for i in range(15):
+        wx = rng.randrange(8, SCENE_W - 10)
+        if trough(wx, 300) > 0.42 or lev(wx, 300)[0] > 3.6:
+            continue
+        ci = rng.randrange(0, len(courses) - 6)
+        wy = bounds[ci][wx]
+        ln = rng.randint(22, 74)
+        ph = rng.uniform(0, 6.3)
+        for yy in range(wy, min(WALK_Y - 2, wy + ln)):
+            t = (yy - wy) / float(ln)
+            sx = wx + int(round(1.6 * math.sin(yy / 23.0 + ph)))
+            base = lev(sx, yy)[0]
+            # they have to READ as a stain, not as a scratch: strong on the
+            # dark wall, almost nothing where the shaft is already lighting it
+            g = max(0.25, 1.35 - 0.22 * base)
+            c.set(sx, yy, band(COLD, base + (0.80 - 0.35 * t) * g))
+            if t > 0.30:
+                c.set(sx + 1, yy, band(COLD, lev(sx + 1, yy)[0] + 0.58 * g))
+            if t > 0.58:
+                c.set(sx - 1, yy, band(COLD, lev(sx - 1, yy)[0] + 0.40 * g))
+            if t > 0.80:
+                c.set(sx + 2, yy, band(COLD, lev(sx + 2, yy)[0] + 0.25 * g))
+
+    # tide lines: the drain has run at four different heights and each left a
+    # different stain.  they cross every light band, which is half their job.
+    for (ty, thick, dark) in ((392, 2, 2), (430, 4, 1)):
+        for x in range(SCENE_W):
+            base = ty + int(round(2.4 * math.sin(x / 63.0 + ty)
+                                  + 1.3 * math.sin(x / 17.0)))
+            if (x + int(41 * math.sin(x / 87.0))) % 37 < 14:
+                continue                              # broken, not a stripe
+            for yy in range(base, base + thick):
+                dim(x, yy, dark)
+            dim(x, base - 1, -1)
+
+    # moss where the wall stays wet: solid patches, never dot noise
+    wall_low = {(x, y) for y in range(WALK_Y - 46, WALK_Y)
+                for x in range(SCENE_W)}
+    for i in range(11):
+        bx = rng.randrange(10, SCENE_W - 20)
+        if trough(bx, WALK_Y - 20) > 0.5:
+            continue
+        depth = rng.randrange(3, 26)
+        for (qx, qy) in blob(rng, bx, WALK_Y - depth, rng.randint(14, 40),
+                             wall_low):
+            # it grows UP out of the wet, so it thins with height instead of
+            # sitting on the brick as a detached speck
+            if (WALK_Y - qy) > depth + rng.randint(0, 4):
+                continue
             c.set(qx, qy, C("19332d"))
+        for k in range(rng.randint(2, 5)):
+            c.hline(bx - rng.randint(0, 6), bx + rng.randint(1, 7),
+                    WALK_Y - rng.randint(1, 4), C("19332d"))
 
-    # the walkway ledge
-    for y in range(WALK_Y, WATER_Y):
-        for x in range(SCENE_W):
-            col = lit(x, y, 0.7 if abs(x - SHAFT_X) < 200 else 0.2)
-            c.set(x, y, col)
-    c.hline(0, SCENE_W - 1, WALK_Y, C("090a14"))
-    # the light pool on the walkway: solid banded ellipse
-    for dx in range(-74, 75):
+    # THE SETTLEMENT CRACK.  the left third had 250 px of plain wall between
+    # the tunnel mouth and the cache and needed one piece of structure.  a
+    # BRICKED-UP ARCH was built here first and thrown away: a wide segmental
+    # head over a panel of infill reads as a cylinder standing in front of the
+    # wall - it came back looking like a silo, three times, at three different
+    # spans.  a crack cannot be mistaken for an object.  it steps along the bed
+    # joints and down the perpends the way brick actually fails, the wall has
+    # dropped a pixel on the low side, and somebody has strapped it with two
+    # iron pattress plates and stopped worrying about it.
+    crack = []
+    cx, cy = 296.0, WALL_TOP + 6
+    while cy < WALK_Y - 2:
+        run = rng.randint(5, 14)                     # along a bed joint
+        step = -1 if rng.random() < 0.72 else 1
+        for k in range(run):
+            cx += step
+            crack.append((int(cx), int(cy)))
+        drop = rng.randint(6, 15)                    # then down a perpend
+        for k in range(drop):
+            cy += 1
+            crack.append((int(cx), int(cy)))
+    for i, (qx, qy) in enumerate(crack):
+        t = i / float(len(crack))
+        w = 1 + int(t * 2.2)
+        for k in range(w):
+            c.set(qx - k, qy, C("090a14"))
+        c.set(qx + 1, qy, wall_col(qx + 1, qy, 1.2))     # the arris that lifted
+        if (qy * 3 + qx) % 5 < 3:
+            c.set(qx + 2, qy, wall_col(qx + 2, qy, 0.6))
+        c.set(qx - w, qy, wall_col(qx - w, qy, -1.6))
+        if t > 0.3 and (qy * 5 + qx) % 7 < 3:            # spalled shoulders
+            c.set(qx + 3, qy, wall_col(qx + 3, qy, -1.7))
+            c.set(qx - w - 1, qy, wall_col(qx - w - 1, qy, 1.2))
+    # the two straps, and the tell-tale somebody bedded across the crack
+    for (px, py, tilt) in ((272, 196, 1), (252, 318, -1)):
+        # a solid iron cross bedded flat on the brick: a lit top-left face, a
+        # shadow under the bottom-right, its own drop shadow on the wall, and
+        # one boss in the middle with the rust that has run out of it
+        cells = []
         for dy in range(-10, 11):
-            d = (dx / 74.0) ** 2 + (dy / 10.0) ** 2
-            if d < 1.0:
-                c.set(SHAFT_X + dx, WALK_Y + 18 + dy,
-                      C("819796") if d < 0.3 else C("577277"))
-    c.hline(SHAFT_X - 90, SHAFT_X + 90, WATER_Y - 1, C("577277"))
-    c.hline(SHAFT_X - 170, SHAFT_X - 91, WATER_Y - 1, C("394a50"))
-    c.hline(SHAFT_X + 91, SHAFT_X + 170, WATER_Y - 1, C("394a50"))
+            for dx in range(-10, 11):
+                arm = (abs(dy) <= 3 and abs(dx) <= 10) or (abs(dx) <= 3 and abs(dy) <= 10)
+                if not arm or abs(dx) + abs(dy) > 13:
+                    continue
+                cells.append((dx, dy))
+        for (dx, dy) in cells:                       # the drop shadow first
+            c.set(px + dx + 2, py + dy + 2, wall_col(px + dx + 2, py + dy + 2, -2.6))
+        for (dx, dy) in cells:
+            cl, _ = lev(px + dx, py + dy)
+            edge = ((dx + tilt, dy) not in cells) or ((dx, dy - 1) not in cells)
+            low = ((dx, dy + 1) not in cells)
+            b = 2.3 if edge else (1.3 if (dx + dy) < 0 else 0.5)
+            if low:
+                b = -1.4
+            b += (0.0, 0.2, -0.22)[(dx * 5 + dy * 3) % 3]
+            c.set(px + dx, py + dy, band(COLD, cl + b))
+        c.rect(px - 3, py - 3, px + 3, py + 3, band(COLD, lev(px, py)[0] + 2.2))
+        c.rect(px - 2, py - 2, px + 2, py + 2, band(COLD, lev(px, py)[0] + 0.9))
+        c.hline(px - 3, px + 3, py + 4, C("090a14"))
+        c.rect(px - 1, py - 1, px + 1, py + 1, C("602c2c"))
+        c.set(px, py, C("341c27"))
+        for dy in range(5, rng.randint(11, 22)):     # a rust run off the boss
+            c.set(px, py + dy, C("341c27") if dy > 9 else C("602c2c"))
+            if dy > 12:
+                c.set(px + 1, py + dy, C("241527"))
 
-    # black water: solid, with the shaft's reflection as broken DASHES
-    for y in range(WATER_Y, SCENE_H):
+    # debris washed up against the wall: silt, a broken slab, caught sticks
+    for x in range(392, 486):
+        u = (x - 392) / 94.0
+        h = int(15 * math.sin(u * math.pi) ** 0.7
+                + 2.0 * math.sin(x / 4.0) + 1.4 * math.sin(x / 11.0))
+        for yy in range(WALK_Y - h, WALK_Y + 3):
+            c.set(x, yy, band(COLD, lev(x, yy)[0] - 0.6
+                              + (0.0, 0.3, -0.25)[(x * 3 + yy * 5) % 3]))
+        if h > 2:
+            c.set(x, WALK_Y - h, band(COLD, lev(x, WALK_Y - h)[0] + 0.8))
+    for i in range(7):                               # sticks caught in it
+        sx = rng.randrange(396, 470)
+        sy = WALK_Y - rng.randint(0, 9)
+        ln = rng.randint(7, 22)
+        dy = rng.choice((-1, 0, 0, 1))
+        for k in range(ln):
+            c.set(sx + k, sy + (k * dy) // 6, C("341c27") if i % 2 else C("241527"))
+    c.rect(432, WALK_Y - 19, 452, WALK_Y - 8,        # a broken slab on edge
+           band(COLD, lev(442, WALK_Y - 14)[0] + 0.3))
+    c.hline(432, 452, WALK_Y - 19, band(COLD, lev(442, WALK_Y - 19)[0] + 1.4))
+    c.vline(452, WALK_Y - 19, WALK_Y - 8, C("090a14"))
+    c.hline(430, 453, WALK_Y - 7, C("090a14"))
+
+    # ------------------------------------------------------ the left arch ---
+    # the main drain carries on into the dark: half an arch cut by the frame,
+    # a voussoir ring round it, and the channel running away underneath
+    ACX, ACY, ARX, ARY = 18, 308, 168, 162
+    RING = 17
+
+    def arch_x(yv):
+        """the intrados' right-hand x at height yv (None above the crown)"""
+        if yv > ACY:
+            return ACX + ARX
+        d = 1.0 - ((ACY - yv) / float(ARY)) ** 2
+        if d <= 0.0:
+            return None
+        return ACX + ARX * d ** 0.5
+
+    for yv in range(int(ACY - ARY) - RING - 2, WALK_Y):
+        ax = arch_x(yv)
+        if ax is None:
+            continue
+        ai = int(round(ax))
+        for x in range(0, min(SCENE_W, ai)):
+            c.set(x, yv, C("090a14"))
+        # the voussoir ring: radial bricks, each with its own tone
+        for k in range(RING):
+            x = ai + k
+            if not (0 <= x < SCENE_W):
+                continue
+            ang = math.atan2(max(0.0, ACY - yv) / float(ARY),
+                             (x - ACX) / float(ARX))
+            seg = int(ang * 15.0)
+            vo = (0.0, 0.30, -0.28, 0.14, -0.44, 0.22)[seg % 6]
+            cl, _ = lev(x, yv)
+            b = vo
+            if k == 0:
+                b += 1.0                              # the arris catches light
+            elif k == RING - 1:
+                b -= 1.4
+            if abs(ang * 15.0 - round(ang * 15.0)) < 0.055:
+                b -= 2.2                              # radial joint
+            c.set(x, yv, band(COLD, cl + b - 0.15))
+    # the drain carries on in there: the benching, the channel and a second
+    # arch ring, all at the bottom of the ramp.  the first cut left this a
+    # 300x300 hole of dead black, which is the same complaint as the old scene
+    for x in range(0, 186):
+        ax = arch_x(WALK_Y - 1)
+        if ax is None or x >= ax:
+            continue
+        d = 1.0 - x / 200.0
+        c.set(x, WALK_Y - 3, C("151d28") if d > 0.55 else C("10141f"))
+        for yy in range(WALK_Y - 2, KERB_Y - 6):
+            c.set(x, yy, C("10141f") if (x + yy) % 5 else C("151d28"))
+        for yy in range(KERB_Y - 6, WATER_Y - 4):
+            c.set(x, yy, C("090a14"))
+    for i in range(30):                              # glints far up the invert
+        gx = rng.randrange(4, 150)
+        gy = rng.randrange(WATER_Y - 12, WATER_Y - 5)
+        c.hline(gx, gx + rng.randint(1, 5), gy, C("151d28"))
+    for yv in range(int(ACY - ARY) + 40, WALK_Y - 4):
+        ax = arch_x(yv)
+        if ax is None:
+            continue
+        # the wall a long way in.  COURSE LINES ONLY, broken: the first cut
+        # scattered single pixels in here and that is the one texture this
+        # project bans outright - it read as dust on the screen.
+        if yv % 7:
+            continue
+        far = (int(round(ACX - 46 + (ARX - 58)
+                         * max(0.0, 1.0 - ((ACY - yv) / float(ARY - 44)) ** 2) ** 0.5))
+               if yv <= ACY else ACX + ARX - 58)
+        x = -rng.randint(0, 14)
+        while x < min(int(ax) - 6, far):
+            ln = rng.randint(7, 26)
+            if x >= 0:
+                c.hline(x, min(min(int(ax) - 7, far - 1), x + ln), yv, C("10141f"))
+            x += ln + rng.randint(4, 17)
+    # a second ring further in, a ghost, so the hole has depth
+    for yv in range(int(ACY - ARY) + 26, WALK_Y - 8):
+        d = 1.0 - ((ACY - yv) / float(ARY - 30)) ** 2 if yv <= ACY else 1.0
+        if d <= 0.0:
+            continue
+        gi = int(round(ACX - 30 + (ARX - 34) * d ** 0.5))
+        for k in range(5):
+            if 0 <= gi + k < SCENE_W:
+                c.set(gi + k, yv, C("151d28") if k < 2 else C("10141f"))
+    # roots through a burst joint just outside the arch
+    # a root has come through a joint and burst it: a compact mass hanging out
+    # of the wall with a few strands under it, all falling the same way.  the
+    # first cut sprayed nine strands radially from one point and read as a
+    # spider.
+    rx0, ry0 = 198, 292
+    for (qx, qy) in blob(rng, rx0, ry0, 58,
+                         {(a, b) for b in range(284, 306) for a in range(188, 218)}):
+        c.set(qx, qy, C("341c27") if (qx * 3 + qy) % 4 else C("19332d"))
+    c.hline(rx0 - 9, rx0 + 13, 284, C("090a14"))
+    for i in range(6):
+        wpx = float(rx0 + rng.randint(-8, 12))
+        wpy = float(302 + rng.randint(-3, 3))
+        a = math.pi / 2 + rng.uniform(-0.55, 0.55)
+        for t in range(rng.randint(12, 34)):
+            wpx += math.cos(a)
+            wpy += math.sin(a)
+            a += rng.uniform(-0.13, 0.13)
+            a = max(0.7, min(2.45, a))
+            th = 2 if t < 11 else 1
+            for k in range(th):
+                c.set(int(wpx) + k, int(wpy),
+                      C("341c27") if t < 9 else (C("241527") if t < 20
+                                                 else C("19332d")))
+
+    # ------------------------------------------------------- the pipe run ---
+    def pipe_y(x):
+        return 176 + (x - 636) // 24
+
+    PIPE = (-3.0, 0.6, 2.1, 1.4, 0.5, -0.2, -1.0, -1.9, -2.6, -3.4)
+    for x in range(636, SCENE_W):
+        py = pipe_y(x)
+        cl, _ = lev(x, py + 4)
+        for k, b in enumerate(PIPE):
+            c.set(x, py - 1 + k, band(COLD, cl + b))
+    for bx in (664, 748, 836, 926):                  # saddles up to the wall
+        bx += rng.randint(-9, 9)
+        py = pipe_y(bx)
+        for x in range(bx - 5, bx + 6):
+            cl, _ = lev(x, py + 4)
+            c.set(x, py - 4, band(COLD, cl + 0.9))
+            c.set(x, py - 3, band(COLD, cl - 0.2))
+            c.set(x, py - 2, band(COLD, cl - 1.6))
+            for k, b in enumerate(PIPE):
+                c.set(x, py - 1 + k, band(COLD, cl + b - 0.7))
+        c.vline(bx - 6, py - 4, py + 8, C("090a14"))
+        c.vline(bx + 6, py - 4, py + 8, C("090a14"))
+    for cx in (700, 802, 900):                       # socket collars
+        cx += rng.randint(-11, 11)
+        py = pipe_y(cx)
+        for x in range(cx, cx + 7):
+            cl, _ = lev(x, py + 4)
+            for k, b in enumerate(PIPE):
+                c.set(x, py - 2 + k, band(COLD, cl + b + (0.5 if k < 4 else 0.0)))
+            c.set(x, py - 3, band(COLD, cl - 2.2))
+            c.set(x, py + 8, band(COLD, cl - 3.2))
+        for k in range(rng.randint(2, 3)):           # rust runs off the collar
+            sx = cx + rng.randint(0, 6)
+            ln = rng.randint(6, 17)
+            for yy in range(py + 8, py + 8 + ln):
+                u = (yy - py - 8) / float(ln)
+                c.set(sx, yy, C("602c2c") if u < 0.35 else C("341c27"))
+                if u < 0.55:
+                    c.set(sx + 1, yy, C("341c27"))
+                else:
+                    c.set(sx - 1, yy, C("241527"))
+    # a thin conduit dropping to a junction box
+    for x in range(636, 786):
+        c.set(x, 206, band(COLD, lev(x, 206)[0] - 1.6))
+        c.set(x, 207, band(COLD, lev(x, 207)[0] + 0.6))
+        c.set(x, 208, band(COLD, lev(x, 208)[0] - 2.2))
+    for yy in range(200, 220):
+        for x in range(786, 806):
+            cl, _ = lev(x, yy)
+            b = 0.9 if x < 790 or yy < 203 else (-1.6 if yy > 216 else -0.3)
+            c.set(x, yy, band(COLD, cl + b))
+    c.hline(786, 806, 199, C("090a14"))
+    c.hline(786, 806, 220, C("090a14"))
+    c.set(795, 210, C("394a50"))
+
+    # bolt scars: a bracket was here and somebody took it
+    for yy in range(300, 338):
+        rag = int(round(1.6 * math.sin(yy / 5.0) + 1.1 * math.sin(yy / 13.0)))
+        for x in range(668 + rag, 708 - rag):
+            c.set(x, yy, wall_col(x, yy, 0.45))      # cleaner brick, not a slab
+    for (hx, hy) in ((672, 304), (703, 304), (672, 333), (703, 333)):
+        c.rect(hx, hy, hx + 1, hy + 1, C("10141f"))
+        c.set(hx, hy + 2, wall_col(hx, hy + 2, -1.2))
+        c.set(hx, hy - 1, wall_col(hx, hy - 1, 0.9))
+        for yy in range(hy + 2, hy + 2 + rng.randint(5, 11)):
+            c.set(hx, yy, C("341c27") if yy > hy + 5 else C("602c2c"))
+
+    # ---------------------------------------------------------- the penstock
+    # a cast-iron gate over a side inlet: frame, guides, a plate cracked open,
+    # a rising spindle up to a headstock and a handwheel
+    IX0, IX1, IY0, IY1 = 792, 852, 384, WALK_Y
+    GATE_BOT, GATE_TOP = 414, 316                    # the plate, cracked open
+    for yy in range(IY0, IY1):
+        for x in range(IX0, IX1):
+            c.set(x, yy, C("090a14"))
+    for x in range(IX0, IX1):                        # the throat's own arch
+        d = 1.0 - ((x - (IX0 + IX1) / 2.0) / ((IX1 - IX0) / 2.0)) ** 2
+        ty = IY0 + int(10 * (1.0 - max(0.0, d) ** 0.5))
+        for yy in range(IY0, ty):
+            c.set(x, yy, band(COLD, lev(x, yy)[0] - 1.4))
+    for k in range(9):                               # the frame flanges
+        for yy in range(GATE_TOP - 18, IY1):
+            for x in (IX0 - 9 + k, IX1 + 8 - k):
+                cl, _ = lev(x, yy)
+                b = 2.0 if k < 3 else (0.2 if k < 6 else -2.2)
+                c.set(x, yy, band(COLD, cl + b))
+    for yy in range(GATE_TOP - 18, GATE_TOP - 10):   # the guides' head beam
+        for x in range(IX0 - 9, IX1 + 9):
+            cl, _ = lev(x, yy)
+            c.set(x, yy, band(COLD, cl + (1.9 if yy < GATE_TOP - 15 else -0.8)))
+    for yy in range(IY0 - 10, IY0 - 4):              # the throat's own lintel
+        for x in range(IX0 - 12, IX1 + 12):
+            cl, _ = lev(x, yy)
+            c.set(x, yy, band(COLD, cl + (1.4 if yy < IY0 - 7 else -1.2)))
+    for by in range(IY0 - 6, IY1 - 6, 26):           # bolt bosses
+        for x in (IX0 - 6, IX1 + 5):
+            c.rect(x, by, x + 2, by + 2, band(COLD, lev(x, by)[0] + 2.4))
+            c.set(x + 1, by + 3, C("090a14"))
+            for yy in range(by + 4, by + 4 + rng.randint(4, 12)):
+                c.set(x + 1, yy, C("341c27") if yy > by + 7 else C("602c2c"))
+    PL0, PL1 = IX0 - 2, IX1 + 1
+    for yy in range(GATE_TOP, GATE_BOT):
+        v = (yy - GATE_TOP) / float(GATE_BOT - GATE_TOP)
+        for x in range(PL0, PL1 + 1):
+            cl, _ = lev(x, yy)
+            b = 1.35 - 1.25 * ((x - PL0) / float(PL1 - PL0)) - 0.75 * v
+            c.set(x, yy, band(COLD, cl + b))
+    for ry in (GATE_TOP + 2, GATE_TOP + 38, GATE_TOP + 74):   # stiffeners
+        for x in range(PL0, PL1 + 1):
+            cl, _ = lev(x, ry)
+            u = (x - PL0) / float(PL1 - PL0)
+            c.set(x, ry - 1, band(COLD, cl + 2.5 - 1.1 * u))
+            c.set(x, ry, band(COLD, cl + 1.7 - 1.1 * u))
+            c.set(x, ry + 1, band(COLD, cl + 0.2 - 1.1 * u))
+            c.set(x, ry + 2, band(COLD, cl - 1.9))
+    for vx in (PL0 + 17, PL1 - 16):                  # vertical stiffeners
+        for yy in range(GATE_TOP + 4, GATE_BOT - 2):
+            cl, _ = lev(vx, yy)
+            c.set(vx, yy, band(COLD, cl + 1.9 - 0.7 * (yy - GATE_TOP) / 100.0))
+            c.set(vx + 1, yy, band(COLD, cl + 0.6))
+            c.set(vx + 2, yy, band(COLD, cl - 1.7))
+    for yy in range(GATE_TOP + 6, GATE_BOT - 4, 11):  # the rivet lines
+        for x in (PL0 + 4, PL1 - 3):
+            cl, _ = lev(x, yy)
+            c.set(x, yy, band(COLD, cl + 2.2))
+            c.set(x, yy + 1, band(COLD, cl - 1.3))
+    for i in range(7):                               # wear, in solid patches
+        for (qx, qy) in blob(rng, rng.randrange(PL0 + 3, PL1 - 3),
+                             rng.randrange(GATE_TOP + 4, GATE_BOT - 4),
+                             rng.randint(6, 19),
+                             {(a, b) for b in range(GATE_TOP, GATE_BOT)
+                              for a in range(PL0, PL1 + 1)}):
+            cl, _ = lev(qx, qy)
+            c.set(qx, qy, band(COLD, cl - 0.5) if i % 2 else C("241527"))
+    c.rect(816, GATE_TOP - 4, 820, GATE_TOP + 2,     # the lifting lug
+           band(COLD, lev(818, GATE_TOP)[0] + 1.8))
+    c.set(818, GATE_TOP - 3, C("090a14"))
+    c.vline(PL0, GATE_TOP, GATE_BOT - 1, band(COLD, lev(PL0, GATE_TOP)[0] + 2.4))
+    c.vline(PL1, GATE_TOP, GATE_BOT - 1, band(COLD, lev(PL1, GATE_TOP)[0] - 1.9))
+    c.hline(PL0, PL1, GATE_TOP, band(COLD, lev(PL0, GATE_TOP)[0] + 2.6))
+    c.hline(PL0, PL1, GATE_BOT - 2, band(COLD, lev(PL0, GATE_BOT)[0] - 1.6))
+    c.hline(PL0, PL1, GATE_BOT - 1, band(COLD, 4.6))  # wet lip, water leaving
+    c.hline(PL0, PL1, GATE_BOT, C("090a14"))
+    for yy in range(246, GATE_TOP + 2):              # the rising spindle
+        cl, _ = lev(818, yy)
+        c.set(817, yy, band(COLD, cl + 0.4))
+        c.set(818, yy, band(COLD, cl + 2.6))
+        c.set(819, yy, band(COLD, cl + 0.6))
+        if yy % 5 == 0:                          # the thread
+            c.set(817, yy, band(COLD, cl - 1.4))
+            c.set(819, yy, band(COLD, cl + 1.8))
+    for x in range(IX0 - 4, IX1 + 5):                # the headstock bridge
+        cl, _ = lev(x, 242)
+        c.set(x, 240, band(COLD, cl + 2.4))
+        c.set(x, 241, band(COLD, cl + 1.3))
+        c.set(x, 242, band(COLD, cl + 0.2))
+        c.set(x, 243, band(COLD, cl - 2.4))
+    for lx in (IX0 - 1, IX1 - 1):                    # its legs
+        for yy in range(244, GATE_TOP - 4):
+            cl, _ = lev(lx, yy)
+            c.set(lx, yy, band(COLD, cl + 2.0))
+            c.set(lx + 1, yy, band(COLD, cl - 0.4))
+    for a in range(0, 360, 4):                       # the handwheel
+        ra = math.radians(a)
+        for r in (13, 14):
+            wx = int(round(818 + math.cos(ra) * r))
+            wy = int(round(226 + math.sin(ra) * r * 0.94))
+            cl, _ = lev(wx, wy)
+            c.set(wx, wy, band(COLD, cl + (2.6 if math.sin(ra) < 0 else 0.6)))
+    for a in (18, 102, 198, 288):
+        ra = math.radians(a)
+        for r in range(3, 13):
+            wx = int(round(818 + math.cos(ra) * r))
+            wy = int(round(226 + math.sin(ra) * r * 0.94))
+            c.set(wx, wy, band(COLD, lev(wx, wy)[0] + 1.6))
+    c.rect(816, 224, 820, 228, band(COLD, lev(818, 226)[0] + 2.2))
+    c.set(818, 226, C("090a14"))
+    # the leak: a sheet out from under the plate, down the throat
+    # the leak.  the first cut was a hatched FIELD and it read as a grille
+    # bolted over the inlet; it is falling water now - vertical strokes, each
+    # its own length and brightness, breaking up as they drop.
+    for k in range(17):
+        wx = rng.randrange(IX0 + 2, IX1 - 3)
+        y0 = GATE_BOT + 1 + rng.randint(0, 4)
+        ln = rng.randint(12, IY1 - GATE_BOT)
+        wide = rng.random() < 0.45
+        broke = y0 + int(ln * rng.uniform(0.45, 0.95))
+        for yy in range(y0, min(IY1, y0 + ln)):
+            t = (yy - GATE_BOT) / float(IY1 - GATE_BOT)
+            if yy > broke and (yy * 5 + wx) % 7 < 4:
+                continue
+            c.set(wx, yy, band(COLD, 3.6 - 1.4 * t))
+            if wide and yy < broke:
+                c.set(wx + 1, yy, band(COLD, 2.6 - 1.2 * t))
+    c.hline(IX0 + 2, IX1 - 2, GATE_BOT + 1, band(COLD, 4.4))
+
+    # ----------------------------------------------------- cables, left ----
+    for (y0, hooks, tone) in ((176, (44, 158, 276), 0), (196, (52, 168, 288), 1)):
+        for i in range(len(hooks) - 1):
+            x0, x1 = hooks[i], hooks[i + 1]
+            for x in range(x0, x1):
+                t = (x - x0) / float(x1 - x0)
+                sy = y0 + int(round(math.sin(t * math.pi) * (13 + 5 * tone)))
+                c.set(x, sy, C("10141f"))
+                c.set(x, sy + 1, C("090a14"))
+        for hx in hooks:
+            for yy in range(y0 - 5, y0 + 2):
+                c.set(hx, yy, band(COLD, lev(hx, yy)[0] + 0.9))
+            c.set(hx + 1, y0 - 5, band(COLD, lev(hx, y0)[0] + 0.9))
+            c.set(hx + 2, y0 - 4, band(COLD, lev(hx, y0)[0] - 1.4))
+
+    # ------------------------------------------------- the manhole shaft ----
+    # cut LAST of the wall work so nothing paints over the throat
+    for yy in range(0, WALL_TOP + 4):
+        for x in range(SHAFT_X - 29, SHAFT_X + 30):
+            c.set(x, yy, C("090a14"))
+    for yy in range(0, WALL_TOP + 4):                # its brick lining
+        t = min(1.0, yy / 74.0)
+        for x in range(SHAFT_X - 29, SHAFT_X + 30):
+            dx = x - SHAFT_X
+            # the near face of the chimney is lit from the sky above and dies
+            # downward; the far side of the throat stays a step back
+            cl = 2.55 - 1.75 * t - abs(dx) / 21.0 + (0.45 if dx < 0 else -0.30)
+            row = (yy + (5 if dx > 0 else 0)) // 8
+            if (yy + (5 if dx > 0 else 0)) % 8 == 0:
+                cl -= 1.7
+            elif (x * 3 + row * 19) % 21 == 0:
+                cl -= 1.4
+            elif (yy + (5 if dx > 0 else 0)) % 8 == 1:
+                cl += 0.45
+            cl += (0.0, 0.22, -0.20, 0.12, -0.30)[(x * 7 + row * 5) % 5]
+            c.set(x, yy, band(COLD, cl))
+    for dx in range(-24, 25):                        # the open cover ring
+        dy = int((1.0 - (dx / 24.0) ** 2) ** 0.5 * 7)
+        for yy in range(13 - dy, 13 + dy):
+            c.set(SHAFT_X + dx, yy, C("172038"))     # the night up there
+        c.set(SHAFT_X + dx, 13 + dy, C("577277"))
+        c.set(SHAFT_X + dx, 13 - dy, C("394a50"))
+        c.set(SHAFT_X + dx, 12 + dy, C("819796"))
+    c.set(SHAFT_X - 9, 9, C("c7cfcc"))               # one star
+    c.set(SHAFT_X + 13, 17, C("a8b5b2"))
+    for x in range(SHAFT_X + 14, SHAFT_X + 54):      # the cover, slid aside
+        d = (x - (SHAFT_X + 14)) / 40.0
+        h = int(4 * (1.0 - abs(d - 0.5) * 0.7))
+        for yy in range(6 - h, 6 + h):
+            c.set(x, yy, C("202e37") if yy < 6 else C("151d28"))
+        c.set(x, 6 + h, C("090a14"))
+        c.set(x, 6 - h, C("394a50"))
+
+    # ------------------------------------------------------- the ladder ----
+    LX0, LX1 = SHAFT_X + 7, SHAFT_X + 21
+    LTOP, LBOT = 18, WALK_Y - 2
+    for yy in range(LTOP, LBOT):
+        t = (yy - LTOP) / float(LBOT - LTOP)
+        cl, _ = lev(LX0, yy)
+        # the foot of the run has been standing in the water for decades, so
+        # it loses its highlight and thins - it does NOT turn into a dashed
+        # orange line, which is what the first cut did and it read as noise
+        eaten = 0.0 if t < 0.88 else (t - 0.88) / 0.12
+        c.set(LX0 - 1, yy, band(COLD, cl - 2.2))
+        c.set(LX0, yy, band(COLD, cl + 1.5 - 1.1 * eaten))
+        c.set(LX0 + 1, yy, band(COLD, cl - 0.7 - 0.5 * eaten))
+        c.set(LX1 - 1, yy, band(COLD, cl + 1.1 - 0.9 * eaten))
+        c.set(LX1, yy, band(COLD, cl - 1.5))
+        c.set(LX1 + 1, yy, band(COLD, cl - 1.9))
+        if eaten > 0.3 and (yy * 3) % 7 < 3:
+            c.set(LX0 + 1, yy, C("341c27"))
+    rung_i = 0
+    for ry in range(LTOP + 8, LBOT - 4, 13):         # the pitch is real: regular
+        rung_i += 1
+        cl, _ = lev(LX0, ry)
+        gone = rung_i == 17
+        bent = rung_i in (9, 24)
+        rust = rng.random() < 0.17
+        if gone:                                     # only the two stubs left
+            c.hline(LX0 + 1, LX0 + 3, ry, C("602c2c"))
+            c.hline(LX1 - 3, LX1 - 1, ry, C("884b2b"))
+            c.set(LX0 + 1, ry + 1, C("341c27"))
+            continue
+        for x in range(LX0 + 1, LX1):
+            u = (x - LX0) / float(LX1 - LX0)
+            dy = int(round(1.6 * math.sin(u * math.pi))) if bent else 0
+            top = band(COLD, cl + (0.8 if rust else 1.6))
+            if rust and (x * 5 + rung_i * 3) % 7 < 2:
+                top = C("602c2c") if (x + rung_i) % 8 < 4 else C("341c27")
+            c.set(x, ry + dy, top)
+            c.set(x, ry + 1 + dy, band(COLD, cl - (1.9 if rust else 1.4)))
+        if rung_i % 4 == 1:                          # a fixing plate + its rust
+            c.rect(LX1 + 1, ry - 2, LX1 + 5, ry + 3, band(COLD, cl + 0.6))
+            c.set(LX1 + 5, ry - 2, C("090a14"))
+            c.hline(LX1 + 1, LX1 + 5, ry + 4, C("090a14"))
+            for yy in range(ry + 4, ry + 4 + rng.randint(5, 16)):
+                c.set(LX1 + 3, yy, C("341c27") if yy > ry + 8 else C("602c2c"))
+
+    # ------------------------------------------------------- the benching --
+    # THE POOL IS NOT AN ELLIPSE.  the cover is only slid half aside, so the
+    # light that gets down here is a lopsided patch with a bite out of its
+    # right-hand side, and its edge wobbles instead of describing an arc.  the
+    # benching's own joints and cracks then cut across it - which is the whole
+    # reason dim() had to learn both ramps, because the lantern's pool is warm
+    # and every one of those cuts used to stop dead at it.
+    def pool_at(x, yy):
+        bx = (x - SHAFT_X) / (196.0 if x < SHAFT_X else 138.0)
+        bx += 0.09 * math.sin(yy / 5.0)
+        by = (yy - 471) / 21.0
+        return max(0.0, 1.0 - bx * bx - by * by
+                   + 0.17 * math.sin(x / 41.0) + 0.10 * math.sin(x / 17.0)
+                   + 0.07 * math.sin(x / 6.0))
+
+    for yy in range(WALK_Y, KERB_Y):
         for x in range(SCENE_W):
-            c.set(x, y, C("090a14"))
-    for y in range(WATER_Y + 2, SCENE_H, 3):          # reflection column
-        for k in range(2):
-            gx = SHAFT_X + rng.randint(-24, 20)
-            c.hline(gx, gx + rng.randint(2, 5), y,
-                    C("253a5e") if rng.random() < 0.7 else C("3c5e8b"))
-    for y in range(WATER_Y + 4, SCENE_H, 7):          # faint drift lines
-        gx = rng.randrange(30, SCENE_W - 40)
-        c.hline(gx, gx + rng.randint(3, 7), y, C("172038"))
-    c.hline(0, SCENE_W - 1, WATER_Y, C("090a14"))
+            t = (yy - WALK_Y) / float(KERB_Y - WALK_Y)
+            pool = pool_at(x, yy)
+            lx = abs(x - LANT[0])
+            wp = max(0.0, 1.0 - (lx / 118.0) ** 2 - ((yy - 474) / 21.0) ** 2
+                     + 0.20 * math.sin(x / 37.0) + 0.13 * math.sin(x / 11.0)
+                     + 0.08 * math.sin(x / 5.0))
+            wp *= min(1.0, max(0.0, (374 - x) / 48.0))
+            sq = 1.0 - trough(x, 400) * 0.8
+            lv = 1.05 + 0.75 * t + pool * 4.7 * sq
+            if wp * 5.4 > lv - 0.7 and wp > 0.05:
+                c.set(x, yy, band(WARM, 1.0 + wp * 5.6 + 0.5 * t))
+            else:
+                c.set(x, yy, band(COLD, lv))
+    c.hline(0, SCENE_W - 1, WALK_Y, C("090a14"))     # the wall's own shadow
+    for x in range(SCENE_W):
+        dim(x, WALK_Y + 1, 1)
+    # the ladder's rungs throw bars across the pool, thrown right because the
+    # shaft is open on its left
+    for i in range(9):
+        sy = WALK_Y + 2 + i * 4
+        if sy >= KERB_Y - 1:
+            break
+        off = int((sy - WALK_Y) * 1.15)
+        for x in range(SHAFT_X + 5 + off, SHAFT_X + 23 + off):
+            for yy in range(sy, min(KERB_Y, sy + 2)):
+                dim(x, yy, 2)
+    for yy in range(WALK_Y + 2, KERB_Y):             # the stiles' own shadows
+        off = int((yy - WALK_Y) * 1.15)
+        dim(SHAFT_X + 7 + off, yy, 2)
+        dim(SHAFT_X + 8 + off, yy, 1)
+        dim(SHAFT_X + 21 + off, yy, 2)
+    # benching structure: a longitudinal joint, unit joints, cracks
+    for x in range(SCENE_W):
+        jy = WALK_Y + 12 + int(round(1.4 * math.sin(x / 71.0)))
+        if (x + int(7 * math.sin(x / 29.0))) % 41 > 3:
+            dim(x, jy, 2)
+            dim(x, jy + 1, -1)
+    jx = -rng.randint(0, 40)
+    while jx < SCENE_W:
+        jx += rng.randint(46, 96)
+        for yy in range(WALK_Y + 1, KERB_Y):
+            dim(jx, yy, 2)
+        dim(jx + 1, WALK_Y + 1, -1)
+    for i in range(13):                              # cracks, forked
+        cx0 = rng.randrange(20, SCENE_W - 20)
+        cy0 = WALK_Y + rng.randint(2, 8)
+        a = math.pi / 2 + rng.uniform(-0.5, 0.5)
+        fx, fy = float(cx0), float(cy0)
+        for t in range(rng.randint(12, 28)):
+            fx += math.cos(a)
+            fy += math.sin(a)
+            a += rng.uniform(-0.22, 0.22)
+            if fy >= KERB_Y:
+                break
+            dim(int(fx), int(fy), 2)
+    # the nosing, and the channel wall under it
+    for x in range(SCENE_W):
+        hit = RAMP_AT.get(c.get(x, KERB_Y - 2))
+        r, base = hit if hit else (COLD, 2)
+        c.set(x, KERB_Y - 1, r[min(len(r) - 1, base + 1)])
+        c.set(x, KERB_Y, C("090a14"))
+        for yy in range(KERB_Y + 1, WATER_Y):
+            t = (yy - KERB_Y) / float(WATER_Y - KERB_Y)
+            c.set(x, yy, r[max(0, min(len(r) - 1,
+                                      int(base - 1.2 - 1.9 * t + 0.5)))])
+    ux = -rng.randint(0, 30)
+    while ux < SCENE_W:                              # the channel wall's units
+        ux += rng.randint(28, 62)
+        for yy in range(KERB_Y + 1, WATER_Y):
+            c.set(ux, yy, C("090a14"))
+        dim(ux + 1, KERB_Y + 1, -1)
+    for i in range(22):                              # spalls off its face
+        sx = rng.randrange(6, SCENE_W - 8)
+        sy = rng.randrange(KERB_Y + 2, WATER_Y - 2)
+        for (qx, qy) in blob(rng, sx, sy, rng.randint(4, 12),
+                             {(a, b) for b in range(KERB_Y + 1, WATER_Y)
+                              for a in range(SCENE_W)}):
+            dim(qx, qy, 1 if (qx + qy) % 3 else 2)
+    for x in range(SCENE_W):                         # slime at the waterline
+        k = (x + int(19 * math.sin(x / 37.0)) + int(7 * math.sin(x / 11.0)))
+        if k % 67 < 26:
+            c.set(x, WATER_Y - 2, C("19332d"))
+            if k % 67 < 17:
+                c.set(x, WATER_Y - 1, C("19332d"))
 
-    # raider cache in the pool's edge light
-    bx, by = SHAFT_X - 118, WALK_Y + 26
-    c.rect(bx, by - 14, bx + 22, by, C("341c27"))
-    c.rect(bx + 1, by - 13, bx + 21, by - 9, C("602c2c"))
-    c.hline(bx + 1, bx + 21, by - 8, C("884b2b"))
-    c.vline(bx + 11, by - 8, by - 1, C("241527"))
-    c.hline(bx, bx + 22, by, C("090a14"))
-    c.rect(bx + 28, by - 9, bx + 34, by, C("202e37"))
-    c.rect(bx + 29, by - 7, bx + 33, by - 3, C("151d28"))
-    c.set(bx + 31, by - 10, C("394a50"))
-    c.rect(bx - 22, by - 6, bx - 4, by, C("411d31"))
-    c.hline(bx - 22, bx - 4, by - 6, C("752438"))
-    c.hline(bx - 24, bx + 36, by + 1, C("090a14"))
+    # the silt fan the penstock has washed out across the benching
+    for x in range(IX0 - 16, IX1 + 17):
+        d = abs(x - (IX0 + IX1) / 2.0) / 46.0
+        h = int((KERB_Y - WALK_Y) * max(0.0, 1.0 - d * d)
+                + 2.2 * math.sin(x / 5.0) + 1.6 * math.sin(x / 13.0))
+        for yy in range(WALK_Y + 1, min(KERB_Y, WALK_Y + 1 + h)):
+            dim(x, yy, 1)
+        if 3 < h < KERB_Y - WALK_Y - 1 and (x * 5) % 7 > 1:
+            dim(x, WALK_Y + h, -1)
 
-    # (no baked dot-vignette — the runtime vignette.png is smooth alpha)
+    # ------------------------------------------------------ the cache ------
+    # a raider's stash by the ladder, lit by their own lantern (LORE 7)
+    def wbox(x0, y0, x1, y1, top, face, side, dark):
+        for yy in range(y0, y1 + 1):
+            for x in range(x0, x1 + 1):
+                c.set(x, yy, face)
+        for x in range(x0, x1 + 1):
+            c.set(x, y0, top)
+        for yy in range(y0, y1 + 1):
+            c.set(x0, yy, side)
+        c.hline(x0, x1, y1 + 1, dark)
+        c.vline(x1 + 1, y0, y1 + 1, dark)
 
-    # god-ray overlay (soft alpha, breathes at runtime)
+    # the crate: boards of THREE different widths with their own shadow gaps,
+    # a lit top plane and a corner batten.  the first cut ruled a grid of
+    # lines across a flat rectangle and read as a hatch in the wall.
+    CX0, CX1, CY0, CY1 = 292, 340, 424, 468
+    for yy in range(CY0, CY1 + 1):
+        for x in range(CX0, CX1 + 1):
+            u = (x - CX0) / float(CX1 - CX0)
+            c.set(x, yy, band(BRICK, 4.4 - 1.5 * u
+                              + (0.0, 0.2, -0.2)[(x * 3 + yy * 7) % 3]))
+    for x in range(CX0, CX1 + 1):                    # the top plane
+        c.set(x, CY0, band(BRICK, 5.4 - 1.2 * (x - CX0) / float(CX1 - CX0)))
+        c.set(x, CY0 + 1, band(BRICK, 4.9 - 1.2 * (x - CX0) / float(CX1 - CX0)))
+    bd = CY0 + 2
+    for w in (11, 8, 13, 9):
+        bd += w
+        if bd >= CY1:
+            break
+        c.hline(CX0, CX1, bd, band(BRICK, 2.0))
+        c.hline(CX0, CX1, bd + 1, band(BRICK, 5.0))
+    for bx in (CX0 + 3, CX1 - 4):                    # corner battens
+        c.vline(bx, CY0 + 2, CY1, band(BRICK, 5.1 if bx < 310 else 3.4))
+        c.vline(bx + 1, CY0 + 2, CY1, band(BRICK, 2.6))
+    for i in range(5):                               # knocks and wear
+        for (qx, qy) in blob(rng, rng.randrange(CX0 + 4, CX1 - 4),
+                             rng.randrange(CY0 + 4, CY1 - 4), rng.randint(5, 13),
+                             {(a, b) for b in range(CY0 + 2, CY1 + 1)
+                              for a in range(CX0, CX1 + 1)}):
+            c.set(qx, qy, band(BRICK, 3.0))
+    c.hline(CX0, CX1, CY1 + 1, C("090a14"))
+    c.vline(CX1 + 1, CY0, CY1 + 1, C("090a14"))
+    c.vline(CX0 - 1, CY0, CY1 + 1, C("090a14"))
+    # a jerry can beside it, standing a little further forward
+    wbox(348, 438, 368, 466, C("394a50"), C("202e37"), C("577277"), C("090a14"))
+    c.rect(352, 444, 364, 458, C("151d28"))          # the recessed face
+    c.hline(352, 364, 443, C("394a50"))
+    c.vline(351, 444, 458, C("394a50"))
+    c.rect(356, 434, 360, 437, C("202e37"))          # its cap
+    c.set(356, 434, C("577277"))
+    # a rolled tarp lying at the front of the ledge, well clear of the lantern
+    for i in range(3):
+        ty = 470 - i * 5
+        for x in range(168, 231):
+            wob = int(round(1.1 * math.sin(x / 9.0 + i)))
+            for k in range(4):
+                c.set(x, ty + wob + k, C("19332d"))
+            c.set(x, ty + wob, C("25562e") if i == 2 else C("19332d"))
+            c.set(x, ty + wob + 3, C("090a14") if i else C("19332d"))
+        for k in range(rng.randint(3, 6)):           # creases, per roll
+            fx = rng.randrange(172, 226)
+            c.vline(fx, ty - 1, ty + 3, C("25562e"))
+    c.hline(166, 232, 475, C("090a14"))
+    c.vline(166, 456, 475, C("090a14"))
+    c.vline(232, 456, 475, C("090a14"))
+
+    # THE CAST SHADOWS.  a lamp sitting on the floor throws everything near it
+    # a long way, and those shadows are what stop the pool being a disc.  each
+    # one leaves its object's BASE, spreads as it goes and breaks up at the
+    # far end instead of stopping on a straight edge.
+    def floor_shadow(ox0, ox1, base, length, right):
+        for k in range(length):
+            t = k / float(length)
+            x = (ox1 + 1 + k) if right else (ox0 - 1 - k)
+            if not (0 <= x < SCENE_W):
+                continue
+            if t > 0.5 and (x * 7 + int(11 * math.sin(x / 4.0))) % 13 < int(11 * t):
+                continue
+            y0 = base - int(9 * (1.0 - t)) + int(2.0 * math.sin(x / 6.0))
+            y1 = min(KERB_Y, base + 4 + int(13 * t))
+            for yy in range(max(WALK_Y + 1, y0), y1):
+                dim(x, yy, 3 if t < 0.45 else 2)
+
+    floor_shadow(CX0, CX1, 468, 108, True)
+    floor_shadow(168, 230, 474, 92, False)
+    floor_shadow(348, 368, 466, 74, True)
+
+    # the lantern: the second light source, and it must READ as the source
+    lx, ly = LANT
+    for dx in range(-13, 14):                        # its own shadow, small
+        h = int(3 * (1.0 - (dx / 13.0) ** 2)) + 1
+        for yy in range(478 - h, 480 + h):
+            dim(lx + dx, yy, 3)
+    c.rect(lx - 6, ly - 7, lx + 6, ly + 15, C("341c27"))   # the frame
+    c.rect(lx - 5, ly - 4, lx + 5, ly + 10, C("884b2b"))  # the glass belly
+    c.rect(lx - 4, ly - 3, lx + 4, ly + 9, C("de9e41"))
+    c.rect(lx - 3, ly - 1, lx + 3, ly + 7, C("e8c170"))
+    c.rect(lx - 1, ly + 1, lx + 1, ly + 5, C("ebede9"))   # the flame
+    for bxk in (lx - 3, lx + 3):                          # the cage bars
+        c.vline(bxk, ly - 4, ly + 10, C("602c2c"))
+    c.hline(lx - 6, lx + 6, ly - 7, C("ad7757"))          # the top cap
+    c.hline(lx - 5, lx + 5, ly - 6, C("884b2b"))
+    c.hline(lx - 6, lx + 6, ly - 5, C("4d2b32"))
+    c.rect(lx - 2, ly - 11, lx + 2, ly - 8, C("602c2c"))  # the chimney
+    c.set(lx - 2, ly - 11, C("884b2b"))
+    c.hline(lx - 7, lx + 7, ly + 16, C("602c2c"))         # the foot
+    c.hline(lx - 7, lx + 7, ly + 17, C("341c27"))
+    c.hline(lx - 8, lx + 8, ly + 18, C("090a14"))
+    c.vline(lx - 7, ly + 12, ly + 17, C("341c27"))
+    for a in range(196, 345, 8):                          # the wire handle
+        ra = math.radians(a)
+        c.set(int(lx + math.cos(ra) * 8), int(ly - 12 + math.sin(ra) * 8),
+              C("884b2b"))
+
+    # ------------------------------------------------------- the water -----
+    def water_top(x):
+        return WATER_Y + int(round(1.1 * math.sin(x / 47.0)
+                                   + 0.8 * math.sin(x / 19.0 + 1.1)))
+
+    for yy in range(WATER_Y - 3, SCENE_H):
+        for x in range(SCENE_W):
+            if yy >= water_top(x):
+                c.set(x, yy, C("090a14"))
+
+    def refl(x, y):
+        t = max(0.0, (y - WATER_Y) / 37.0)
+        hw = 42.0 + 128.0 * t
+        d = max(0.0, abs(x - SHAFT_X) - hw * 0.22) / (hw * 0.92)
+        return max(0.0, 1.0 - d) ** 1.45 * (1.0 - 0.42 * t)
+
+    def refl_w(x, y):
+        t = max(0.0, (y - WATER_Y) / 37.0)
+        hw = 20.0 + 62.0 * t
+        d = max(0.0, abs(x - LANT[0]) - hw * 0.22) / (hw * 0.92)
+        return max(0.0, 1.0 - d) ** 1.5 * (1.0 - 0.5 * t)
+
+    yy = WATER_Y - 2
+    row = 0
+    while yy < SCENE_H:
+        t = max(0.0, (yy - WATER_Y) / 37.0)
+        step = 2 + int(3.5 * t)                      # the chop opens up nearer
+        thick = 1 + int(3.0 * t)
+        x = -rng.randint(0, 40)
+        while x < SCENE_W:
+            ln = int((4 + 26 * t) * rng.uniform(0.4, 1.7))
+            gap = int((3 + 20 * t) * rng.uniform(0.4, 1.9))
+            top = water_top(x) if 0 <= x < SCENE_W else WATER_Y
+            if yy >= top:
+                s = refl(x + ln // 2, yy)
+                sw = refl_w(x + ln // 2, yy)
+                jitter = rng.uniform(-0.35, 0.35)
+                for k in range(thick):
+                    for px2 in range(x, min(SCENE_W, x + ln)):
+                        if px2 < 0 or yy + k >= SCENE_H:
+                            continue
+                        if yy + k < water_top(px2):
+                            continue
+                        if sw * 5.0 > s * 4.6 and sw > 0.06:
+                            c.set(px2, yy + k,
+                                  band(WARM, 1.0 + sw * 5.4 + jitter - 0.6 * k))
+                        else:
+                            c.set(px2, yy + k,
+                                  band(COLD, 0.95 + s * 4.4 + jitter - 0.55 * k))
+            x += ln + gap
+        yy += step + thick
+        row += 1
+    # the bright lip right under the surface, broken
+    for x in range(SCENE_W):
+        top = water_top(x)
+        if (x + int(9 * math.sin(x / 13.0))) % 19 < 12:
+            s = refl(x, top + 1)
+            sw = refl_w(x, top + 1)
+            if sw > 0.05 and sw * 5.0 > s * 4.6:
+                c.set(x, top, band(WARM, 1.6 + sw * 5.0))
+            else:
+                c.set(x, top, band(COLD, 1.5 + s * 4.2))
+
+    def wake(x0, x1, wl, warm=False):
+        """a broken ring where a thing breaks the surface, and a broken
+        reflection under it - the underpass pitch's float_wake, cut down.  the
+        first cut ran a 1-in-5 dashed line of 577277 the whole length of every
+        object and read as a bright rule laid across the water."""
+        hot = C("577277") if not warm else C("884b2b")
+        mid = C("202e37") if not warm else C("4d2b32")
+        for x in range(x0 - 4, x1 + 5):
+            k = (x * 13 + x0 * 7) % 23
+            if k < 11:
+                continue
+            d = 0 if x0 <= x <= x1 else 1
+            c.set(x, wl + d, hot if k > 19 else mid)
+        # the broken reflection under it.  the first cut stepped k down a
+        # column at every x and came back as a comb of vertical ticks; it has
+        # to be laid in HORIZONTAL strokes, the way the rest of the chop is.
+        for k in range(1, 8):
+            x = x0 - 2
+            while x < x1 + 3:
+                ln = 2 + (x * 7 + k * 5) % 9
+                if (x * 13 + k * 29 + x0) % 11 > 4:
+                    for px2 in range(x, min(x1 + 3, x + ln)):
+                        c.set(px2, wl + k,
+                              C("151d28") if k > 3 else C("202e37"))
+                x += ln + 1 + (x * 3 + k) % 7
+
+    # three things floating, each cut DEAD LEVEL by the waterline
+    pl_y = water_top(320)
+    for x in range(286, 362):                        # a plank, lying over
+        u = (x - 286) / 76.0
+        tilt = int(round(1.6 * u))
+        for k in range(6):
+            col = (C("884b2b"), C("602c2c"), C("602c2c"),
+                   C("4d2b32"), C("341c27"), C("241527"))[k]
+            c.set(x, pl_y - 6 + tilt + k, col)
+        if (x * 5) % 19 < 2:                         # grain, not dots
+            c.vline(x, pl_y - 5 + tilt, pl_y - 1 + tilt, C("4d2b32"))
+    c.vline(286, pl_y - 6, pl_y, C("341c27"))        # the end grain
+    c.vline(287, pl_y - 6, pl_y, C("4d2b32"))
+    c.hline(286, 361, pl_y, C("090a14"))
+    wake(286, 361, pl_y, True)
+    dr_y = water_top(706)
+    for x in range(682, 730):                        # a drum on its side
+        d = 1.0 - ((x - 706) / 24.0) ** 2
+        h = int(15 * max(0.0, d) ** 0.5)
+        for yy in range(dr_y - h, dr_y):
+            u = (dr_y - yy) / float(max(1, h))
+            c.set(x, yy, band(COLD, 1.2 + 2.6 * u - 1.1 * abs((x - 700) / 24.0)))
+        if h > 2 and (x - 682) % 17 == 0:
+            c.vline(x, dr_y - h + 1, dr_y - 1, C("602c2c"))
+    for x in range(692, 722):
+        c.set(x, dr_y - 12, C("884b2b") if (x % 5) else C("602c2c"))
+    c.hline(682, 729, dr_y, C("090a14"))
+    wake(682, 729, dr_y)
+    mt_y = water_top(150)
+    for x in range(112, 200):                        # a raft of caught rubbish
+        u = (x - 112) / 88.0
+        h = int(6 * math.sin(u * math.pi) ** 0.6 + 1.4 * math.sin(x / 5.0)
+                + 1.0 * math.sin(x / 13.0))
+        for k in range(max(0, h)):
+            c.set(x, mt_y - k, C("19332d") if (x + k) % 5 else C("25562e"))
+        if h > 1:
+            c.set(x, mt_y - h, C("202e37") if (x * 3) % 7 else C("394a50"))
+    for i in range(9):                               # sticks and a can in it
+        mx = rng.randrange(116, 190)
+        my = mt_y - rng.randint(0, 5)
+        ln = rng.randint(5, 16)
+        c.hline(mx, mx + ln, my, C("341c27") if i % 3 else C("241527"))
+        c.set(mx + ln, my - 1, C("4d2b32"))
+    c.rect(160, mt_y - 5, 170, mt_y - 1, C("394a50"))
+    c.hline(160, 170, mt_y - 5, C("577277"))
+    c.vline(170, mt_y - 5, mt_y - 1, C("202e37"))
+    c.hline(112, 199, mt_y + 1, C("090a14"))
+    wake(112, 199, mt_y)
+
+    # the drip's landing point is an ANCHOR in scripts/main_menu.gd: it falls
+    # down x 608 and vanishes at y 508.  if this ever fails the surface moved
+    # and the drip is landing in mid-air.
+    assert water_top(608) == 508, f"drip anchor moved: {water_top(608)}"
+
+    # -------------------------------------------------- the god-ray overlay -
     rw, rh = 150, 390
     ray = Image.new("RGBA", (rw, rh), (0, 0, 0, 0))
     rp = ray.load()
     for y in range(rh):
         t = y / float(rh)
-        half = 24 + 24 * t
+        half = 23 + 25 * t
         for x in range(rw):
             ax = abs(x - rw / 2) / half
             if ax < 1.0:
-                a = int(72 * (1.0 - ax) ** 1.6 * (1.0 - t * 0.5))
+                a = int(70 * (1.0 - ax) ** 1.6 * (1.0 - t * 0.46))
+                if t > 0.9:
+                    a = int(a * (1.0 + (t - 0.9) * 3.0))
                 if a > 0:
-                    rp[x, y] = (168, 181, 178, a)
+                    rp[x, y] = (168, 181, 178, min(255, a))
 
-    # drip ripple strip: 3 frames, 18x8
+    # ---------------------------------------------------- the ripple strip --
     strip = Canvas(54, 8)
     for f in range(3):
         ox = f * 18 + 9
         r = 2 + f * 3
-        for a in range(0, 360, 15):
+        for a in range(0, 360, 11):
+            if (a // 11 + f * 3) % 7 < 2:            # broken rings, not ellipses
+                continue
             x = int(ox + math.cos(math.radians(a)) * r)
-            y = int(4 + math.sin(math.radians(a)) * r * 0.4)
-            if 0 <= x < 54:
-                strip.set(x, y, C("253a5e") if f == 2 else C("3c5e8b"))
+            y = int(4 + math.sin(math.radians(a)) * r * 0.42)
+            if f * 18 <= x < f * 18 + 18:
+                strip.set(x, y, C("3c5e8b") if f < 2 else C("253a5e"))
+        if f == 0:
+            strip.set(ox, 3, C("4f8fba"))
     return c, ray, strip
 
 
 def make_scene_den() -> tuple[Canvas, Image.Image, Canvas]:
-    """Menu 2 — THE DEN: the traders' back room, all three of them home.
-    kettle hunched behind his scale on the candle side, verne at the
-    medicine shelf, mara at the radio wall. Two light sources own the frame
-    (warm candle left, cool radio right) with clean BANDED falloff — never
-    dithered (this said DITHERED; the coin-flip dither read as dot static
-    and was removed from this very function — see ramp_pick). The job
-    board carries paper JOB SHEETS — pin, title, a little photo of the
-    district, squiggled unreadable notes; transit ringed red: tonight's
-    job. Returns (base, candle-glow overlay, VU-needle strip)."""
+    """Menu 2 — THE DEN: the traders' back room in the old transit depot,
+    all three of them home. kettle hunched over his scale in the candle light
+    (LEFT), verne at his dressing table under the instrument rail
+    (CENTRE-RIGHT), mara on the radio at the rack (RIGHT). Two light sources
+    own the frame and nothing else lights anything: warm candle left, cold
+    screen right.
+
+    REDESIGNED 2026-08-02 on the user's call ("a redesign would be good too
+    for these"), to the standard set by tools/pitches/*.py. What changed:
+
+      * MARA IS BUILT FROM tools/pitches/counter.py's CHARACTER SHEET. She
+        was a rectangle of jacket with a square hand and one black dot for an
+        eye, and the user said so: "in the den, mara doesn't look anything
+        like the other mara painting we made". She now carries the same
+        design — the dark-red hair mass, the low ponytail, the greying lock,
+        the headset with two visible cups (ON her ears here; on the counter
+        they are pushed up because she is off-channel), the oxblood jacket
+        with its collar and green enamel district pin, and the scar through
+        her left brow. Different angle, different scale, same woman.
+      * VERNE'S CORNER SAYS MEDIC. He stood at a shelf with four bottles on
+        it. He now has his table: an enamel basin he is rinsing in, a stack
+        of folded dressings, an instrument tray, a stained cloth, a shelf of
+        mismatched bottles and a rail of hung instruments over his head.
+      * THE LIGHT IS BANDED CEL WITH WOBBLED SEAMS. It was two smooth
+        airbrushed ellipses; every band edge now rides three sines so it
+        cannot read as an airbrush.
+      * THE DOT NOISE IS GONE — it broke a standing rule in three places:
+        the board's 50%-speckle drop shadow, the rug's 6%-holes weave and
+        kettle's 110-loose-pixel coin pile. Shadows step DOWN THE RAMP now
+        (see `darker`), the rug is woven from stripes, the coins are stacks.
+      * The wall is horizontal shiplap with rolled board heights, staggered
+        butt joints, per-board tone, knots, splits and nail pairs (it was
+        vertical stripes); the floor is depot concrete with wobbled
+        expansion joints (the old board rows read as courses of brick).
+      * EVERY FIGURE IS CLIPPED AT THE FAR EDGE OF HIS OWN TABLE and his
+        arms are drawn again afterwards, so the things on the table sit in
+        FRONT of him. The first cut drew each body over the table top and
+        buried kettle's coins and every one of verne's instruments.
+      * A QUIET PATCH behind the menu buttons (x 396-564, y 272-408): every
+        light term, tone bias and bevel is scaled by (1 - quiet) so the wall
+        there collapses to one flat value with no rectangular edge anywhere.
+        It used to be a full-height COLUMN and that was wrong — see below.
+
+    COLOUR COHESION PASS, 2026-08-02. The user: "the den painting, the blue
+    and the brown areas of the screen is too much, like all the colours of
+    the screen should be blended together nicely". The frame read as two
+    pictures butted together. The four things that fixed it are written out
+    in full above the ramp table in the body; the short version is: ONE
+    shared neutral ramp under everything, a bounce tail on each lamp that
+    crosses the whole frame, chroma scaled by how much light is actually
+    present, and the middle turned from a dead gap into the mixing zone.
+    The two-source idea is untouched — warm candle left, cold rig right,
+    mara's oxblood jacket still the one warm accent in the cool half.
+
+    ANCHORS scripts/main_menu.gd draws onto — NONE MOVED:
+      (150, 344) candle flame (additive glow), (334, 372) ashtray (smoke),
+      (746, 262) + (814, 272) VU dial faces on the rack, (760, 312) +
+      (860, 372) rig pilot LEDs.
+
+    Returns (base, candle-glow overlay, VU-needle strip)."""
     rng = random.Random(f"{SEED}:scene:den")
     c = Canvas(SCENE_W, SCENE_H)
-    CANDLE = (150, 366)
-    RADIO = (760, 320)
-    warm_ramp = [C("241527"), C("341c27"), C("602c2c"), C("884b2b"), C("ad7757")]
-    cool_ramp = [C("172038"), C("1e1d39"), C("253a5e"), C("3c5e8b")]
 
-    def light_levels(x: int, y: int) -> tuple[float, float]:
-        dw = ((x - CANDLE[0]) ** 2 + ((y - CANDLE[1]) * 2.1) ** 2) ** 0.5
-        dc = ((x - RADIO[0]) ** 2 + ((y - RADIO[1]) * 1.9) ** 2) ** 0.5
-        return max(0.0, 1.0 - dw / 350.0), max(0.0, 1.0 - dc / 310.0)
+    CEIL = 52
+    FLOOR_Y = 430
+    CANDLE = (150, 344)                     # the flame — main_menu.gd's anchor
+    WARM_SRC = (150, 352)
+    COOL_SRC = (752, 322)                   # the rack's big screen
+    QX0, QX1 = 396, 564
+    QF_L, QF_R = 176, 168                   # how far the wall's TEXTURE fades
+    QY0, QY1, QF_T, QF_B = 272, 408, 86, 78  # ...and the strip it is flat over
+    LF_L, LF_R = 112, 96                    # how far the LIGHT flattens
 
-    def ramp_pick(ramp_: list, lv: float):
-        # clean banded light — the coin-flip dither read as dot static
-        return ramp_[max(0, min(len(ramp_) - 1, int(lv + 0.5)))]
+    dark_ramp = ["090a14", "10141f", "151d28"]
+    warm_ramp = ["10141f", "241527", "341c27", "4d2b32",
+                 "7a4841", "ad7757", "c09473"]
+    cool_ramp = ["10141f", "172038", "1e1d39", "253a5e", "3c5e8b", "577277"]
+    skin_ramp = ["341c27", "4d2b32", "7a4841", "c09473", "d7b594", "e7d5b3"]
 
-    CEIL = 46
-    # back wall: planks with ROLLED widths, tone jitter, knots, nails and
-    # splits — a fixed 26px rhythm read as an obvious grid (user report)
-    plank_edges: list[int] = []
-    px_ = 0
-    while px_ < SCENE_W:
-        plank_edges.append(px_)
-        px_ += rng.randint(16, 36)
-    plank_of: list[int] = [0] * SCENE_W
-    for pi in range(len(plank_edges)):
-        x0 = plank_edges[pi]
-        x1 = plank_edges[pi + 1] if pi + 1 < len(plank_edges) else SCENE_W
-        for x in range(x0, min(SCENE_W, x1)):
-            plank_of[x] = pi
-    plank_bias = [rng.uniform(-0.55, 0.55) for _ in plank_edges]
-    plank_split = {pi: (rng.randrange(plank_edges[pi] + 3,
-                        min(SCENE_W - 1, plank_edges[pi] + 14)),
-                        rng.randrange(90, 320))
-                   for pi in range(len(plank_edges)) if rng.random() < 0.16}
-    knots = {}
-    for pi in range(len(plank_edges)):
-        for k in range(rng.randrange(0, 3)):
-            kx = plank_edges[pi] + rng.randint(3, 12)
-            knots[(kx, rng.randrange(CEIL + 20, 410))] = True
-    for y in range(CEIL, 430):
-        for x in range(SCENE_W):
-            warm, cool = light_levels(x, y)
-            pi = plank_of[x]
-            plank_edge = x in plank_edges
-            base_i = (1 if plank_edge else 0) + plank_bias[pi]
-            if warm >= cool and warm > 0.03:
-                col = ramp_pick(warm_ramp, base_i + warm * 4.2)
-            elif cool > 0.03:
-                col = ramp_pick(cool_ramp, base_i + cool * 3.4)
+    # every big surface gets a TWIN of its own ramp in the other temperature,
+    # same length, same step values. mix2() crossfades between the pair by
+    # which lamp is actually reaching that pixel, so the far end of kettle's
+    # table catches the rig and verne's bench catches the candle. Nothing
+    # in the room belongs to only one lamp.
+    warm_twin = ["10141f", "172038", "1e1d39", "253a5e", "3c5e8b", "577277",
+                 "819796"]
+    cool_twin = ["10141f", "241527", "341c27", "4d2b32", "7a4841", "ad7757"]
+
+    # ---- THE ROOM IS ONE ROOM (colour cohesion pass, 2026-08-02) -----------
+    # The user: "the blue and the brown areas of the screen is too much, like
+    # all the colours of the screen should be blended together nicely". It read
+    # as two paintings butted together — a brown one and a blue one with a dead
+    # black gap down the middle where quiet() had killed both lamps.
+    #
+    # What fixes it, and none of it may be undone without the frame splitting
+    # in two again:
+    #   * ONE SHARED NEUTRAL RAMP (wall_n, Apollo's slate column) is the room's
+    #     own material. warm and cool are the SAME ramp at the SAME value with
+    #     only the hue moved, so the unlit wall on the left and the unlit wall
+    #     on the right are recognisably one wall.
+    #   * EACH LAMP HAS A BOUNCE TAIL (the `amb` term) that crosses the whole
+    #     frame. The candle reaches the near edge of the rig and the rig reaches
+    #     the far end of kettle's table. That, more than anything else, is what
+    #     makes two lamps read as being in one space.
+    #   * CHROMA IS SCALED BY HOW MUCH LIGHT IS ACTUALLY THERE. Light is most
+    #     coloured where it is strongest; far from both lamps the tint washes
+    #     out to the shared neutral instead of driving the hue to its extreme.
+    #   * THE MIDDLE IS THE MIXING ZONE, not a hole. quiet() no longer fades
+    #     the lamps to nothing there — it blends the light field toward ONE
+    #     fixed sample of itself (_QREF), so the column behind the buttons is
+    #     perfectly flat AND carries the real warm+cool mixture of that spot.
+    wall_n = ["090a14", "10141f", "151d28", "202e37", "394a50", "577277",
+              "819796"]
+    wall_w = ["090a14", "10141f", "241527", "341c27", "4d2b32", "7a4841",
+              "ad7757"]
+    wall_c = ["090a14", "10141f", "172038", "253a5e", "3c5e8b", "4f8fba",
+              "73bed3"]
+    AMB, GAIN, TP, CHROMA = -0.19, 3.61, 2.55, 0.72
+
+    # every ramp colour knows the colour one step below it, so a cast shadow
+    # can be a real STEP DOWN over whatever it falls on instead of a speckle
+    darker: dict = {}
+    for _r in (dark_ramp, wall_n, wall_w, wall_c, warm_ramp, cool_ramp):
+        for _i in range(len(_r) - 1, 0, -1):
+            darker.setdefault(C(_r[_i])[:3], C(_r[_i - 1]))
+
+    # the snap pool: mixing two ramps lands between palette entries, so the
+    # result is pulled back onto Apollo. Kept to the slate / brown / blue
+    # families on purpose — a free nearest-match over all 46 would drag
+    # midtones into the greens and pinks.
+    snap_pool = [C(h)[:3] for h in (
+        "090a14 10141f 151d28 202e37 394a50 577277 819796 241527 341c27 "
+        "411d31 4d2b32 602c2c 7a4841 884b2b ad7757 c09473 172038 1e1d39 "
+        "253a5e 3c5e8b 4f8fba").split()]
+    snap_cache: dict = {}
+
+    def snap(r: float, g: float, b: float):
+        k = (int(r) >> 1, int(g) >> 1, int(b) >> 1)
+        got = snap_cache.get(k)
+        if got is None:
+            rr, gg, bb = (k[0] << 1) + 1, (k[1] << 1) + 1, (k[2] << 1) + 1
+            got = min(snap_pool, key=lambda p: (p[0] - rr) ** 2 * 3
+                      + (p[1] - gg) ** 2 * 6 + (p[2] - bb) ** 2 * 2)
+            got = (got[0], got[1], got[2], 255)
+            snap_cache[k] = got
+        return got
+
+    def _quiet(x: float, fl: float, fr: float) -> float:
+        if QX0 <= x <= QX1:
+            return 1.0
+        d = (QX0 - x) / fl if x < QX0 else (x - QX1) / fr
+        if d >= 1.0:
+            return 0.0
+        return 1.0 - d * d * (3.0 - 2.0 * d)     # smoothstep, so the fade in
+                                                 # has no edge of its own
+
+    def quiet(x: int, y: int = 340) -> float:
+        """kills the wall's own TEXTURE behind the buttons. Its feather is
+        LONG on purpose: a flat column beside a textured wall reads as a
+        panel hung there, and a short feather just moves the edge.
+
+        It is a WINDOW, not a full-height column: only the strip the buttons
+        actually occupy has to be flat, so above and below it the shiplap
+        comes back and the middle of the frame stops reading as an empty
+        panel between the two lamps."""
+        q = _quiet(x, QF_L, QF_R)
+        if q <= 0.0:
+            return 0.0
+        if QY0 <= y <= QY1:
+            return q
+        d = (QY0 - y) / float(QF_T) if y < QY0 else (y - QY1) / float(QF_B)
+        if d >= 1.0:
+            return 0.0
+        return q * (1.0 - d * d * (3.0 - 2.0 * d))
+
+    def qlit(x: int) -> float:
+        """flattens the LIGHT FIELD to one sample. Shorter than quiet() —
+        stretching this one would dim the lamps either side of the band."""
+        return _quiet(x, LF_L, LF_R)
+
+    def band(ramp: list, lv: float):
+        """Banded cel light — never dithered, never interpolated."""
+        return C(ramp[max(0, min(len(ramp) - 1, int(lv + 0.5)))])
+
+    def ramp_at(ramp: list, lv: float):
+        """A point ALONG a ramp, between its steps. Only the two mixing
+        helpers use this; every cel surface still goes through band()."""
+        lv = max(0.0, min(len(ramp) - 1.001, lv))
+        i = int(lv)
+        f = lv - i
+        a, b = C(ramp[i]), C(ramp[i + 1])
+        return (a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f,
+                a[2] + (b[2] - a[2]) * f)
+
+    def _key(d: float, r: float) -> float:
+        """the pool itself — tight, and the only thing that is really bright"""
+        return max(0.0, min(1.0, 1.0 - d / r)) ** 1.4
+
+    def _bounce(d: float, r: float) -> float:
+        """what the room gives back. Weak and DELIBERATELY almost flat, but
+        it crosses the whole frame — this is the shared base."""
+        return max(0.0, min(1.0, 1.0 - d / r))
+
+    def _raw_lights(x: float, y: float, wobbly: bool = True) -> tuple[float,
+                                                                     float]:
+        """warm, cool in 0..1. The radius is WOBBLED by three sines of
+        different period, so no band seam can ever close into a clean
+        ellipse — that is what made the old pools read as airbrush.
+        wobbly=False is for the button column's reference sample ONLY: with
+        the wobble in, one row of it dipped a step darker than its neighbours
+        and printed a dark stripe across the otherwise flat patch."""
+        wob = ((9.0 * math.sin(x / 41.0 + 0.7) + 6.0 * math.sin(y / 27.0 + 2.1)
+                + 4.5 * math.sin((x + y) / 23.0)) if wobbly else 0.0)
+        dw = ((x - WARM_SRC[0]) ** 2
+              + ((y - WARM_SRC[1]) * 1.55) ** 2) ** 0.5 + wob
+        dc = ((x - COOL_SRC[0]) ** 2
+              + ((y - COOL_SRC[1]) * 1.28) ** 2) ** 0.5 - wob
+        return ((0.86 * _key(dw, 400.0) + 0.38 * _bounce(dw, 1500.0)) / 1.24,
+                (0.86 * _key(dc, 430.0) + 0.38 * _bounce(dc, 1400.0)) / 1.24)
+
+    QCX = (QX0 + QX1) * 0.5
+    _qref: dict = {}
+
+    def lights(x: int, y: int) -> tuple[float, float]:
+        """Behind the buttons the light field is flattened ACROSS X ONLY —
+        every row keeps the height falloff the walls either side have. The
+        first cut flattened x and y together and the column then ignored the
+        wall's own darkening toward the ceiling, which put a pale slab in the
+        top middle of the frame. Across the button band itself the field
+        barely moves with y, so the band still comes out one flat colour."""
+        w, cl = _raw_lights(x, y)
+        q = qlit(x)
+        if q > 0.0:
+            r = _qref.get(y)
+            if r is None:
+                r = _raw_lights(QCX, y, False)
+                _qref[y] = r
+            w += (r[0] - w) * q
+            cl += (r[1] - cl) * q
+        return w, cl
+
+    def tint(lv: float, warm: float, cool: float):
+        """One surface pixel: the shared neutral, pushed toward whichever
+        lamp is winning HERE and by how much light there is to push with."""
+        tot = warm + cool
+        te = ((warm - cool) / max(0.001, tot)) * min(1.0, tot / CHROMA)
+        n = ramp_at(wall_n, lv)
+        o = ramp_at(wall_w if te >= 0.0 else wall_c, lv)
+        k = min(1.0, abs(te))
+        return snap(n[0] + (o[0] - n[0]) * k, n[1] + (o[1] - n[1]) * k,
+                    n[2] + (o[2] - n[2]) * k)
+
+    def mix2(rw: list, rc: list, lv: float, warm: float, cool: float,
+            bias: float = 0.0):
+        """A MATERIAL lit by both lamps — its own warm and cool ramps,
+        crossfaded by which lamp is actually reaching it. Kettle's table
+        catches the rig on its far end; verne's catches the candle."""
+        tot = warm + cool
+        k = max(0.0, min(1.0, cool / max(0.001, tot) + bias))
+        # pulled toward whichever lamp owns the surface: a straight ratio put
+        # 40% of a slate ramp through the right-hand end of the job board and
+        # it read as a blue STAIN, not as bounce.
+        k = k ** 1.6 if k < 0.5 else 1.0 - (1.0 - k) ** 1.6
+        a, b = ramp_at(rw, lv), ramp_at(rc, lv)
+        return snap(a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k,
+                    a[2] + (b[2] - a[2]) * k)
+
+    def surface(x: int, y: int, base: float):
+        """One wall/floor pixel, on the room's shared ramp."""
+        warm, cool = lights(x, y)
+        return tint(base + AMB + GAIN * ((warm + cool) ** TP), warm, cool)
+
+    def shade(x0: int, y0: int, x1: int, y1: int, steps: int = 1) -> None:
+        """Cast shadow: step whatever is already there DOWN the ramp."""
+        for y in range(y0, y1 + 1):
+            for x in range(x0, x1 + 1):
+                for _ in range(steps):
+                    p = c.get(x, y)[:3]
+                    if p in darker:
+                        c.set(x, y, darker[p])
+                    else:
+                        break
+
+    def darken(pts) -> None:
+        for (qx, qy) in pts:
+            p = c.get(qx, qy)[:3]
+            if p in darker:
+                c.set(qx, qy, darker[p])
+
+    def soft_shadow(cx: int, cy: int, rx: int, ry: int) -> None:
+        """A body's shadow on the boards: one step down inside a WOBBLED
+        ellipse. shade() is a rectangle, and behind a person a rectangle
+        reads as a dark panel hung on the wall."""
+        for dy in range(-ry, ry + 1):
+            for dx in range(-rx, rx + 1):
+                w = (0.11 * math.sin((cx + dx) / 14.0 + 0.6)
+                     + 0.08 * math.sin((cy + dy) / 9.0))
+                if (dx / float(rx)) ** 2 + (dy / float(ry)) ** 2 + w < 1.0:
+                    x, y = cx + dx, cy + dy
+                    p = c.get(x, y)[:3]
+                    if p in darker:
+                        c.set(x, y, darker[p])
+
+    def box(x0: int, y0: int, x1: int, y1: int, face, lit, shd) -> None:
+        """A panel with a section: lit top+left, shaded bottom+right."""
+        c.rect(x0, y0, x1, y1, face)
+        c.hline(x0, x1, y0, lit)
+        c.vline(x0, y0, y1, lit)
+        c.hline(x0, x1, y1, shd)
+        c.vline(x1, y0, y1, shd)
+
+    def limb(x0, y0, x1, y1, w0, w1, ramp, base, rim_lit, rim_shd,
+             across: bool = False) -> None:
+        """One arm segment with a section. Stepped 3x its own length so it
+        can never come out as a ladder of rungs (the first cut of mara's
+        raised arm did exactly that: the step was 1.2 px and the gaps showed
+        the screen through her sleeve)."""
+        n = max(4, int(max(abs(x1 - x0), abs(y1 - y0)) * 3))
+        for k in range(n + 1):
+            t = k / float(n)
+            x = x0 + (x1 - x0) * t
+            y = y0 + (y1 - y0) * t
+            w = w0 + (w1 - w0) * t
+            iw = max(1, int(round(w)))
+            for d in range(-iw, iw + 1):
+                u = (d + iw) / float(2 * iw)
+                col = band(ramp, base + (1.0 - u) * 2.2)
+                if across:
+                    c.set(int(round(x)), int(round(y)) + d, col)
+                else:
+                    c.set(int(round(x)) + d, int(round(y)), col)
+            if across:
+                c.set(int(round(x)), int(round(y)) - iw, rim_lit)
+                c.set(int(round(x)), int(round(y)) + iw, rim_shd)
             else:
-                col = C("090a14") if plank_edge else C("10141f")
-            c.set(x, y, col)
-    for (kx, ky) in knots:                                # knots + grain swirls
-        c.set(kx, ky, C("241527"))
-        c.set(kx + 1, ky, C("341c27"))
-        c.set(kx, ky + 1, C("341c27"))
-    for pi, (sx_, sy_) in plank_split.items():            # split boards
-        for k in range(rng.randint(20, 70)):
-            c.set(sx_ + (k // 16), sy_ + k, C("090a14"))
-    for pi in range(len(plank_edges)):                    # nail pairs
-        nx_ = plank_edges[pi] + rng.randint(2, 10)
-        for ny_ in (CEIL + rng.randint(6, 14), 410 - rng.randint(0, 10)):
-            c.set(nx_, ny_, C("151d28"))
-    # ceiling: joists over darkness + a dead bulb on its cable
-    for y in range(0, CEIL):
-        for x in range(SCENE_W):
-            c.set(x, y, C("090a14"))
-    for bx in range(40, SCENE_W, 128):
-        jx = bx + rng.randint(-8, 8)
-        c.rect(jx, 8, jx + 7, CEIL - 1, C("241527"))
-        c.vline(jx + 7, 8, CEIL - 1, C("10141f"))
-    c.vline(298, 0, 66, C("151d28"))
-    c.rect(296, 67, 300, 72, C("394a50"))
-    c.set(297, 69, C("577277"))
-    # floor: board ROWS with staggered joints and rolled tones — the old
-    # constant diagonal seam period was one more readable grid
-    fy = 430
-    row_i = 0
-    while fy < SCENE_H:
-        row_h = 8 + int((fy - 430) / 20) + rng.randint(0, 2)
-        tone_flip = rng.random() < 0.5
-        joints = []
-        jx = -rng.randint(0, 60)
-        while jx < SCENE_W:
-            jx += rng.randint(46, 130)
-            joints.append(jx)
-        for y in range(fy, min(SCENE_H, fy + row_h)):
-            for x in range(SCENE_W):
-                warm, cool = light_levels(x, y)
-                col = C("241527") if tone_flip else C("341c27")
-                if warm > 0.44:
-                    col = C("602c2c")
-                elif warm > 0.28:
-                    col = C("4d2b32")
-                elif cool > 0.34:
-                    col = C("1e1d39")
-                if y == fy:
-                    col = C("090a14")                     # row seam
-                elif x in joints and y > fy + 1:
-                    col = C("090a14")                     # staggered joint
-                c.set(x, y, col)
-        for jx in joints:                                  # nail at each joint
-            if 0 <= jx - 1 < SCENE_W and fy + 2 < SCENE_H:
-                c.set(jx - 1, fy + 2, C("151d28"))
-        fy += row_h
-        row_i += 1
-    floor_region = {(x, y) for y in range(432, SCENE_H) for x in range(SCENE_W)}
-    for i in range(7):                                     # worn traffic patches
-        patch = blob(rng, rng.randrange(120, 840), rng.randrange(440, 520),
-                     rng.randint(40, 110), floor_region)
-        for (qx, qy) in patch:
-            c.set(qx, qy, C("4d2b32"))
-    # kettle's rug
-    for y in range(438, 502):
-        for x in range(96, 356):
-            edge = min(x - 96, 355 - x, y - 438, 501 - y)
-            if edge < 2 and rng.random() < 0.5:
-                continue                      # frayed edge
-            if edge < 2:
-                c.set(x, y, C("752438"))
-            elif rng.random() > 0.06:
-                c.set(x, y, C("411d31"))
-    c.rect(150, 462, 165, 470, C("341c27"))   # worn through to boards
-    c.rect(280, 480, 291, 486, C("341c27"))
+                c.set(int(round(x)) - iw, int(round(y)), rim_lit)
+                c.set(int(round(x)) + iw, int(round(y)), rim_shd)
 
-    # ---- THE JOB BOARD ----
-    for y in range(108, 282):                 # drop shadow
-        for x in range(78, 362):
-            if rng.random() < 0.5:
-                c.set(x, y, C("090a14"))
-    c.rect(66, 92, 352, 274, C("341c27"))     # frame
-    c.rect(70, 96, 348, 270, C("4d2b32"))     # cork
-    cork_region = {(x, y) for y in range(96, 270) for x in range(70, 348)}
-    for i in range(8):                        # cork wear patches, not dots
-        patch = blob(rng, 70 + rng.randrange(278), 96 + rng.randrange(174),
-                     rng.randint(16, 44), cork_region)
-        for (qx, qy) in patch:
-            c.set(qx, qy, C("602c2c") if i % 3 else C("341c27"))
-    c.hline(66, 240, 91, C("ad7757"))         # top edge catch, warm half
-    c.hline(241, 352, 91, C("577277"))        # cool half
-    c.vline(92, CEIL - 1, 92, C("090a14"))    # hanging wires
-    c.vline(326, CEIL - 1, 92, C("090a14"))
+    def hand(hx, hy, up_col, dn_col, rim, shd, n_fing: int = 3,
+             down: bool = True) -> None:
+        for k in range(12):
+            t = k / 12.0
+            hw = int(6 - abs(t - 0.4) * 5)
+            y = hy + k if down else hy - k
+            c.hline(hx - hw, hx + hw, y, up_col if t < 0.45 else dn_col)
+            c.set(hx - hw, y, rim)
+            c.set(hx + hw, y, shd)
+        for k in range(n_fing):
+            fx = hx - 3 + k * 3
+            if down:
+                c.vline(fx, hy + 11, hy + 14, dn_col)
+                c.set(fx, hy + 14, shd)
+            else:
+                c.vline(fx, hy - 14, hy - 11, dn_col)
+                c.set(fx, hy - 14, up_col)
+
+    def wobble(x: int, a: float, b: float, p: float, q: float) -> int:
+        return int(round(a * math.sin(x / p) + b * math.sin(x / q + 1.7)))
+
+    # ================================================== ceiling =============
+    # dark, but never a featureless slab: joists across it, the conduit run
+    # that feeds the whole den, and the dead bulb still hanging off it.
+    c.rect(0, 0, SCENE_W - 1, CEIL - 1, C("090a14"))
+    jx = rng.randint(8, 34)
+    while jx < SCENE_W:
+        w = rng.randint(7, 11)
+        c.rect(jx, 0, jx + w, CEIL - 1, C("151d28"))
+        c.vline(jx, 0, CEIL - 1, C("202e37"))
+        c.vline(jx + w, 0, CEIL - 1, C("090a14"))
+        for _ in range(rng.randint(1, 3)):                   # bolt plates
+            by = rng.randrange(6, CEIL - 10)
+            c.hline(jx + 1, jx + w - 1, by, C("10141f"))
+            c.set(jx + 2 + rng.randrange(max(1, w - 4)), by, C("202e37"))
+        jx += rng.randint(92, 152)
+    for x in range(SCENE_W):                                 # the conduit
+        yy = 38 + wobble(x, 1.1, 0.7, 137.0, 61.0)
+        c.set(x, yy, C("394a50"))
+        c.set(x, yy + 1, C("202e37"))
+        c.set(x, yy + 2, C("151d28"))
+        c.set(x, yy + 3, C("090a14"))
+    for cx_ in range(26, SCENE_W, 106):                      # its saddle clips
+        sx = cx_ + rng.randint(-11, 11)
+        c.vline(sx, 32, 40, C("202e37"))
+        c.vline(sx + 1, 33, 40, C("151d28"))
+    for k in range(30):                                      # the dead bulb
+        c.set(298 + (1 if k > 18 else 0), 42 + k, C("151d28"))
+    c.rect(295, 72, 301, 76, C("394a50"))
+    c.rect(296, 76, 300, 82, C("202e37"))
+    c.hline(296, 300, 77, C("151d28"))
+    c.set(297, 79, C("394a50"))
+    for k in range(22):                                      # a coiled lead
+        a = k / 21.0 * math.pi * 3.4
+        c.set(int(486 + math.cos(a) * 7), int(20 + k * 0.9), C("10141f"))
+    c.hline(0, SCENE_W - 1, CEIL - 3, C("10141f"))           # the wall plate
+    c.hline(0, SCENE_W - 1, CEIL - 2, C("151d28"))
+    c.hline(0, SCENE_W - 1, CEIL - 1, C("090a14"))
+
+    # ================================================== the boarded wall ====
+    # horizontal shiplap: rolled board heights, staggered butt joints, a tone
+    # per board, a lit proud lip and a shadow line under every board.
+    rows = []
+    wy = CEIL
+    while wy < FLOOR_Y:
+        h = rng.randint(13, 19)
+        joints = []
+        jj = -rng.randint(0, 90)
+        while jj < SCENE_W + 60:
+            jj += rng.randint(86, 196)
+            joints.append(jj)
+        rows.append((wy, min(FLOOR_Y, wy + h), joints, rng.uniform(-0.34, 0.34),
+                     [rng.uniform(-0.24, 0.24) for _ in range(len(joints) + 2)]))
+        wy += h
+    for (y0, y1, joints, rbias, bbias) in rows:
+        jset = set(joints)
+        for x in range(SCENE_W):
+            seg = 0
+            for j in joints:
+                if x >= j:
+                    seg += 1
+            tone = rbias + bbias[seg]
+            for y in range(y0, y1):
+                if x in jset and y > y0:
+                    c.set(x, y, C("090a14"))
+                    continue
+                s = 1.0 - quiet(x, y)        # per ROW: the quiet patch is a
+                base = 0.66 + tone * s       # window, not a full-height column
+                if y == y0:
+                    base += 0.70 * s                 # the proud lip catches it
+                elif y == y0 + 1:
+                    base += 0.28 * s
+                elif y >= y1 - 2:
+                    base -= 0.82 * s                 # shadow under the board
+                c.set(x, y, surface(x, y, base))
+    for (y0, y1, joints, rbias, bbias) in rows:      # knots: a SOLID dark core
+        if rng.random() < 0.55 and y1 - y0 > 9:      # with one lit lip beneath.
+            kx = rng.randrange(14, SCENE_W - 14)     # Drawn as two dashed rings
+            ky = rng.randrange(y0 + 4, y1 - 4)       # they read as dead flies.
+            rx_ = rng.randint(2, 4)
+            for dy in range(-2, 3):
+                hw = rx_ - abs(dy)
+                if hw < 0 or not (y0 < ky + dy < y1 - 1):
+                    continue
+                c.hline(kx - hw, kx + hw, ky + dy,
+                        surface(kx, ky + dy,
+                                0.66 - (2.6 if abs(dy) < 2 else 1.4)))
+            if y0 < ky + 3 < y1 - 1:
+                c.hline(kx - rx_ + 1, kx + rx_ - 1, ky + 3,
+                        surface(kx, ky + 3, 2.0))
+        if rng.random() < 0.30:                      # a split along the grain
+            sx = rng.randrange(20, SCENE_W - 60)
+            ln = rng.randint(20, 70)
+            for k in range(ln):
+                c.set(sx + k, y0 + 3 + (k // 26), C("090a14"))
+                if k % 7 < 2:
+                    c.set(sx + k, y0 + 2 + (k // 26),
+                          surface(sx + k, y0 + 2, 1.9))
+        for j in joints:                             # nail pairs at the joins
+            if not (6 < j < SCENE_W - 8):
+                continue
+            for nx_ in (j - 5, j + 4):
+                ny_ = y0 + 4 + rng.randrange(0, max(1, y1 - y0 - 8))
+                c.set(nx_, ny_, C("090a14"))
+                c.set(nx_, ny_ + 1, C("090a14"))
+                c.set(nx_, ny_ - 1, surface(nx_, ny_ - 1, 2.1))
+    for _ in range(14):                              # patched-in boards: other
+        ri = rng.randrange(1, len(rows) - 1)         # timber, other batch.
+        y0, y1, joints, _b, _bb = rows[ri]           # ONLY where a lamp
+        cand = [j for j in joints if 30 < j < SCENE_W - 130   # actually reaches
+                and quiet(j) <= 0.0 and quiet(j + 120) <= 0.0
+                and max(lights(j + 40, (y0 + y1) // 2)) > 0.42]
+        if not cand:
+            continue
+        j0 = cand[rng.randrange(len(cand))]
+        j1 = min([j for j in joints if j > j0] + [j0 + 110])
+        for x in range(j0 + 1, min(SCENE_W, j1)):
+            for y in range(y0 + 1, y1 - 1):
+                c.set(x, y, surface(x, y, 1.15 if y > y0 + 2 else 1.75))
+    wall_region = {(x, y) for y in range(CEIL + 6, FLOOR_Y - 2)
+                   for x in range(SCENE_W)}
+    for _ in range(11):                              # damp / soot patches
+        pat = blob(rng, rng.randrange(20, SCENE_W - 20),
+                   rng.randrange(CEIL + 10, FLOOR_Y - 10),
+                   rng.randint(30, 110), wall_region)
+        # a patch that touches the flat button rectangle is dropped WHOLE —
+        # clipping it there would leave a straight edge on the one part of
+        # the wall that has to be featureless. The rolls are still spent.
+        if not any(quiet(px_, py_) >= 1.0 for (px_, py_) in pat):
+            darken(pat)
+
+    # ================================================== the floor ===========
+    for y in range(FLOOR_Y, SCENE_H):
+        d = (y - FLOOR_Y) / float(SCENE_H - FLOOR_Y)
+        for x in range(SCENE_W):
+            c.set(x, y, surface(x, y, 0.94 - d * 1.55))
+    for x in range(SCENE_W):                                  # the kick board
+        yb = FLOOR_Y + 5 + wobble(x, 0.9, 0.6, 149.0, 53.0)
+        for y in range(FLOOR_Y, yb):
+            c.set(x, y, surface(x, y, 0.10))
+        c.set(x, FLOOR_Y - 1, C("090a14"))
+        c.set(x, yb, surface(x, yb, 2.05))
+        c.set(x, yb + 1, C("090a14"))
+    for jy in (474, 516):                                     # expansion joints
+        for x in range(SCENE_W):
+            yy = jy + wobble(x, 2.4, 1.6, 83.0, 31.0)
+            c.set(x, yy, C("090a14"))
+            c.set(x, yy + 1, surface(x, yy + 1, 1.5))
+    floor_region = {(x, y) for y in range(FLOOR_Y + 9, SCENE_H)
+                    for x in range(SCENE_W)}
+    for _ in range(5):                                        # long cracks
+        x_ = rng.randrange(60, SCENE_W - 60)
+        y_ = rng.randrange(FLOOR_Y + 12, SCENE_H - 30)
+        for k in range(rng.randint(40, 100)):
+            c.set(x_, y_, C("090a14"))
+            x_ += rng.choice((-1, 0, 1, 1, 1))
+            y_ += rng.choice((0, 0, 0, 1))
+            if k % 23 == 22:                                  # one branch
+                for m in range(rng.randint(6, 16)):
+                    c.set(x_ + m, y_ - m // 2, C("090a14"))
+    for _ in range(9):                                        # oil, solid
+        darken(blob(rng, rng.randrange(40, SCENE_W - 40),
+                    rng.randrange(FLOOR_Y + 14, SCENE_H - 14),
+                    rng.randint(40, 150), floor_region))
+    for _ in range(22):                                       # small grit
+        bx = rng.randrange(20, SCENE_W - 20)
+        by = rng.randrange(FLOOR_Y + 12, SCENE_H - 6)
+        for k in range(rng.randint(2, 5)):
+            c.set(bx + k, by + (k // 3), surface(bx + k, by, 1.9))
+
+    # ================================================== kettle's rug ========
+    # woven stripes and a real fringe. It used to be a solid block with 6% of
+    # its pixels dropped at random, which is exactly the dot noise that is
+    # banned everywhere else in this file.
+    RX0, RX1, RY0, RY1 = 88, 366, 442, 512
+    rug_ramp = ["090a14", "241527", "341c27", "411d31", "602c2c", "752438"]
+    rug_twin = ["090a14", "172038", "1e1d39", "253a5e", "3c5e8b", "577277"]
+    stripes = []
+    sx_ = RX0 + 6
+    while sx_ < RX1 - 6:
+        w_ = rng.randint(3, 11)
+        stripes.append((sx_, min(RX1 - 6, sx_ + w_), rng.uniform(-0.9, 0.9)))
+        sx_ += w_
+    for y in range(RY0, RY1 + 1):
+        t = (y - RY0) / float(RY1 - RY0)
+        pull = int(round(math.sin(t * math.pi) * 5))          # it lies unevenly
+        for (a, b, tone) in stripes:
+            for x in range(a - pull, b - pull):
+                warm, cool = lights(x, y)
+                c.set(x, y, mix2(rug_ramp, rug_twin,
+                                 1.5 + (warm + cool * 0.45) * 3.4 + tone,
+                                 warm, cool))
+            c.set(a - pull, y, C("241527"))                    # each stripe has
+        if y % 9 == 0:                                        # its own edge
+            darken([(x, y) for x in range(RX0 - pull, RX1 - pull)])
+    for x in range(RX0 + 4, RX1 - 4):                         # the bound border
+        warm, cool = lights(x, RY0)
+        lit = (warm + cool * 0.45) * 2.4
+        for yy in (RY0, RY0 + 1, RY0 + 2):
+            c.set(x, yy, mix2(rug_ramp, rug_twin, 2.6 + lit, warm, cool))
+        for yy in (RY1 - 2, RY1 - 1, RY1):
+            c.set(x, yy, mix2(rug_ramp, rug_twin, 2.2 + lit, warm, cool))
+        c.set(x, RY0 + 3, C("090a14"))
+        c.set(x, RY1 - 3, C("090a14"))
+    for k in range(0, RX1 - RX0 - 8, 3):                      # fringe, uneven
+        fx = RX0 + 4 + k + rng.randint(-1, 1)
+        for m in range(rng.randint(2, 6)):
+            warm, cool = lights(fx, RY1 + 1 + m)
+            c.set(fx, RY1 + 1 + m,
+                  mix2(["241527", "341c27", "602c2c", "ad7757"],
+                       ["172038", "1e1d39", "253a5e", "577277"],
+                       0.4 + (warm + cool * 0.45) * 2.8, warm, cool))
+    rug_region = {(x, y) for y in range(RY0 + 3, RY1 - 2)
+                  for x in range(RX0 + 4, RX1 - 4)}
+    for _ in range(4):                                        # worn right down
+        darken(blob(rng, rng.randrange(RX0 + 20, RX1 - 20),
+                    rng.randrange(RY0 + 8, RY1 - 8),
+                    rng.randint(30, 90), rug_region))
+    for k in range(26):                                       # a folded corner
+        c.hline(RX1 - 6 - k, RX1 - 4, RY1 - 24 + k, C("341c27"))
+        c.set(RX1 - 6 - k, RY1 - 24 + k, C("602c2c"))
+
+    # ================================================== the job board =======
+    BX0, BY0, BX1, BY1 = 66, 92, 352, 274
+    shade(BX0 + 7, BY0 + 10, BX1 + 13, BY1 + 15, 2)            # its cast shadow
+    shade(BX0 + 13, BY0 + 16, BX1 + 7, BY1 + 9, 1)
+    for y in range(BY0, BY1 + 1):                              # the frame
+        for x in range(BX0, BX1 + 1):
+            warm, cool = lights(x, y)
+            c.set(x, y, mix2(["241527", "341c27", "4d2b32", "7a4841",
+                              "ad7757"],
+                             ["172038", "1e1d39", "253a5e", "3c5e8b",
+                              "577277"],
+                             0.30 + (warm + cool * 0.45) * 3.1, warm, cool))
+    c.hline(BX0, BX1, BY0, C("ad7757"))                        # top catch
+    c.hline(BX0 + 1, BX1 - 1, BY0 + 1, C("884b2b"))
+    c.vline(BX0, BY0, BY1, C("884b2b"))
+    c.hline(BX0, BX1, BY1, C("090a14"))
+    c.vline(BX1, BY0, BY1, C("241527"))
+    for k in range(10):                                        # mitred corners
+        c.set(BX0 + k, BY0 + 9 - k, C("241527"))
+        c.set(BX1 - k, BY0 + 9 - k, C("241527"))
+        c.set(BX0 + k, BY1 - 9 + k, C("090a14"))
+        c.set(BX1 - k, BY1 - 9 + k, C("090a14"))
+    CX0, CY0, CX1, CY1 = BX0 + 10, BY0 + 10, BX1 - 10, BY1 - 10
+    for y in range(CY0, CY1 + 1):                              # the cork
+        for x in range(CX0, CX1 + 1):
+            warm, cool = lights(x, y)
+            g = 0.0
+            if (y * 3 + int(math.sin(x / 13.0) * 2)) % 7 == 0:
+                g -= 0.55                                      # pressed grain
+            elif (y * 5 + int(math.sin(x / 9.0 + 1.2) * 2)) % 11 == 0:
+                g += 0.40
+            c.set(x, y, mix2(["241527", "341c27", "4d2b32", "7a4841",
+                              "ad7757", "c09473"],
+                             ["172038", "1e1d39", "253a5e", "3c5e8b",
+                              "577277", "819796"],
+                             0.44 + (warm + cool * 0.45) * 3.5 + g,
+                             warm, cool))
+    c.hline(CX0, CX1, CY0, C("090a14"))                        # rebate shadow
+    c.hline(CX0, CX1, CY0 + 1, C("241527"))
+    c.vline(CX0, CY0, CY1, C("241527"))
+    c.vline(CX1, CY0, CY1, C("884b2b"))
+    c.hline(CX0, CX1, CY1, C("884b2b"))
+    cork_region = {(x, y) for y in range(CY0 + 2, CY1 - 1)
+                   for x in range(CX0 + 2, CX1 - 1)}
+    for _ in range(10):                                        # wear, solid
+        darken(blob(rng, rng.randrange(CX0 + 8, CX1 - 8),
+                    rng.randrange(CY0 + 8, CY1 - 8),
+                    rng.randint(18, 60), cork_region))
+    for _ in range(12):                                        # old pin holes,
+        hx = rng.randrange(CX0 + 6, CX1 - 6)                   # punched through
+        hy = rng.randrange(CY0 + 6, CY1 - 6)
+        c.rect(hx, hy, hx + 1, hy + 1, C("241527"))
+        c.hline(hx, hx + 1, hy + 2, C("884b2b"))
+    c.vline(92, CEIL - 1, BY0, C("090a14"))                    # hanging wires
+    c.vline(93, CEIL - 1, BY0, C("151d28"))
+    c.vline(326, CEIL - 1, BY0, C("090a14"))
+    c.vline(327, CEIL - 1, BY0, C("151d28"))
 
     def mini_photo(px0: int, py0: int, kind: str) -> None:
         c.rect(px0 - 1, py0 - 1, px0 + 24, py0 + 15, C("090a14"))
         for yy in range(15):
             for xx in range(24):
-                c.set(px0 + xx, py0 + yy, C("253a5e") if yy < 8 else C("172038"))
+                c.set(px0 + xx, py0 + yy,
+                      C("253a5e") if yy < 6 else (C("1e1d39") if yy < 11
+                                                  else C("172038")))
         if kind == "transit":
-            for xx in range(24):
-                c.set(px0 + xx, py0 + 10, C("394a50"))
-            c.rect(px0 + 14, py0 + 7, px0 + 19, py0 + 9, C("25562e"))
-            c.vline(px0 + 5, py0 + 2, py0 + 10, C("090a14"))
-            c.set(px0 + 6, py0 + 3, C("411d31"))
+            c.hline(px0, px0 + 23, py0 + 10, C("394a50"))       # the rail line
+            c.hline(px0, px0 + 23, py0 + 11, C("202e37"))
+            c.rect(px0 + 13, py0 + 6, px0 + 19, py0 + 9, C("25562e"))
+            c.hline(px0 + 13, px0 + 19, py0 + 6, C("468232"))
+            c.vline(px0 + 5, py0 + 2, py0 + 10, C("090a14"))    # the mast
+            c.hline(px0 + 3, px0 + 7, py0 + 2, C("090a14"))
+            c.set(px0 + 6, py0 + 4, C("cf573c"))
         elif kind == "the mills":
-            c.rect(px0 + 4, py0 + 7, px0 + 17, py0 + 14, C("10141f"))
+            c.rect(px0 + 3, py0 + 7, px0 + 17, py0 + 14, C("10141f"))
+            c.hline(px0 + 3, px0 + 17, py0 + 7, C("202e37"))
             c.vline(px0 + 7, py0 + 1, py0 + 7, C("10141f"))
-            c.vline(px0 + 13, py0 + 2, py0 + 7, C("10141f"))
+            c.vline(px0 + 8, py0 + 1, py0 + 7, C("151d28"))
+            c.vline(px0 + 13, py0 + 3, py0 + 7, C("10141f"))
             c.set(px0 + 7, py0, C("341c27"))
-            c.set(px0 + 8, py0 - 1, C("241527"))
         elif kind == "harbor":
-            for xx in range(24):
-                if rng.random() < 0.5:
-                    c.set(px0 + xx, py0 + 12, C("3c5e8b"))
-            c.vline(px0 + 16, py0 + 2, py0 + 11, C("090a14"))
-            c.hline(px0 + 9, px0 + 16, py0 + 2, C("090a14"))
-            c.set(px0 + 9, py0 + 3, C("090a14"))
+            c.hline(px0, px0 + 23, py0 + 12, C("3c5e8b"))       # the water line
+            c.hline(px0, px0 + 23, py0 + 13, C("253a5e"))
+            c.vline(px0 + 16, py0 + 2, py0 + 11, C("090a14"))   # a crane
+            c.hline(px0 + 8, px0 + 16, py0 + 2, C("090a14"))
+            c.vline(px0 + 9, py0 + 3, py0 + 5, C("090a14"))
             c.rect(px0 + 2, py0 + 9, px0 + 9, py0 + 11, C("10141f"))
-        else:  # old ward
+            c.hline(px0 + 2, px0 + 9, py0 + 9, C("202e37"))
+        else:                                                   # old ward
             for (bx_, bh) in ((1, 5), (6, 9), (12, 4), (17, 7)):
                 c.rect(px0 + bx_, py0 + 12 - bh, px0 + bx_ + 4, py0 + 12,
                        C("10141f"))
+                c.hline(px0 + bx_, px0 + bx_ + 4, py0 + 12 - bh, C("202e37"))
             c.vline(px0 + 8, py0, py0 + 3, C("10141f"))
+            c.set(px0 + 8, py0, C("cf573c"))
 
     def squiggle(x0: int, x1: int, y: int, col) -> None:
         for x in range(x0, x1):
@@ -6066,261 +7669,1133 @@ def make_scene_den() -> tuple[Canvas, Image.Image, Canvas]:
                 continue                       # word gaps
             c.set(x, y + (1 if math.sin(x * 1.7) > 0.3 else 0), col)
 
-    sheets = [("transit", 180, 110, False), ("the mills", 86, 122, True),
-              ("harbor", 274, 128, True), ("old ward", 116, 196, True)]
+    sheets = [("transit", 178, 108, False, 0.10),
+              ("the mills", 84, 124, True, -0.07),
+              ("harbor", 272, 130, True, 0.05),
+              ("old ward", 118, 196, True, -0.04)]
     pins: list[tuple[int, int]] = []
-    for (word, sx, sy, crossed) in sheets:
-        pw, ph = (72, 64) if word == "transit" else (60, 54)
-        paper = C("d7b594") if sx < 470 else C("a8b5b2")
-        shade = C("c09473") if sx < 470 else C("819796")
-        cut_a = rng.randint(1, 4)              # two torn corners, clean cuts
-        cut_b = rng.randint(1, 4)
+    for (word, sx, sy, crossed, lean) in sheets:
+        pw, ph = (74, 66) if word == "transit" else (62, 56)
+        pale = word in ("transit", "the mills")
+        cut_a, cut_b = rng.randint(2, 6), rng.randint(2, 6)
+        curl = rng.randint(4, 9)                               # a lifted corner
+        ramp = (["4d2b32", "602c2c", "884b2b", "ad7757", "c09473",
+                 "d7b594", "e7d5b3"] if pale else
+                ["341c27", "4d2b32", "602c2c", "884b2b", "ad7757",
+                 "c09473", "d7b594"])
         for yy in range(ph):
+            off = int(round(lean * (yy - ph / 2)))
             for xx in range(pw):
                 if xx + yy < cut_a or (pw - xx) + (ph - yy) < cut_b:
-                    continue                   # torn corners
-                col = paper
-                if xx > pw - 3 or yy > ph - 3:
-                    col = shade                # edge shading
-                c.set(sx + xx, sy + yy, col)
-        pin = (sx + pw // 2, sy + 2)
+                    continue
+                if (pw - xx) + yy < curl:                      # the curl, lifted
+                    continue
+                lv = 3.4 - (yy / float(ph)) * 1.1
+                if xx > pw - 4:
+                    lv -= 1.3
+                if yy > ph - 4:
+                    lv -= 1.5
+                c.set(sx + xx + off, sy + yy, band(ramp, lv))
+        for k in range(curl):                                  # its underside
+            c.set(sx + pw - 1 - k + int(round(lean * (-ph / 2 + curl - k))),
+                  sy + curl - 1 - k, C("7a4841"))
+        shade(sx - 1, sy + ph, sx + pw + 3, sy + ph + 3, 1)    # sheet shadow
+        pin = (sx + pw // 2, sy + 3)
         pins.append(pin)
-        # a REAL pin tack holding the sheet up: round colored head, glint,
-        # its little shadow pressed into the paper (user call)
         pin_col = [C("cf573c"), C("73bed3"), C("e8c170"), C("a8ca58")][len(pins) % 4]
-        for (dx, dy) in ((0, 0), (1, 0), (-1, 0), (0, -1), (0, 1)):
+        c.set(pin[0], pin[1] + 3, C("341c27"))                 # pressed shadow
+        c.set(pin[0] + 1, pin[1] + 3, C("341c27"))
+        for (dx, dy) in ((0, 0), (1, 0), (-1, 0), (0, -1), (0, 1),
+                         (1, -1), (-1, 1), (1, 1)):
             c.set(pin[0] + dx, pin[1] + dy, pin_col)
-        c.set(pin[0], pin[1] - 1, C("ebede9"))
-        c.set(pin[0], pin[1] + 2, C("341c27"))
-        # the district name, WRITTEN: near-black ink stretched tall like a
-        # marker stroke, underlined — readable across the room (user call)
+        c.set(pin[0] - 1, pin[1] - 1, C("ebede9"))
+        c.set(pin[0], pin[1] + 2, C("090a14"))
+        # the district name in tall marker ink, underlined
         title = _render_word(word, C("090a14"), C("241527"))
         tall = title.resize((title.width, title.height * 2), Image.NEAREST)
-        c.img.alpha_composite(tall, (sx + 4, sy + 6))
+        c.img.alpha_composite(tall, (sx + 5, sy + 8))
         c.px = c.img.load()
-        for ux in range(sx + 4, min(sx + 4 + tall.width, sx + pw - 4)):
-            c.set(ux, sy + 7 + tall.height + (1 if (ux % 9) > 6 else 0),
+        for ux in range(sx + 5, min(sx + 5 + tall.width, sx + pw - 5)):
+            c.set(ux, sy + 9 + tall.height + (1 if (ux % 9) > 6 else 0),
                   C("341c27"))
-        mini_photo(sx + 4, sy + 24, word)
-        for ln in range(3):                    # unreadable notes, right column
-            squiggle(sx + 31, sx + pw - 4, sy + 26 + ln * 6, C("341c27"))
-        squiggle(sx + 4, sx + pw - 4, sy + 43, C("341c27"))
-        squiggle(sx + 4, sx + pw - 18, sy + 48, C("341c27"))
-        if crossed:                            # struck off the rotation
-            for k in range(pw - 8):
-                if rng.random() < 0.8:
-                    c.set(sx + 4 + k, sy + 6 + int(k * (ph - 12) / pw),
-                          C("a53030"))
+        mini_photo(sx + 5, sy + 26, word)
+        for ln in range(3):
+            squiggle(sx + 32, sx + pw - 5, sy + 28 + ln * 6, C("341c27"))
+        squiggle(sx + 5, sx + pw - 5, sy + 45, C("341c27"))
+        squiggle(sx + 5, sx + pw - 19, sy + 50, C("341c27"))
+        if crossed:                            # struck off — one solid stroke
+            for k in range(pw - 10):
+                yy = sy + 8 + int(k * (ph - 16) / float(pw))
+                c.set(sx + 5 + k, yy, C("a53030"))
+                c.set(sx + 5 + k, yy + 1, C("752438"))
         else:                                  # transit: ringed red, tonight
-            for a in range(0, 360, 7):
-                x = int(pin[0] + math.cos(math.radians(a)) * 7)
-                y = int(pin[1] + 1 + math.sin(math.radians(a)) * 5)
-                c.set(x, y, C("a53030"))
-            squiggle(sx + 6, sx + 34, sy + 56, C("a53030"))
-    for i in range(1, len(pins)):              # red strings between pins
+            for a in range(0, 360, 5):
+                c.set(int(pin[0] + math.cos(math.radians(a)) * 9),
+                      int(pin[1] + 2 + math.sin(math.radians(a)) * 6),
+                      C("a53030"))
+            for a in range(0, 360, 5):
+                c.set(int(pin[0] + math.cos(math.radians(a)) * 8),
+                      int(pin[1] + 3 + math.sin(math.radians(a)) * 5),
+                      C("752438"))
+            squiggle(sx + 7, sx + 36, sy + 58, C("a53030"))
+    for i in range(1, len(pins)):              # red string between the pins
         x0, y0 = pins[0]
         x1, y1 = pins[i]
-        steps = 44
-        for k in range(steps + 1):
-            t = k / steps
+        for k in range(90):
+            t = k / 89.0
             x = x0 + (x1 - x0) * t
-            y = y0 + (y1 - y0) * t + math.sin(t * math.pi) * 5
+            y = y0 + (y1 - y0) * t + math.sin(t * math.pi) * 6
             c.set(int(x), int(y), C("a53030"))
+            c.set(int(x), int(y) + 1, C("752438"))
 
-    # ---- kettle's corner (warm) ----
-    c.rect(104, 384, 344, 398, C("602c2c"))    # table top
-    c.rect(108, 398, 340, 404, C("341c27"))
-    for lx in (118, 326):
-        c.rect(lx, 404, lx + 5, 466, C("241527"))
-        c.set(lx + 5, 406, C("341c27"))
-    # KETTLE — a real little person, not a silhouette: seated behind the
-    # table in profile, hunched toward the scale, candle-lit from the left
-    kx, ky = 252, 330                                   # head anchor
-    c.rect(kx, ky, kx + 15, ky + 11, C("d7b594"))       # face, profile left
-    c.vline(kx + 15, ky + 2, ky + 10, C("c09473"))      # far shade
-    c.rect(kx + 12, ky + 1, kx + 15, ky + 11, C("c09473"))
-    c.rect(kx - 2, ky - 4, kx + 17, ky, C("341c27"))    # flat cap
-    c.hline(kx - 5, kx + 6, ky, C("4d2b32"))            # brim toward candle
-    c.set(kx - 5, ky - 1, C("602c2c"))
-    c.rect(kx + 2, ky + 8, kx + 12, ky + 13, C("819796"))  # grey beard
-    c.set(kx + 1, ky + 9, C("a8b5b2"))
-    c.set(kx + 6, ky + 5, C("090a14"))                  # eye
-    c.rect(kx - 4, ky + 13, kx + 20, ky + 40, C("602c2c"))  # coat, hunched
-    c.rect(kx - 4, ky + 13, kx + 2, ky + 40, C("884b2b"))   # candle-lit front
-    c.vline(kx - 4, ky + 14, ky + 39, C("ad7757"))
-    c.rect(kx + 14, ky + 13, kx + 20, ky + 40, C("4d2b32")) # shaded back
-    c.rect(kx + 4, ky + 16, kx + 12, ky + 20, C("341c27"))  # scarf
-    c.rect(kx - 12, ky + 18, kx - 2, ky + 23, C("602c2c"))  # arm reaching out
-    c.hline(kx - 12, kx - 2, ky + 18, C("884b2b"))
-    c.rect(kx - 16, ky + 21, kx - 11, ky + 25, C("d7b594")) # hand at the scale
-    c.set(kx - 16, ky + 25, C("c09473"))
-    c.rect(kx - 2, ky + 40, kx + 18, ky + 46, C("341c27"))  # lap into table line
-    # the scale, big enough to read
-    c.vline(205, 324, 382, C("202e37"))
-    c.vline(206, 324, 382, C("151d28"))
-    c.hline(167, 245, 324, C("202e37"))
-    c.hline(167, 245, 325, C("151d28"))
-    for (ex, pan_y) in ((167, 344), (245, 336)):
-        c.vline(ex, 326, pan_y - 3, C("394a50"))       # chains
-        c.hline(ex - 9, ex + 9, pan_y, C("151d28"))    # pan
-        c.hline(ex - 7, ex + 7, pan_y + 1, C("202e37"))
-        c.set(ex - 9, pan_y - 1, C("394a50"))
-        c.set(ex + 9, pan_y - 1, C("394a50"))
-    for k in range(6):                                  # brass in the low pan
-        c.set(162 + k * 2, 343, C("e8c170") if k % 2 else C("de9e41"))
-    c.set(205, 320, C("577277"))                        # pivot glint
-    for i in range(110):                                # brass pile on the table
-        px_ = 262 + rng.randrange(70)
-        py_ = 376 + rng.randrange(8)
-        c.set(px_, py_, (C("de9e41"), C("e8c170"), C("be772b"))[rng.randrange(3)])
-    # the candle, fat, with a SOLID banded wall halo that respects the plank
-    # lines (runtime glow breathes softly on top)
-    plank_set = set(plank_edges)
-    for dy in range(-38, 39):
-        for dx in range(-54, 55):
-            d = (dx / 54.0) ** 2 + (dy / 38.0) ** 2
-            x = CANDLE[0] + dx
-            y = CANDLE[1] - 24 + dy
-            if d < 1.0 and y < 384 and x not in plank_set:
-                if d < 0.34:
-                    c.set(x, y, C("ad7757"))
-                elif d < 0.72:
-                    c.set(x, y, C("884b2b"))
-    c.rect(CANDLE[0] - 3, CANDLE[1] - 16, CANDLE[0] + 2, CANDLE[1], C("d7b594"))
-    c.vline(CANDLE[0] + 2, CANDLE[1] - 14, CANDLE[1], C("c09473"))
-    c.set(CANDLE[0] - 1, CANDLE[1] - 18, C("de9e41"))
-    c.rect(CANDLE[0] - 1, CANDLE[1] - 21, CANDLE[0], CANDLE[1] - 18, C("e8c170"))
-    c.set(CANDLE[0] - 1, CANDLE[1] - 22, C("e7d5b3"))
-    c.hline(CANDLE[0] - 6, CANDLE[0] + 5, CANDLE[1] + 1, C("884b2b"))
-    c.hline(CANDLE[0] - 4, CANDLE[0] + 3, CANDLE[1] + 2, C("602c2c"))
-    # ashtray on the table's end — runtime smoke rises from here
-    c.rect(330, 378, 340, 381, C("202e37"))
-    c.set(334, 377, C("cf573c"))
+    # ================================================== kettle's table ======
+    T_X0, T_X1, T_FAR, T_NEAR = 92, 352, 372, 394
+    shade(T_X0 - 4, T_FAR - 3, T_X1 + 4, T_FAR + 2, 2)         # against the wall
 
-    # ---- VERNE at the medicine shelf (center-right), a real figure ----
-    c.hline(636, 706, 248, C("341c27"))                 # shelf plank
-    c.hline(636, 706, 249, C("241527"))
-    c.rect(640, 234, 646, 247, C("25562e"))             # bottles, all different
-    c.set(642, 232, C("468232"))
-    c.set(641, 238, C("468232"))
-    c.rect(652, 238, 657, 247, C("3c5e8b"))
-    c.set(654, 236, C("73bed3"))
-    c.rect(663, 230, 668, 247, C("819796"))             # tall jar
-    c.set(664, 234, C("a8b5b2"))
-    c.rect(674, 240, 683, 247, C("c7cfcc"))             # one bandage roll
-    c.set(677, 243, C("819796"))
-    vx, vy = 652, 286                                   # head anchor
-    c.rect(vx, vy, vx + 13, vy + 12, C("d7b594"))       # face, 3/4 right
-    c.vline(vx, vy + 2, vy + 11, C("c09473"))
-    c.rect(vx - 1, vy - 3, vx + 14, vy + 1, C("341c27"))  # short dark hair
-    c.set(vx + 14, vy - 1, C("4d2b32"))
-    c.set(vx + 9, vy + 5, C("090a14"))                  # eye
-    c.rect(vx - 4, vy + 12, vx + 17, vy + 48, C("394a50"))  # coat
-    c.rect(vx + 1, vy + 16, vx + 12, vy + 44, C("c7cfcc"))  # medic apron
-    c.vline(vx + 1, vy + 17, vy + 43, C("a8b5b2"))
-    c.set(vx + 6, vy + 22, C("a53030"))                 # small red cross
-    c.set(vx + 6, vy + 24, C("a53030"))
-    c.set(vx + 5, vy + 23, C("a53030"))
-    c.set(vx + 7, vy + 23, C("a53030"))
-    c.vline(vx + 17, vy + 14, vy + 46, C("253a5e"))     # cool rim
-    c.vline(vx - 4, vy + 14, vy + 46, C("341c27"))
-    c.rect(vx - 9, vy + 24, vx - 3, vy + 29, C("394a50"))   # arm up to shelf
-    c.rect(vx - 12, vy + 20, vx - 6, vy + 25, C("d7b594"))  # hand at a bottle
-    c.rect(vx - 2, vy + 48, vx + 6, vy + 78, C("202e37"))   # legs
-    c.rect(vx + 8, vy + 48, vx + 16, vy + 78, C("151d28"))
-    c.rect(vx - 3, vy + 78, vx + 7, vy + 82, C("10141f"))   # boots
-    c.rect(vx + 7, vy + 78, vx + 17, vy + 82, C("090a14"))
-    c.rect(vx - 8, vy + 84, vx + 22, vy + 87, C("090a14"))  # ground shadow
+    # ---- KETTLE, clipped at the far edge of his own table so everything on
+    # it sits in FRONT of him. Pawnbroker's son from old ward: flat cap, the
+    # grey beard, hunched over the balance, hard candle-light from the left.
+    KX = 300
 
-    # ---- mara at the radio wall (cool) ----
-    # units first: two SCREEN units (glowing scanline faces), the rest dark
-    units = ((700, 240, 790, 296, True), (700, 304, 768, 352, False),
-             (796, 252, 886, 300, True), (776, 308, 874, 356, False),
-             (700, 360, 786, 400, False), (794, 364, 868, 404, False))
-    for (rx0, ry0, rx1, ry1, screen) in units:
-        # baked halo behind the glowing units, BEFORE the box itself
-        c.rect(rx0, ry0, rx1, ry1, C("151d28"))
-        c.rect(rx0 + 2, ry0 + 2, rx1 - 2, ry1 - 2, C("202e37"))
-        if screen:                                       # scanline glass, clean
-            for yy in range(ry0 + 5, ry1 - 10):
-                for xx in range(rx0 + 6, rx1 - 6):
-                    if yy % 2 == 0:
-                        c.set(xx, yy, C("253a5e"))
-                    else:
-                        c.set(xx, yy, C("172038"))
-            for xx in range(rx0 + 6, rx1 - 6):           # a waveform trace
-                yy = (ry0 + ry1) // 2 + int(math.sin(xx * 0.55) * 3)
-                c.set(xx, yy, C("73bed3"))
-            c.hline(rx0 + 6, rx1 - 6, ry1 - 8, C("394a50"))  # control strip
-            for i in range(3):
-                c.set(rx0 + 10 + i * 8, ry1 - 6, C("577277"))
-        else:                                            # dark unit: one LED
-            c.set(rx1 - 8, ry0 + 8, C("73bed3"))
-            c.set(rx1 - 9, ry0 + 8, C("253a5e"))         # its tiny halo
-            c.set(rx1 - 8, ry0 + 7, C("172038"))
-            c.set(rx1 - 8, ry0 + 9, C("172038"))
-    for (nx_, ny_) in ((746, 262), (814, 272)):          # dial faces (needles)
-        c.rect(nx_ - 10, ny_ - 8, nx_ + 10, ny_ + 5, C("253a5e"))
-        c.rect(nx_ - 9, ny_ - 7, nx_ + 9, ny_ + 4, C("3c5e8b"))
-        c.rect(nx_ - 8, ny_ - 6, nx_ + 8, ny_ + 3, C("172038"))
-    # the junction box the whole rig feeds into — cables visibly run to it
-    c.rect(878, 226, 894, 240, C("202e37"))
-    c.rect(880, 228, 892, 238, C("151d28"))
-    c.set(884, 232, C("cf573c"))                          # fuse LED
-    c.set(883, 232, C("752438"))
-    c.set(885, 232, C("752438"))
-    for (sx_, sy_, ex_, ey_) in ((884, 240, 840, 252), (884, 240, 886, 300),
-                                 (880, 238, 790, 244)):
-        steps = 24                                        # cable drops
-        for k in range(steps + 1):
-            t = k / steps
-            x = sx_ + (ex_ - sx_) * t
-            y = sy_ + (ey_ - sy_) * t + math.sin(t * math.pi) * 6
-            c.set(int(x), int(y), C("090a14"))
-    for k in range(80):                                   # cable arcs above
-        t = k / 80.0
-        c.set(int(700 + t * 178), int(226 + math.sin(t * 3.4) * 9 + t * 4),
-              C("090a14"))
-        c.set(int(730 + t * 148), int(214 + math.sin(t * 4.4) * 7 + t * 16),
+    def k_hw(y: int) -> int:                       # the head, tapering to jaw
+        u = (y - 302) / 30.0
+        if u < 0.14:
+            return 13
+        if u < 0.58:
+            return 15
+        if u < 0.78:
+            return 14
+        return max(4, int(14 - (u - 0.78) * 44))
+
+    soft_shadow(KX + 8, 336, 50, 50)                           # his wall shadow
+    for y in range(338, T_FAR):                                # the coat
+        t = (y - 338) / 34.0
+        half = int(21 + (t ** 0.5) * 15)
+        for x in range(KX - half, KX + half + 1):
+            u = (x - (KX - half)) / float(2 * half)
+            lv = 0.9 + (1.0 - u) * 3.2 - (0.7 if 0.40 < u < 0.54 else 0.0)
+            c.set(x, y, band(warm_ramp, lv))
+        c.set(KX - half, y, C("ad7757"))                       # candle rim
+        c.set(KX - half + 1, y, C("884b2b"))
+        c.set(KX + half, y, C("090a14"))
+        c.set(KX + half - 1, y, C("241527"))
+    for k in range(9):                                         # a shoulder seam
+        c.set(KX - 24 - k // 3, 340 + k, C("341c27"))
+        c.set(KX + 22 + k // 3, 340 + k, C("090a14"))
+    for y in range(340, 352):                                  # the scarf
+        c.hline(KX - 15, KX + 12, y, C("602c2c") if y < 346 else C("4d2b32"))
+    c.hline(KX - 15, KX - 5, 340, C("884b2b"))
+    c.hline(KX - 16, KX + 13, 351, C("241527"))
+    for k in range(11):                                        # its hanging end
+        c.hline(KX - 18 - k // 3, KX - 9 - k // 3, 350 + k,
+                C("602c2c") if k < 6 else C("4d2b32"))
+    for y in range(302, 333):                                  # the face
+        hw = k_hw(y)
+        for x in range(KX - hw, KX + hw + 1):
+            u = (x - (KX - hw)) / float(2 * hw + 1)
+            c.set(x, y, C("d7b594") if u < 0.32 else
+                  (C("c09473") if u < 0.66 else C("7a4841")))
+    for k in range(6):                                         # the nose
+        c.hline(KX - k_hw(314 + k) - 1 + k // 4, KX - k_hw(314 + k) + 1,
+                314 + k, C("e7d5b3") if k < 3 else C("d7b594"))
+    c.set(KX - k_hw(320), 320, C("c09473"))
+    c.hline(KX - 13, KX - 4, 311, C("341c27"))                 # the brow
+    c.hline(KX - 12, KX - 6, 312, C("241527"))
+    c.hline(KX + 2, KX + 9, 310, C("341c27"))
+    c.set(KX - 10, 315, C("090a14"))                           # the near eye
+    c.set(KX - 11, 315, C("090a14"))
+    c.set(KX - 10, 314, C("e7d5b3"))
+    c.set(KX + 4, 314, C("090a14"))                            # the far eye
+    c.set(KX + 5, 314, C("090a14"))
+    for y in range(319, 338):                                  # the white beard.
+        t = (y - 319) / 19.0                                   # It is one step
+        hw = int(13 * (1.0 - t * t * 0.94) ** 0.5)             # BRIGHTER than
+        for x in range(KX - hw, KX + hw + 1):                  # his skin all
+            u = (x - (KX - hw)) / float(2 * hw + 1)            # through — grey
+            c.set(x, y, C("e7d5b3") if u < 0.28 else           # paint here goes
+                  (C("d7b594") if u < 0.60 else C("ad7757")))  # blue in candle
+        c.set(KX + hw, y, C("7a4841"))                         # light
+    for k in range(9):                                         # a few strands
+        c.set(KX - 8 + k * 2, 336 + (k % 2), C("ad7757"))
+    c.hline(KX - 10, KX - 2, 319, C("c09473"))                 # the moustache
+    c.hline(KX - 9, KX + 4, 320, C("e7d5b3"))
+    c.hline(KX - 8, KX + 2, 321, C("d7b594"))
+    c.hline(KX - 6, KX + 1, 324, C("7a4841"))                  # the mouth line
+    for y in range(292, 302):                                  # the flat cap
+        t = (y - 292) / 10.0
+        hw = int(9 + t * 6)
+        for x in range(KX - hw - 2, KX + hw + 1):
+            u = (x - (KX - hw - 2)) / float(2 * hw + 3)
+            c.set(x, y, C("4d2b32") if u < 0.34 else
+                  (C("341c27") if u < 0.70 else C("241527")))
+    c.hline(KX - 14, KX + 13, 300, C("241527"))
+    for k in range(18):                                        # its brim, out
+        yb = 300 + k // 7                                      # over the candle
+        c.set(KX - 15 - k, yb, C("884b2b") if k < 11 else C("602c2c"))
+        c.set(KX - 15 - k, yb + 1, C("602c2c") if k < 11 else C("4d2b32"))
+        c.set(KX - 15 - k, yb + 2, C("241527"))
+    c.set(KX - 33, 302, C("ad7757"))
+
+    # ---- his shelf of stock: what people have pawned and not come back for
+    c.rect(92, 306, 214, 310, C("341c27"))
+    c.hline(93, 213, 306, C("ad7757"))
+    c.hline(92, 214, 310, C("090a14"))
+    for bxx in (98, 208):                                      # its two brackets
+        for k in range(9):
+            c.set(bxx, 311 + k, C("241527"))
+            c.set(bxx + 1 + k // 2, 311 + k, C("341c27"))
+    soft_shadow(152, 316, 66, 16)
+    c.rect(100, 288, 118, 306, C("341c27"))                    # a mantel clock
+    c.hline(101, 117, 288, C("884b2b"))
+    c.vline(100, 288, 305, C("602c2c"))
+    c.vline(118, 288, 305, C("241527"))
+    for (dy, hw) in ((0, 5), (1, 6), (2, 6), (3, 6), (4, 5)):
+        c.hline(109 - hw, 109 + hw, 294 + dy, C("d7b594"))
+    c.set(109, 296, C("341c27"))
+    c.set(110, 297, C("341c27"))
+    c.set(108, 298, C("341c27"))
+    c.hline(102, 116, 303, C("241527"))
+    c.rect(124, 292, 138, 306, C("202e37"))                    # a tin
+    c.hline(125, 137, 292, C("577277"))
+    c.vline(138, 292, 305, C("090a14"))
+    c.hline(126, 136, 298, C("151d28"))
+    c.hline(126, 136, 299, C("394a50"))
+    for k in range(15):                                        # a pair of boots
+        c.hline(146, 152, 291 + k, C("241527") if k % 5 else C("341c27"))
+        c.hline(155, 161, 289 + k, C("341c27") if k % 5 else C("241527"))
+    c.hline(144, 156, 305, C("090a14"))
+    c.hline(153, 165, 303, C("090a14"))
+    c.set(146, 290, C("602c2c"))
+    c.set(155, 288, C("602c2c"))
+    c.rect(170, 294, 190, 306, C("4d2b32"))                    # a valve radio
+    c.hline(171, 189, 294, C("884b2b"))
+    c.vline(190, 294, 305, C("241527"))
+    c.rect(173, 297, 181, 303, C("241527"))
+    for k in range(3):
+        c.hline(174, 180, 298 + k * 2, C("602c2c"))
+    for (dy, hw) in ((0, 2), (1, 3), (2, 3), (3, 2)):          # its dial
+        c.hline(186 - hw, 186 + hw, 298 + dy, C("de9e41"))
+    c.set(186, 299, C("341c27"))
+    c.rect(196, 298, 206, 306, C("819796"))                    # a stack of plates
+    c.hline(196, 206, 298, C("c7cfcc"))
+    c.hline(196, 206, 301, C("394a50"))
+    c.hline(196, 206, 304, C("394a50"))
+    c.vline(206, 299, 305, C("577277"))
+
+    # ---- the table, drawn in front of him
+    for y in range(T_FAR, T_NEAR + 1):                         # the top face
+        for x in range(T_X0, T_X1 + 1):
+            warm, cool = lights(x, y)
+            t = (y - T_FAR) / float(T_NEAR - T_FAR)
+            c.set(x, y, mix2(warm_ramp, warm_twin,
+                             1.5 + (warm + cool * 0.45) * 5.0 + t * 0.7,
+                             warm, cool))
+    for sy_ in (T_FAR + 7, T_FAR + 15):                        # board seams
+        for x in range(T_X0, T_X1 + 1):
+            c.set(x, sy_ + (1 if math.sin(x / 21.0) > 0.35 else 0), C("341c27"))
+    c.hline(T_X0, T_X1, T_NEAR, C("ad7757"))                   # the lit near lip
+    c.hline(T_X0, T_X1, T_NEAR + 1, C("884b2b"))
+    for y in range(T_NEAR + 2, T_NEAR + 16):                   # the apron
+        for x in range(T_X0 + 3, T_X1 - 2):
+            warm, cool = lights(x, y)
+            c.set(x, y, mix2(warm_ramp, warm_twin,
+                             0.15 + (warm + cool * 0.45) * 3.1, warm, cool))
+    c.hline(T_X0 + 3, T_X1 - 2, T_NEAR + 16, C("090a14"))
+    for lx in (110, 330):                                      # legs
+        for y in range(T_NEAR + 14, 478):
+            warm, cool = lights(lx, y)
+            lv = 0.3 + (warm + cool * 0.45) * 3.0
+            c.hline(lx, lx + 8, y, mix2(warm_ramp, warm_twin, lv, warm, cool))
+            c.vline(lx, y, y, mix2(warm_ramp, warm_twin, lv + 1.1, warm, cool))
+            c.vline(lx + 8, y, y, C("090a14"))
+        c.hline(lx - 1, lx + 9, 478, C("090a14"))
+    for x in range(112, 331):                                  # the stretcher
+        warm, cool = lights(x, 452)
+        lit = (warm + cool * 0.45)
+        c.set(x, 452, mix2(warm_ramp, warm_twin, 0.6 + lit * 3.0, warm, cool))
+        c.set(x, 453, mix2(warm_ramp, warm_twin, 0.1 + lit * 2.6, warm, cool))
+        c.set(x, 454, C("090a14"))
+
+    # ---- the ledger, open, weighed down with a stone
+    for y in range(372, 391):
+        t = (y - 372) / 18.0
+        c.hline(96 + int(t * 3), 136 - int(t * 2), y,
+                C("d7b594") if y < 385 else C("c09473"))
+    c.vline(115, 372, 390, C("a8b5b2"))
+    c.vline(116, 373, 390, C("819796"))
+    for k in range(5):
+        squiggle(99 + (k % 2) * 2, 113, 375 + k * 3, C("7a4841"))
+        squiggle(119, 134 - (k % 3) * 3, 375 + k * 3, C("7a4841"))
+    c.rect(124, 370, 134, 376, C("394a50"))                    # the stone
+    c.hline(125, 133, 370, C("577277"))
+    c.set(132, 375, C("202e37"))
+
+    # ---- the candle: the warm source, on its tin saucer
+    c.rect(138, 380, 162, 386, C("394a50"))
+    c.hline(139, 161, 380, C("819796"))
+    c.hline(138, 162, 386, C("090a14"))
+    c.rect(141, 376, 159, 381, C("202e37"))
+    c.hline(142, 158, 376, C("577277"))
+    for y in range(356, 381):                                  # the candle body
+        t = (y - 356) / 24.0
+        hw = 5 + int(t * 1.6)
+        c.hline(150 - hw, 150 + hw, y, C("d7b594"))
+        c.hline(150 - hw, 150 - hw + 2, y, C("e7d5b3"))
+        c.vline(150 + hw, y, y, C("c09473"))
+        c.vline(150 + hw - 1, y, y, C("c09473"))
+    for (dx_, dy0, dl) in ((-4, 362, 9), (3, 368, 7), (-1, 372, 5)):
+        c.vline(150 + dx_, dy0, dy0 + dl, C("e7d5b3"))         # wax runs
+        c.set(150 + dx_ + 1, dy0 + dl, C("d7b594"))
+    c.hline(144, 156, 356, C("e7d5b3"))                        # the melted top
+    c.hline(146, 154, 355, C("e7d5b3"))
+    c.set(150, 354, C("341c27"))                               # the wick
+    c.set(150, 353, C("241527"))
+    for (dy, hw, col) in ((0, 1, "e7d5b3"), (1, 2, "e8c170"), (2, 2, "e8c170"),
+                          (3, 3, "de9e41"), (4, 3, "de9e41"), (5, 2, "be772b"),
+                          (6, 2, "884b2b"), (7, 1, "884b2b")):
+        c.hline(150 - hw, 150 + hw, CANDLE[1] + dy, C(col))
+    c.set(150, CANDLE[1] - 1, C("e7d5b3"))                     # the tip
+    c.set(150, CANDLE[1] + 2, C("e7d5b3"))                     # the hot core
+
+    # ---- the coin pouch
+    for y in range(374, 393):
+        t = abs(y - 384) / 10.0
+        hw = int(13 - t * 5)
+        c.hline(178 - hw, 178 + hw, y, C("4d2b32") if y > 379 else C("341c27"))
+        c.set(178 - hw, y, C("602c2c"))
+        c.set(178 + hw, y, C("241527"))
+    c.hline(171, 185, 375, C("602c2c"))
+    c.hline(173, 183, 373, C("241527"))                        # its drawn cord
+    c.set(172, 374, C("884b2b"))
+
+    # ---- the balance: plinth, column, tipped beam, two hung brass pans
+    c.rect(200, 380, 242, 388, C("202e37"))                    # plinth
+    c.hline(201, 241, 380, C("577277"))
+    c.hline(200, 242, 388, C("090a14"))
+    c.rect(204, 376, 238, 380, C("151d28"))
+    c.hline(205, 237, 376, C("394a50"))
+    c.vline(220, 322, 377, C("394a50"))                        # column
+    c.vline(221, 322, 377, C("202e37"))
+    c.vline(222, 323, 377, C("151d28"))
+    c.rect(216, 318, 226, 324, C("202e37"))                    # the pivot head
+    c.hline(217, 225, 318, C("577277"))
+    c.set(221, 321, C("819796"))
+    for x in range(178, 264):                                  # the beam, tipped
+        y = 326 + int(round((x - 221) * -0.055))
+        c.set(x, y, C("394a50"))
+        c.set(x, y + 1, C("202e37"))
+        c.set(x, y + 2, C("090a14"))
+    c.vline(221, 314, 322, C("577277"))                        # the pointer
+    c.set(221, 313, C("819796"))
+    for (ex, pan_y, deep) in ((184, 356, True), (256, 336, False)):
+        top = 326 + int(round((ex - 221) * -0.055)) + 2
+        for k in range(pan_y - top - 5):                       # three chains
+            c.set(ex - 9, top + k, C("202e37"))
+            c.set(ex, top + k, C("394a50"))
+            c.set(ex + 9, top + k, C("202e37"))
+        c.hline(ex - 10, ex + 10, pan_y - 5, C("202e37"))      # the yoke
+        for (dy, hw, col) in ((0, 14, "de9e41"), (1, 14, "be772b"),
+                              (2, 12, "884b2b"), (3, 10, "884b2b"),
+                              (4, 7, "602c2c"), (5, 4, "602c2c")):
+            c.hline(ex - hw, ex + hw, pan_y + dy, C(col))
+        c.hline(ex - 13, ex - 5, pan_y, C("e8c170"))
+        c.set(ex - 14, pan_y + 1, C("602c2c"))
+        c.set(ex + 14, pan_y + 1, C("341c27"))
+        if deep:                                               # loaded with gold
+            for (gx, gw) in ((-9, 5), (-2, 6), (5, 4)):
+                c.hline(ex + gx, ex + gx + gw, pan_y - 1, C("e8c170"))
+                c.hline(ex + gx, ex + gx + gw, pan_y - 2, C("de9e41"))
+            c.hline(ex - 4, ex + 1, pan_y - 4, C("e8c170"))
+            c.hline(ex - 3, ex, pan_y - 5, C("e7d5b3"))
+    for (wx, wh) in ((250, 6), (258, 4), (242, 3)):            # weights, other
+        c.rect(wx, 335 - wh, wx + 5, 334, C("884b2b"))         # pan
+        c.hline(wx, wx + 5, 335 - wh, C("de9e41"))
+        c.vline(wx + 5, 335 - wh, 334, C("602c2c"))
+        c.set(wx + 2, 336 - wh, C("e8c170"))
+
+    # ---- coin stacks on the table. The old version was 110 loose pixels.
+    for (cx_, n_, tone) in ((252, 7, 0), (266, 4, 1), (278, 9, 0),
+                            (292, 5, 1), (304, 3, 0)):
+        for k in range(n_):
+            y = 386 - k * 2
+            c.hline(cx_, cx_ + 10, y, C("de9e41") if tone == 0 else C("be772b"))
+            c.hline(cx_, cx_ + 10, y + 1, C("884b2b"))
+            c.set(cx_, y, C("be772b"))
+            c.set(cx_ + 10, y, C("602c2c"))
+        top = 386 - n_ * 2
+        c.hline(cx_ + 1, cx_ + 9, top, C("e8c170"))            # the top face
+        c.hline(cx_ + 3, cx_ + 7, top - 1, C("e8c170"))
+        c.set(cx_ + 4, top - 1, C("e7d5b3"))
+    for (lx, ly) in ((318, 388), (246, 390), (330, 384)):      # loose coins
+        c.hline(lx, lx + 8, ly, C("be772b"))
+        c.hline(lx + 1, lx + 7, ly - 1, C("de9e41"))
+        c.hline(lx, lx + 8, ly + 1, C("602c2c"))
+
+    # ---- the ashtray. Runtime smoke rises from (334, 372).
+    for y in range(366, 379):
+        t = abs(y - 373) / 7.0
+        hw = int(15 * (1.0 - t * t) ** 0.5) if t < 1 else 0
+        if hw > 0:
+            c.hline(334 - hw, 334 + hw, y, C("151d28") if y > 370 else
+                    C("202e37"))
+            c.set(334 - hw, y, C("394a50"))
+            c.set(334 + hw, y, C("090a14"))
+    c.hline(322, 346, 367, C("577277"))
+    c.hline(326, 342, 371, C("090a14"))                        # the ash bed
+    c.hline(328, 340, 372, C("241527"))
+    c.hline(330, 338, 370, C("819796"))                        # grey ash
+    c.hline(333, 341, 369, C("c7cfcc"))                        # the stub
+    c.set(342, 369, C("cf573c"))                               # its ember
+    c.set(343, 369, C("884b2b"))
+
+    # ---- kettle's arms, over the table: one out to the loaded pan, one
+    # holding a coin up to the flame.
+    limb(KX - 19, 350, KX - 32, 360, 8, 7, warm_ramp, 1.1,
+         C("ad7757"), C("090a14"))
+    limb(KX - 32, 360, KX - 50, 370, 7, 6, warm_ramp, 1.4,
+         C("ad7757"), C("090a14"), across=True)
+    c.vline(KX - 40, 358, 374, C("341c27"))                    # the rolled cuff
+    c.vline(KX - 41, 359, 373, C("602c2c"))
+    for y in range(366, 379):                                  # the hand, down
+        t = (y - 366) / 13.0                                   # on the table top
+        hw = int(6 - abs(t - 0.35) * 5)
+        c.hline(KX - 54 - hw, KX - 54 + hw, y,
+                C("d7b594") if t < 0.5 else C("c09473"))
+        c.set(KX - 54 - hw, y, C("e7d5b3"))
+        c.set(KX - 54 + hw, y, C("7a4841"))
+    for k in range(3):                                         # fingers spread
+        c.vline(KX - 57 + k * 3, 378, 382, C("c09473"))        # on the boards
+        c.set(KX - 57 + k * 3, 382, C("7a4841"))
+    c.hline(KX - 60, KX - 46, 383, C("341c27"))                # its little
+    c.hline(KX - 58, KX - 48, 384, C("241527"))                # shadow
+    limb(KX + 20, 352, KX + 14, 370, 8, 7, warm_ramp, 0.9,
+         C("884b2b"), C("090a14"))
+    for y in range(345, 358):                                  # that hand: a
+        t = (y - 345) / 13.0                                   # closed fist,
+        hw = int(6 - abs(t - 0.38) * 4)                        # side on
+        c.hline(KX + 10 - hw, KX + 10 + hw, y,
+                C("d7b594") if t < 0.45 else C("c09473"))
+        c.set(KX + 10 - hw, y, C("e7d5b3"))
+        c.set(KX + 10 + hw, y, C("7a4841"))
+    c.hline(KX + 6, KX + 13, 350, C("ad7757"))                 # the knuckle line
+    c.vline(KX + 6, 341, 346, C("c09473"))                     # thumb and finger
+    c.set(KX + 6, 341, C("d7b594"))                            # pinching it
+    c.vline(KX + 13, 342, 346, C("7a4841"))
+    c.hline(KX + 7, KX + 12, 340, C("de9e41"))                 # the coin, edge-on
+    c.hline(KX + 8, KX + 11, 339, C("e8c170"))
+    c.set(KX + 9, 338, C("e7d5b3"))
+    c.hline(KX + 7, KX + 12, 341, C("884b2b"))
+
+    # ================================================== VERNE'S CORNER =====
+    # the medic's table. He was a plain figure at a shelf with four bottles;
+    # the corner says what he does before you read the figure at all.
+    VX0, VX1, V_FAR, V_NEAR = 570, 694, 366, 398
+    # the instrument rail over his head — hung tools, every one different,
+    # hung SHORT off the rail (the first cut gave each a 20 px wire and the
+    # row came out reading as six coat hangers)
+    c.rect(590, 176, 690, 180, C("202e37"))
+    c.hline(591, 689, 176, C("577277"))
+    c.hline(590, 690, 180, C("090a14"))
+    c.vline(596, 168, 176, C("151d28"))
+    c.vline(684, 168, 176, C("151d28"))
+    for (hx, kind, drop) in ((600, 0, 3), (618, 1, 6), (634, 2, 2),
+                             (650, 3, 5), (666, 1, 3), (680, 0, 7)):
+        c.vline(hx, 180, 180 + drop, C("819796"))
+        c.set(hx + 1, 180, C("394a50"))
+        b = 181 + drop
+        if kind == 0:                                          # shears
+            c.rect(hx - 2, b, hx + 3, b + 9, C("a8b5b2"))
+            c.vline(hx - 2, b, b + 9, C("c7cfcc"))
+            c.vline(hx + 3, b, b + 9, C("577277"))
+            for k in range(9):                                 # the two blades
+                c.set(hx - 2 - k // 3, b + 9 + k, C("a8b5b2"))
+                c.set(hx + 3 + k // 3, b + 9 + k, C("819796"))
+            c.set(hx - 4, b + 18, C("577277"))
+            c.set(hx + 5, b + 18, C("394a50"))
+        elif kind == 1:                                        # forceps
+            for k in range(19):
+                c.set(hx - 2 + k // 9, b + k, C("c7cfcc"))
+                c.set(hx + 2 - k // 9, b + k, C("819796"))
+                if k < 4:
+                    c.set(hx, b + k, C("a8b5b2"))
+            c.hline(hx - 3, hx + 3, b + 19, C("a8b5b2"))
+            c.hline(hx - 2, hx + 2, b + 20, C("577277"))
+        elif kind == 2:                                        # a clamp
+            c.rect(hx - 4, b, hx + 4, b + 7, C("819796"))
+            c.hline(hx - 4, hx + 4, b, C("c7cfcc"))
+            c.hline(hx - 4, hx + 4, b + 7, C("394a50"))
+            c.vline(hx - 4, b, b + 7, C("a8b5b2"))
+            c.rect(hx - 2, b + 8, hx + 2, b + 15, C("577277"))
+            c.vline(hx - 2, b + 8, b + 15, C("819796"))
+        else:                                                  # a bone saw
+            c.rect(hx - 2, b, hx + 4, b + 15, C("577277"))
+            c.vline(hx - 2, b, b + 15, C("a8b5b2"))
+            c.vline(hx + 4, b, b + 15, C("394a50"))
+            for k in range(0, 16, 2):
+                c.set(hx + 5, b + k, C("c7cfcc"))
+                c.set(hx + 6, b + k, C("819796"))
+            c.rect(hx - 3, b + 15, hx + 5, b + 20, C("341c27"))
+            c.hline(hx - 3, hx + 5, b + 15, C("602c2c"))
+    # the shelf of mismatched bottles
+    c.rect(590, 232, 692, 236, C("341c27"))
+    c.hline(591, 691, 232, C("884b2b"))
+    c.hline(590, 692, 236, C("090a14"))
+    c.vline(594, 236, 244, C("241527"))                        # its brackets
+    c.vline(686, 236, 244, C("241527"))
+    for (bx, bw, bh, glass, fill, cap) in (
+            (596, 6, 18, "25562e", "468232", "341c27"),
+            (606, 5, 12, "253a5e", "3c5e8b", "202e37"),
+            (614, 8, 22, "819796", "c7cfcc", "394a50"),
+            (626, 6, 14, "4d2b32", "884b2b", "241527"),
+            (636, 9, 16, "202e37", "394a50", "151d28"),
+            (650, 5, 20, "25562e", "75a743", "19332d"),
+            (658, 7, 11, "253a5e", "4f8fba", "172038"),
+            (670, 6, 24, "7a4841", "ad7757", "341c27")):
+        y0 = 232 - bh
+        c.rect(bx, y0, bx + bw, 231, C(glass))
+        c.vline(bx, y0, 231, C(fill))                          # the lit edge
+        c.vline(bx + bw, y0, 231, C("090a14"))
+        c.hline(bx, bx + bw, y0, C(cap))
+        c.rect(bx + 1, y0 + bh // 3, bx + bw - 1, 230, C(fill))
+        c.vline(bx + bw - 1, y0 + bh // 3, 230, C(glass))
+        c.set(bx + 1, y0 + bh // 3 + 1, C("c7cfcc"))           # a glass catch
+    c.rect(678, 216, 690, 231, C("c7cfcc"))                    # a dressing box
+    c.hline(679, 689, 216, C("ebede9"))
+    c.vline(690, 216, 231, C("819796"))
+    c.hline(681, 687, 222, C("a53030"))
+    c.vline(684, 219, 225, C("a53030"))
+
+    # ---- VERNE: ER nurse, the one who says don't go. Standing behind the
+    # table, clipped at its far edge; sleeves rolled, both hands working.
+    VVX = 630
+
+    def v_hw(y: int) -> int:
+        u = (y - 264) / 36.0
+        if u < 0.15:
+            return 12
+        if u < 0.62:
+            return 13
+        if u < 0.80:
+            return 12
+        return max(4, int(12 - (u - 0.80) * 42))
+
+    soft_shadow(VVX + 8, 312, 44, 62)
+    for y in range(302, V_FAR):                                # shirt and apron
+        t = (y - 302) / 64.0
+        half = int(18 + (t ** 0.4) * 9)
+        for x in range(VVX - half, VVX + half + 1):
+            u = (x - (VVX - half)) / float(2 * half)
+            if abs(x - VVX) < half - 6 and y > 312:
+                col = band(["202e37", "394a50", "577277", "819796", "a8b5b2",
+                            "c7cfcc"], 1.6 + (1.0 - u) * 2.4)   # the apron bib
+            else:
+                col = band(["090a14", "10141f", "19332d", "25562e", "468232"],
+                           0.9 + (1.0 - u) * 2.0)               # the shirt
+            c.set(x, y, col)
+        c.set(VVX - half, y, C("3c5e8b"))                       # the rack's rim
+        c.set(VVX - half + 1, y, C("253a5e"))
+        c.set(VVX + half, y, C("090a14"))
+    for y in range(312, V_FAR):                                 # the bib edge
+        t = (y - 312) / 54.0
+        hw = int(11 + t * 6)
+        c.vline(VVX - hw, y, y, C("819796"))
+        c.vline(VVX + hw, y, y, C("202e37"))
+    stain_region = {(a, b) for b in range(318, V_FAR)
+                    for a in range(VVX - 16, VVX + 16)}
+    for _ in range(2):                                          # old stains,
+        col = C("602c2c") if rng.random() < 0.5 else C("4d2b32")  # SOLID patches
+        for (qx, qy) in blob(rng, rng.randrange(VVX - 11, VVX + 11),
+                             rng.randrange(328, V_FAR - 8),
+                             rng.randint(14, 30), stain_region):
+            for (ddx, ddy) in ((0, 0), (1, 0), (0, 1), (1, 1)):
+                if (qx + ddx, qy + ddy) in stain_region:
+                    c.set(qx + ddx, qy + ddy, col)
+    c.hline(VVX - 20, VVX + 6, 312, C("a8b5b2"))                # the apron strap
+    c.hline(VVX - 18, VVX + 4, 313, C("819796"))
+    for y in range(298, 306):                                   # the neck
+        c.hline(VVX - 5, VVX + 4, y, C("7a4841") if y > 301 else C("602c2c"))
+    c.hline(VVX - 5, VVX + 4, 298, C("4d2b32"))
+    for y in range(264, 301):                                   # the face
+        hw = v_hw(y)
+        for x in range(VVX - hw, VVX + hw + 1):
+            u = (x - (VVX - hw)) / float(2 * hw + 1)
+            c.set(x, y, C("7a4841") if u > 0.62 else
+                  (C("c09473") if u > 0.24 else C("d7b594")))
+    for y in range(264, 278):                                   # a cold forehead
+        hw = v_hw(y)
+        c.hline(VVX - hw, VVX - hw + 4, y, C("ad7757"))
+    for k in range(8):                                          # the nose
+        c.vline(VVX - 4 - k // 4, 280 + k, 280 + k, C("d7b594"))
+    c.hline(VVX - 6, VVX - 2, 288, C("c09473"))
+    c.set(VVX - 6, 289, C("7a4841"))
+    c.hline(VVX - 13, VVX - 5, 277, C("341c27"))                # brows
+    c.hline(VVX + 1, VVX + 8, 276, C("341c27"))
+    c.hline(VVX - 12, VVX - 6, 281, C("090a14"))                # eyes, cast down
+    c.hline(VVX + 2, VVX + 7, 280, C("090a14"))
+    c.set(VVX - 12, 282, C("d7b594"))
+    c.hline(VVX - 8, VVX - 1, 293, C("7a4841"))                 # the mouth
+    c.hline(VVX - 7, VVX - 2, 294, C("602c2c"))
+    for y in range(288, 300):                                   # a shaved jaw
+        hw = v_hw(y) - 1                                        # in shadow, NOT
+        for x in range(VVX - hw, VVX + hw):                     # dot stubble
+            if c.get(x, y)[:3] == C("c09473")[:3]:
+                c.set(x, y, C("7a4841"))
+            elif c.get(x, y)[:3] == C("d7b594")[:3]:
+                c.set(x, y, C("c09473"))
+    c.hline(VVX - 8, VVX - 3, 296, C("819796"))                 # going grey, at
+    c.hline(VVX - 2, VVX + 2, 297, C("577277"))                 # the jaw only
+    for y in range(254, 268):                                   # cropped hair
+        t = (y - 254) / 14.0
+        hw = int(9 + t * 5)
+        for x in range(VVX - hw, VVX + hw + 1):
+            u = (x - (VVX - hw)) / float(2 * hw + 1)
+            c.set(x, y, C("4d2b32") if u < 0.30 else
+                  (C("341c27") if u < 0.68 else C("241527")))
+    for k in range(12):                                         # the temples
+        c.vline(VVX - 14 + k // 6, 262 + k // 2, 270 + k // 2, C("341c27"))
+        c.vline(VVX + 13 - k // 6, 262 + k // 2, 268 + k // 2, C("241527"))
+    c.vline(VVX - 13, 264, 270, C("819796"))
+    c.set(VVX - 12, 266, C("819796"))
+
+    # ---- his table, in front of him
+    shade(VX0 - 4, V_FAR - 3, VX1 + 4, V_FAR + 2, 2)
+    for y in range(V_FAR, V_NEAR + 1):
+        for x in range(VX0, VX1 + 1):
+            warm, cool = lights(x, y)
+            t = (y - V_FAR) / float(V_NEAR - V_FAR)
+            c.set(x, y, mix2(cool_twin, cool_ramp,
+                             0.7 + (cool + warm * 0.45) * 4.2 + t * 0.6,
+                             warm, cool))
+    for x in range(VX0, VX1 + 1):
+        c.set(x, V_FAR + 11 + (1 if math.sin(x / 19.0) > 0.4 else 0),
               C("10141f"))
-    c.rect(690, 408, 900, 420, C("341c27"))              # desk
-    c.rect(694, 420, 896, 426, C("241527"))
-    c.vline(706, 426, 486, C("241527"))
-    c.vline(882, 426, 490, C("241527"))
-    # MARA — seated at the rig, oxblood jacket (the warm accent inside the
-    # cool zone: the eye goes to her), headset on, screen-lit
-    mx, my = 736, 336                                    # head anchor
-    c.rect(mx, my, mx + 14, my + 12, C("d7b594"))        # face, 3/4 right
-    c.vline(mx, my + 3, my + 11, C("c09473"))
-    c.rect(mx - 2, my - 4, mx + 8, my + 10, C("4d2b32")) # hair
-    c.rect(mx - 4, my + 8, mx + 1, my + 22, C("4d2b32")) # low ponytail
-    c.set(mx - 4, my + 22, C("341c27"))
-    c.set(mx + 10, my + 5, C("090a14"))                  # eye toward screens
-    c.hline(mx - 2, mx + 14, my - 5, C("151d28"))        # headset band
-    c.set(mx - 2, my - 4, C("151d28"))
-    c.set(mx + 14, my - 4, C("151d28"))
-    c.rect(mx + 12, my + 4, mx + 17, my + 12, C("202e37"))  # ear cup
-    c.set(mx + 14, my + 7, C("73bed3"))                  # cup LED
-    c.hline(mx - 1, mx + 12, my - 3, C("3c5e8b"))        # screen light on hair
-    c.rect(mx - 6, my + 12, mx + 18, my + 44, C("752438"))  # jacket
-    c.vline(mx + 18, my + 14, my + 42, C("3c5e8b"))      # rig-side rim
-    c.rect(mx + 16, my + 14, mx + 18, my + 42, C("411d31"))
-    c.vline(mx - 6, my + 14, my + 42, C("411d31"))       # shaded back
-    c.rect(mx + 12, my + 20, mx + 30, my + 26, C("752438"))  # arm to the dial
-    c.hline(mx + 12, mx + 30, my + 20, C("a53030"))
-    c.rect(mx + 28, my + 24, mx + 34, my + 29, C("d7b594"))  # hand on the knob
-    c.rect(mx - 8, my + 44, mx + 16, my + 66, C("202e37"))   # legs, seated
-    c.rect(mx - 10, my + 66, mx - 2, my + 72, C("10141f"))   # boot
-    c.rect(mx + 12, my + 44, mx + 18, my + 50, C("151d28"))
-    c.rect(mx - 14, my + 42, mx + 20, my + 47, C("341c27"))  # chair seat
-    c.vline(mx - 10, my + 47, my + 76, C("241527"))          # chair legs
-    c.vline(mx + 16, my + 47, my + 78, C("241527"))
-    c.rect(mx - 18, my + 8, mx - 13, my + 46, C("341c27"))   # chair back
-    c.vline(mx - 13, my + 10, my + 44, C("241527"))
+    c.hline(VX0, VX1, V_NEAR, C("577277"))
+    c.hline(VX0, VX1, V_NEAR + 1, C("394a50"))
+    for y in range(V_NEAR + 2, V_NEAR + 14):
+        for x in range(VX0 + 3, VX1 - 2):
+            warm, cool = lights(x, y)
+            c.set(x, y, mix2(cool_twin, cool_ramp,
+                             0.1 + (cool + warm * 0.45) * 2.6, warm, cool))
+    c.hline(VX0 + 3, VX1 - 2, V_NEAR + 14, C("090a14"))
+    for lx in (578, 678):
+        for y in range(V_NEAR + 12, 476):
+            warm, cool = lights(lx, y)
+            lit = cool + warm * 0.45
+            c.hline(lx, lx + 7, y,
+                    mix2(cool_twin, cool_ramp, 0.2 + lit * 2.4, warm, cool))
+            c.vline(lx, y, y,
+                    mix2(cool_twin, cool_ramp, 0.9 + lit * 2.6, warm, cool))
+            c.vline(lx + 7, y, y, C("090a14"))
+        c.hline(lx - 1, lx + 8, 476, C("090a14"))
+    # the enamel basin he is rinsing in
+    for y in range(372, 396):
+        t = abs(y - 384) / 12.0
+        hw = int(21 * (1.0 - t * t) ** 0.5) if t < 1 else 0
+        if hw > 0:
+            c.hline(600 - hw, 600 + hw, y, C("c7cfcc") if y < 378 else
+                    (C("a8b5b2") if y < 390 else C("819796")))
+    for y in range(374, 386):                                   # the water
+        t = abs(y - 380) / 6.0
+        hw = int(16 * (1.0 - t * t) ** 0.5) if t < 1 else 0
+        if hw > 0:
+            c.hline(600 - hw, 600 + hw, y,
+                    C("3c5e8b") if y < 380 else C("253a5e"))
+    c.hline(588, 608, 377, C("73bed3"))
+    c.hline(592, 604, 376, C("a4dddb"))
+    c.hline(590, 610, 383, C("172038"))
+    c.hline(602, 612, 383, C("752438"))                         # what came off
+    for k in range(9):                                          # its chipped rim
+        c.set(583 + k, 381 + (k // 4), C("819796"))
+    c.set(619, 381, C("577277"))
+    # the folded dressings, each fold offset
+    for k in range(5):
+        y = 392 - k * 3
+        w = 12 - (k % 2)
+        c.rect(636 - w, y - 2, 636 + w, y, C("c7cfcc"))
+        c.hline(636 - w, 636 + w, y - 2, C("ebede9"))
+        c.hline(636 - w, 636 + w, y, C("819796"))
+        c.set(636 + w, y - 1, C("577277"))
+    # the instrument tray
+    c.rect(656, 378, 692, 392, C("394a50"))
+    c.hline(657, 691, 378, C("819796"))
+    c.hline(656, 692, 392, C("090a14"))
+    c.rect(658, 380, 690, 390, C("202e37"))
+    for (ix, il, tone) in ((661, 11, "c7cfcc"), (668, 16, "a8b5b2"),
+                           (678, 9, "819796")):
+        c.hline(ix, ix + il, 383, C(tone))
+        c.hline(ix, ix + il, 384, C("577277"))
+        c.set(ix, 382, C("ebede9"))
+    c.hline(664, 676, 387, C("752438"))                         # a stained cloth
+    c.hline(666, 674, 388, C("a53030"))
+    c.hline(668, 672, 386, C("411d31"))
+    # ---- both forearms down to the table, sleeves rolled above the elbow
+    for (sgn, hx, hy) in ((-1, 600, 372), (1, 668, 370)):
+        limb(VVX + sgn * 17, 318, VVX + sgn * 26, 340, 7, 6,
+             ["090a14", "10141f", "19332d", "25562e", "468232"], 0.8,
+             C("3c5e8b") if sgn < 0 else C("25562e"), C("090a14"))
+        c.hline(VVX + sgn * 26 - 8, VVX + sgn * 26 + 8, 340, C("468232"))
+        c.hline(VVX + sgn * 26 - 8, VVX + sgn * 26 + 8, 341, C("25562e"))
+        limb(VVX + sgn * 26, 342, hx, hy - 2, 6, 5, skin_ramp, 1.3,
+             C("e7d5b3") if sgn < 0 else C("d7b594"), C("4d2b32"))
+        hand(hx, hy, C("d7b594"), C("c09473"), C("e7d5b3"), C("7a4841"), 3)
+    # a crate of supplies and a bucket under the table
+    c.rect(592, 442, 642, 476, C("341c27"))
+    c.hline(593, 641, 442, C("602c2c"))
+    c.vline(592, 442, 476, C("4d2b32"))
+    c.vline(642, 442, 476, C("090a14"))
+    c.hline(592, 642, 476, C("090a14"))
+    for k in (452, 464):
+        c.hline(594, 640, k, C("241527"))
+        c.hline(594, 640, k + 1, C("4d2b32"))
+    c.rect(604, 434, 630, 443, C("c7cfcc"))                     # linen stacked in
+    c.hline(604, 630, 434, C("ebede9"))
+    c.hline(604, 630, 439, C("819796"))
+    c.rect(648, 458, 668, 476, C("202e37"))                     # a bucket
+    c.hline(648, 668, 458, C("577277"))
+    c.vline(668, 458, 476, C("090a14"))
+    c.rect(651, 461, 665, 466, C("172038"))
+    for k in range(12):
+        c.set(646 + k, 456 - int(math.sin(k / 11.0 * math.pi) * 6),
+              C("394a50"))
 
-    # (no baked dot-vignette — the runtime vignette.png is smooth alpha)
+    # ================================================== MARA'S RACK ========
+    # the rig she walked out of the control room with, grown into a rack.
+    for ux in (692, 906):                                      # the uprights
+        for y in range(222, 412):
+            c.vline(ux, y, y, C("577277"))
+            c.hline(ux + 1, ux + 6, y, C("202e37"))
+            c.vline(ux + 7, y, y, C("090a14"))
+        for by in range(230, 410, 26):                         # its punched slots
+            c.hline(ux + 2, ux + 5, by, C("151d28"))
+            c.set(ux + 3, by + 1, C("394a50"))
+    shade(686, 218, 916, 416, 1)
 
-    # candle glow overlay (soft alpha, breathes at runtime)
+    def rack_unit(x0, y0, x1, y1, wear):
+        box(x0, y0, x1, y1, C("202e37"), C("577277"), C("090a14"))
+        c.rect(x0 + 3, y0 + 3, x1 - 3, y1 - 3, C("151d28"))
+        c.hline(x0 + 3, x1 - 3, y0 + 3, C("090a14"))
+        c.hline(x0 + 3, x1 - 3, y1 - 3, C("394a50"))
+        for (sx_, sy_) in ((x0 + 2, y0 + 2), (x1 - 2, y0 + 2),
+                           (x0 + 2, y1 - 2), (x1 - 2, y1 - 2)):
+            c.set(sx_, sy_, C("819796"))                        # rack screws
+            c.set(sx_, sy_ + 1, C("394a50"))
+        reg = {(a, b) for b in range(y0 + 4, y1 - 3)
+               for a in range(x0 + 4, x1 - 3)}
+        for _ in range(wear):
+            for (qx, qy) in blob(rng, rng.randrange(x0 + 6, x1 - 6),
+                                 rng.randrange(y0 + 6, y1 - 6),
+                                 rng.randint(6, 18), reg):
+                c.set(qx, qy, C("10141f"))
+
+    def dial(nx: int, ny: int) -> None:
+        """A meter face with a real bezel and a pivot at the bottom centre —
+        main_menu.gd draws its 3-frame needle sprite centred on (nx, ny)."""
+        c.rect(nx - 13, ny - 11, nx + 13, ny + 9, C("394a50"))
+        c.hline(nx - 12, nx + 12, ny - 11, C("819796"))
+        c.hline(nx - 13, nx + 13, ny + 9, C("090a14"))
+        c.vline(nx + 13, ny - 11, ny + 9, C("151d28"))
+        c.rect(nx - 11, ny - 9, nx + 11, ny + 7, C("172038"))
+        c.rect(nx - 10, ny - 8, nx + 10, ny + 6, C("253a5e"))
+        c.rect(nx - 9, ny - 7, nx + 9, ny + 5, C("172038"))
+        for a in range(200, 341, 14):                           # the tick scale
+            c.set(int(nx + math.cos(math.radians(a)) * 8),
+                  int(ny + 5 + math.sin(math.radians(a)) * 6.4),
+                  C("a53030") if a > 310 else C("819796"))
+        c.set(nx, ny + 5, C("394a50"))                          # the pivot
+        for (sx_, sy_) in ((nx - 12, ny - 10), (nx + 12, ny - 10),
+                           (nx - 12, ny + 8), (nx + 12, ny + 8)):
+            c.set(sx_, sy_, C("c7cfcc"))
+
+    rack_unit(700, 230, 792, 290, 3)                           # meter panel 1
+    dial(746, 262)
+    for (kx_, kr) in ((712, 4), (726, 3), (776, 5)):           # its knobs
+        for (dy, hw) in ((-kr, 0), (-kr + 1, kr - 1), (0, kr), (kr - 1, kr - 1)):
+            c.hline(kx_ - hw, kx_ + hw, 276 + dy, C("151d28"))
+        c.hline(kx_ - kr + 1, kx_ + kr - 1, 276 - kr + 1, C("394a50"))
+        c.set(kx_ - 1, 276 - kr + 2, C("819796"))
+        c.hline(kx_ - kr, kx_ + kr, 276 + kr, C("090a14"))
+    c.hline(706, 736, 240, C("394a50"))                        # a legend strip
+    c.hline(706, 728, 244, C("202e37"))
+    c.rect(766, 236, 786, 250, C("151d28"))                    # a small readout
+    for k in range(3):
+        c.hline(769, 783, 239 + k * 4, C("73bed3") if k == 1 else C("253a5e"))
+
+    rack_unit(796, 236, 902, 296, 4)                           # meter panel 2
+    dial(814, 272)
+    for k in range(7):                                         # a slider bank
+        sx_ = 836 + k * 8
+        c.vline(sx_, 250, 288, C("090a14"))
+        c.vline(sx_ + 1, 250, 288, C("151d28"))
+        sy_ = 256 + (k * 37) % 26
+        c.rect(sx_ - 2, sy_, sx_ + 3, sy_ + 4, C("394a50"))
+        c.hline(sx_ - 2, sx_ + 3, sy_, C("819796"))
+        c.hline(sx_ - 2, sx_ + 3, sy_ + 4, C("090a14"))
+    c.rect(800, 244, 806, 292, C("151d28"))                    # a vent slot
+    for k in range(244, 292, 4):
+        c.hline(800, 806, k, C("090a14"))
+        c.hline(800, 806, k + 1, C("202e37"))
+
+    # the big screen — THE COOL SOURCE. Everything on this side is lit by it.
+    rack_unit(698, 296, 800, 360, 2)
+    for y in range(303, 348):                                  # the glass
+        for x in range(705, 755):
+            c.set(x, y, C("253a5e") if y % 2 == 0 else C("172038"))
+    for x in range(705, 755):                                  # the trace
+        yy = 326 + int(math.sin((x - 705) * 0.42) * 7
+                       + math.sin((x - 705) * 0.13) * 3)
+        c.set(x, yy, C("73bed3"))
+        c.set(x, yy + 1, C("3c5e8b"))
+    c.vline(741, 303, 347, C("253a5e"))                        # the sweep
+    c.vline(742, 303, 347, C("3c5e8b"))
+    c.hline(705, 754, 303, C("a4dddb"))
+    c.hline(705, 754, 347, C("172038"))
+    c.vline(704, 302, 348, C("090a14"))
+    c.vline(756, 302, 348, C("090a14"))
+    c.rect(758, 300, 796, 356, C("151d28"))                    # its control bay
+    c.hline(758, 796, 300, C("394a50"))
+    for k in range(4):                                         # buttons, varied
+        bx_ = 763 + (k % 2) * 16
+        by_ = 324 + (k // 2) * 12
+        c.rect(bx_, by_, bx_ + 11, by_ + 7, C("202e37"))
+        c.hline(bx_, bx_ + 11, by_, C("577277"))
+        c.hline(bx_, bx_ + 11, by_ + 7, C("090a14"))
+        c.set(bx_ + 9, by_ + 3, C("341c27") if k != 1 else C("cf573c"))
+    c.rect(752, 306, 770, 318, C("202e37"))                    # the LED's plate
+    c.hline(752, 770, 306, C("577277"))
+    c.hline(752, 770, 318, C("090a14"))
+    c.rect(756, 309, 764, 315, C("151d28"))
+    c.set(760, 312, C("253a5e"))                               # LED anchor: the
+    c.set(759, 312, C("172038"))                               # dark lamp under
+    c.set(761, 312, C("172038"))                               # the blink
+
+    # the junction box the whole rig feeds from, and its visible cable runs
+    c.rect(916, 216, 942, 244, C("202e37"))
+    c.hline(917, 941, 216, C("819796"))
+    c.hline(916, 942, 244, C("090a14"))
+    c.rect(919, 220, 939, 240, C("151d28"))
+    for k in range(3):
+        c.rect(922, 223 + k * 6, 936, 226 + k * 6, C("341c27"))
+        c.hline(922, 936, 223 + k * 6, C("602c2c"))
+    c.set(929, 219, C("cf573c"))
+    c.set(928, 219, C("752438"))
+    for (sx_, sy_, ex_, ey_, sag) in ((922, 244, 860, 300, 9),
+                                      (929, 244, 902, 250, 5),
+                                      (934, 244, 906, 380, 13),
+                                      (918, 240, 800, 246, 11)):
+        n = int(max(abs(ex_ - sx_), abs(ey_ - sy_)) * 2)
+        for k in range(n + 1):
+            t = k / float(n)
+            x = sx_ + (ex_ - sx_) * t
+            y = sy_ + (ey_ - sy_) * t + math.sin(t * math.pi) * sag
+            c.set(int(x), int(y), C("090a14"))
+            c.set(int(x) + 1, int(y), C("10141f"))
+    for k in range(240):                                       # arcs above
+        t = k / 239.0
+        c.set(int(700 + t * 216), int(214 + math.sin(t * 3.6) * 10 + t * 3),
+              C("090a14"))
+        c.set(int(716 + t * 196), int(206 + math.sin(t * 4.6) * 7 + t * 12),
+              C("10141f"))
+
+    # ================================================== mara's desk ========
+    D_X0, D_X1, D_FAR, D_NEAR = 700, 916, 384, 404
+    shade(D_X0 - 4, D_FAR - 3, D_X1 + 4, D_FAR + 2, 2)
+    for y in range(D_FAR, D_NEAR + 1):
+        for x in range(D_X0, D_X1 + 1):
+            warm, cool = lights(x, y)
+            t = (y - D_FAR) / float(D_NEAR - D_FAR)
+            c.set(x, y, mix2(cool_twin, cool_ramp,
+                             0.8 + (cool + warm * 0.45) * 4.4 + t * 0.7,
+                             warm, cool))
+    for x in range(D_X0, D_X1 + 1):
+        c.set(x, D_FAR + 8 + (1 if math.sin(x / 17.0) > 0.4 else 0), C("10141f"))
+    c.hline(D_X0, D_X1, D_NEAR, C("577277"))
+    c.hline(D_X0, D_X1, D_NEAR + 1, C("394a50"))
+    for y in range(D_NEAR + 2, D_NEAR + 15):
+        for x in range(D_X0 + 3, D_X1 - 2):
+            warm, cool = lights(x, y)
+            c.set(x, y, mix2(cool_twin, cool_ramp,
+                             0.1 + (cool + warm * 0.45) * 2.7, warm, cool))
+    c.hline(D_X0 + 3, D_X1 - 2, D_NEAR + 15, C("090a14"))
+    for lx in (708, 900):
+        for y in range(D_NEAR + 13, 494):
+            warm, cool = lights(lx, y)
+            lit = cool + warm * 0.45
+            c.hline(lx, lx + 7, y,
+                    mix2(cool_twin, cool_ramp, 0.2 + lit * 2.5, warm, cool))
+            c.vline(lx, y, y,
+                    mix2(cool_twin, cool_ramp, 0.9 + lit * 2.7, warm, cool))
+            c.vline(lx + 7, y, y, C("090a14"))
+        c.hline(lx - 1, lx + 8, 494, C("090a14"))
+    # the set on the desk that carries the second blinking LED
+    box(838, 348, 902, 392, C("202e37"), C("577277"), C("090a14"))
+    c.rect(841, 351, 899, 389, C("151d28"))
+    c.hline(841, 899, 351, C("090a14"))
+    for k in range(6):                                          # speaker grille
+        c.hline(846, 872, 356 + k * 4, C("090a14"))
+        c.hline(846, 872, 357 + k * 4, C("202e37"))
+    for k in range(2):                                          # two toggles
+        c.rect(880 + k * 8, 358, 884 + k * 8, 368, C("394a50"))
+        c.hline(880 + k * 8, 884 + k * 8, 358, C("819796"))
+        c.set(882 + k * 8, 360 + k * 4, C("c7cfcc"))
+    c.rect(852, 366, 870, 380, C("202e37"))                     # the LED's plate
+    c.hline(852, 870, 366, C("577277"))
+    c.hline(852, 870, 380, C("090a14"))
+    c.rect(856, 369, 864, 375, C("151d28"))
+    c.set(860, 372, C("253a5e"))                                # LED anchor
+    c.set(859, 372, C("172038"))
+    c.set(861, 372, C("172038"))
+    for k in range(30):                                         # its own lead,
+        t = k / 29.0                                            # down the back
+        c.set(int(902 + t * 6), int(388 + t * 14), C("090a14"))
+        c.set(int(903 + t * 6), int(388 + t * 14), C("10141f"))
+    # her mug, and the log she keeps
+    c.rect(714, 372, 730, 390, C("819796"))
+    c.hline(715, 729, 372, C("c7cfcc"))
+    c.vline(730, 373, 389, C("394a50"))
+    c.hline(714, 730, 390, C("090a14"))
+    c.rect(716, 374, 728, 377, C("341c27"))
+    for k in range(8):
+        c.set(732 + int(math.sin(k / 7.0 * math.pi) * 3), 375 + k, C("577277"))
+    c.rect(742, 380, 782, 392, C("c7cfcc"))                     # the log book
+    c.hline(742, 782, 380, C("ebede9"))
+    c.hline(742, 782, 392, C("819796"))
+    for k in range(3):
+        squiggle(746, 778, 383 + k * 3, C("819796"))
+
+    # ================================================== MARA ================
+    # SAME WOMAN AS tools/pitches/counter.py — hair mass, ponytail, greying
+    # lock, the two-cup headset, the oxblood jacket, the green enamel pin,
+    # the brow scar. Seated at the rig in three-quarter, ON channel, one hand
+    # on the cup, lit hard and cold from the screen on her left.
+    MX = 806
+    MFY0, MFY1 = 300, 337
+    ox_ramp = ["241527", "411d31", "752438", "a53030"]
+
+    def m_hw(y: int) -> int:
+        u = (y - MFY0) / float(MFY1 - MFY0)
+        if u < 0.13:
+            return 11
+        if u < 0.60:
+            return 13
+        if u < 0.76:
+            return 12
+        return max(3, int(12 - (u - 0.76) * 40))
+
+    def m_ell(rx: int, ry: int):
+        out = []
+        for dy in range(-ry, ry + 1):
+            t = 1.0 - (dy / float(ry)) ** 2
+            out.append((dy, int(rx * (t ** 0.5)) if t > 0 else -1))
+        return out
+
+    soft_shadow(MX + 6, 340, 48, 50)                            # off the rack
+    c.rect(MX - 44, 330, MX - 36, D_FAR, C("341c27"))           # her chair back
+    c.hline(MX - 44, MX - 36, 330, C("602c2c"))
+    c.vline(MX - 44, 331, D_FAR, C("4d2b32"))
+    c.vline(MX - 36, 331, D_FAR, C("090a14"))
+    # ---- the oxblood jacket, clipped at the desk's far edge
+    shoulder_top: dict = {}
+    for y in range(344, D_FAR):
+        t = (y - 344) / 40.0
+        half = int(19 + (t ** 0.45) * 17)
+        for x in range(MX - half, MX + half + 1):
+            u = (x - (MX - half)) / float(2 * half)
+            c.set(x, y, C("752438") if 0.16 < u < 0.85 else C("411d31"))
+            shoulder_top.setdefault(x, y)
+        c.set(MX - half, y, C("3c5e8b"))                        # cold rim, screen
+        c.set(MX - half + 1, y, C("253a5e"))
+        c.set(MX + half, y, C("241527"))                        # dark rim, away
+        c.set(MX + half - 1, y, C("411d31"))
+    for x, y in shoulder_top.items():
+        if abs(x - MX) > 15:
+            c.set(x, y + 1, C("a53030"))
+            c.set(x, y + 2, C("a53030"))
+    c.rect(MX - 14, 338, MX + 13, 348, C("411d31"))             # the collar
+    c.hline(MX - 14, MX + 13, 338, C("752438"))
+    c.rect(MX - 10, 340, MX + 9, 349, C("341c27"))
+    c.hline(MX - 14, MX - 6, 339, C("a53030"))
+    c.set(MX - 15, 340, C("752438"))
+    c.rect(MX + 7, 341, MX + 12, 345, C("25562e"))              # the enamel pin
+    c.hline(MX + 7, MX + 12, 341, C("468232"))
+    c.set(MX + 12, 345, C("19332d"))
+    c.set(MX + 9, 343, C("19332d"))
+    for y in range(328, 350):                                   # the neck
+        c.hline(MX - 6, MX + 5, y, C("7a4841"))
+    c.rect(MX - 4, 332, MX + 3, 346, C("ad7757"))
+    c.hline(MX - 6, MX + 5, 328, C("4d2b32"))
+    c.hline(MX - 6, MX + 5, 329, C("602c2c"))
+    # ---- the hair mass: crown darkest, one lit band on the screen side
+    for (dy, hw) in m_ell(23, 13):
+        if hw < 0 or dy > 7:
+            continue
+        c.hline(MX - hw, MX + hw, 299 + dy, C("4d2b32"))
+        if dy < -8:
+            c.hline(MX - hw, MX + hw, 299 + dy, C("341c27"))
+        if -4 < dy < 3:
+            c.hline(MX - hw, MX - hw + 5, 299 + dy, C("602c2c"))
+    for k in range(10):                                         # the side masses
+        c.rect(MX - 23 + k, 296, MX - 13, 336 - abs(k - 3) * 2, C("4d2b32"))
+        c.rect(MX + 13, 296, MX + 23 - k, 330 - abs(k - 4) * 2, C("4d2b32"))
+    c.vline(MX - 23, 296, 330, C("602c2c"))                     # the screen finds
+    c.vline(MX - 22, 302, 326, C("884b2b"))                     # this side
+    c.vline(MX + 23, 296, 322, C("341c27"))
+    for k in range(5):                                          # loose strands
+        c.vline(MX + 25 + rng.randrange(3), 296 + k * 8, 302 + k * 8,
+                C("341c27"))
+    for k in range(52):                                         # the ponytail
+        t = k / 52.0
+        px_ = int(MX + 26 + t * 8 + math.sin(t * 3.0) * 3)
+        w = int(8 - t * 4)
+        c.rect(px_ - w, 298 + k, px_ + w, 299 + k, C("4d2b32"))
+        c.vline(px_ - w, 298 + k, 299 + k,
+                C("602c2c") if t < 0.5 else C("4d2b32"))
+        c.vline(px_ + w, 298 + k, 299 + k, C("341c27"))
+    c.rect(MX + 28, 342, MX + 38, 350, C("341c27"))             # its tie
+    c.hline(MX + 28, MX + 38, 342, C("4d2b32"))
+    for k in range(26):                                         # THE GREY LOCK
+        t = k / 25.0
+        x = MX - 21 + int(t * 4 + math.sin(t * 2.4) * 2)
+        w = 2 - int(t * 2)
+        col = C("577277") if t < 0.35 else (C("394a50") if t < 0.75
+                                            else C("202e37"))
+        c.hline(x, x + w, 294 + k, col)
+        c.set(x - 1, 294 + k, C("341c27"))
+    # ---- the headset, ON her ears: she is on channel, this is her rig
+    for k in range(150):
+        t = k / 149.0
+        a = math.radians(193 + t * 154)
+        hx = int(MX + math.cos(a) * 24)
+        hy = int(305 + math.sin(a) * 22)
+        c.set(hx, hy, C("202e37"))
+        c.set(hx, hy + 1, C("394a50"))
+        c.set(hx, hy + 2, C("151d28"))
+    for (sgn, yx) in ((-1, MX - 24), (1, MX + 24)):
+        c.rect(yx - 1, 294, yx + 1, 302, C("394a50"))           # the yoke
+        c.vline(yx + sgn * 2, 295, 301, C("151d28"))
+        cx0 = yx - 5
+        for k in range(15):                                     # the ear cup
+            n = 0 if 2 < k < 12 else 1
+            c.hline(cx0 + n, cx0 + 9 - n, 300 + k, C("202e37"))
+            c.set(cx0 + n, 300 + k, C("394a50"))
+            c.set(cx0 + 9 - n, 300 + k, C("151d28"))
+        c.rect(cx0 + 3, 303, cx0 + 7, 311, C("151d28"))         # the pad
+        c.hline(cx0 + 2, cx0 + 8, 300, C("577277"))
+        c.hline(cx0 + 2, cx0 + 8, 314, C("090a14"))
+        c.set(cx0 + 4, 306, C("73bed3"))                        # LIVE, not dead
+    for k in range(70):                                         # the lead, down
+        t = k / 69.0                                            # to the rack
+        c.set(int(MX + 30 + t * 26), int(316 + t * 40 + math.sin(t * 3.0) * 5),
+              C("090a14"))
+        c.set(int(MX + 31 + t * 26), int(316 + t * 40 + math.sin(t * 3.0) * 5),
+              C("151d28"))
+    # ---- the face. Cold from the screen on her left, nothing from the right.
+    for y in range(MFY0, MFY1 + 1):
+        hw = m_hw(y)
+        c.hline(MX - hw, MX + hw, y,
+                C("7a4841") if y < MFY0 + 11 else C("c09473"))
+    for y in range(MFY0 + 4, MFY1 - 2):                         # the cold plane
+        hw = m_hw(y)
+        c.hline(MX - hw, MX - hw + 4, y, C("d7b594"))
+        c.set(MX - hw, y, C("3c5e8b"))
+    for y in range(MFY0 + 16, MFY1 - 4):                        # the far side
+        hw = m_hw(y)                                            # falls away
+        c.hline(MX + hw - 3, MX + hw, y, C("7a4841"))
+    c.hline(MX - 9, MX + 2, MFY1 - 4, C("d7b594"))              # the lit chin
+    c.hline(MX - 7, MX, MFY1 - 3, C("d7b594"))
+    c.hline(MX - 5, MX - 1, MFY1 - 2, C("e7d5b3"))
+    for (dy, hw_, lean, col) in ((21, 5, 0.3, "d7b594"),
+                                 (19, 4, -0.25, "c09473")):
+        cx0 = MX - 8 if lean > 0 else MX + 7
+        for (ddy, hw2) in m_ell(hw_, hw_):
+            if hw2 < 0:
+                continue
+            y = MFY0 + dy + ddy
+            cx = cx0 + int(ddy * lean)
+            fhw = m_hw(y) - 1
+            c.hline(max(MX - fhw, cx - hw2), min(MX + fhw, cx + hw2), y, C(col))
+    for k in range(4):                                          # the healed cut
+        c.set(MX - 11 + k, MFY0 + 21 + k // 2, C("7a4841"))
+    for k in range(26):                                         # the fringe
+        x = MX - 13 + k
+        drop = 5 + int(round(1.3 * math.sin(k * 0.38)
+                             + 0.8 * math.sin(k * 0.81)))
+        if 5 <= k <= 8:
+            drop += 2
+        if 17 <= k <= 19:
+            drop += 2
+        if k == 10:
+            drop -= 2
+        c.vline(x, MFY0 - 3, MFY0 + drop, C("4d2b32"))
+        c.set(x, MFY0 + drop + 1, C("341c27"))
+    c.hline(MX - 12, MX - 5, MFY0 + 13, C("602c2c"))            # brows, unmatched
+    c.hline(MX - 11, MX - 6, MFY0 + 14, C("341c27"))
+    c.hline(MX + 4, MX + 11, MFY0 + 12, C("602c2c"))
+    c.hline(MX + 5, MX + 10, MFY0 + 13, C("341c27"))
+    c.set(MX - 9, MFY0 + 13, C("c09473"))                       # THE SCAR, one
+    c.set(MX - 9, MFY0 + 14, C("c09473"))                       # unbroken line
+    c.set(MX - 9, MFY0 + 12, C("c09473"))
+    c.set(MX - 8, MFY0 + 11, C("d7b594"))
+    c.set(MX - 8, MFY0 + 10, C("d7b594"))
+    c.set(MX - 9, MFY0 + 15, C("7a4841"))
+    c.hline(MX - 11, MX - 7, MFY0 + 15, C("884b2b"))
+    c.hline(MX - 12, MX - 6, MFY0 + 17, C("090a14"))            # the eyes, on
+    c.hline(MX - 11, MX - 7, MFY0 + 18, C("090a14"))            # the screen
+    c.hline(MX + 5, MX + 10, MFY0 + 16, C("090a14"))
+    c.hline(MX + 6, MX + 9, MFY0 + 17, C("090a14"))
+    c.set(MX - 10, MFY0 + 16, C("73bed3"))                      # its catchlight
+    c.set(MX + 6, MFY0 + 15, C("3c5e8b"))
+    c.vline(MX - 2, MFY0 + 16, MFY0 + 24, C("7a4841"))          # the nose
+    c.vline(MX - 1, MFY0 + 17, MFY0 + 22, C("c09473"))
+    c.vline(MX, MFY0 + 18, MFY0 + 23, C("d7b594"))
+    for k in range(3):
+        c.hline(MX - 2 + k // 2, MX + 1 - k // 3, MFY0 + 23 + k,
+                C("d7b594") if k < 2 else C("e7d5b3"))
+    c.set(MX - 3, MFY0 + 25, C("7a4841"))
+    c.set(MX + 1, MFY0 + 25, C("7a4841"))
+    c.hline(MX - 5, MX + 1, MFY0 + 29, C("884b2b"))             # the mouth
+    c.set(MX + 2, MFY0 + 30, C("7a4841"))
+    c.hline(MX - 3, MX, MFY0 + 30, C("c09473"))
+    # ---- her left arm folded up, hand at the ear cup: she is listening
+    limb(MX - 20, 356, MX - 34, 344, 9, 8, ox_ramp, 0.5,
+         C("253a5e"), C("241527"))
+    limb(MX - 34, 344, MX - 30, 328, 8, 6, ox_ramp, 0.5,
+         C("253a5e"), C("241527"))
+    c.hline(MX - 37, MX - 24, 330, C("341c27"))                 # the pushed cuff
+    c.hline(MX - 37, MX - 24, 331, C("241527"))
+    for y in range(308, 322):                                   # the hand, small
+        t = (y - 308) / 14.0                                    # and pressed to
+        hw = int(5 - abs(t - 0.6) * 4)                          # the cup
+        c.hline(MX - 31 - hw, MX - 31 + hw, y,
+                C("d7b594") if t > 0.45 else C("c09473"))
+        c.set(MX - 31 - hw, y, C("e7d5b3"))
+        c.set(MX - 31 + hw, y, C("7a4841"))
+    for k in range(3):                                          # fingers curled
+        c.hline(MX - 29 + k, MX - 24 + k, 306 + k * 3, C("c09473"))
+        c.set(MX - 29 + k, 306 + k * 3, C("d7b594"))
+    # ---- her right forearm out to the set, keying it
+    limb(MX + 20, 356, MX + 34, 372, 9, 8, ox_ramp, 0.5,
+         C("a53030"), C("241527"))
+    limb(MX + 34, 372, 848, 380, 8, 6, ox_ramp, 0.5,
+         C("a53030"), C("241527"), across=True)
+    c.vline(MX + 38, 366, 386, C("341c27"))
+    c.vline(MX + 39, 367, 385, C("241527"))
+    for y in range(376, 388):                                   # the hand, flat
+        t = (y - 376) / 12.0
+        hw = int(8 - abs(t - 0.4) * 6)
+        c.hline(848 - hw, 848 + hw, y, C("c09473") if t > 0.45 else C("d7b594"))
+        c.set(848 - hw, y, C("e7d5b3"))
+        c.set(848 + hw, y, C("7a4841"))
+
+    # a coil of spare cable on the floor by the rack
+    for (rx_, ry_, cy_) in ((22, 8, 508), (16, 6, 512), (11, 4, 510)):
+        for a in range(0, 360, 3):
+            c.set(int(722 + math.cos(math.radians(a)) * rx_),
+                  int(cy_ + math.sin(math.radians(a)) * ry_), C("090a14"))
+            c.set(int(722 + math.cos(math.radians(a)) * rx_),
+                  int(cy_ - 1 + math.sin(math.radians(a)) * ry_), C("151d28"))
+
+    # ---------------------------------------------------- runtime overlays --
+    # candle glow (soft alpha, breathes and gutters at runtime)
     gw, gh = 240, 170
     glow = Image.new("RGBA", (gw, gh), (0, 0, 0, 0))
     gp = glow.load()
@@ -6329,22 +8804,26 @@ def make_scene_den() -> tuple[Canvas, Image.Image, Canvas]:
         for x in range(gw):
             d = ((x - gw / 2) / (gw / 2)) ** 2 + ((y - gh / 2) / (gh / 2)) ** 2
             if d < 1.0:
-                gp[x, y] = (r, g, b, int(70 * (1.0 - d) ** 2))
+                gp[x, y] = (r, g, b, int(64 * (1.0 - d) ** 2))
 
-    # VU needle strip: 3 frames, 16x12
+    # VU needle strip: 3 frames, 16x12, drawn over the baked dial faces
     strip = Canvas(48, 12)
     for f in range(3):
         ox = f * 16
-        strip.rect(ox, 0, ox + 15, 11, C("253a5e"))
-        strip.rect(ox + 1, 1, ox + 14, 10, C("172038"))
-        strip.set(ox + 13, 2, C("a53030"))
-        strip.set(ox + 14, 2, C("a53030"))
+        strip.rect(ox, 0, ox + 15, 11, C("172038"))
+        strip.rect(ox + 1, 1, ox + 14, 10, C("253a5e"))
+        strip.rect(ox + 2, 2, ox + 13, 9, C("172038"))
+        for k in range(4):                                    # the scale ticks
+            strip.set(ox + 3 + k * 3, 3, C("819796") if k < 3 else C("a53030"))
+        strip.set(ox + 13, 3, C("a53030"))
+        strip.set(ox + 13, 4, C("752438"))
         tip = (ox + 4, 3) if f == 0 else ((ox + 8, 2) if f == 1 else (ox + 12, 3))
-        x0, y0 = ox + 8, 10
+        x0, y0 = ox + 8, 9
         for k in range(9):
             t = k / 8.0
             strip.set(int(x0 + (tip[0] - x0) * t), int(y0 + (tip[1] - y0) * t),
-                      C("c7cfcc"))
+                      C("c7cfcc") if k > 2 else C("819796"))
+        strip.set(ox + 8, 9, C("394a50"))
     return c, glow, strip
 
 

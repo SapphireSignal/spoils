@@ -73,6 +73,12 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.29", [
+		"both menu backgrounds repainted to match the new ones being auditioned. the den: mara now actually looks like mara, verne finally looks like the medic he is with his instruments and bottles and basin, and kettle has a face and the shelf of pawned stock he keeps. the light is properly banded instead of two soft blobs, the wall is real boards and the floor is concrete",
+		"the drain was mostly empty black - it now has the tunnel arching overhead, the drain carrying on through an archway, a pipe run, a big cast iron sluice gate cracked open and pouring water, and a lantern down on the bank so theres something warm against the cold light from the manhole",
+		"speckled dot noise removed from the den, which had been breaking one of the standing rules for a long time - the board shadow, the rug and the coins were all made of scattered loose pixels and are now actually drawn",
+		"caught before it shipped: mara's head in the den used to sit exactly where the animated dial needle is drawn, so the needle would have been twitching on top of her hair",
+	]],
 	["v0.6.28", [
 		"dying at the wheel could stand your body up on the pavement. if you pressed f to get out in the second or so after being killed, the game put the corpse down beside the car mid-fade. getting in already guarded against this, getting out only half did",
 		"the handoff notes for two whole releases were never written, and nothing could tell. the check that guards these docs now fails the build if the current version isnt named in them - and it was proven by watching it fail on the real gap before it was filled",

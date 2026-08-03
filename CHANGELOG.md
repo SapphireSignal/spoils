@@ -3,6 +3,55 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.29] — 2026-08-02 — the den and the drain, repainted
+
+Both shipped menu backdrops rebuilt to the standard of the four candidate
+scenes being auditioned alongside them. User call: *"can you upgrade the den
+and the drain paintings a bit to like match all of these 4. I think they are
+a bit behind in visuals"*, then *"yes a redesign would be good too"*.
+
+### Changed
+- **THE DEN.** Mara is now recognisably the same woman as her portrait in the
+  counter pitch — same hair mass and greying lock, same two-cup headset, same
+  oxblood jacket, same face construction and the scar through her brow. She
+  was a flat block with one dot for an eye. **Verne now reads as the medic**
+  he is in the lore: a rail of hung instruments, a shelf of bottles and a
+  dressing box, a basin he is rinsing in. **Kettle** gained a face, a flat
+  cap, a beard, and the shelf of unredeemed stock LORE 7b says he keeps. The
+  two light pools are banded cel light instead of smooth airbrushed ellipses;
+  the wall is real shiplap with staggered joints; the floor is depot concrete
+  rather than rows that read as brick.
+- **DOT NOISE REMOVED from the den — it had been breaking a standing rule.**
+  Three sources: the job board's drop shadow was a 50% speckle, the rug was a
+  solid block with 6% of its pixels dropped, and the coins were 110 loose
+  pixels. All three are now structure — a real shadow step, a woven rug with
+  a bound border and fringe, and five modelled coin stacks.
+- **THE DRAIN.** The light was smooth concentric rings on a flat wall; it is
+  now a shaft modelled as a vertical slot with a separate bounce off the
+  pool, its bands cut by bed joints, perpends and a per-brick tone mosaic so
+  no contour is ever a clean curve. The brick was a perfect grid — it now has
+  rolled course heights, a rolled pitch per course, sagging courses, chipped
+  corners, replacement bricks from a redder batch and lime runs. Two thirds
+  of the frame was empty black: it gains a barrel soffit overhead, the tunnel
+  continuing left through a voussoired arch, a pipe run on saddles, a
+  cast-iron penstock cracked open and sheeting water, and a lantern that puts
+  one warm source against the cold shaft.
+
+### Fixed
+- **A living-layer collision caught before it shipped.** Mara's crown in the
+  den originally topped out at y266, which put her hair under the VU-needle
+  sprite anchored at (814, 272) — the needle would have animated on her head.
+  Found by compositing the real overlay sprites at their exact coordinates
+  and reading the result. Her crown is now a flatter dome topping at 286.
+
+### Notes
+- `art/gen/manifest.json` is **byte-identical** and only the six menu backdrop
+  files changed, so no other art in the game was disturbed. Each scene draws
+  from its own rng stream.
+- All five living-layer anchors verified in the running game, not just in the
+  bake: `--shot --scene=menu --backdrop=0` and `=1` both confirm the candle
+  glow lands on the candle and the ray lands on the shaft.
+
 ## [0.6.28] — 2026-08-02 — the chain skipped two releases
 
 A third migration audit — six lenses over the docs and the code comments,

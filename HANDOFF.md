@@ -41,6 +41,74 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-02 — four backdrops auditioned, and the den and drain repainted
+
+**Shipped:** **v0.6.28** (the migration audit — see the entry below) and
+**v0.6.29** (both shipped menu backdrops repainted). Plus **four candidate
+backdrops** built and revised over many rounds in `tools/pitches/` — the yard
+at dusk, the warden's window, the flooded underpass, mara's counter. They are
+**deliberately unwired**: nothing imports them and `gen_art.py` never emits
+them. The menu still rotates den + drain only.
+
+**The user's words:** *"im here for the migration"*, then on the gap:
+*"Why does the handoff have a gap? I just had the last session spend like 2
+hours fixing and making sure the migration would all be clean and working"*.
+On the one pitch anyone had painted: *"yes just drop it"*. On choosing:
+*"show me the pitches again and what the living layer would be, I will pick a
+couple and we make them"*. On the tally: *"nobody is dying out there anymore
+it's just me so the tally amount can stay the same forever"*, then *"there's
+too many tallies on both the screens let's half the amount of both"*. On a
+fix that made things worse: *"this fix is probably worse than how we had it
+before, the arms and hands are all messed up"*. On the shipped scenes:
+*"can you upgrade the den and the drain paintings a bit to like match all of
+these 4"*, *"yes a redesign would be good too for these that's what I meant"*,
+and *"the blue and the brown areas of the screen is too much, like all the
+colours of the screen should be blended together nicely"*.
+
+**Learned:**
+- **PARALLEL AGENTS MUST NEVER RUN REPO-WIDE GIT.** Twice today an agent ran
+  `git stash` / snapshot-and-restore on a file another agent was editing.
+  **Nothing was lost either time** — verified by hashing — but only by luck.
+  Every agent prompt now forbids `git stash/checkout/reset`; read-only git is
+  fine. When agents run in parallel, give each ONE file and say so.
+- **A FIX THAT REBUILDS MORE THAN WAS COMPLAINED ABOUT WILL BE REJECTED.** The
+  shoulder pass rebuilt the whole limb system to fix "shoulders look cropped",
+  which moved the arms and detached the hands. Reverted, then redone with a
+  hard constraint AND A PROOF: hands pixel-identical, arm centrelines fixed,
+  only the width profile and the outer silhouette may change. It worked.
+  **Constrain the fix to the complaint and prove the rest is untouched.**
+- **AMBIGUOUS SHAPES GET READ AS WHATEVER THE BRAIN SUPPLIES.** A downpipe read
+  as "the back of a car". A shoulder read as a hooded figure. A light spill on
+  wet tarmac read as **a dead body in blood** — the user asked outright.
+  Every time the cure was the same: give the object a lit face, a shade face
+  and a visible connection to something. **Light with no visible path back to
+  its source cannot read as light; it reads as a stain.**
+- **A THING CAN BE DRAWN AND INVISIBLE.** The car tarp's fill was `151d28` and
+  the sky behind it is also `151d28`, so two thirds of it never showed and all
+  that read was a 3 px rib — a bandstand hoop. Check a fill against what is
+  BEHIND it, not just against its own neighbours.
+- **DO NOT BUMP THE VERSION BEFORE THE WORK IS FINISHED.** I bumped to v0.6.29
+  early; the user then found a problem, and the repo sat RED (`DOCS FAIL`, tag
+  lag) while it was fixed. Bump at commit time.
+- **I got two things wrong that cost agent runs.** I called the den's VU meter
+  needles "kettle's knitting needles" and nearly had an agent pin kettle's
+  hands to coordinates on the opposite side of the frame; and I sent the tarp
+  fix to `yard.py`, which has no tarp (that agent correctly changed nothing
+  rather than inventing one). **Verify what an anchor IS before briefing it.**
+- **The den's two-tone was a hard `if warm >= cool` switch**, and that switch
+  WAS the visible boundary. One shared neutral ramp that both lamps tint at the
+  same value is what makes two lights read as one room.
+- Smooth lump functions render as mountain ranges: a smooth function has one
+  highest point, and one highest point in a 10 px silhouette is a peak.
+
+**Picked up at:** **THE USER HAS NOT PICKED WHICH BACKDROPS TO KEEP.** Four
+are painted and revised in `tools/pitches/`; whichever they choose get
+promoted into `gen_art.py` and wired with their living layers (the five
+techniques are listed in TASKS.md A1), and the rest get deleted the way the
+overlook did. Nothing is blocked. All gates green, tree clean at v0.6.29.
+
+---
+
 ## 2026-08-02 — the chain skipped two releases, and nothing could see it
 
 **Shipped:** **v0.6.28**, plus the record of **v0.6.26 and v0.6.27 that this
