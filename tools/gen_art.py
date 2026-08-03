@@ -10200,7 +10200,7 @@ def make_scene_yard() -> tuple[Canvas, Image.Image, Canvas, Image.Image]:
     return c, halo, splash, glint
 
 
-def make_scene_warden() -> Canvas:
+def make_scene_warden() -> tuple[Canvas, Image.Image, Image.Image, Canvas, Canvas]:
     """Menu 4 — THE WARDEN'S WINDOW: night at the toll booth, and he is
     looking straight back at you. Promoted 2026-08-02 from the backdrop pitch
     the user chose to keep ("let's add all 4 of those menu backdrops to the
@@ -10223,12 +10223,19 @@ def make_scene_warden() -> Canvas:
         image that cold rim is what separates a dark cap from a dark interior
         wall. If a failing-ballast blink ever gets built it needs its own
         overlay AND this base re-baked without those rims.
-      * ROOM LEFT FOR A LIVING LAYER (none of it built here): the lamp's warm
-        pool is baked as a SOLID BANDED wash only, exactly like the den's
-        candle halo, so a soft-alpha breathing glow can sit on top; the fuse
-        box behind the glass is baked with no lit LED; the floodlight's ground
-        pool is baked flat so a slow cold overlay can swim on it; nothing
-        occupies the moth's approach lane.
+      * THE LIVING LAYER IS BUILT (v0.6.33) and scripts/main_menu.gd hardcodes
+        its anchors, so anything that moves them is animation playing in mid
+        air. The bake still emits NOTHING extra: the lamp's warm pool is a
+        SOLID BANDED wash only, exactly like the den's candle halo, with the
+        breathing glow on top; the fuse box behind the glass is baked with no
+        lit LED (its dead lens is the 341c27 pixel at 810, 268); the road
+        spill breathes on the lamp's own clock, which is what finally joins it
+        to the window it comes out of; and the moth's lane around the lamp
+        shade is still clear. HIS EYES ARE BAKED OPEN and the blink overlay
+        is mapped off those exact pixels — rows 253-255, x 662-668 and
+        683-689 — so moving his face by one pixel breaks the blink.
+        Still unused, if anyone wants it: the far floodlight's ground pool is
+        baked flat so a slow cold overlay could swim on it.
       * THE BUTTON BAND (x 392-568, y 290-390) is held clear by every layer
         that could cross it: the razor coil tops out ~17 px under it, the
         receding mesh dies at x < 480 rather than degenerate into speckle, the
@@ -13062,7 +13069,71 @@ def make_scene_warden() -> Canvas:
     # function has taken its own — so not one pixel below the roof line moves.
     _strata(c, rng)
     _mast(c, rng)
-    return c
+
+    # ---------------------------------------------------- runtime overlays --
+    # Built after every base draw and taking NO rng draw, so the painting the
+    # user signed off stays bit-identical. Lessons carried over from the
+    # yard's layer (v0.6.32): a glow's SIZE is the whole read, and a light
+    # has to beat its BACKGROUND rather than its own colour.
+
+    def _soft(w: int, h: int, name: str, peak: int, power: float,
+              squash: float = 1.0) -> Image.Image:
+        """one soft-alpha lobe. Not palette-checked — it is light, not art."""
+        img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        px = img.load()
+        r, g, b, _ = C(name)
+        for y in range(h):
+            for x in range(w):
+                u = (x - w / 2 + 0.5) / (w / 2)
+                v = (y - h / 2 + 0.5) / (h / 2) * squash
+                d = u * u + v * v
+                if d < 1.0:
+                    px[x, y] = (r, g, b, int(peak * (1.0 - d) ** power))
+        return img
+
+    # the desk lamp's pool. LOW peak and WIDE, the den's candle-halo numbers —
+    # the baked wash under it is already solid and banded, this only breathes.
+    # It must not blow out his face, which is the one thing this composition
+    # cannot afford (see the notes at the head of this function).
+    lamp = _soft(150, 110, "e8c170", 54, 2.0)
+
+    # the window's light on the wet road, ON THE SAME CLOCK as the lamp. The
+    # spill's whole problem in review was that nothing joined it to the window
+    # it comes out of; breathing the two together is the join, stated in
+    # motion instead of in paint. Centred on the warm pixels' own centroid
+    # (490, 494) and short enough that it cannot reach the button band's
+    # bottom edge at y 390.
+    spill = _soft(210, 80, "be772b", 34, 1.7)
+
+    # HIS EYES CLOSING. One sprite over BOTH eyes with the bridge of his nose
+    # left transparent between them, so nothing in the middle of his face is
+    # ever painted over. Covers rows 253-255, x 662-689 — the exact rows the
+    # open eyes occupy, mapped off the bake pixel by pixel:
+    #   253  090a14 lash line   254  819796 white   255  a8b5b2 catchlight
+    # Closed, the upper lid sweeps DOWN, so the socket colour takes 253 and
+    # the dark seam lands on 254.
+    blink = Canvas(28, 3)
+    for ex in (0, 21):                              # x 662 and x 683
+        for k in range(7):
+            blink.set(ex + k, 0, C("241527"))
+            blink.set(ex + k, 1, C("090a14") if 1 <= k <= 5 else C("241527"))
+            blink.set(ex + k, 2, C("241527"))
+
+    # THE MOTH at the lamp. 3 frames of wing, 7x5. It is the one thing in this
+    # picture that is not exhausted, and it is why the lamp guts when it lands.
+    moth = Canvas(21, 5)
+    for f, (span, lift) in enumerate(((3, 0), (2, 1), (1, 2))):
+        ox = f * 7
+        moth.set(ox + 3, 2, C("c09473"))            # body
+        moth.set(ox + 3, 3, C("7a4841"))
+        for k in range(span):                       # wings, opening downward
+            moth.set(ox + 3 - 1 - k, 2 + lift, C("d7b594"))
+            moth.set(ox + 3 + 1 + k, 2 + lift, C("d7b594"))
+            if k == 0:
+                moth.set(ox + 3 - 1 - k, 1 + lift, C("ad7757"))
+                moth.set(ox + 3 + 1 + k, 1 + lift, C("ad7757"))
+
+    return c, lamp, spill, blink, moth
 
 
 def make_scene_underpass() -> Canvas:
@@ -17405,9 +17476,16 @@ def main() -> None:
     yard_halo.save(OUT / "menu_yard_halo.png")          # light: soft alpha
     yard_splash.img.save(OUT / "menu_yard_splash.png")
     yard_glint.save(OUT / "menu_yard_glint.png")        # light: soft alpha
-    warden_base = make_scene_warden()
+    (warden_base, warden_lamp, warden_spill,
+     warden_blink, warden_moth) = make_scene_warden()
     assert_palette(warden_base.img, "menu_warden")
+    assert_palette(warden_blink.img, "menu_warden_blink")
+    assert_palette(warden_moth.img, "menu_warden_moth")
     warden_base.img.save(OUT / "menu_warden.png")
+    warden_lamp.save(OUT / "menu_warden_lamp.png")      # light: soft alpha
+    warden_spill.save(OUT / "menu_warden_spill.png")    # light: soft alpha
+    warden_blink.img.save(OUT / "menu_warden_blink.png")
+    warden_moth.img.save(OUT / "menu_warden_moth.png")
     underpass_base = make_scene_underpass()
     assert_palette(underpass_base.img, "menu_underpass")
     underpass_base.img.save(OUT / "menu_underpass.png")

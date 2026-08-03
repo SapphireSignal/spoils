@@ -3,6 +3,37 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.33] — 2026-08-02 — the warden's gate wakes up
+
+Second of the four. Same contract as the yard: the base painting comes out
+bit-identical (hashed either side of the regen), the overlays are built after
+every base draw and take no rng draw, and every anchor is mapped off the bake.
+
+### Added
+- **`menu_warden_lamp`, `menu_warden_spill`, `menu_warden_blink`,
+  `menu_warden_moth`** and `_tick_warden()`.
+- **The desk lamp and the road spill breathe on ONE value.** The review note
+  on this painting was that nothing joined the pool on the tarmac to the
+  window it comes out of — `_light_path` said it in paint, and a shared clock
+  says it in motion.
+- **He blinks.** A 28×3 overlay laid exactly over rows 253-255, x 662-668 and
+  683-689 — the pixels the open eyes occupy — with the bridge of his nose
+  left transparent between them. Closed, the upper lid sweeps down: the
+  socket colour takes row 253 and the dark seam lands on 254. Verified by
+  forcing it on, shooting, and comparing against the bake.
+- **A moth works the lampshade**, 3 wing frames on a rounded elliptical
+  orbit, and the lamp **guts for 0.16 s** when it touches — every 5-11 s, not
+  every pass.
+- **The fuse box pilot** (dead in the bake at 810, 268) wakes on a 4.9 s
+  period that divides into nothing else in the frame.
+
+### Deliberately not done
+- **No dust field in the lamp light.** `dust.png` is a PLUS — full-alpha
+  centre, four neighbours at 90, empty corners. Dense it reads as smoke (the
+  den) and around a lens it reads as a glow (the LEDs), but six drifting
+  alone over the ledger each read as a four-pointed **star**. Cut after
+  seeing it in the render.
+
 ## [0.6.32] — 2026-08-02 — the trainyard wakes up
 
 First of the four promoted paintings to get a living layer. All five of the

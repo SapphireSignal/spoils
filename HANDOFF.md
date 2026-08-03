@@ -88,14 +88,43 @@ taken 40 frames in, so the eave drip is always caught mid-flight — the SPLASH
 was proven separately by temporarily flying the drip at 2600 px/s, shooting,
 and reverting (verified reverted by grep, not by memory).
 
-**Picked up at:** **the living layers for backdrops 3, 4 and 5** — warden,
-underpass, counter, in that order, one version each. Every one of them has
-its room already documented in its own `make_scene_*` docstring: the warden's
-lamp pool is baked as a solid banded wash with the fuse-box LED left unlit at
-(800-820, 258-276) and a moth lane kept clear; the underpass's sodium tube is
-baked at ~60% with three ceiling leaks at x = 300, 596 and 736; the counter's
-taped splice at (838, 246) has a permanent baked scorch ring under it waiting
-for the ember that drips there. Nothing is blocked. All gates green.
+**Then v0.6.33 — THE WARDEN'S GATE.** His desk lamp and the pool of light out
+on the wet road breathe on **one shared value**, which is what finally makes
+that pool read as light coming out of his window (the review note on this
+painting was that nothing joined the two). A moth works the lampshade on a
+rounded elliptical orbit with three wing frames, and the lamp **guts for
+0.16 s when it touches**, every 5-11 s rather than every pass. The fuse box
+pilot, dead in the bake at (810, 268), wakes on a period that divides into
+nothing else in the frame. **And he blinks** — a 28×3 overlay laid exactly
+over rows 253-255, x 662-668 and 683-689, the pixels his open eyes occupy,
+with the bridge of his nose left transparent between them. Verified by
+forcing it on, shooting, and comparing against the bake; reverted by file
+restore and confirmed by grep.
+
+**Two more things learned on the warden:**
+- **`dust.png` IS A PLUS, not a dot** — full-alpha centre, four neighbours at
+  90, empty corners. Dense and overlapping it reads as smoke (the den); ringed
+  round a lens it reads as a glow (every LED so far). But SIX of them drifting
+  alone over the ledger each read as a little four-pointed **star**. The dust
+  field was cut after seeing it, not before. If you want sparse motes anywhere,
+  you need a different texture.
+- **A HARNESS SHOT LANDS ~0.17 s IN, and that is close enough to t=0 to catch
+  a blink.** His eyes were shut in the first two shots and I read the frames
+  as "open" without checking. The blink phase now carries a +2.0 so the scene
+  opens with his eyes open — and the lesson is that comparing two SHOTS is
+  worthless when a breathing light is in frame, because everything lit differs
+  between them. Compare a shot against the BAKE.
+
+**Picked up at:** **the living layers for backdrops 4 and 5** — underpass then
+counter, one version each. Both have their room already documented in their
+own `make_scene_*` docstring: the underpass's sodium tube is baked at ~60% so a
+runtime dropout takes the top end off without changing its shape, with three
+ceiling leaks at x = 300, 596 and 736 and the walkway pool and wall halo baked
+for a glow to sit on; the counter's taped splice at (838, 246) has a permanent
+baked scorch ring under it, waiting for the ember that drips there, and its
+light box is baked steady so the COLD light is the one that breathes (the den
+and the warden both breathe the warm one — the inversion is the pitch).
+Nothing is blocked. All gates green.
 
 ---
 

@@ -1,13 +1,13 @@
 ﻿extends Node2D
 ## Main menu. SIX generated backdrop scenes rotate with a slow crossfade, in a
 ## shuffle-bag order (see _bag_next) so no backdrop repeats until every one of
-## them has been shown. Three of them are ALIVE and tick every frame:
-##   0 den   - the traders at home: candle vs radio glow, smoke, rig LEDs
-##   1 drain - the tunnel under the district: god-ray, motes, ringing drips
-##   2 yard  - the trainyard: the signal ticks red, drizzle, eave runoff
-## The other three are STATIC paintings for now — a living layer for them is
+## them has been shown. Four of them are ALIVE and tick every frame:
+##   0 den    - the traders at home: candle vs radio glow, smoke, rig LEDs
+##   1 drain  - the tunnel under the district: god-ray, motes, ringing drips
+##   2 yard   - the trainyard: the signal ticks red, drizzle, eave runoff
+##   3 warden - the toll gate: lamp and road spill on one clock, a moth, he blinks
+## The other two are STATIC paintings for now — a living layer for them is
 ## the next version's job, so do not assume one exists:
-##   3 warden    - the toll gate warden
 ##   4 underpass - the road underpass
 ##   5 counter   - the counter
 ## (the storm scene retired 2026-08-01 — user call). DEPLOY starts the raid.
@@ -28,6 +28,10 @@ const TEX_YARD_HALO := preload("res://art/gen/menu_yard_halo.png")
 const TEX_YARD_SPLASH := preload("res://art/gen/menu_yard_splash.png")
 const TEX_YARD_GLINT := preload("res://art/gen/menu_yard_glint.png")
 const TEX_WARDEN := preload("res://art/gen/menu_warden.png")
+const TEX_WARDEN_LAMP := preload("res://art/gen/menu_warden_lamp.png")
+const TEX_WARDEN_SPILL := preload("res://art/gen/menu_warden_spill.png")
+const TEX_WARDEN_BLINK := preload("res://art/gen/menu_warden_blink.png")
+const TEX_WARDEN_MOTH := preload("res://art/gen/menu_warden_moth.png")
 const TEX_UNDERPASS := preload("res://art/gen/menu_underpass.png")
 const TEX_COUNTER := preload("res://art/gen/menu_counter.png")
 const TEX_RAIN := preload("res://art/gen/rain_streak.png")
@@ -71,6 +75,16 @@ var _yard_splash: Sprite2D
 var _yard_splash_age := -1.0
 var _yard_drip: Sprite2D
 var _yard_drip_t := 0.0
+# warden life
+var _w_lamp: Sprite2D
+var _w_spill: Sprite2D
+var _w_blink: Sprite2D
+var _w_led: Sprite2D
+var _w_moth: Sprite2D
+var _w_moth_a := 0.0
+var _w_flap := 0.0
+var _w_gutter := 0.0      # seconds of gutter left, set when the moth touches
+var _w_gutter_t := 4.0    # seconds until the moth is allowed to touch again
 
 var _title: TextureRect
 var _title_base_y := 0.0
@@ -96,6 +110,10 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.33", [
+		"the warden's gate is alive now. his desk lamp breathes and the pool of light out on the wet road breathes with it, which is what finally makes that pool read as light coming out of his window. a moth works the lampshade and the lamp guts when it touches. the fuse box behind the glass has a pilot light again. and he blinks",
+		"the painting is untouched again - the blink is a twenty-eight pixel overlay laid exactly over his eyes, with the bridge of his nose left alone",
+	]],
 	["v0.6.32", [
 		"the trainyard menu background is alive now. the signal ticks red on a slow beat, the cabinet indicator and the far signal down the line blink on their own timings, drizzle blows through the left of the yard, and water runs off the boxcar roof and bursts on the ballast. the sunset moves in the puddle between the rails",
 		"the painting itself is untouched - every one of those is a light or a moving piece laid over the picture you already approved, checked byte for byte",
@@ -785,7 +803,7 @@ func _process(delta: float) -> void:
 		_shine_clip.visible = false
 
 	# per-scene life (also during crossfades — anything visible stays alive).
-	# 0-2 are alive; 3-5 are still paintings and tick nothing, so they are
+	# 0-3 are alive; 4-5 are still paintings and tick nothing, so they are
 	# deliberately absent here rather than missing by accident.
 	if _scenes[0].visible:
 		_tick_den()
@@ -793,6 +811,8 @@ func _process(delta: float) -> void:
 		_tick_drain(delta)
 	if _scenes[2].visible:
 		_tick_yard(delta)
+	if _scenes[3].visible:
+		_tick_warden(delta)
 
 
 func _menu_reset_windows() -> void:
@@ -1002,10 +1022,52 @@ func _build_scenes() -> void:
 	add_child(yard)
 	_scenes.append(yard)
 
-	# 4-6: STILL PAINTINGS — living layers for these are the next version.
+	# 4: THE WARDEN — his desk lamp breathes and the road spill breathes with
+	# it (that shared clock is what joins the pool to the window it comes out
+	# of), the fuse box wakes, a moth works the lamp and guts it when it
+	# touches, and he blinks. Anchors are mapped off the bake, see
+	# make_scene_warden's docstring.
+	var warden := Node2D.new()
+	_backdrop(warden, TEX_WARDEN)
+	_w_spill = Sprite2D.new()                  # the window's light on wet road
+	_w_spill.texture = TEX_WARDEN_SPILL
+	_w_spill.position = PC + Vector2(490, 494)   # the warm pixels' own centroid
+	_w_spill.material = add_mat
+	warden.add_child(_w_spill)
+	_w_lamp = Sprite2D.new()
+	_w_lamp.texture = TEX_WARDEN_LAMP
+	_w_lamp.position = PC + Vector2(632, 312)
+	_w_lamp.material = add_mat
+	warden.add_child(_w_lamp)
+	# NO DUST FIELD IN THE LAMP LIGHT, and that is a decision not an omission.
+	# `dust.png` is a PLUS: full-alpha centre, four neighbours at 90, corners
+	# empty. Dense and overlapping it reads as smoke (the den) and around a
+	# lens it reads as a glow (the LEDs here and in the yard) — but SIX of
+	# them drifting alone over the ledger each read as a little four-pointed
+	# STAR, which is sparkle, not dust, and the moth already owns that air.
+	_w_led = Sprite2D.new()                    # fuse box pilot, dead in the bake
+	_w_led.texture = TEX_DUST
+	_w_led.modulate = Color("cf573c")
+	_w_led.position = PC + Vector2(811, 269)   # the 3x3 raster correction again
+	warden.add_child(_w_led)
+	_w_moth = Sprite2D.new()
+	_w_moth.texture = TEX_WARDEN_MOTH
+	_w_moth.hframes = 3
+	warden.add_child(_w_moth)
+	_w_blink = Sprite2D.new()
+	_w_blink.texture = TEX_WARDEN_BLINK
+	# 28 wide (EVEN) so texel 0 lands on x 662; 3 tall (ODD) so the middle row
+	# lands on P-1 and the sprite has to sit a pixel low to cover rows 253-255.
+	_w_blink.position = PC + Vector2(676, 255)
+	_w_blink.visible = false
+	warden.add_child(_w_blink)
+	add_child(warden)
+	_scenes.append(warden)
+
+	# 5-6: STILL PAINTINGS — living layers for these are the next version.
 	# They rotate on exactly the same footing as the ones above; the only
 	# difference is that nothing in _process ticks them.
-	for texture in [TEX_WARDEN, TEX_UNDERPASS, TEX_COUNTER]:
+	for texture in [TEX_UNDERPASS, TEX_COUNTER]:
 		var still := Node2D.new()
 		_backdrop(still, texture)
 		add_child(still)
@@ -1103,6 +1165,41 @@ func _tick_yard(delta: float) -> void:
 			_yard_splash.visible = true
 			_yard_splash.frame = 0
 			_yard_splash_age = 0.0
+
+
+func _tick_warden(delta: float) -> void:
+	# THE LAMP AND THE ROAD SPILL SHARE ONE VALUE. That is the whole point of
+	# them: the review note on this painting was that nothing joined the pool
+	# on the tarmac to the window it comes out of, and two lights breathing on
+	# one clock say it in motion.
+	if _w_gutter > 0.0:
+		_w_gutter -= delta
+	var burn := 0.80 + 0.09 * sin(_time * 1.7) + 0.04 * sin(_time * 4.3)
+	if _w_gutter > 0.0:
+		burn *= 0.55                            # the moth is on the shade
+	_w_lamp.modulate.a = clampf(burn, 0.0, 1.0)
+	_w_spill.modulate.a = clampf(burn * 0.9, 0.0, 1.0)
+	# the fuse box pilot — slower than anything else in the frame
+	_w_led.visible = fmod(_time + 1.2, 4.9) < 2.2
+	# the moth works the shade. Its position is ROUNDED: a pixel-art sprite
+	# on a fractional position crawls between two rasterisations.
+	_w_moth_a += delta * 2.3
+	_w_flap += delta * 17.0
+	_w_moth.frame = int(_w_flap) % 3
+	_w_moth.position = PC + Vector2(
+		roundf(626.0 + cos(_w_moth_a) * 22.0),
+		roundf(276.0 + sin(_w_moth_a) * 13.0 + sin(_time * 5.1) * 1.5))
+	_w_gutter_t -= delta
+	if _w_gutter_t <= 0.0 and sin(_w_moth_a) > 0.94:
+		_w_gutter = 0.16                        # it touched: the lamp guts
+		_w_gutter_t = randf_range(5.0, 11.0)
+	# HE BLINKS. Two closes in quick succession now and then, which is what a
+	# tired man does; one lone blink on a fixed period reads as a machine.
+	# The +2.0 keeps his eyes OPEN for the first couple of seconds after the
+	# menu opens (and in every harness shot, which lands ~0.17 s in) — landing
+	# on the scene mid-blink reads as a man with his eyes shut, not a blink.
+	var b := fmod(_time + 2.0, 6.3)
+	_w_blink.visible = b < 0.11 or (b > 0.27 and b < 0.36)
 
 
 func _fade_ramp() -> Gradient:

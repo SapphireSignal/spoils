@@ -35,7 +35,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
 	 form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.32 shipped, 2026-08-02.** Milestone 1 (a walkable world) is DONE.
+**v0.6.33 shipped, 2026-08-02.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 
@@ -176,6 +176,15 @@ light spill.
   you got wrong.
 - **NEVER chain the smoke test and the push.** `smoke; git push` pushed a
   RED build (v0.4.2). Run smoke, READ the verdict, then push.
+- **THE RELEASE ORDER IS: bump the docs → COMMIT → TAG → smoke → push.**
+  User call, 2026-08-02: *"make sure the tags in place before doing smoke for
+  future, so we dont waste time running the smoke and it failing right?"*
+  `--checkdocs` runs FIRST inside `--smoke` and compares the doc versions
+  against `git describe`, so smoking before the tag exists always fails on a
+  version disagreement — a wasted multi-minute run that says nothing about
+  the build. Tag first, then smoke, and the verdict is real. (Tagging before
+  a green smoke is safe: the tag is local until `--tags` is pushed, and
+  `git tag -d` undoes it.)
 - **Write commit messages to a FILE and use `git commit -F`.** A
   multi-line `-m` here-string silently failed and left the tag on the
   wrong commit; recovery is `git tag -f` + force-push the tag.
@@ -496,11 +505,12 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   `scripts/main_menu.gd` — 6
   rotating backdrops, one every 10 s (`SCENE_SECONDS`; it was 30 for one
   release, user call): 0=den (the traders +
-  job board), 1=drain, 2=yard, 3=warden, 4=underpass, 5=counter. **0, 1 and
-  2 are LIVING** — per-scene ticks drive candle/needles/LEDs/smoke,
-  ray/motes/drips, and the yard's signal tick / two indicator blinks /
-  drizzle / eave runoff (v0.6.32);
-  **3-5 are STATIC paintings** until a living layer is built
+  job board), 1=drain, 2=yard, 3=warden, 4=underpass, 5=counter. **0-3 are
+  LIVING** — per-scene ticks drive candle/needles/LEDs/smoke,
+  ray/motes/drips, the yard's signal tick / two indicator blinks /
+  drizzle / eave runoff (v0.6.32), and the warden's lamp-and-road-spill on
+  one clock / moth / fuse pilot / his blink (v0.6.33);
+  **4-5 are STATIC paintings** until a living layer is built
   for them (v0.6.30 promoted the four; the storm scene was RETIRED
   2026-08-01, user call; painting coords via the PC offset const).
   **The order is a SHUFFLE BAG, not a cycle** (`_bag_next`/`_bag_reset`): each
