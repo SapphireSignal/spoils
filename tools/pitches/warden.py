@@ -1936,116 +1936,26 @@ def _warden_figure(c: Canvas, rng: random.Random) -> None:
     """46px of face, lit from BELOW by the ledger lamp. Bands run: peak
     shadow (near black) -> brow -> cheeks -> lit jaw -> hot chin rim."""
     # ---- tunic and shoulders (drawn first, the head sits over the neck) ----
-    # A SHOULDER IS NOT A BOX. The first cut stepped straight out of the neck
-    # onto a horizontal shelf and then fell down a straight vertical, and the
-    # user read it as a man with his shoulders cut off: "Same with the
-    # wardens shoulders, cropped off". The run is now
-    # neck -> trapezius -> deltoid cap -> arm, and four things carry it:
-    #   * the OUTERMOST point of each shoulder sits well BELOW the top of the
-    #     shoulder line (L_CAP / R_CAP), so the mass HANGS off the torso
-    #     instead of shelving out of it;
-    #   * the curve EASES — 2-3px per row coming out of the neck, 1px per row
-    #     over the cap, then it tucks back IN under the cap before the sleeve
-    #     widens again at his elbow. Nothing is straight for four rows;
-    #   * the arm and the frayed cuff take their outer edge from the SAME
-    #     profile, so the shoulder turns into the sleeve instead of each
-    #     piece ending on an edge of its own. The old arm block started at
-    #     y 292 a full 20px wider than the tunic it grew out of — that step
-    #     was the "cropped" edge as much as the vertical below it was;
-    #   * he is under-lit, so the shading is INVERTED against every other
-    #     asset in the project: the top of each shoulder turns away from the
-    #     lamp and goes near-black, the underside of the cap catches it.
-    def _ease(u, k):
-        u = max(0.0, min(1.0, u))
-        return 1.0 - (1.0 - u) ** k
-
-    def _seg(y, y0, y1, w0, w1, k):
-        return w0 + (w1 - w0) * _ease((y - y0) / float(y1 - y0), k)
-
-    L_CAP, R_CAP = 312, 306      # the row each deltoid crests on
-
-    def half_l(y):
-        """his RIGHT shoulder — the low one. It passes behind the lamp shade
-        at y 300, so the readable run is the trapezius easing over into the
-        top of the cap; the rest of the cap is deliberately occluded by a
-        thing with a bright lit rim, which is a body going behind a lamp and
-        not a body ending."""
-        if y <= 286:
-            return 12
-        if y <= 300:
-            # 3,3,3,2,2,2,2,1,1,1,1,1,1,1 — it EASES. A first cut ran a flat
-            # 2px per row for ten rows before easing, and ten rows of an
-            # identical step is a straight diagonal however it ends.
-            return int(_seg(y, 286, 300, 12, 36, 1.8))
-        if y <= 311:
-            return int(_seg(y, 300, 311, 36, 46, 1.4))
-        return 46
-
-    def half_r(y):
-        """his LEFT shoulder — he leans on this elbow, so it rides higher and
-        carries more mass. Crest at R_CAP, a 3px tuck under it, then the
-        sleeve widens again into the elbow planted on the counter."""
-        if y <= 280:
-            return 12
-        if y <= 292:
-            # it starts BEHIND the jaw, two rows above where any of it shows,
-            # so the run that is visible is already easing rather than
-            # leaving the neck at its steepest
-            return int(_seg(y, 280, 292, 12, 48, 1.35))
-        if y <= 306:
-            return int(_seg(y, 292, 306, 48, 70, 2.1))
-        if y <= 316:
-            return int(_seg(y, 306, 316, 70, 67, 1.5))
-        if y <= 332:
-            return int(_seg(y, 316, 332, 67, 72, 1.3))
-        return 72
-
-    for y in range(280, 344):
-        hl, hr = half_l(y), half_r(y)
+    for y in range(286, 344):
+        t = (y - 286) / 20.0
+        hl = 12 + int(min(1.0, t) * 34)          # his right shoulder, lower
+        hr = 12 + int(min(1.0, (y - 280) / 18.0) * 50)   # elbow side, higher
+        hr = min(hr, 62)
         for x in range(CX - hl, CX + hr + 1):
             dx = x - CX
-            half = hr if dx >= 0 else hl
-            e = half - abs(dx)                   # px in from the silhouette
-            capy = R_CAP if dx >= 0 else L_CAP
             lv = 2
-            if y > 292:
+            if y > 296:
                 lv = 3
-            if y > 306:
+            if y > 308:
                 lv = 4
             if y > 318:
                 lv = 5
-            # THE ROLL. Every band here is a function of `e`, the distance in
-            # from the silhouette, so every band FOLLOWS THE CURVE — that is
-            # what makes the mass read as round. The old code stepped on
-            # `dx > hr - 12`, which is a vertical stripe wherever the contour
-            # is not vertical, i.e. exactly over the shoulder.
-            # It is also NARROW. A first cut fell two steps over fourteen
-            # pixels and the result was a thick black band hugging the whole
-            # silhouette, which read as a hood pulled over him rather than as
-            # a shoulder turning away.
-            if e < 16:
-                t = (16 - e) / 16.0
-                drop = 2.2 if dx >= 0 else 1.6
-                if y > capy:                     # released under the cap
-                    drop *= max(0.3, 1.0 - (y - capy) / 18.0)
-                lv -= int(t ** 1.8 * drop + 0.3)
-            # THE LIT UNDERSIDE. Below the crest the cap turns down toward the
-            # open ledger, which is the biggest bounce card in the frame, so a
-            # soft crescent lifts a step and a half — inboard of the contour,
-            # never on it, because the lamp is nowhere near that side of him.
-            if dx >= 0 and y > capy - 5:
-                g = (math.exp(-((e - 12.0) / 6.5) ** 2)
-                     * max(0.0, 1.0 - abs(y - (capy + 3)) / 12.0))
-                if g > 0.45:                 # capped at 394a50: a full step
-                    lv = min(lv + 1 + (g > 0.80), 4)   # brighter read as a
-                                             # bald patch on the sleeve
-            # CONTACT SHADE under the open ledger. Most of his torso is
-            # hidden behind that page, so the page has to read as being IN
-            # FRONT of him — otherwise the shoulders look like they stop at
-            # it, which is the same complaint by another route. The shade is
-            # painted on HIM, not on the ledger.
-            if 295 <= y <= 297 and 645 <= x <= 719:
-                lv -= y - 294
+            if dx > hr - 12:
+                lv -= 1
+            if dx > hr - 5:
+                lv -= 1
+            if dx < -hl + 4:
+                lv -= 1
             lv += int(0.6 * math.sin(x / 19.0 + y / 47.0))
             c.set(x, y, cold(max(1, lv)))
     # folds — rolled positions, never evenly spaced
@@ -2080,61 +1990,23 @@ def _warden_figure(c: Canvas, rng: random.Random) -> None:
     c.set(CX - 27, 309, C("884b2b"))
 
     # ---- the arm on the counter (elbow up, forearm coming at you) ----
-    # IT TAKES ITS OUTER EDGE FROM half_r, four pixels in. It used to run to
-    # its own x1 = CX+62, which at y 292 was twenty pixels wider than the
-    # tunic it grew out of: the sleeve appeared as a slab beside the neck
-    # with a horizontal shelf on top of it, and that shelf read as the cut.
-    # Staying inboard of the profile also leaves the deltoid's own contour
-    # shading to define the silhouette instead of a flat 090a14 outline.
-    # The sleeve is no longer a second slab painted over the tunic — the
-    # tunic pass above already carries this whole mass, with the contour
-    # shading that rounds it. All that is left of the arm is the CREASE where
-    # it laps over his chest. The old block ran to its own x1 = CX+62, twenty
-    # pixels wider than the tunic it grew out of at y 292, and that step was
-    # the "cropped" edge as surely as the vertical below it was.
     for y in range(292, 336):
         t = (y - 292) / 44.0
         x0 = CX + 30 + int(t * 12)
+        x1 = CX + 62 + int(t * 8)
+        for x in range(x0, x1):
+            lv = 2 + int(t * 3.2)
+            if x > x1 - 6:
+                lv -= 1
+            c.set(x, y, cold(max(1, lv)))
         c.set(x0 - 1, y, C("090a14"))
-        c.set(x0, y, cold(2))
+        c.set(x1, y, C("090a14"))
     for k in range(36):                                    # frayed cuff — six
         x = CX + 36 + k                                    # years of it
         h = 320 + rng.randint(0, 3)
-        if x > CX + half_r(316) - 3:                       # it stops ON the
-            continue                                       # sleeve profile
-        # and it BOWS. The sleeve is a cylinder pointed at you, so its cuff
-        # is an ellipse, not a ruled line; drawn flat it put a hard straight
-        # edge across the one place the shoulder has to look round.
-        b = int(2.6 * math.sin(math.pi * k / 27.0))
-        c.vline(x, 312 - b, h + b // 2, C("394a50"))
-        c.set(x, 311 - b, C("577277"))
-        c.set(x, h + b // 2 + 1, C("202e37"))
-
-    # THE SHOULDER SEAM — a uniform's sleeve is SET IN, and that one curved
-    # line is what tells the eye the dark mass beside his neck is a shoulder
-    # and not a panel. It rides 9px inboard of the contour so it traces the
-    # same trapezius -> cap run, and it is under-lit like everything else on
-    # him: black on its upper side, one lit step on its lower side. An
-    # earlier cut ran it all the way down past the cuff at a fixed angle and
-    # it read as a scratch across the sleeve, so it stops at the cap.
-    # It is NOT an offset of the contour: over the cap the contour is
-    # vertical, so an offset copy of it is a vertical bar sitting beside the
-    # edge, which is what a first cut drew and it read as a slot. This is its
-    # own arc, well inboard, out to the point of the shoulder and back in
-    # under the arm.
-    for y in range(288, 315):                    # it dies at the armpit,
-        u = (y - 288) / 32.0                     # which the ledger hides
-        x = CX + 26 + int(20 * math.sin(u * 2.2))
-        c.set(x, y, cold(2))
-        # the lit lip is SHORT — over the point of the shoulder only. Run
-        # down the whole seam it stopped being a seam and read as a cable
-        # strung across him, which on this project is a thing that means
-        # something (every powered fixture shows its wire).
-        c.set(x + 1, y, cold(4 if 298 < y < 310 else 3))
-    for y in range(289, 302):                    # and the same seam on the
-        x = CX - half_l(y) + 6                   # low shoulder, in the four
-        c.set(x, y, cold(2))                     # rows of it the lamp leaves
-        c.set(x - 1, y, cold(4 if y > 294 else 3))
+        c.vline(x, 312, h, C("394a50"))
+        c.set(x, 311, C("577277"))
+        c.set(x, h + 1, C("202e37"))
 
     # ---- the head ----
     # THE UNDER-LIGHT, in five skin tones. Read it bottom-up: chin hottest,
