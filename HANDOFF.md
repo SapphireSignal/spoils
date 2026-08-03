@@ -115,16 +115,41 @@ restore and confirmed by grep.
   worthless when a breathing light is in frame, because everything lit differs
   between them. Compare a shot against the BAKE.
 
-**Picked up at:** **the living layers for backdrops 4 and 5** — underpass then
-counter, one version each. Both have their room already documented in their
-own `make_scene_*` docstring: the underpass's sodium tube is baked at ~60% so a
-runtime dropout takes the top end off without changing its shape, with three
-ceiling leaks at x = 300, 596 and 736 and the walkway pool and wall halo baked
-for a glow to sit on; the counter's taped splice at (838, 246) has a permanent
-baked scorch ring under it, waiting for the ember that drips there, and its
-light box is baked steady so the COLD light is the one that breathes (the den
-and the warden both breathe the warm one — the inversion is the pitch).
-Nothing is blocked. All gates green.
+**Then v0.6.34 — THE UNDERPASS.** The sodium tube is failing: a steady burn
+with a short **stammer** punched through it every 7.4 s, and the bar, the wall
+halo behind it and the pool on the walkway all take **one value**, because a
+lamp whose reflection keeps burning while the lamp is out is two lamps. Three
+ceiling leaks drip from the portal beam (y 108) into the flood (y 406) and push
+a broken 3-frame ring out of the water.
+
+**Two things worth carrying forward:**
+- **THE PITCH NOTE'S THIRD DRIP COLUMN WAS WRONG and the code said so.** It
+  proposed x = 300, 596 and **736** — but the walkway starts at x 604, so a
+  drip at 736 lands on the kerb and the sandbags and would push a ripple ring
+  out of concrete. Moved to 262 / 372 / 592, all over open water (the sunken
+  car owns x < 230), all outside the button box. **A docstring's suggestion is
+  a suggestion; check it against the geometry the same file computes.**
+- **I HIT THE MODULATE-MULTIPLIES TRAP AGAIN, two versions after writing it
+  down.** The drip was tinted 577277 over `rain_streak`'s own 3c5e8b, giving
+  (20,42,65) — darker than the 202e37 wall it falls down, so it rendered as
+  nothing. Knowing a rule is not the same as applying it.
+- **And most of an hour went on a verification that was wrong, not a bug.**
+  The overlays looked absent because the shot happened to land inside the
+  tube's 0.44 s stammer, so every light in the scene was at 16%. The fix was a
+  `print` in the tick — three lights, alpha 0.90, ring age 0.11 — followed by
+  a FULL-FRAME diff that found them all exactly where they belonged. **When a
+  point-sample says an overlay is missing, diff the whole frame before
+  believing it**, and remember anything on a stutter has phases where it is
+  legitimately invisible.
+
+**Picked up at:** **the living layer for backdrop 5, the counter** — the last
+one. Its room is already documented in `make_scene_counter`'s docstring: the
+taped splice at (838, 246) has a permanent baked scorch ring under it, waiting
+for the ember that drips there; the light box glass is baked in its steady
+state so the **COLD** light is the one that breathes (the den, the warden and
+the underpass all breathe the warm one — the inversion IS the pitch); and the
+work lamp's bulb is baked lit but shielded, so a warm glow can go on top
+without the bake fighting it. Nothing is blocked. All gates green.
 
 ---
 

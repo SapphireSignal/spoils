@@ -13136,7 +13136,8 @@ def make_scene_warden() -> tuple[Canvas, Image.Image, Image.Image, Canvas, Canva
     return c, lamp, spill, blink, moth
 
 
-def make_scene_underpass() -> Canvas:
+def make_scene_underpass() -> tuple[Canvas, Image.Image, Image.Image,
+                                    Image.Image, Canvas]:
     """Menu 5 — THE UNDERPASS: transit's road ducking under the rail line,
     flooded and never drained. Promoted 2026-08-02 from the backdrop pitch the
     user chose to keep ("let's add all 4 of those menu backdrops to the game,
@@ -13145,13 +13146,20 @@ def make_scene_underpass() -> Canvas:
     half sunk in the near flood at the bottom left, and the whole picture
     repeated, broken, in the water.
 
-    STATIC BASE ONLY — no living layer is wired for it yet. Room was left for
-    one and the notes are in the pitch: the sodium tube is baked at roughly
-    60% of its contribution (solid banded light only, so a runtime dropout
-    takes the top end off and never changes the shape), three ceiling leaks at
-    x = 300, 596 and 736 drip clear of the button box, and the walkway pool and
-    wall halo are baked so a breathing glow can sit on top of them rather than
-    replace them.
+    THE LIVING LAYER IS BUILT (v0.6.34). The sodium tube is still baked at
+    roughly 60% of its contribution — solid banded light only — so the runtime
+    dropout takes the top end off and never changes its shape, and the walkway
+    pool and the wall halo are still baked so the breathing glows sit ON them
+    rather than replace them. All three ride ONE stutter value, because they
+    are one lamp.
+
+    THE DRIP COLUMNS MOVED, and the reason is worth keeping. The pitch note
+    here said x = 300, 596 and 736; 736 is past the walkway's start at 604, so
+    a drip there lands on the KERB and the sandbags, not in water, and it
+    would have pushed a ring out of concrete. The drips run at x = 262, 372
+    and 592 instead — all over open water (the sunken car owns x < 230), all
+    outside the button box at 395-565 — and they fall from the portal beam's
+    underside at y 108 to the waterline at y 406.
 
     THE QUIET ZONE behind the menu buttons (the real rect is x 395-565 /
     y 237-307) is held by a wobbled TROUGH centred on (480, 300) with half
@@ -14664,7 +14672,51 @@ def make_scene_underpass() -> Canvas:
                 c.set(xx, yy + 1, C("202e37"))
         x += run + rng.randint(1, 6)
 
-    return c
+    # ---------------------------------------------------- runtime overlays --
+    # Built after every base draw, taking NO rng draw. Three warm lobes that
+    # all ride ONE stutter value — tube, wall halo and walkway pool are the
+    # same lamp, so they must fail together or the picture comes apart — plus
+    # the ring the drips push out of the water.
+
+    def _lobe(w: int, h: int, name: str, peak: int, power: float) -> Image.Image:
+        img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        px = img.load()
+        r, g, b, _ = C(name)
+        for y in range(h):
+            for x in range(w):
+                u = (x - w / 2 + 0.5) / (w / 2)
+                v = (y - h / 2 + 0.5) / (h / 2)
+                d = u * u + v * v
+                if d < 1.0:
+                    px[x, y] = (r, g, b, int(peak * (1.0 - d) ** power))
+        return img
+
+    # the tube itself (hot and tight), the wall behind it (broad and weak,
+    # deliberately centred at x 720 so its left edge dies at 580 and cannot
+    # reach the button box at 395-565), and its pool on the walkway.
+    tube = _lobe(180, 44, "e8c170", 96, 1.5)
+    halo = _lobe(280, 230, "be772b", 30, 1.9)
+    pool = _lobe(280, 58, "be772b", 46, 1.6)
+
+    # the ring a drip pushes up. BROKEN, not a clean ellipse: this water is
+    # drawn in runs everywhere else in the picture, and a perfect ring on top
+    # of it reads as a decal. 3 frames of 18x8, opening and thinning.
+    ring = Canvas(54, 8)
+    for f, (rx, ry, keep, col) in enumerate(
+            ((3.0, 1.4, 1.00, "a8b5b2"), (6.4, 2.6, 0.72, "577277"),
+             (8.4, 3.4, 0.44, "394a50"))):
+        ox = f * 18
+        for a in range(0, 360, 7):
+            if math.sin(a * 1.7) * 0.5 + math.sin(a * 0.6) * 0.5 > keep * 2 - 1:
+                continue                       # the gaps, unevenly spaced
+            ring.set(ox + 9 + int(math.cos(math.radians(a)) * rx),
+                     4 + int(math.sin(math.radians(a)) * ry), C(col))
+    for f in range(3):                         # the dark under-edge, always
+        ox = f * 18
+        for k in range(-int(2 + f * 3), int(3 + f * 3)):
+            ring.set(ox + 9 + k, 5 + f, C("10141f"))
+
+    return c, tube, halo, pool, ring
 
 
 def make_scene_counter() -> Canvas:
@@ -17486,9 +17538,15 @@ def main() -> None:
     warden_spill.save(OUT / "menu_warden_spill.png")    # light: soft alpha
     warden_blink.img.save(OUT / "menu_warden_blink.png")
     warden_moth.img.save(OUT / "menu_warden_moth.png")
-    underpass_base = make_scene_underpass()
+    (underpass_base, up_tube, up_halo,
+     up_pool, up_ring) = make_scene_underpass()
     assert_palette(underpass_base.img, "menu_underpass")
+    assert_palette(up_ring.img, "menu_underpass_ring")
     underpass_base.img.save(OUT / "menu_underpass.png")
+    up_tube.save(OUT / "menu_underpass_tube.png")       # light: soft alpha
+    up_halo.save(OUT / "menu_underpass_halo.png")       # light: soft alpha
+    up_pool.save(OUT / "menu_underpass_pool.png")       # light: soft alpha
+    up_ring.img.save(OUT / "menu_underpass_ring.png")
     counter_base = make_scene_counter()
     assert_palette(counter_base.img, "menu_counter")
     counter_base.img.save(OUT / "menu_counter.png")

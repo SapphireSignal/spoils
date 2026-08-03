@@ -1,14 +1,14 @@
 ﻿extends Node2D
 ## Main menu. SIX generated backdrop scenes rotate with a slow crossfade, in a
 ## shuffle-bag order (see _bag_next) so no backdrop repeats until every one of
-## them has been shown. Four of them are ALIVE and tick every frame:
-##   0 den    - the traders at home: candle vs radio glow, smoke, rig LEDs
-##   1 drain  - the tunnel under the district: god-ray, motes, ringing drips
-##   2 yard   - the trainyard: the signal ticks red, drizzle, eave runoff
-##   3 warden - the toll gate: lamp and road spill on one clock, a moth, he blinks
-## The other two are STATIC paintings for now — a living layer for them is
-## the next version's job, so do not assume one exists:
-##   4 underpass - the road underpass
+## them has been shown. Five of them are ALIVE and tick every frame:
+##   0 den       - the traders at home: candle vs radio glow, smoke, rig LEDs
+##   1 drain     - the tunnel under the district: god-ray, motes, ringing drips
+##   2 yard      - the trainyard: the signal ticks red, drizzle, eave runoff
+##   3 warden    - the toll gate: lamp and road spill on one clock, a moth, a blink
+##   4 underpass - the flood: a failing sodium tube, three leaks ringing the water
+## The last one is a STATIC painting for now — a living layer for it is the
+## next version's job, so do not assume one exists:
 ##   5 counter   - the counter
 ## (the storm scene retired 2026-08-01 — user call). DEPLOY starts the raid.
 
@@ -33,6 +33,10 @@ const TEX_WARDEN_SPILL := preload("res://art/gen/menu_warden_spill.png")
 const TEX_WARDEN_BLINK := preload("res://art/gen/menu_warden_blink.png")
 const TEX_WARDEN_MOTH := preload("res://art/gen/menu_warden_moth.png")
 const TEX_UNDERPASS := preload("res://art/gen/menu_underpass.png")
+const TEX_UP_TUBE := preload("res://art/gen/menu_underpass_tube.png")
+const TEX_UP_HALO := preload("res://art/gen/menu_underpass_halo.png")
+const TEX_UP_POOL := preload("res://art/gen/menu_underpass_pool.png")
+const TEX_UP_RING := preload("res://art/gen/menu_underpass_ring.png")
 const TEX_COUNTER := preload("res://art/gen/menu_counter.png")
 const TEX_RAIN := preload("res://art/gen/rain_streak.png")
 const TEX_DUST := preload("res://art/gen/dust.png")
@@ -85,6 +89,15 @@ var _w_moth_a := 0.0
 var _w_flap := 0.0
 var _w_gutter := 0.0      # seconds of gutter left, set when the moth touches
 var _w_gutter_t := 4.0    # seconds until the moth is allowed to touch again
+# underpass life
+var _up_lights: Array[Sprite2D] = []   # tube, wall halo, walkway pool: ONE lamp
+var _up_drips: Array[Sprite2D] = []
+var _up_drip_t: Array[float] = []
+var _up_rings: Array[Sprite2D] = []
+var _up_ring_age: Array[float] = []
+const UP_DRIP_X := [262.0, 372.0, 592.0]   # over open water, clear of the box
+const UP_DRIP_TOP := 108.0                 # the portal beam's underside
+const UP_WATER := 406.0
 
 var _title: TextureRect
 var _title_base_y := 0.0
@@ -110,6 +123,10 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.34", [
+		"the flooded underpass is alive now. the sodium tube is failing - it stammers out and strikes again every few seconds, and the glow on the wall behind it and the pool of light on the walkway go out with it, because theyre the same lamp. three leaks in the deck overhead drip into the flood and push a broken ring out of the water where they land",
+		"the painting is untouched again, checked byte for byte",
+	]],
 	["v0.6.33", [
 		"the warden's gate is alive now. his desk lamp breathes and the pool of light out on the wet road breathes with it, which is what finally makes that pool read as light coming out of his window. a moth works the lampshade and the lamp guts when it touches. the fuse box behind the glass has a pilot light again. and he blinks",
 		"the painting is untouched again - the blink is a twenty-eight pixel overlay laid exactly over his eyes, with the bridge of his nose left alone",
@@ -803,7 +820,7 @@ func _process(delta: float) -> void:
 		_shine_clip.visible = false
 
 	# per-scene life (also during crossfades — anything visible stays alive).
-	# 0-3 are alive; 4-5 are still paintings and tick nothing, so they are
+	# 0-4 are alive; 5 is still a painting and ticks nothing, so it is
 	# deliberately absent here rather than missing by accident.
 	if _scenes[0].visible:
 		_tick_den()
@@ -813,6 +830,8 @@ func _process(delta: float) -> void:
 		_tick_yard(delta)
 	if _scenes[3].visible:
 		_tick_warden(delta)
+	if _scenes[4].visible:
+		_tick_underpass(delta)
 
 
 func _menu_reset_windows() -> void:
@@ -1064,10 +1083,53 @@ func _build_scenes() -> void:
 	add_child(warden)
 	_scenes.append(warden)
 
-	# 5-6: STILL PAINTINGS — living layers for these are the next version.
-	# They rotate on exactly the same footing as the ones above; the only
-	# difference is that nothing in _process ticks them.
-	for texture in [TEX_UNDERPASS, TEX_COUNTER]:
+	# 5: THE UNDERPASS — one failing sodium tube. Its own bar, the halo it
+	# throws on the wall and its pool on the walkway are ONE LAMP and share
+	# one stutter value; three ceiling leaks drip into the flood and break
+	# the reflections. Anchors: make_scene_underpass's docstring.
+	var underpass := Node2D.new()
+	_backdrop(underpass, TEX_UNDERPASS)
+	for spec in [[TEX_UP_HALO, Vector2(720, 215)],      # wall behind the tube
+				 [TEX_UP_POOL, Vector2(748, 382)],      # its pool on the walkway
+				 [TEX_UP_TUBE, Vector2(702, 152)]]:     # the tube itself
+		var light := Sprite2D.new()
+		light.texture = spec[0]
+		light.position = PC + (spec[1] as Vector2)
+		light.material = add_mat
+		underpass.add_child(light)
+		_up_lights.append(light)
+	for i in UP_DRIP_X.size():
+		var ring := Sprite2D.new()
+		ring.texture = TEX_UP_RING
+		ring.hframes = 3
+		ring.position = PC + Vector2(UP_DRIP_X[i], UP_WATER)
+		ring.visible = false
+		underpass.add_child(ring)
+		_up_rings.append(ring)
+		_up_ring_age.append(-1.0)
+		var drip := Sprite2D.new()
+		drip.texture = TEX_RAIN
+		# PALE, not a tint. `rain_streak` is already a 3c5e8b at 20-76% alpha
+		# and modulate MULTIPLIES it — a 577277 here took the drip to (20,42,65),
+		# which is DARKER than the 202e37 wall it falls down, so it rendered as
+		# nothing. Same trap the yard's drizzle fell into; check a moving light
+		# against what is BEHIND it, every time.
+		drip.modulate = Color("c7cfcc", 0.9)
+		drip.visible = false
+		underpass.add_child(drip)
+		_up_drips.append(drip)
+		# staggered so the three never fall together — a leaking roof is not
+		# a metronome, and three drips in step read as one mechanism. The
+		# first is almost immediate so the scene is already dripping when it
+		# fades in, rather than standing still for most of a second.
+		_up_drip_t.append(0.08 + i * 1.4)
+	add_child(underpass)
+	_scenes.append(underpass)
+
+	# 6: STILL PAINTING — the counter's living layer is the next version.
+	# It rotates on exactly the same footing as the ones above; the only
+	# difference is that nothing in _process ticks it.
+	for texture in [TEX_COUNTER]:
 		var still := Node2D.new()
 		_backdrop(still, texture)
 		add_child(still)
@@ -1200,6 +1262,43 @@ func _tick_warden(delta: float) -> void:
 	# on the scene mid-blink reads as a man with his eyes shut, not a blink.
 	var b := fmod(_time + 2.0, 6.3)
 	_w_blink.visible = b < 0.11 or (b > 0.27 and b < 0.36)
+
+
+func _tick_underpass(delta: float) -> void:
+	# THE TUBE IS FAILING. A sodium tube does not fade — it drops out and
+	# strikes again, so this is a steady burn with a short stammer punched
+	# through it every 7.4 s, not a sine. The bar, the wall halo and the pool
+	# all take the SAME value: they are one lamp, and a lamp whose reflection
+	# keeps burning while the lamp itself is out is two lamps.
+	var lit := 0.88 + 0.05 * sin(_time * 2.1) + 0.03 * sin(_time * 5.3)
+	var cyc := fmod(_time, 7.4)
+	if cyc < 0.44 and fmod(cyc, 0.13) < 0.075:
+		lit *= 0.16                            # the stammer
+	for light in _up_lights:
+		light.modulate.a = clampf(lit, 0.0, 1.0)
+	# three leaks in the deck, each on its own clock
+	for i in _up_drips.size():
+		var drip := _up_drips[i]
+		if _up_ring_age[i] >= 0.0:
+			_up_ring_age[i] += delta
+			var f := int(_up_ring_age[i] / 0.15)
+			if f > 2:
+				_up_rings[i].visible = false
+				_up_ring_age[i] = -1.0
+			else:
+				_up_rings[i].frame = f
+		_up_drip_t[i] -= delta
+		if _up_drip_t[i] <= 0.0 and not drip.visible:
+			_up_drip_t[i] = randf_range(3.4, 8.0)
+			drip.visible = true
+			drip.position = PC + Vector2(UP_DRIP_X[i], UP_DRIP_TOP)
+		if drip.visible:
+			drip.position.y += 780.0 * delta
+			if drip.position.y >= PC.y + UP_WATER - 2.0:
+				drip.visible = false
+				_up_rings[i].visible = true
+				_up_rings[i].frame = 0
+				_up_ring_age[i] = 0.0
 
 
 func _fade_ramp() -> Gradient:

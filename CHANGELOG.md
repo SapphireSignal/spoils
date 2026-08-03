@@ -3,6 +3,38 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.34] — 2026-08-03 — the flood, and a tube that is giving up
+
+Third of the four. Same contract: base painting bit-identical (hashed either
+side of the regen), overlays built after every base draw, no rng draw taken.
+
+### Added
+- **`menu_underpass_tube`, `_halo`, `_pool`, `_ring`** and
+  `_tick_underpass()`.
+- **THE TUBE, ITS WALL HALO AND ITS WALKWAY POOL ARE ONE VALUE.** A sodium
+  tube does not fade, it drops out and strikes again — so this is a steady
+  burn with a short stammer punched through it every 7.4 s, not a sine. All
+  three lobes take the same number, because a lamp whose reflection keeps
+  burning while the lamp is out is two lamps.
+- **Three ceiling leaks** drip from the portal beam's underside (y 108) to
+  the waterline (y 406) and push a **broken** 3-frame ring out of the flood.
+  Broken on purpose: this water is drawn in runs everywhere else in the
+  painting, and a clean ellipse on top of it reads as a decal.
+
+### Changed from the pitch note, with reason
+- **The drip columns moved to x 262, 372 and 592.** The docstring proposed
+  300, 596 and **736** — but 736 is past the walkway's start at 604, so a
+  drip there lands on the kerb and the sandbags and would have pushed a ring
+  out of concrete. The three now used are all over open water (the sunken car
+  owns x < 230) and all outside the button box at 395-565.
+
+### Fixed during the pass
+- **The drip rendered as nothing.** Tinting `rain_streak` (already a 3c5e8b
+  at 20-76% alpha) with 577277 took it to (20,42,65) — *darker* than the
+  202e37 wall it falls down. The yard's drizzle hit the identical trap two
+  versions ago; `modulate` MULTIPLIES, so a moving light has to be checked
+  against what is behind it, every time.
+
 ## [0.6.33] — 2026-08-02 — the warden's gate wakes up
 
 Second of the four. Same contract as the yard: the base painting comes out
