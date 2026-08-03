@@ -212,6 +212,9 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.44", [
+		"a safety fix in the art generator. it used to delete all the games art first and then redraw it, so any small mistake in one drawing left the art folder empty until it was run again - that happened twice yesterday. it now writes everything first and only clears out leftovers at the very end, so a mistake leaves your art exactly where it was",
+	]],
 	["v0.6.43", [
 		"the underpass door has a wired glass panel now, and theres blood spattered on the far side of it",
 		"kettle has a proper beard in the den. he was always meant to have one but it rendered as a bare chin - it has an edge against his cheek, strands through it and a ragged bottom now",

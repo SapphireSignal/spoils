@@ -3,6 +3,33 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.44] — 2026-08-03 — a bad drawing can no longer empty `art/gen`
+
+**No game change.** `tools/gen_art.py` only.
+
+### Fixed — the blast radius, not the bug
+`main()` opened by deleting **every PNG in `art/gen`** and then regenerated
+them, so any exception part way through left the folder empty and the project
+unloadable until someone re-ran the generator. That happened **twice on
+2026-08-03** — once from a duplicate `make_rain_splash()` (Python keeps the
+later definition, so `assert_palette` got an `Image`), once from `x ** 0.5` on
+a negative `x` returning a **complex number** while shaping kettle's beard.
+Both times the actual defect was a two-line art bug whose blast radius was the
+entire art folder.
+
+Now the run notes its start time, writes everything, and **only then** deletes
+the PNGs it did not touch. Same end state, no orphans left behind, but a crash
+leaves the previous art exactly where it was.
+
+**Proven, not asserted:** a `RuntimeError` was planted halfway through the run
+and the generator executed. `art/gen` held **528 PNGs before and 528 after**.
+Under the old order it would have held zero.
+
+### Worth being clear about the scope
+This never could have reached a player. `art/gen` is committed, players never
+run the generator, and a build with missing art does not load — so `--smoke`
+fails and it cannot be pushed. The cost was a dev loop stopping dead.
+
 ## [0.6.43] — 2026-08-03 — glass in the door, and kettle finally has a beard
 
 ### Added — the door's vision panel

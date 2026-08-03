@@ -33,6 +33,7 @@ it breaks the pixel grid; variation is baked at generation time instead.
 import json
 import math
 import random
+import time
 from pathlib import Path
 
 from PIL import Image
@@ -18056,8 +18057,18 @@ def assert_palette(img: Image.Image, name: str) -> None:
 def main() -> None:
     check_tessellation()
     OUT.mkdir(parents=True, exist_ok=True)
-    for stale in OUT.glob("*.png"):
-        stale.unlink()
+    # THE PURGE HAPPENS AT THE END NOW, NOT HERE. This used to delete every
+    # PNG in art/gen before generating anything, which meant ANY exception
+    # part way through left the folder empty and the project unloadable until
+    # someone re-ran it. That happened TWICE on 2026-08-03 — once from a
+    # duplicate function name, once from `x ** 0.5` on a negative x returning
+    # a complex number — and both times the actual defect was a two-line art
+    # bug whose blast radius was the entire art folder.
+    #
+    # Now: note the time, write everything, and only then delete the PNGs
+    # that were not (re)written this run. Same end state, no orphans, but a
+    # crash leaves the previous art exactly where it was.
+    run_start = time.time() - 1.0        # 1s slack for coarse mtime clocks
 
     manifest: dict = {"tile": [64, 32], "wall_h": WALL_H, "story_h": STORY_H,
                       "floors": {}, "props": {}, "families": {}, "char": {}}
@@ -18263,7 +18274,7 @@ def main() -> None:
 
     (OUT / "manifest.json").write_text(json.dumps(manifest, indent=2))
 
-    import gen_font  # regenerate the UI font too (the purge above removed it)
+    import gen_font  # regenerate the UI font too
     gen_font.main()
 
     # ---- contact sheet ----
@@ -18305,7 +18316,20 @@ def main() -> None:
     dev_out.mkdir(exist_ok=True)
     prev.save(dev_out / "preview.png")
 
-    print(f"OK: wrote {len(entries) + 6} files to {OUT}")
+    # ---- the purge, LAST: anything in art/gen this run did not touch is a
+    # leftover from an older build and goes now. If we never get here because
+    # something raised, the old art is still on disk and the game still runs.
+    dropped = 0
+    for stale in OUT.glob("*.png"):
+        if stale.stat().st_mtime < run_start:
+            stale.unlink()
+            dropped += 1
+    for stale in OUT.glob("*.png.import"):
+        if not stale.with_suffix("").exists():
+            stale.unlink()
+
+    print(f"OK: wrote {len(entries) + 6} files to {OUT}"
+          + (f" ({dropped} stale removed)" if dropped else ""))
 
 if __name__ == "__main__":
     main()

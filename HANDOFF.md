@@ -378,6 +378,18 @@ crash of the session, both from a generator raising mid-run. **gen_art deletes
 before it writes**, so any exception in it leaves nothing on disk. Clamp the
 bracket.
 
+**Then v0.6.44 — A BAD DRAWING CAN NO LONGER EMPTY `art/gen`.** `main()` used
+to delete every PNG up front and then regenerate, so any exception part way
+through left the folder empty and the project unloadable. It happened TWICE in
+one day, both times from a two-line art bug (a duplicate function name; then
+`x ** 0.5` on a negative x returning a complex number). The run now writes
+everything and purges untouched files at the END. **Proven by planting a
+RuntimeError mid-run and counting: 528 PNGs before, 528 after.** The user's
+question — "it would just break the game for the user?" — has a clear answer
+and it is worth repeating to them: no. `art/gen` is committed, players never
+run the generator, and a build with missing art does not load, so `--smoke`
+fails and it cannot be pushed. The cost was a dev loop stopping dead.
+
 **Picked up at:** **nothing is in progress.** A1 in TASKS.md is now DONE — all
 six backdrops exist and all six live. The next items in that list are the
 in-game map screen and the map-select tile; **M2 (guns) still waits on the

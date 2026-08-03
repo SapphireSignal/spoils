@@ -35,7 +35,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
 	 form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.43 shipped, 2026-08-03.** Milestone 1 (a walkable world) is DONE.
+**v0.6.44 shipped, 2026-08-03.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 
@@ -688,6 +688,12 @@ before the world builds, so a stale handoff is a red build rather than
 something the next session discovers hours in. **If it fails, fix the docs
 before writing code** — that is the whole point of it.
 
+
+**`gen_art.py` NO LONGER WIPES `art/gen` UP FRONT** (v0.6.44). It writes
+everything and purges untouched files at the END, so a crash mid-run leaves
+the old art intact — verified by planting a RuntimeError and counting the
+folder (528 before, 528 after). Before that, any exception in an 18,000-line
+generator left the project unloadable, and it happened twice in one day.
 
 After ANY art change: `python tools\gen_art.py`, then delete orphan imports:
 `python -c "import pathlib; [p.unlink() for p in pathlib.Path('art/gen').glob('*.png.import') if not p.with_suffix('').exists()]"`
