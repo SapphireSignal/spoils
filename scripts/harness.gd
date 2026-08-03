@@ -110,6 +110,8 @@ func _ready() -> void:
 			_smoke.call_deferred()
 		elif arg.begins_with("--shot="):
 			_shot.call_deferred(arg.trim_prefix("--shot="))
+		elif arg.begins_with("--film="):
+			_film.call_deferred(arg.trim_prefix("--film="))
 		elif arg == "--perf":
 			_perf.call_deferred()
 		elif arg == "--probe-world":
@@ -1507,6 +1509,56 @@ func _perf_deploy() -> void:
 	print("PERF-DEPLOY frames=%d build_s=%.2f worst:%s" % [
 		frames, float(built_us - t0) / 1_000_000.0, top])
 	get_tree().quit(0)
+
+
+func _film(film_name: String) -> void:
+	## Capture a SEQUENCE, not a frame — `--film=<name> [--scene=menu]
+	## [--backdrop=N] [--film-seconds=N] [--film-fps=N]`. Frames land in
+	## `shots/film_<name>/f000.png` and up; turn them into something watchable
+	## with ffmpeg.
+	##
+	## WHY THIS EXISTS: the menu backdrops' living layers are MOTION, and a
+	## still cannot show motion — not to the user and not to whoever is
+	## building them. Every judgement about whether a scene "reads as alive"
+	## made off a single frame is a guess. (It is also the frame-capture half
+	## of the parked trailer work, which needs exactly this.)
+	##
+	## Deliberately simple: it does the menu/backdrop setup only. A raid film
+	## would need the whole --shot flag surface and nothing needs it yet.
+	var seconds := 4.0
+	var fps := 12.0
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--film-seconds="):
+			seconds = maxf(0.5, float(arg.trim_prefix("--film-seconds=")))
+		elif arg.begins_with("--film-fps="):
+			fps = clampf(float(arg.trim_prefix("--film-fps=")), 2.0, 60.0)
+	if _shot_scene != "menu":
+		await _ensure_game_scene()
+	for i in 8:
+		await get_tree().process_frame
+	if _shot_backdrop >= 0:
+		var main_menu := get_tree().get_first_node_in_group("main_menu")
+		if main_menu != null:
+			main_menu.call("show_backdrop", _shot_backdrop)
+	_apply_env_flags()
+	for i in 6:
+		await get_tree().process_frame
+	var dir := ProjectSettings.globalize_path("res://shots").path_join(
+		"film_" + film_name)
+	DirAccess.make_dir_recursive_absolute(dir)
+	# clear any earlier take, or ffmpeg silently splices two runs together
+	var old := DirAccess.open(dir)
+	if old != null:
+		for stale in old.get_files():
+			if stale.ends_with(".png"):
+				DirAccess.remove_absolute(dir.path_join(stale))
+	var total := int(seconds * fps)
+	for i in total:
+		await get_tree().create_timer(1.0 / fps).timeout
+		var frame := get_viewport().get_texture().get_image()
+		frame.save_png(dir.path_join("f%03d.png" % i))
+	print("FILM SAVED: %d frames at %.0f fps -> %s" % [total, fps, dir])
+	get_tree().quit()
 
 
 func _shot_splash(shot_name: String) -> void:

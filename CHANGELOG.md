@@ -3,6 +3,80 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.37] — 2026-08-03 — the living layers, made noticeable
+
+User: *"these living layers are very minimal, can we add some more to it, to
+every backdrop, i want it to be noticable"*, then — and this is the sharper
+half of the brief — *"dont just amp up the current ones, find new ones on the
+screen and create some, like some flcikering lights, or some pole lines sparks
+coming off them"*.
+
+### The tool that made this possible: `--film`
+`--film=<name> [--scene=menu] [--backdrop=N] [--film-seconds=N]
+[--film-fps=N]` captures a SEQUENCE into `shots/film_<name>/`. **A living
+layer is motion and a still cannot show motion** — every judgement about
+whether a scene "reads as alive" made off one frame is a guess, and all six of
+these were built off guesses. Measuring the first film settled the argument
+immediately: the underpass changed **less than 0.5% of the screen in 38 of 47
+frames**. It was a still image with a lamp in it. (This is also the frame
+capture half of the parked trailer work, which needs exactly this.)
+
+The frame folders are **gitignored** — hundreds of full-res PNGs per run, and
+they are a means to a GIF, not a result.
+
+### Fixed — a real bug the user found
+- **Rings appeared on the drain's water with nothing falling into them.** The
+  two ripples had their OWN random timers and only ripple #0 was ever
+  triggered by the drip. Ripples and drips are now **paired by index, four of
+  each**, so a ring in that scene is only ever something landing. The drip
+  also fell at 900 px/s — across the whole frame in under half a second — so
+  you could watch for a minute and never catch one in the air. Now 470.
+
+### Added — new objects, not louder old ones
+- **Arcing joints**, one shared 5-frame sheet used three times, every one
+  anchored on a real fitting: two on the trainyard's overhead lines (wire
+  pixels read out of the bake at 170,175 and 230,205), one on the isolator
+  feeding the warden's shift lamp, one on the counter's taped splice — whose
+  pilot bead the bake already paints LIVE.
+- **The underpass's dead pendant lamp is switched on and failing**, cold
+  against the sodium and never in step with it, lighting the half of that
+  frame where nothing moved at all.
+- **The drain's sluice gate pours.** It has always been described as "leaking
+  a sheet into the channel" and the bake draws that sheet in 090a14 — i.e.
+  invisible. Six scrolling frames, sheet and foam as ONE object so they can
+  never fall out of step.
+- **Water surfaces move** in the drain and the underpass — six frames of
+  dashes in the water's own drawn language, cycling ~9 a second.
+- **The underpass's reflection is now one of its lights.** It is a quarter of
+  the frame and was entirely baked, so the tube could stammer out while the
+  huge bright patch it throws on the flood sat perfectly still.
+- **Rain across the full frame** in the trainyard and at the toll gate. It
+  crosses the button bands, and that is a deliberate reversal: those bands are
+  kept clear of STRUCTURE, and rain is not structure.
+- **The den's candle behaves like a flame** (it moved 14% and guttered once
+  every nine seconds — that is a lamp with a loose wire), and its glow's peak
+  alpha went 64 → 120, because swinging 40% of almost nothing is nothing.
+- **The counter's light box flutters like the fluorescent it is.**
+
+### Measured, before → after (mean % of screen changing per frame, and how
+### many frames out of a 4-5 s film are visually still)
+| scene | before | after |
+|---|---|---|
+| drain | 0.56%, 39 still | 1.76%, 5 still |
+| underpass | 0.50%, 38 still | 2.01%, 3 still |
+| den / yard / warden / counter | ~0.2-0.4%, ~50 still | see the note below |
+
+**HONEST LIMIT OF THAT TABLE:** the metric downsamples bilinearly, which
+averages 2 px rain streaks away — so it under-reports the four scenes whose
+main addition is rain or sparks, and their numbers barely moved even though
+the rain is plainly visible in the frames. It is a good detector of *gross*
+stillness and a bad judge of thin fast things. Use it to catch a dead scene,
+not to grade a live one.
+
+### Performance
+**245 fps on every backdrop**, unchanged. The 172 fps seen during a film is
+the capture writing PNGs, not the scene.
+
 ## [0.6.36] — 2026-08-03 — the door check was flaky, and that is worse than broken
 
 **No game change.** `harness.gd` only. Found because v0.6.35's smoke printed

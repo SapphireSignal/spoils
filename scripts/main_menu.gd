@@ -21,6 +21,10 @@ const TEX_DEN_NEEDLES := preload("res://art/gen/menu_den_needles.png")
 const TEX_DRAIN := preload("res://art/gen/menu_drain.png")
 const TEX_DRAIN_RAY := preload("res://art/gen/menu_drain_ray.png")
 const TEX_DRAIN_RIPPLE := preload("res://art/gen/menu_drain_ripple.png")
+const TEX_DRAIN_SLUICE := preload("res://art/gen/menu_drain_sluice.png")
+const TEX_DRAIN_LANT := preload("res://art/gen/menu_drain_lant.png")
+const TEX_DRAIN_CHOP := preload("res://art/gen/menu_drain_chop.png")
+const TEX_DRAIN_MIST := preload("res://art/gen/menu_drain_mist.png")
 const TEX_YARD := preload("res://art/gen/menu_yard.png")
 const TEX_YARD_HALO := preload("res://art/gen/menu_yard_halo.png")
 const TEX_YARD_SPLASH := preload("res://art/gen/menu_yard_splash.png")
@@ -35,6 +39,11 @@ const TEX_UP_TUBE := preload("res://art/gen/menu_underpass_tube.png")
 const TEX_UP_HALO := preload("res://art/gen/menu_underpass_halo.png")
 const TEX_UP_POOL := preload("res://art/gen/menu_underpass_pool.png")
 const TEX_UP_RING := preload("res://art/gen/menu_underpass_ring.png")
+const TEX_UP_WET := preload("res://art/gen/menu_underpass_wet.png")
+const TEX_UP_CHOP := preload("res://art/gen/menu_underpass_chop.png")
+const TEX_UP_PEND := preload("res://art/gen/menu_underpass_pend.png")
+const TEX_UP_PENDPOOL := preload("res://art/gen/menu_underpass_pendpool.png")
+const TEX_UP_MIST := preload("res://art/gen/menu_underpass_mist.png")
 const TEX_COUNTER := preload("res://art/gen/menu_counter.png")
 const TEX_CTR_BOX := preload("res://art/gen/menu_counter_box.png")
 const TEX_CTR_LAMP := preload("res://art/gen/menu_counter_lamp.png")
@@ -43,6 +52,9 @@ const TEX_CTR_FLARE := preload("res://art/gen/menu_counter_flare.png")
 const TEX_CTR_DUST := preload("res://art/gen/menu_counter_dust.png")
 const TEX_RAIN := preload("res://art/gen/rain_streak.png")
 const TEX_DUST := preload("res://art/gen/dust.png")
+# SHARED. The same event on the yard's lines, the warden's isolator and
+# the counter's taped splice, so it is one asset and one helper.
+const TEX_SPARK := preload("res://art/gen/menu_spark.png")
 const TEX_VIGNETTE := preload("res://art/gen/vignette.png")
 const TEX_MAP_THUMB := preload("res://art/gen/menu_map_transit.png")
 const TEX_TITLE := preload("res://art/gen/title.png")
@@ -70,10 +82,19 @@ var _leds: Array[Sprite2D] = []
 # drain life
 var _ray: Sprite2D
 var _ripples: Array[Sprite2D] = []
-var _ripple_t: Array[float] = []
 var _ripple_age: Array[float] = []
-var _drip: Sprite2D
-var _drip_t := 0.0
+var _drips: Array[Sprite2D] = []
+var _drip_t: Array[float] = []
+var _sluice: Sprite2D
+var _lant: Sprite2D
+var _drain_chop: Sprite2D
+var _drain_mist: Sprite2D
+var _drain_anim := 0.0
+# FOUR leaks, and every one of them owns exactly one ripple at the same index.
+# Sources sit under the soffit; they land on the pool. See _tick_drain.
+const DRAIN_DRIP_X := [498.0, 560.0, 608.0, 672.0]
+const DRAIN_DRIP_TOP := [168.0, 152.0, 110.0, 158.0]
+const DRAIN_DRIP_Y := [512.0, 508.0, 510.0, 516.0]
 # yard life
 var _yard_halo: Sprite2D
 var _yard_glint: Sprite2D
@@ -98,7 +119,14 @@ var _up_drips: Array[Sprite2D] = []
 var _up_drip_t: Array[float] = []
 var _up_rings: Array[Sprite2D] = []
 var _up_ring_age: Array[float] = []
-const UP_DRIP_X := [262.0, 372.0, 592.0]   # over open water, clear of the box
+var _up_chop: Sprite2D
+var _up_chop_t := 0.0
+var _up_pend: Array[Sprite2D] = []   # the dead pendant, switched on and dying
+var _up_mist: Sprite2D
+# SIX leak columns, not three (v0.6.37). Three drips over a 960px frame is
+# one every few seconds somewhere you are probably not looking; six reads
+# as a roof that leaks. All over open water, all outside the button box.
+const UP_DRIP_X := [148.0, 262.0, 330.0, 372.0, 592.0, 268.0]
 const UP_DRIP_TOP := 108.0                 # the portal beam's underside
 const UP_WATER := 406.0
 # counter life
@@ -111,6 +139,13 @@ var _ctr_ember: Sprite2D
 var _ctr_ember_t := 1.4    # long enough for the arc's swell to read first
 const CTR_SPLICE := Vector2(837, 254)      # the live pilot bead in _cables
 const CTR_TIN_Y := 399.0                   # the parts tin's baked scorch ring
+
+# arcing joints. Each entry: [sprite, seconds until the next strike].
+# ANCHORED ON REAL FITTINGS, never in open air — the yard's two are on wire
+# pixels sampled out of the bake (x 170 y 175 and x 230 y 205), the warden's
+# is the isolator on the shift lamp's conduit, the counter's is the taped
+# splice whose pilot bead is already painted live.
+var _arcs: Array[Array] = []
 
 var _title: TextureRect
 var _title_base_y := 0.0
@@ -136,6 +171,11 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.37", [
+		"the menu backgrounds move a lot more now. you said the living layers were too minimal and you were right - i was being too careful with them",
+		"new things that move, rather than just more of the old ones: sparks arc off the telegraph lines in the trainyard, off the isolator box by the warden's booth and off the taped splice over mara's head. the dead hanging lamp in the underpass is lit now and failing badly, out of step with the sodium tube. its rain across the whole frame in the trainyard and at the toll gate. the candle in the den actually behaves like a flame instead of a lamp with a loose wire",
+		"the drain: the sluice gate is pouring a real sheet of water into the channel now - it was always described that way but painted almost black so you never saw it. and a bug you spotted, rings appearing on the water with nothing falling into them: the two ripples had their own timers and only one of them was ever caused by a drip. theres four drips now and every ring is something landing",
+	]],
 	["v0.6.36", [
 		"the test that checks you cant walk through a closed door was giving a different answer on different runs, on the same build. it was measuring where you ended up one frame AFTER the shove, and by then the player's own movement had nudged them back out of the door - so which way they popped came down to rounding. it reads the result straight away now. no change to the game itself",
 	]],
@@ -820,6 +860,7 @@ func _process(delta: float) -> void:
 		if stamp != _ms_clock_stamp:      # relabel only when it changes
 			_ms_clock_stamp = stamp
 			_ms_clock.text = stamp
+	_tick_arcs(delta)
 	_rotate_timer += delta
 	if _rotate_timer >= SCENE_SECONDS:
 		_rotate_timer = 0.0
@@ -924,16 +965,16 @@ func _build_scenes() -> void:
 		_leds.append(led)
 	var smoke := CPUParticles2D.new()
 	smoke.texture = TEX_DUST
-	smoke.amount = 5
+	smoke.amount = 16      # 5 was a thread; a kettle on a stove makes a plume
 	smoke.lifetime = 7.0
 	smoke.preprocess = 7.0
 	smoke.position = PC + Vector2(334, 372)
 	smoke.direction = Vector2(-0.15, -1)
-	smoke.spread = 9.0
-	smoke.gravity = Vector2(0, -3)
-	smoke.initial_velocity_min = 4.0
-	smoke.initial_velocity_max = 8.0
-	smoke.color = Color("577277", 0.35)
+	smoke.spread = 22.0
+	smoke.gravity = Vector2(-2, -6)
+	smoke.initial_velocity_min = 7.0
+	smoke.initial_velocity_max = 16.0
+	smoke.color = Color("819796", 0.42)
 	smoke.color_ramp = _fade_ramp()
 	den.add_child(smoke)
 	add_child(den)
@@ -949,7 +990,7 @@ func _build_scenes() -> void:
 	drain.add_child(_ray)
 	var motes := CPUParticles2D.new()
 	motes.texture = TEX_DUST
-	motes.amount = 13
+	motes.amount = 30      # 13 read as a few specks in a very large shaft
 	motes.lifetime = 10.0
 	motes.preprocess = 10.0
 	motes.position = PC + Vector2(615, 200)
@@ -963,21 +1004,56 @@ func _build_scenes() -> void:
 	motes.color = Color("a8b5b2", 0.5)
 	motes.color_ramp = _fade_ramp()
 	drain.add_child(motes)
-	for pos in [Vector2(608, 514), Vector2(646, 524)]:
+	# THE SLUICE ACTUALLY RUNS NOW. The penstock has always been described as
+	# leaking a sheet into the channel and the bake draws that sheet in
+	# 090a14 — invisible. User: "i dont see any water dripping down from the
+	# top". Six scrolling frames, sheet and foam in one object so they can
+	# never fall out of step.
+	_sluice = Sprite2D.new()
+	_sluice.texture = TEX_DRAIN_SLUICE
+	_sluice.hframes = 6
+	_sluice.position = PC + Vector2(822, 452)
+	drain.add_child(_sluice)
+	# OVER THE LIT WATER, not the dark half. The first placement centred this
+	# at y 512, which put two thirds of it below the pool's lit band — it
+	# measured 967 changed pixels against the bake and the scene still read as
+	# a photograph. The water under the shaft runs roughly y 446-510.
+	_drain_chop = Sprite2D.new()               # the pool's surface, moving
+	_drain_chop.texture = TEX_DRAIN_CHOP
+	_drain_chop.hframes = 6
+	_drain_chop.position = PC + Vector2(600, 478)
+	_drain_chop.material = add_mat
+	drain.add_child(_drain_chop)
+	_drain_mist = Sprite2D.new()               # drifts on every single frame
+	_drain_mist.texture = TEX_DRAIN_MIST
+	_drain_mist.material = add_mat
+	drain.add_child(_drain_mist)
+	_lant = Sprite2D.new()                     # the raider's lantern flame
+	_lant.texture = TEX_DRAIN_LANT
+	_lant.position = PC + Vector2(250, 456)    # LANT, from the generator
+	_lant.material = add_mat
+	drain.add_child(_lant)
+	# ONE RIPPLE PER DRIP, PAIRED BY INDEX. The old build gave the two ripples
+	# their OWN random timers, so ripple #1 fired with nothing above it — the
+	# user saw exactly that: "theres just water droplets in water with no
+	# water coming down". A ring in this scene is now only ever the result of
+	# something landing.
+	for i in DRAIN_DRIP_X.size():
 		var ripple := Sprite2D.new()
 		ripple.texture = TEX_DRAIN_RIPPLE
 		ripple.hframes = 3
-		ripple.position = PC + pos
+		ripple.position = PC + Vector2(DRAIN_DRIP_X[i], DRAIN_DRIP_Y[i])
 		ripple.visible = false
 		drain.add_child(ripple)
 		_ripples.append(ripple)
-		_ripple_t.append(randf_range(0.5, 2.5))
 		_ripple_age.append(-1.0)
-	_drip = Sprite2D.new()
-	_drip.texture = TEX_RAIN
-	_drip.modulate = Color("a8b5b2", 0.8)
-	_drip.visible = false
-	drain.add_child(_drip)
+		var dr := Sprite2D.new()
+		dr.texture = TEX_RAIN
+		dr.modulate = Color("c7cfcc", 0.9)
+		dr.visible = false
+		drain.add_child(dr)
+		_drips.append(dr)
+		_drip_t.append(0.15 + i * 0.52)
 	add_child(drain)
 	_scenes.append(drain)
 
@@ -1033,12 +1109,12 @@ func _build_scenes() -> void:
 	# streaks drifted 94px right over their fall and walked into the buttons.
 	var drizzle := CPUParticles2D.new()
 	drizzle.texture = TEX_RAIN
-	drizzle.amount = 54
+	drizzle.amount = 130
 	drizzle.lifetime = 3.4                     # ~2.9s of it inside the frame
 	drizzle.preprocess = 3.4
-	drizzle.position = PC + Vector2(160, -20)
+	drizzle.position = PC + Vector2(430, -20)
 	drizzle.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
-	drizzle.emission_rect_extents = Vector2(190, 8)
+	drizzle.emission_rect_extents = Vector2(500, 8)
 	drizzle.direction = Vector2(0.06, 1)
 	drizzle.spread = 3.0
 	drizzle.gravity = Vector2(2, 30)
@@ -1047,7 +1123,11 @@ func _build_scenes() -> void:
 	# WHITE, not a tint. `color` MULTIPLIES the texture, and rain_streak is
 	# already a 3c5e8b at 20-76% alpha — tinting it 577277 as well took it to
 	# (20,42,65) at a quarter alpha and the drizzle rendered invisible.
-	drizzle.color = Color(1, 1, 1, 0.9)
+	# it crosses the button band now, and that is a deliberate reversal: the
+	# bands are kept clear of STRUCTURE, and rain is not structure. At this
+	# alpha the labels stay perfectly legible and the alternative was a scene
+	# that measured 49 still frames out of 59.
+	drizzle.color = Color(1, 1, 1, 0.62)
 	drizzle.color_ramp = _fade_ramp()
 	yard.add_child(drizzle)
 	_yard_splash = Sprite2D.new()
@@ -1061,6 +1141,10 @@ func _build_scenes() -> void:
 	_yard_drip.modulate = Color("a8b5b2", 0.75)
 	_yard_drip.visible = false
 	yard.add_child(_yard_drip)
+	# SPARKS OFF THE POLE LINES (user's own example). Both points are wire
+	# pixels read out of the bake, not eyeballed.
+	_add_arc(yard, Vector2(170, 175), add_mat, 1.1)
+	_add_arc(yard, Vector2(230, 205), add_mat, 4.6)
 	add_child(yard)
 	_scenes.append(yard)
 
@@ -1103,6 +1187,25 @@ func _build_scenes() -> void:
 	_w_blink.position = PC + Vector2(676, 255)
 	_w_blink.visible = false
 	warden.add_child(_w_blink)
+	var wrain := CPUParticles2D.new()
+	wrain.texture = TEX_RAIN
+	wrain.amount = 120
+	wrain.lifetime = 3.2
+	wrain.preprocess = 3.2
+	wrain.position = PC + Vector2(470, -20)
+	wrain.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	wrain.emission_rect_extents = Vector2(500, 8)
+	wrain.direction = Vector2(0.08, 1)
+	wrain.spread = 3.0
+	wrain.gravity = Vector2(3, 34)
+	wrain.initial_velocity_min = 140.0
+	wrain.initial_velocity_max = 175.0
+	wrain.color = Color(1, 1, 1, 0.58)
+	wrain.color_ramp = _fade_ramp()
+	warden.add_child(wrain)
+	# the isolator on the shift lamp's conduit — a real fitting, and the only
+	# thing in the booth's dead upper-left that could plausibly arc
+	_add_arc(warden, Vector2(813, 147), add_mat, 2.7)
 	add_child(warden)
 	_scenes.append(warden)
 
@@ -1112,7 +1215,12 @@ func _build_scenes() -> void:
 	# the reflections. Anchors: make_scene_underpass's docstring.
 	var underpass := Node2D.new()
 	_backdrop(underpass, TEX_UNDERPASS)
+	# THE REFLECTION IS ONE OF THE LIGHTS. It is a quarter of the frame and it
+	# was entirely baked, so the tube could stammer out while the huge bright
+	# patch it throws on the flood sat perfectly still. On the same value, a
+	# stammer now takes the whole bottom-right of the picture with it.
 	for spec in [[TEX_UP_HALO, Vector2(720, 215)],      # wall behind the tube
+				 [TEX_UP_WET, Vector2(700, 470)],       # its reflection, flooded
 				 [TEX_UP_POOL, Vector2(748, 382)],      # its pool on the walkway
 				 [TEX_UP_TUBE, Vector2(702, 152)]]:     # the tube itself
 		var light := Sprite2D.new()
@@ -1121,6 +1229,28 @@ func _build_scenes() -> void:
 		light.material = add_mat
 		underpass.add_child(light)
 		_up_lights.append(light)
+	# THE PENDANT. A conical shade hangs at 307-353 x 193-231 and the bake
+	# leaves it stone dead — in the half of the picture where nothing else
+	# moves at all. Cold mercury against the sodium's amber, and it fails
+	# HARDER and never in step, so the two ends of the underpass argue.
+	for spec in [[TEX_UP_PENDPOOL, Vector2(330, 412)],   # on the flood below
+				 [TEX_UP_PEND, Vector2(330, 246)]]:      # under the shade
+		var pl := Sprite2D.new()
+		pl.texture = spec[0]
+		pl.position = PC + (spec[1] as Vector2)
+		pl.material = add_mat
+		underpass.add_child(pl)
+		_up_pend.append(pl)
+	_up_mist = Sprite2D.new()                  # drifts every single frame
+	_up_mist.texture = TEX_UP_MIST
+	_up_mist.material = add_mat
+	underpass.add_child(_up_mist)
+	_up_chop = Sprite2D.new()                  # the surface itself, moving
+	_up_chop.texture = TEX_UP_CHOP
+	_up_chop.hframes = 6
+	_up_chop.position = PC + Vector2(700, 462)
+	_up_chop.material = add_mat
+	underpass.add_child(_up_chop)
 	for i in UP_DRIP_X.size():
 		var ring := Sprite2D.new()
 		ring.texture = TEX_UP_RING
@@ -1145,7 +1275,7 @@ func _build_scenes() -> void:
 		# a metronome, and three drips in step read as one mechanism. The
 		# first is almost immediate so the scene is already dripping when it
 		# fades in, rather than standing still for most of a second.
-		_up_drip_t.append(0.08 + i * 1.4)
+		_up_drip_t.append(0.08 + i * 0.63)
 	add_child(underpass)
 	_scenes.append(underpass)
 
@@ -1170,18 +1300,18 @@ func _build_scenes() -> void:
 	# _build_scenes is ONE scope from top to bottom.
 	var ctr_motes := CPUParticles2D.new()        # dust over the warm counter
 	ctr_motes.texture = TEX_CTR_DUST             # ROUND, not dust.png's plus
-	ctr_motes.amount = 9
+	ctr_motes.amount = 34
 	ctr_motes.lifetime = 9.0
 	ctr_motes.preprocess = 9.0
-	ctr_motes.position = PC + Vector2(806, 380)
+	ctr_motes.position = PC + Vector2(700, 330)
 	ctr_motes.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
-	ctr_motes.emission_rect_extents = Vector2(66, 26)
+	ctr_motes.emission_rect_extents = Vector2(200, 90)
 	ctr_motes.direction = Vector2(-0.35, -1)
 	ctr_motes.spread = 16.0
 	ctr_motes.gravity = Vector2(-1, -2)
 	ctr_motes.initial_velocity_min = 2.0
 	ctr_motes.initial_velocity_max = 6.0
-	ctr_motes.color = Color("e8c170", 0.22)
+	ctr_motes.color = Color("e8c170", 0.40)
 	ctr_motes.color_ramp = _fade_ramp()
 	counter.add_child(ctr_motes)
 	_ctr_flare = Sprite2D.new()
@@ -1205,6 +1335,9 @@ func _build_scenes() -> void:
 	_ctr_arc.position = PC + CTR_SPLICE
 	_ctr_arc.material = add_mat
 	counter.add_child(_ctr_arc)
+	# the taped splice. Its pilot bead is already painted LIVE in the bake, so
+	# an arc here is the picture keeping its own promise.
+	_add_arc(counter, CTR_SPLICE, add_mat, 3.4)
 	add_child(counter)
 	_scenes.append(counter)
 
@@ -1214,9 +1347,12 @@ func _build_scenes() -> void:
 
 
 func _tick_den() -> void:
-	var a := 0.82 + 0.14 * sin(_time * 6.7) + 0.05 * sin(_time * 17.3)
-	if fmod(_time, 9.1) < 0.35:                     # the flame gutters
-		a *= 0.45
+	# a candle is a FLAME. The old curve moved 14% and gutted once every nine
+	# seconds, which is a lamp with a loose wire, not a flame.
+	var a := 0.78 + 0.20 * sin(_time * 6.7) + 0.11 * sin(_time * 17.3) \
+		+ 0.06 * sin(_time * 3.1)
+	if fmod(_time, 5.3) < 0.30:                     # the flame gutters
+		a *= 0.38
 	_candle_glow.modulate.a = clampf(a, 0.0, 1.0)
 	for i in _needles.size():
 		var wob := sin(_time * (7.0 + i * 1.7) + i * 2.6) + sin(_time * 3.1 + i)
@@ -1227,34 +1363,48 @@ func _tick_den() -> void:
 
 func _tick_drain(delta: float) -> void:
 	_ray.modulate.a = 0.86 + 0.12 * sin(_time * 0.8)
-	for i in _ripples.size():
+	# the sluice and the pool run every frame — this scene is never still now
+	_drain_anim += delta
+	_sluice.frame = int(_drain_anim / 0.075) % 6
+	_drain_chop.frame = int(_drain_anim / 0.10) % 6
+	_drain_chop.modulate.a = 0.85 + 0.12 * sin(_time * 1.1)
+	_drain_mist.position = PC + Vector2(
+		470.0 + sin(_time * 0.17) * 210.0,
+		486.0 + sin(_time * 0.29) * 7.0)
+	_drain_mist.modulate.a = 0.6 + 0.2 * sin(_time * 0.53)
+	# the lantern is a FLAME: three periods that do not divide, plus the odd
+	# gutter when the draught off the channel catches it
+	var fl := 0.74 + 0.13 * sin(_time * 9.3) + 0.08 * sin(_time * 21.7) \
+		+ 0.05 * sin(_time * 2.9)
+	if fmod(_time, 6.7) < 0.22:
+		fl *= 0.55
+	_lant.modulate.a = clampf(fl, 0.0, 1.0)
+	# four leaks, each owning the ripple at its own index
+	for i in _drips.size():
 		if _ripple_age[i] >= 0.0:
 			_ripple_age[i] += delta
-			var f := int(_ripple_age[i] / 0.3)
-			if f > 2:
+			var rf := int(_ripple_age[i] / 0.3)
+			if rf > 2:
 				_ripples[i].visible = false
 				_ripple_age[i] = -1.0
-				_ripple_t[i] = randf_range(1.6, 4.5)
 			else:
-				_ripples[i].frame = f
-		else:
-			_ripple_t[i] -= delta
-			if _ripple_t[i] <= 0.0:
-				_ripple_age[i] = 0.0
+				_ripples[i].frame = rf
+		var dr := _drips[i]
+		_drip_t[i] -= delta
+		if _drip_t[i] <= 0.0 and not dr.visible:
+			_drip_t[i] = randf_range(1.5, 4.2)
+			dr.visible = true
+			dr.position = PC + Vector2(DRAIN_DRIP_X[i], DRAIN_DRIP_TOP[i])
+		if dr.visible:
+			# 470, not the old 900: at 900 px/s a drip crossed the whole frame
+			# in under half a second and you could watch this scene for a
+			# minute without ever catching one in the air
+			dr.position.y += 470.0 * delta
+			if dr.position.y >= PC.y + DRAIN_DRIP_Y[i] - 2.0:
+				dr.visible = false
 				_ripples[i].visible = true
 				_ripples[i].frame = 0
-	_drip_t -= delta                                # one drip at a time
-	if _drip_t <= 0.0 and not _drip.visible:
-		_drip_t = randf_range(2.5, 6.0)
-		_drip.visible = true
-		_drip.position = PC + Vector2(608, 110)
-	if _drip.visible:
-		_drip.position.y += 900.0 * delta
-		if _drip.position.y >= PC.y + 508.0:        # hits the water: ring it
-			_drip.visible = false
-			_ripple_age[0] = 0.0
-			_ripples[0].visible = true
-			_ripples[0].frame = 0
+				_ripple_age[i] = 0.0
 
 
 func _tick_yard(delta: float) -> void:
@@ -1349,6 +1499,30 @@ func _tick_underpass(delta: float) -> void:
 		lit *= 0.16                            # the stammer
 	for light in _up_lights:
 		light.modulate.a = clampf(lit, 0.0, 1.0)
+	# the surface breaks up continuously — six frames of dashes in the water's
+	# own language, ~9 a second. This is the one thing in the scene that is
+	# ALWAYS moving; everything else waits for its own timer.
+	_up_chop_t += delta
+	_up_chop.frame = int(_up_chop_t / 0.11) % 6
+	_up_chop.modulate.a = clampf(lit * 0.95, 0.0, 1.0)
+	# THE PENDANT IS DYING, and it is on nothing's clock but its own: a fast
+	# irregular flutter built from three periods that do not divide, with a
+	# hard cut-out every 5.1 s. Never in step with the sodium tube — two
+	# failing lights blinking together read as one switch being thrown.
+	var pf := 0.62 + 0.24 * sin(_time * 11.3) + 0.14 * sin(_time * 27.1) \
+		+ 0.10 * sin(_time * 3.7)
+	if fmod(_time, 5.1) < 0.30:
+		pf *= 0.08
+	elif fmod(_time, 1.7) < 0.06:
+		pf *= 0.35
+	for pl in _up_pend:
+		pl.modulate.a = clampf(pf, 0.0, 1.0)
+	# the mist never stops moving — it is the scene's baseline life, so no
+	# frame of this backdrop is ever completely still
+	_up_mist.position = PC + Vector2(
+		420.0 + sin(_time * 0.13) * 250.0,
+		470.0 + sin(_time * 0.31) * 9.0)
+	_up_mist.modulate.a = 0.55 + 0.18 * sin(_time * 0.47)
 	# three leaks in the deck, each on its own clock
 	for i in _up_drips.size():
 		var drip := _up_drips[i]
@@ -1362,7 +1536,7 @@ func _tick_underpass(delta: float) -> void:
 				_up_rings[i].frame = f
 		_up_drip_t[i] -= delta
 		if _up_drip_t[i] <= 0.0 and not drip.visible:
-			_up_drip_t[i] = randf_range(3.4, 8.0)
+			_up_drip_t[i] = randf_range(1.6, 4.4)
 			drip.visible = true
 			drip.position = PC + Vector2(UP_DRIP_X[i], UP_DRIP_TOP)
 		if drip.visible:
@@ -1378,7 +1552,13 @@ func _tick_counter(delta: float) -> void:
 	# THE COLD ONE MOVES. Every other lit scene in this menu breathes its warm
 	# source; here the key light is the box under her map, so the plate is
 	# what wavers and the work lamp holds steady against it.
-	_ctr_box.modulate.a = 0.78 + 0.16 * sin(_time * 0.9) + 0.06 * sin(_time * 2.7)
+	# a drafting box is a fluorescent tube under glass, and a tired one
+	# flutters. Three periods that do not divide, plus an occasional dip.
+	var bx := 0.74 + 0.14 * sin(_time * 0.9) + 0.09 * sin(_time * 8.3) \
+		+ 0.05 * sin(_time * 19.7)
+	if fmod(_time, 4.3) < 0.09:
+		bx *= 0.42
+	_ctr_box.modulate.a = clampf(bx, 0.0, 1.0)
 	_ctr_lamp.modulate.a = 0.88 + 0.04 * sin(_time * 1.3)
 	# the splice is LIVE and it knows it: the bead swells just before it lets
 	# an ember go, so the drip has a visible cause instead of arriving out of
@@ -1411,6 +1591,43 @@ func _tick_counter(delta: float) -> void:
 			_ctr_flare.visible = true
 			_ctr_flare.frame = 0
 			_ctr_flare_age = 0.0
+
+
+func _add_arc(parent: Node2D, at: Vector2, add_mat: CanvasItemMaterial,
+		first: float) -> void:
+	var s := Sprite2D.new()
+	s.texture = TEX_SPARK
+	s.hframes = 5
+	s.position = PC + at
+	s.material = add_mat        # an arc blows out against a night sky
+	s.visible = false
+	parent.add_child(s)
+	_arcs.append([s, first, 0.0])
+
+
+func _tick_arcs(delta: float) -> void:
+	## One strike is 5 frames at 0.06 s — a twelfth of a second, which is what
+	## a short actually looks like. The gap between strikes is long and random
+	## so it never reads as a blinking light.
+	for a in _arcs:
+		var s := a[0] as Sprite2D
+		var t: float = a[1] - delta
+		if s.visible:
+			var age: float = a[2] + delta
+			a[2] = age
+			var f := int(age / 0.06)
+			if f > 4:
+				s.visible = false
+				t = randf_range(3.5, 9.0)
+			else:
+				s.frame = f
+		elif t <= 0.0:
+			s.visible = true
+			s.frame = 0
+			a.resize(3)
+			a[2] = 0.0
+			t = 0.0
+		a[1] = t
 
 
 func _fade_ramp() -> Gradient:

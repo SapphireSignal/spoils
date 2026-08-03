@@ -195,6 +195,40 @@ flake**, and that failed run is what sent me looking at the right thing.
 gate is worse than no gate — it teaches whoever hits it to run it again
 instead of reading it. I did exactly that for one run.
 
+**Then v0.6.37 — THE LIVING LAYERS WERE TOO MINIMAL, and the user said so.**
+*"these living layers are very minimal, can we add some more to it, to every
+backdrop, i want it to be noticable"*, then the sharper half: *"dont just amp
+up the current ones, find new ones on the screen and create some, like some
+flcikering lights, or some pole lines sparks coming off them"*.
+
+**THE MOST USEFUL THING BUILT THIS SESSION IS `--film`.** A living layer is
+MOTION and a still cannot show it — I judged all four of v0.6.32-35 off single
+frames and every one of them was too static. The first film settled it in one
+number: **the underpass changed under 0.5% of the screen in 38 of 47 frames.**
+It was a photograph with a lamp in it. Frames go to `shots/film_<name>/`
+(gitignored), ffmpeg turns them into a GIF, and the user can actually see it.
+**Send GIFs for anything animated from now on, never a screenshot.**
+
+**Also learned about that metric, the hard way:** it downsamples bilinearly,
+which averages 2 px rain streaks away — so the four scenes whose main addition
+is rain or sparks barely moved on the number while the rain is plainly visible
+in the frames. **It detects a dead scene reliably and does not grade a live
+one.** Do not tune to it.
+
+**A real bug the user found before I did:** rings appeared on the drain's water
+with nothing falling into them. The two ripples had their own random timers and
+only one was ever caused by a drip. Now four drips, four ripples, PAIRED BY
+INDEX — a ring is only ever something landing. The drip also fell at 900 px/s,
+crossing the frame in under half a second; you could watch for a minute and
+never catch one. Now 470.
+
+**And a self-inflicted one worth remembering: NEVER "replace everything
+between marker A and marker B" WITH A SCRIPT.** Rewriting `_tick_drain` that
+way silently deleted `_tick_yard`, `_tick_warden`, `_tick_underpass` and
+`_tick_counter`, because they lived in that range. The assert I wrote only
+checked the START of the block. It was caught by a parse error and restored
+from HEAD. Assert on what you are DELETING, not on what you are looking for.
+
 **Picked up at:** **nothing is in progress.** A1 in TASKS.md is now DONE — all
 six backdrops exist and all six live. The next items in that list are the
 in-game map screen and the map-select tile; **M2 (guns) still waits on the

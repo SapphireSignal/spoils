@@ -5674,7 +5674,7 @@ def make_title() -> tuple[Image.Image, Image.Image, Image.Image]:
 
 SCENE_W, SCENE_H = 960, 544
 
-def make_scene_drain() -> tuple[Canvas, Image.Image, Canvas]:
+def make_scene_drain() -> tuple:
     """Menu 1 - THE DRAIN, side-on like a stage.  REDESIGNED 2026-08-02 (user:
     "a redesign would be good too for these"), against the four backdrop
     pitches (yard / warden / underpass / counter) as the bar.
@@ -6983,7 +6983,113 @@ def make_scene_drain() -> tuple[Canvas, Image.Image, Canvas]:
                 strip.set(x, y, C("3c5e8b") if f < 2 else C("253a5e"))
         if f == 0:
             strip.set(ox, 3, C("4f8fba"))
-    return c, ray, strip
+
+    # ---- v0.6.37, THE "MAKE IT NOTICEABLE" PASS -----------------------------
+    # User, looking at this scene: "i dont see any water dripping down from the
+    # top, theres just water droplets in water with no water coming down".
+    # Both halves of that are fair, and the second half was a BUG — see
+    # _tick_drain. This is the first half: the penstock has always been
+    # described as "leaking a sheet into the channel" and the bake draws that
+    # sheet in 090a14, i.e. invisible. Now it runs.
+
+    # THE SLUICE SHEET: 6 frames that SCROLL, so it is falling water rather
+    # than a lit shape. Streaks are dashed and each dash rides its own period,
+    # because an unbroken column reads as a bar of metal, not as water.
+    srng = random.Random("spoils:drain:sluice")
+    SW, SH, SF = 60, 76, 6
+    sheet = Image.new("RGBA", (SW * SF, SH), (0, 0, 0, 0))
+    sp = sheet.load()
+    streaks = []
+    for sx in range(2, SW - 2):
+        if srng.random() < 0.62:
+            streaks.append((sx, srng.randrange(0, 26),      # phase
+                            srng.randint(9, 22),            # dash length
+                            srng.randint(18, 34),           # period
+                            srng.randint(46, 120)))         # alpha
+    for f in range(SF):
+        ox = f * SW
+        shift = int(f * SH / SF)
+        for (sx, ph, ln, per, a) in streaks:
+            for y in range(SH):
+                if ((y + shift + ph) % per) < ln:
+                    # thins and brightens as it falls, and dies into the foam
+                    t = y / float(SH)
+                    if t > 0.86:
+                        continue
+                    col = C("a8b5b2") if (y + shift + ph) % per < 3 else C("577277")
+                    sp[ox + sx, y] = (col[0], col[1], col[2],
+                                      int(a * (0.45 + 0.55 * t)))
+        # THE FOAM where it lands, on the same frames — the sheet and its
+        # splash are one object, so they can never fall out of step.
+        # DASHES, not a modulo scatter. The first cut stamped single pixels
+        # on a %11 pattern and it read as dither noise on the water — the
+        # standing no-dot-noise rule. Churn is drawn the way this project
+        # draws every other water surface: short horizontal runs.
+        frng = random.Random("spoils:drain:foam:%d" % f)
+        for k in range(14):
+            fy = SH - 14 + k
+            spread = int(5 + k * 2.0)
+            aa = int(150 * (1.0 - k / 14.0))
+            col = C("a8b5b2") if k < 5 else C("577277")
+            fx = SW // 2 - spread
+            while fx < SW // 2 + spread:
+                run = frng.randint(2, 6)
+                if frng.random() < 0.55:
+                    for xx in range(fx, min(SW // 2 + spread, fx + run)):
+                        if 0 <= xx < SW:
+                            sp[ox + xx, fy] = (col[0], col[1], col[2], aa)
+                fx += run + frng.randint(1, 4)
+
+    # THE LANTERN'S FLAME, at LANT. A raider's lantern is a flame and a flame
+    # is never steady; the bake gives it a solid pool, this flutters on top.
+    lant = Image.new("RGBA", (150, 116), (0, 0, 0, 0))
+    lp = lant.load()
+    lr, lg, lb, _ = C("e8c170")
+    for y in range(116):
+        for x in range(150):
+            u = (x - 75 + 0.5) / 75.0
+            v = (y - 58 + 0.5) / 58.0
+            d = u * u + v * v
+            if d < 1.0:
+                lp[x, y] = (lr, lg, lb, int(96 * (1.0 - d) ** 1.8))
+
+    # THE POOL'S SURFACE, in the water's own dashed language. 6 frames.
+    crng = random.Random("spoils:drain:chop")
+    CW, CH, CF = 300, 66, 6
+    chop = Image.new("RGBA", (CW * CF, CH), (0, 0, 0, 0))
+    cp = chop.load()
+    for f in range(CF):
+        ox = f * CW
+        for _ in range(260):
+            y = crng.randrange(2, CH - 3)
+            near = y / float(CH)
+            ln = crng.randint(5, 9 + int(20 * near))
+            th = 1 + int(crng.random() * (1 + near))
+            x0 = crng.randrange(0, CW - ln)
+            col = C("a8b5b2") if crng.random() < 0.36 else C("577277")
+            a = crng.randint(80, 185)
+            for xx in range(x0, x0 + ln):
+                t = min(xx - x0, x0 + ln - 1 - xx) / max(1.0, ln * 0.3)
+                for k in range(th):
+                    if 0 <= y + k < CH:
+                        cp[ox + xx, y + k] = (col[0], col[1], col[2],
+                                              int(a * min(1.0, t)))
+
+    # a slow band of damp air off the pool — the same trick that took the
+    # underpass from 38 still frames in 47 to 3: something has to be moving on
+    # EVERY frame, not just when a timer fires.
+    mist = Image.new("RGBA", (300, 58), (0, 0, 0, 0))
+    mp = mist.load()
+    mr, mg, mb, _ = C("a8b5b2")
+    for y in range(58):
+        for x in range(300):
+            u = (x - 150 + 0.5) / 150.0
+            v = (y - 29 + 0.5) / 29.0
+            d = u * u + v * v
+            if d < 1.0:
+                mp[x, y] = (mr, mg, mb, int(30 * (1.0 - d) ** 2.2))
+
+    return c, ray, strip, sheet, lant, chop, mist
 
 
 def make_scene_den() -> tuple[Canvas, Image.Image, Canvas]:
@@ -8804,7 +8910,10 @@ def make_scene_den() -> tuple[Canvas, Image.Image, Canvas]:
         for x in range(gw):
             d = ((x - gw / 2) / (gw / 2)) ** 2 + ((y - gh / 2) / (gh / 2)) ** 2
             if d < 1.0:
-                gp[x, y] = (r, g, b, int(64 * (1.0 - d) ** 2))
+                # 64 was inaudible: the tick already swung this 40% and the
+                # den still measured 53 still frames in 59, because 40% of
+                # almost nothing is nothing.
+                gp[x, y] = (r, g, b, int(120 * (1.0 - d) ** 2))
 
     # VU needle strip: 3 frames, 16x12, drawn over the baked dial faces
     strip = Canvas(48, 12)
@@ -8826,6 +8935,48 @@ def make_scene_den() -> tuple[Canvas, Image.Image, Canvas]:
         strip.set(ox + 8, 9, C("394a50"))
     return c, glow, strip
 
+
+
+def make_spark_sheet() -> Canvas:
+    """A short-circuit arc, 5 frames of 20x16. Used on the yard's and the
+    warden's overhead lines and on the counter's taped splice — scene-neutral
+    on purpose, because it is the same event in all three.
+
+    User's brief, 2026-08-03: "find new ones on the screen and create some,
+    like some flcikering lights, or some pole lines sparks coming off them".
+
+    Frames: the strike, the fan at its widest, two of throw-off, then embers.
+    It is drawn in the palette's hot end and read ADDITIVELY at runtime, so it
+    blows out against a night sky the way a real arc does."""
+    s = Canvas(100, 16)
+    rng = random.Random("spoils:spark")
+    for f in range(5):
+        ox = f * 20
+        cx, cy = ox + 8, 6
+        if f == 0:                                   # the strike: a hot core
+            s.rect(cx - 1, cy - 1, cx + 1, cy + 1, C("e7d5b3"))
+            s.set(cx, cy - 2, C("e8c170"))
+            s.set(cx, cy + 2, C("e8c170"))
+            s.set(cx - 2, cy, C("e8c170"))
+            s.set(cx + 2, cy, C("e8c170"))
+        elif f < 3:                                  # the fan, thrown DOWNWARD
+            s.rect(cx - 1, cy - 1, cx, cy, C("e8c170") if f == 1 else C("de9e41"))
+            for k in range(7 if f == 1 else 5):
+                a = math.radians(rng.uniform(20.0, 160.0))
+                r = rng.uniform(3.0, 6.0 + f * 2.5)
+                x = int(cx + math.cos(a) * r)
+                y = int(cy + math.sin(a) * r * 0.8)
+                s.set(x, y, C("e8c170") if k % 2 else C("cf573c"))
+                if rng.random() < 0.5:
+                    s.set(x, min(15, y + 1), C("884b2b"))
+        else:                                        # embers on their way down
+            for k in range(4 if f == 3 else 2):
+                a = math.radians(rng.uniform(50.0, 130.0))
+                r = rng.uniform(5.0, 9.0 + f)
+                x = int(cx + math.cos(a) * r)
+                y = int(cy + math.sin(a) * r * 0.95)
+                s.set(x, y, C("cf573c") if f == 3 else C("884b2b"))
+    return s
 
 
 def make_scene_yard() -> tuple[Canvas, Image.Image, Canvas, Image.Image]:
@@ -13136,8 +13287,7 @@ def make_scene_warden() -> tuple[Canvas, Image.Image, Image.Image, Canvas, Canva
     return c, lamp, spill, blink, moth
 
 
-def make_scene_underpass() -> tuple[Canvas, Image.Image, Image.Image,
-                                    Image.Image, Canvas]:
+def make_scene_underpass() -> tuple:
     """Menu 5 — THE UNDERPASS: transit's road ducking under the rail line,
     flooded and never drained. Promoted 2026-08-02 from the backdrop pitch the
     user chose to keep ("let's add all 4 of those menu backdrops to the game,
@@ -14716,7 +14866,60 @@ def make_scene_underpass() -> tuple[Canvas, Image.Image, Image.Image,
         for k in range(-int(2 + f * 3), int(3 + f * 3)):
             ring.set(ox + 9 + k, 5 + f, C("10141f"))
 
-    return c, tube, halo, pool, ring
+    # ---- v0.6.37, THE "MAKE IT NOTICEABLE" PASS (user: "these living layers
+    # are very minimal ... i want it to be noticable"). Two additions, both
+    # chosen because they move a LARGE AREA rather than a detail:
+
+    # 1. THE TUBE'S REFLECTION IN THE FLOOD. The reflection is a quarter of
+    #    the frame and it was entirely BAKED, so the tube could stammer out
+    #    while the huge bright patch it throws on the water sat perfectly
+    #    still — which is both wrong and the reason the stutter read as a
+    #    detail. This lobe rides the same value as the tube, so a stammer now
+    #    takes the whole bottom-right of the picture with it.
+    wet = _lobe(280, 150, "be772b", 40, 1.5)
+
+    # 2. THE SURFACE MOVES. Six frames of dashes in the water's OWN drawn
+    #    language — the flood is painted in broken horizontal runs, so the
+    #    overlay is too, and cycling them reads as the reflection breaking up
+    #    rather than as a texture sliding over it.
+    crng = random.Random("spoils:underpass:chop")
+    CW, CH, CF = 300, 150, 6
+    chop = Image.new("RGBA", (CW * CF, CH), (0, 0, 0, 0))
+    cp = chop.load()
+    for f in range(CF):
+        ox = f * CW
+        for _ in range(230):
+            y = crng.randrange(4, CH - 4)
+            # dashes lengthen and thicken toward the near edge, exactly as the
+            # baked water does — a uniform field reads as static
+            near = y / float(CH)
+            ln = crng.randint(4, 8 + int(20 * near))
+            th = 1 + int(crng.random() * (1 + 2 * near))
+            x0 = crng.randrange(0, CW - ln)
+            col = C("e8c170") if crng.random() < 0.42 else C("be772b")
+            a = crng.randint(70, 180)
+            for xx in range(x0, x0 + ln):
+                # fade the ends so no dash has a hard cap
+                t = min(xx - x0, x0 + ln - 1 - xx) / max(1.0, ln * 0.30)
+                aa = int(a * min(1.0, t))
+                for k in range(th):
+                    if 0 <= y + k < CH:
+                        cp[ox + xx, y + k] = (col[0], col[1], col[2], aa)
+
+    # 3. THE DEAD PENDANT ON THE LEFT. The whole left half of this picture
+    #    does not move at all, and hanging in the middle of it is a conical
+    #    lamp shade (307-353 x 193-231) baked completely DARK. It is the most
+    #    obvious thing in the frame to switch on. Cold mercury against the
+    #    sodium, failing HARDER than the tube and never in step with it, so
+    #    the two halves of the underpass argue with each other.
+    pend = _lobe(120, 104, "73bed3", 74, 1.5)
+    pend_pool = _lobe(130, 54, "577277", 52, 1.6)
+
+    # 4. MIST OFF THE FLOOD. One wide soft band that drifts, so something in
+    #    this scene is moving on EVERY frame rather than waiting for a timer.
+    mist = _lobe(300, 60, "a8b5b2", 26, 2.2)
+
+    return c, tube, halo, pool, ring, wet, chop, pend, pend_pool, mist
 
 
 def make_scene_counter() -> tuple[Canvas, Image.Image, Image.Image,
@@ -17571,15 +17774,23 @@ def main() -> None:
     for i, ring in enumerate(make_signal_rings()):
         ring.save(OUT / f"signal_ring_{i}.png")       # splash fx: alpha-graded
     make_signal_beam().save(OUT / "signal_beam.png")
+    spark_sheet = make_spark_sheet()
+    assert_palette(spark_sheet.img, "menu_spark")
+    spark_sheet.img.save(OUT / "menu_spark.png")   # shared: 5 frames of arc
     make_studio_word().save(OUT / "studio_word.png")
 
     # rotating main-menu backdrops (+ their animated overlay layers)
-    drain_base, drain_ray, drain_ripple = make_scene_drain()
+    (drain_base, drain_ray, drain_ripple, drain_sheet,
+     drain_lant, drain_chop, drain_mist) = make_scene_drain()
     assert_palette(drain_base.img, "menu_drain")
     assert_palette(drain_ripple.img, "menu_drain_ripple")
     drain_base.img.save(OUT / "menu_drain.png")
     drain_ray.save(OUT / "menu_drain_ray.png")          # light: soft alpha
     drain_ripple.img.save(OUT / "menu_drain_ripple.png")
+    drain_sheet.save(OUT / "menu_drain_sluice.png")    # 6 frames, soft alpha
+    drain_lant.save(OUT / "menu_drain_lant.png")       # light: soft alpha
+    drain_chop.save(OUT / "menu_drain_chop.png")       # 6 frames, soft alpha
+    drain_mist.save(OUT / "menu_drain_mist.png")       # light: soft alpha
     den_base, den_glow, den_needles = make_scene_den()
     assert_palette(den_base.img, "menu_den")
     assert_palette(den_needles.img, "menu_den_needles")
@@ -17603,8 +17814,8 @@ def main() -> None:
     warden_spill.save(OUT / "menu_warden_spill.png")    # light: soft alpha
     warden_blink.img.save(OUT / "menu_warden_blink.png")
     warden_moth.img.save(OUT / "menu_warden_moth.png")
-    (underpass_base, up_tube, up_halo,
-     up_pool, up_ring) = make_scene_underpass()
+    (underpass_base, up_tube, up_halo, up_pool, up_ring,
+     up_wet, up_chop, up_pend, up_pend_pool, up_mist) = make_scene_underpass()
     assert_palette(underpass_base.img, "menu_underpass")
     assert_palette(up_ring.img, "menu_underpass_ring")
     underpass_base.img.save(OUT / "menu_underpass.png")
@@ -17612,6 +17823,11 @@ def main() -> None:
     up_halo.save(OUT / "menu_underpass_halo.png")       # light: soft alpha
     up_pool.save(OUT / "menu_underpass_pool.png")       # light: soft alpha
     up_ring.img.save(OUT / "menu_underpass_ring.png")
+    up_wet.save(OUT / "menu_underpass_wet.png")       # light: soft alpha
+    up_chop.save(OUT / "menu_underpass_chop.png")     # 6 frames, soft alpha
+    up_pend.save(OUT / "menu_underpass_pend.png")     # light: soft alpha
+    up_pend_pool.save(OUT / "menu_underpass_pendpool.png")
+    up_mist.save(OUT / "menu_underpass_mist.png")     # light: soft alpha
     (counter_base, ctr_box, ctr_lamp,
      ctr_arc, ctr_flare, ctr_dust) = make_scene_counter()
     assert_palette(counter_base.img, "menu_counter")

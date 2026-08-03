@@ -1,2 +1,6 @@
 .godot/
 art/gen/_zoom_*.png
+# --film= intermediate frames. Hundreds of full-res PNGs per run, and they
+# are a means to a GIF, not a result worth keeping. The films themselves are
+# reproducible: godot ... -- --film=<name> --scene=menu --backdrop=N
+shots/film_*/

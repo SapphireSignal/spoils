@@ -35,7 +35,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
 	 form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.36 shipped, 2026-08-03.** Milestone 1 (a walkable world) is DONE.
+**v0.6.37 shipped, 2026-08-03.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 
@@ -718,6 +718,16 @@ then `godot_console --headless --path . --import`.
 - `--seed=<text>` pins the district; ALWAYS pair `--probe-world` (prints
   lamp/vehicle/door/traffic-light counts + shot-aimable cells) with the same
   seed you then shoot, or your coordinates aim at a different world.
+- Films: `godot_console --path . -- --film=<name> --scene=menu --backdrop=N
+  [--film-seconds=4] [--film-fps=12]` → frames into `shots/film_<name>/`
+  (**gitignored**). **A LIVING LAYER IS MOTION AND A STILL CANNOT SHOW IT.**
+  Every menu backdrop shipped in v0.6.32-35 was judged off single frames and
+  every one of them was too static; the first film measured the underpass
+  changing under 0.5% of the screen in 38 of 47 frames. Turn frames into a
+  GIF with ffmpeg (installed) and send that, not a screenshot.
+  **The obvious motion metric LIES about thin fast things** — downsampling
+  averages 2 px rain streaks away, so rain and sparks barely register. It
+  detects a DEAD scene reliably; it does not grade a live one.
 - Perf: `godot_console --path . -- --perf [--weather=rain --tod=0 ...]` →
   prints avg fps / worst frame ms / node count. Compare against the baseline
   in "Current state of the world" above — that is the ONE place the numbers
