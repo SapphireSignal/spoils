@@ -125,6 +125,39 @@ Also asked for: **upgrade the two existing backdrops** (den, drain).
 
 # B. GAMEPLAY THE USER HAS ASKED FOR
 
+## B0c. The underpass: a real door, a handle, and lore posters *(user, 2026-08-03)*
+
+*"in the underpass backdrop is that a door on the right? if so make it look
+more like a door and add a handle on it, and add a poster or two on the walls
+near the door, make sure it doesnt cover anything already on the wall though,
+make the posters show something about our games lore, like a small painting"*.
+
+**IT IS NOT A DOOR — it is a brick PIER.** Verified by cropping the bake:
+x 828-900, y 228-380, a brick buttress against the wall with a pale capping
+stone on top and the walkway railing crossing in front of its foot. The user
+read it as a door, which is itself the finding: **an ambiguous shape gets read
+as whatever the brain supplies** (the same failure as the downpipe that read
+as a car and the light spill that read as a body). So either commit to a door
+or make the pier unmistakably a pier.
+
+**Recommended: make it a door**, because the user wants one and a service door
+in an underpass wall is plausible. It is BASE ART — `make_scene_underpass`.
+- Give it a frame, a visible reveal, panel lines or a corrugated skin, and a
+  **handle** at ~4/10 of its height on the side away from its hinges.
+- Keep the capping stone or convert it to a lintel; the railing in front is
+  fine and helps it sit in the scene.
+- **The tube's light comes from the LEFT of it** — the lit and shade faces
+  must agree with that or it will read as pasted on.
+
+**The posters:** one or two, on the flat wall NEAR the door and **covering
+nothing that is already drawn**. Free wall in that area: roughly x 902-956,
+y 240-330 (right of the pier, above the walkway) — re-measure before drawing.
+Lore to draw from is in `LORE.md`; small painted images, not text blocks,
+because the font is 5px and a readable poster would be enormous. Candidates:
+the district wire, the tally, a transit-authority evacuation notice.
+**Check `--checkdocs` still passes** — the quiet button box is x 395-565 and
+none of this goes near it.
+
 ## B0a. Rain must actually LAND *(user, 2026-08-03)* — NEXT UP
 
 *"i meant like the actual raindrops coming down on the screen should
