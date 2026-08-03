@@ -43,12 +43,25 @@ chat that dies mid-session still leaves a record.
 
 ## 2026-08-02 — four backdrops auditioned, and the den and drain repainted
 
-**Shipped:** **v0.6.28** (the migration audit — see the entry below) and
-**v0.6.29** (both shipped menu backdrops repainted). Plus **four candidate
-backdrops** built and revised over many rounds in `tools/pitches/` — the yard
-at dusk, the warden's window, the flooded underpass, mara's counter. They are
-**deliberately unwired**: nothing imports them and `gen_art.py` never emits
-them. The menu still rotates den + drain only.
+**Shipped:** **v0.6.28** (the migration audit — see the entry below),
+**v0.6.29** (both shipped menu backdrops repainted) and **v0.6.30** (the four
+candidate backdrops promoted into the game — **the menu now rotates SIX**).
+
+*(This paragraph originally ended "the menu still rotates den + drain only",
+which was true when it was written and false ninety minutes later. Amended
+before the push rather than left to rot — that is the correction to the
+mid-session-staleness lesson recorded three entries down, and it is the whole
+point of it.)*
+
+**On the six:** all four were promoted **byte-identical** to the versions the
+user approved — hashes checked both ways, because a promotion that quietly
+re-rolls a painting would undo many rounds of their review. Rotation is a
+**shuffle bag at 30 s** (`_bag_next`/`_bag_reset` in `main_menu.gd`), with the
+seam case closed: a refill that would put the on-screen scene up next swaps it
+away, so nothing repeats back to back. Hand-rolled Fisher-Yates because
+`Array.shuffle()` is banned project-wide, and deliberately UNSEEDED — the menu
+should differ every launch, unlike the fixed district. **Indices 2-5 are still
+STATIC**; their living layers are the next version.
 
 **The user's words:** *"im here for the migration"*, then on the gap:
 *"Why does the handoff have a gap? I just had the last session spend like 2
@@ -101,11 +114,17 @@ colours of the screen should be blended together nicely"*.
 - Smooth lump functions render as mountain ranges: a smooth function has one
   highest point, and one highest point in a 10 px silhouette is a peak.
 
-**Picked up at:** **THE USER HAS NOT PICKED WHICH BACKDROPS TO KEEP.** Four
-are painted and revised in `tools/pitches/`; whichever they choose get
-promoted into `gen_art.py` and wired with their living layers (the five
-techniques are listed in TASKS.md A1), and the rest get deleted the way the
-overlook did. Nothing is blocked. All gates green, tree clean at v0.6.29.
+**Picked up at:** **THE LIVING LAYERS FOR BACKDROPS 2-5.** The user kept all
+four (*"let's add all 4 of those menu backdrops to the game, just like the den
+and drain"*), so they are in and rotating, but static. Next version gives them
+what den and drain have, using only the five techniques that already exist in
+`main_menu.gd` (listed in TASKS.md A1): a breathing additive glow, a 3-frame
+sprite swap, a visibility blink on offset timers, dust particles with a fade
+ramp, and one travelling sprite that triggers something when it lands. Each
+per-scene brief must name the anchor pixel it hangs off and require the base
+painting to stay byte-identical — that is one hash instead of a review round.
+`tools/pitches/` still holds the four source modules and can be deleted once
+the living layers are in. Nothing is blocked. All gates green at v0.6.30.
 
 ---
 

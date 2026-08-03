@@ -35,7 +35,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
 	 form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.29 shipped, 2026-08-02.** Milestone 1 (a walkable world) is DONE.
+**v0.6.30 shipped, 2026-08-02.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 
@@ -183,6 +183,36 @@ light spill.
   everything (the 8-direction vehicles went this way and it worked).
 - **Ship in small verified versions**, don't batch a long request list —
   the user asked for this explicitly.
+
+### RUNNING AGENT WORK — three rules the user asked be kept FOREVER
+
+Their words, 2026-08-02: *"yes remember those 3 things forever please"*, after
+a session where wasted agent runs cost real tokens. All three failures had one
+shape: **work was launched before the premise was verified.**
+
+1. **CROP AND CONFIRM THE DEFECT YOURSELF BEFORE LAUNCHING ANYTHING.** Two
+   workflows were launched on a wrong diagnosis — the near sleepers cropped
+   when they meant the distant ones, the downpipe when they meant the sunken
+   car — and both had to be stopped and redone. A third was sent to `yard.py`
+   for a tarp that lives in `warden.py`. Two minutes of looking at the actual
+   pixels beats a wasted run.
+2. **EVERY FIX BRIEF NAMES WHAT MUST NOT CHANGE, AND DEMANDS PROOF OF IT.** A
+   brief that said only "fix the shoulders" rebuilt the whole limb system,
+   moved the arms, detached the hands, and was rejected and reverted. The
+   retry said: hands must not move one pixel, arm centrelines fixed, only the
+   width profile and outer silhouette may change — *and prove the hand
+   bounding boxes are pixel-identical*. It landed first time. **The constraint
+   plus the required proof is the entire difference.**
+3. **ASK ONE CLARIFYING QUESTION INSTEAD OF GUESSING SCOPE.** "Upgrade the
+   paintings" was assumed to mean repaint; they meant redesign. That
+   assumption cost a started-and-stopped workflow.
+
+**And one learned the same day that is not their rule but is just as hard:
+NEVER let parallel agents share a file, and never let any agent run repo-wide
+git** (`stash`, `checkout`, `reset`). Two agents wiped others' work that way;
+nothing was lost, but only by luck. Every agent prompt now forbids it, and
+read-only git (`show`, `diff`, `log`) is fine. Sequential costs WALL CLOCK,
+not tokens — the token cost comes from redoing work, not from waiting.
 
 ## SAFETY & TRUST (user asked that every session know this, 2026-08-02)
 
@@ -463,13 +493,21 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   call). `respawn()` is only the fallback for a raid whose debrief never got
   built, and in ordinary play never fires; this line said "death fade →
   respawn", which DESIGN.md had already corrected in its own copy.
-  `scripts/main_menu.gd` — 2
-  rotating LIVING backdrops (0=den w/ the traders + job board, 1=drain;
-  the storm scene was RETIRED 2026-08-01, user call; painting coords via
-  the PC offset const; per-scene ticks drive candle/needles/LEDs/smoke and
-  ray/motes/drips), title shine, changelog viewer. `--backdrop=N` is valid
-  for 0-1 and `show_backdrop` CLAMPS above that, so a bad index silently
-  re-shoots the drain instead of erroring.
+  `scripts/main_menu.gd` — 6
+  rotating backdrops, one every 30 s (`SCENE_SECONDS`): 0=den (the traders +
+  job board), 1=drain, 2=yard, 3=warden, 4=underpass, 5=counter. **Only 0 and
+  1 are LIVING** — per-scene ticks drive candle/needles/LEDs/smoke and
+  ray/motes/drips; **2-5 are STATIC paintings** until a living layer is built
+  for them (v0.6.30 promoted the four; the storm scene was RETIRED
+  2026-08-01, user call; painting coords via the PC offset const).
+  **The order is a SHUFFLE BAG, not a cycle** (`_bag_next`/`_bag_reset`): each
+  round draws all six once, and a refill that would put the on-screen scene up
+  next swaps it away, so nothing ever repeats back to back. Deliberately
+  UNSEEDED — the menu should differ every launch, unlike the fixed district —
+  via hand-rolled Fisher-Yates over `randi_range`, because `Array.shuffle()`
+  is banned project-wide. Also title shine, changelog viewer.
+  `--backdrop=N` is valid for 0-5 and `show_backdrop` CLAMPS above that, so a
+  bad index silently re-shoots the counter instead of erroring.
   `scripts/settings.gd` —
   display/res/quality/fps/vsync/show-fps + rebindable keys + pixel_scale (the
   integer window scale) + 0.2s-window fps counter. `scripts/keybinds_panel.gd`,

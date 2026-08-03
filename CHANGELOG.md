@@ -3,6 +3,40 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.30] — 2026-08-02 — six backdrops, drawn from a bag
+
+The four auditioned menu paintings promoted into the rotation. User call:
+*"let's add all 4 of those menu backdrops to the game, just like the den and
+drain. So we'd have 6 now in total and they all switch between another every
+30 seconds. Make it random every time, but you can't repeat the same one if
+all havent been seen yet"*.
+
+### Added
+- **Four more menu backdrops** — `menu_yard`, `menu_warden`, `menu_underpass`
+  and `menu_counter` join the den and the drain, six in total. They are built
+  in `_build_scenes()` on exactly the same footing as the other two and fade
+  the same way. **They are STATIC** — the den's candle/needles/LEDs and the
+  drain's ray/motes/drips have no counterpart yet; a living layer for the new
+  four is the next version's work, and the module docstring says so.
+
+### Changed
+- **`SCENE_SECONDS` 20.0 → 30.0.**
+- **The rotation is a SHUFFLE BAG, not a cycle.** `_process` used to run
+  `(_scene_index + 1) % _scenes.size()`, the same six-step loop every launch.
+  A bag now holds each index once, `_bag_next()` pops one off the back, and
+  the bag refills only when empty — so every round shows all six exactly once
+  and nothing returns before the others have had a turn. The **bag seam** is
+  handled explicitly: on refill, if the last slot (the next draw) holds the
+  scene already on screen, it is swapped with a random earlier slot, which is
+  the only way the same painting could ever appear twice running.
+  `_bag_reset(shown)` starts a round with one index already spent — used on
+  menu entry and by `show_backdrop`, so the backdrop you are looking at is
+  never the next one up.
+- **Deliberately unseeded**, unlike the world builder: the district must be
+  bit-identical every deploy, the menu should differ every launch. Hand-rolled
+  Fisher-Yates over `randi_range` — `Array.shuffle()` stays banned.
+- `--backdrop=N` now accepts **0-5**; `show_backdrop` still clamps.
+
 ## [0.6.29] — 2026-08-02 — the den and the drain, repainted
 
 Both shipped menu backdrops rebuilt to the standard of the four candidate

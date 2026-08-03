@@ -1,11 +1,18 @@
 ﻿extends Node2D
-## Main menu. Generated backdrop scenes rotate with a slow crossfade,
-## each with its own living detail:
-##   den   - the traders at home: candle vs radio glow, smoke, rig LEDs
-##   drain - the tunnel under the district: god-ray, motes, ringing drips
+## Main menu. SIX generated backdrop scenes rotate with a slow crossfade, in a
+## shuffle-bag order (see _bag_next) so no backdrop repeats until every one of
+## them has been shown. Two of them are ALIVE and tick every frame:
+##   0 den   - the traders at home: candle vs radio glow, smoke, rig LEDs
+##   1 drain - the tunnel under the district: god-ray, motes, ringing drips
+## The other four are STATIC paintings for now — a living layer for them is
+## the next version's job, so do not assume one exists:
+##   2 yard      - the trainyard
+##   3 warden    - the toll gate warden
+##   4 underpass - the road underpass
+##   5 counter   - the counter
 ## (the storm scene retired 2026-08-01 — user call). DEPLOY starts the raid.
 
-const SCENE_SECONDS := 20.0
+const SCENE_SECONDS := 30.0
 const FADE_SECONDS := 1.4
 
 # preloaded once for the process lifetime: re-entering the menu from the game
@@ -16,6 +23,10 @@ const TEX_DEN_NEEDLES := preload("res://art/gen/menu_den_needles.png")
 const TEX_DRAIN := preload("res://art/gen/menu_drain.png")
 const TEX_DRAIN_RAY := preload("res://art/gen/menu_drain_ray.png")
 const TEX_DRAIN_RIPPLE := preload("res://art/gen/menu_drain_ripple.png")
+const TEX_YARD := preload("res://art/gen/menu_yard.png")
+const TEX_WARDEN := preload("res://art/gen/menu_warden.png")
+const TEX_UNDERPASS := preload("res://art/gen/menu_underpass.png")
+const TEX_COUNTER := preload("res://art/gen/menu_counter.png")
 const TEX_RAIN := preload("res://art/gen/rain_streak.png")
 const TEX_DUST := preload("res://art/gen/dust.png")
 const TEX_VIGNETTE := preload("res://art/gen/vignette.png")
@@ -34,6 +45,7 @@ const SHINE_WIDTH := 34.0
 var _scenes: Array[Node2D] = []
 var _scene_index := 0
 var _rotate_timer := 0.0
+var _bag: Array[int] = []   # remaining draws this round — see _bag_next()
 var _fade_tween: Tween
 var _time := 0.0
 
@@ -73,6 +85,10 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.30", [
+		"the four new menu paintings are in the game. six backgrounds now instead of two - the den, the drain, the trainyard, the warden at his gate, the underpass and the counter. the four new ones are still pictures for the moment, the moving parts come next",
+		"they change every thirty seconds instead of twenty, and the order is random now rather than the same loop every time. you cant get the same one twice in a row, and you wont see one come back until youve been shown all six",
+	]],
 	["v0.6.29", [
 		"both menu backgrounds repainted to match the new ones being auditioned. the den: mara now actually looks like mara, verne finally looks like the medic he is with his instruments and bottles and basin, and kettle has a face and the shelf of pawned stock he keeps. the light is properly banded instead of two soft blobs, the wall is real boards and the floor is concrete",
 		"the drain was mostly empty black - it now has the tunnel arching overhead, the drain carrying on through an archway, a pipe run, a big cast iron sluice gate cracked open and pouring water, and a lantern down on the bank so theres something warm against the cold light from the manhole",
@@ -694,6 +710,7 @@ func _ready() -> void:
 	_build_scenes()
 	_build_ui()
 	_activate(0, true)
+	_bag_reset(0)         # the den is on screen, so it is already spent
 	Music.play_menu()
 	# emerge from black — pairs with the splash's fade-out so the handoff
 	# is one continuous dip instead of a hard cut
@@ -712,8 +729,10 @@ func _ready() -> void:
 
 
 func show_backdrop(index: int) -> void:  # harness hook for screenshots
-	_activate(clampi(index, 0, _scenes.size() - 1), true)
+	var shown := clampi(index, 0, _scenes.size() - 1)
+	_activate(shown, true)
 	_rotate_timer = 0.0
+	_bag_reset(shown)     # jumping counts as a draw, same as menu entry
 
 
 func _process(delta: float) -> void:
@@ -730,7 +749,7 @@ func _process(delta: float) -> void:
 	_rotate_timer += delta
 	if _rotate_timer >= SCENE_SECONDS:
 		_rotate_timer = 0.0
-		_activate((_scene_index + 1) % _scenes.size(), false)
+		_activate(_bag_next(), false)
 
 	_title.position.y = _title_base_y + roundf(sin(_time * 1.3) * 2.0)
 
@@ -747,7 +766,9 @@ func _process(delta: float) -> void:
 	else:
 		_shine_clip.visible = false
 
-	# per-scene life (also during crossfades — anything visible stays alive)
+	# per-scene life (also during crossfades — anything visible stays alive).
+	# Only 0 and 1 are alive; 2-5 are still paintings and tick nothing, so
+	# they are deliberately absent here rather than missing by accident.
 	if _scenes[0].visible:
 		_tick_den()
 	if _scenes[1].visible:
@@ -878,6 +899,15 @@ func _build_scenes() -> void:
 	add_child(drain)
 	_scenes.append(drain)
 
+	# 3-6: STILL PAINTINGS — no living layer yet, that is the next version.
+	# They rotate on exactly the same footing as the two above; the only
+	# difference is that nothing in _process ticks them.
+	for texture in [TEX_YARD, TEX_WARDEN, TEX_UNDERPASS, TEX_COUNTER]:
+		var still := Node2D.new()
+		_backdrop(still, texture)
+		add_child(still)
+		_scenes.append(still)
+
 	for scene in _scenes:
 		scene.modulate.a = 0.0
 		scene.visible = false
@@ -934,6 +964,60 @@ func _fade_ramp() -> Gradient:
 	ramp.add_point(0.8, Color(1, 1, 1, 1))
 	ramp.set_color(1, Color(1, 1, 1, 0))
 	return ramp
+
+
+# ------------------------------------------------------- rotation order ----
+#
+# A SHUFFLE BAG, not a cycle. The bag holds every scene index once; each
+# rotation pops one off the back, and the bag is only refilled once it is
+# empty. So within any round every backdrop is shown exactly once and a
+# backdrop cannot come back until all the others have had their turn.
+#
+# The one hole a plain bag leaves is the SEAM: the last draw of one bag and
+# the first draw of the next are independent, so the same backdrop can land
+# twice in a row across the join. _bag_next closes that.
+#
+# Unlike the world builder this is DELIBERATELY UNSEEDED — the map must be
+# bit-identical every deploy, the menu should differ every launch. Godot's
+# global rng is randomized at startup, which is what randi_range draws from.
+# Array.shuffle() stays banned project-wide, hence the hand-rolled
+# Fisher-Yates below.
+
+func _bag_shuffle() -> void:
+	for i in range(_bag.size() - 1, 0, -1):
+		var j := randi_range(0, i)
+		var tmp := _bag[i]
+		_bag[i] = _bag[j]
+		_bag[j] = tmp
+
+
+func _bag_reset(shown: int) -> void:
+	## Start a fresh round with `shown` already spent — the backdrop standing
+	## on screen when the menu opens (or when the harness jumps to one) counts
+	## as drawn, so it is left out of this bag entirely instead of being
+	## eligible to come straight back round.
+	_bag.clear()
+	for i in _scenes.size():
+		if i != shown:
+			_bag.append(i)
+	_bag_shuffle()
+
+
+func _bag_next() -> int:
+	if _bag.is_empty():
+		for i in _scenes.size():
+			_bag.append(i)
+		_bag_shuffle()
+		# we draw from the BACK, so the last element is the next backdrop up.
+		# If the refill put the scene that is already on screen there, swap it
+		# with any other slot: that is the bag seam, and it is the only way
+		# this rotation could ever show the same painting twice running.
+		var last := _bag.size() - 1
+		if last > 0 and _bag[last] == _scene_index:
+			var j := randi_range(0, last - 1)
+			_bag[last] = _bag[j]
+			_bag[j] = _scene_index
+	return _bag.pop_back()
 
 
 func _activate(index: int, instant: bool) -> void:

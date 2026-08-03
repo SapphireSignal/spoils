@@ -6,8 +6,21 @@ CLAUDE.md's rule is "quote the user verbatim, paraphrase is where intent
 dies", and this makes that automatic instead of dependent on a session
 remembering to do it.
 
-THIS IS THE SAFETY NET, NOT THE HANDOFF. It is raw, complete and unreadable
-by design. HANDOFF.md stays the curated memory a new session actually reads.
+THIS IS THE SAFETY NET, NOT THE HANDOFF. It is raw and unedited. HANDOFF.md
+stays the curated memory a new session actually reads.
+
+ONE THING IS FILTERED, AND ONLY ONE: harness task-notifications. They arrive
+on this same event but nobody types them -- they are the machine reporting a
+finished background job. Measured on 2026-08-02 they were 148,634 of the
+day's 157,899 bytes: 94% of the file, burying the user's 9,265 bytes of
+actual words in it. The file exists so that when the handoff turns out to be
+wrong you can find what the user SAID, and that job was being defeated by
+its own noise. The test is deliberately narrow -- the text must both start
+with <task-notification> and contain the closing tag -- because the failure
+that matters here is dropping a real message, not keeping a stray machine
+one. Nothing a human could plausibly type matches it. (The results of that
+work are not lost: they live in the workflow output files, the commits and
+CHANGELOG.md, all of which are curated rather than raw.)
 
 THREE HARD RULES. Each is a real failure mode, not style:
 
@@ -38,13 +51,22 @@ import time
 
 HEADER = """# session log — %s
 
-Raw autosave. Every message the user sent, appended verbatim as it was sent.
+Raw autosave. Every message the user typed, appended verbatim as it was sent.
 
 **This is the safety net, not the handoff.** Nothing here is edited,
 summarised or trusted as a conclusion — `HANDOFF.md` is the curated memory a
 new session reads. Come here when the handoff turns out to be wrong.
 
+Harness task-notifications are the one thing filtered out: they arrive on the
+same event but nobody types them, and they were 94%% of this file's bytes on
+the day the filter was added. What they reported lives in the commits and
+`CHANGELOG.md`. Claude's own replies are NOT saved here — only the user's.
+
 """
+# NOTE the doubled %% above. HEADER is written as `HEADER % day`, so a bare
+# percent sign raises at format time — and because rule 2 swallows every
+# exception, that would silently drop the FIRST message of every new day and
+# look exactly like nothing happened. Caught by the hook test; do not undo it.
 
 
 def main():
@@ -59,6 +81,11 @@ def main():
     text = data.get("prompt") or data.get("user_prompt") or ""
     text = text.replace("\r\n", "\n").replace("\r", "\n").strip()
     if not text:
+        return
+
+    # The ONE filter. Both tests must pass, so a message that merely mentions
+    # the tag is still saved; only a whole machine-generated block is dropped.
+    if text.startswith("<task-notification>") and "</task-notification>" in text:
         return
 
     root = os.environ.get("CLAUDE_PROJECT_DIR") or data.get("cwd") or os.getcwd()
