@@ -1,12 +1,12 @@
 ﻿extends Node2D
 ## Main menu. SIX generated backdrop scenes rotate with a slow crossfade, in a
 ## shuffle-bag order (see _bag_next) so no backdrop repeats until every one of
-## them has been shown. Two of them are ALIVE and tick every frame:
+## them has been shown. Three of them are ALIVE and tick every frame:
 ##   0 den   - the traders at home: candle vs radio glow, smoke, rig LEDs
 ##   1 drain - the tunnel under the district: god-ray, motes, ringing drips
-## The other four are STATIC paintings for now — a living layer for them is
+##   2 yard  - the trainyard: the signal ticks red, drizzle, eave runoff
+## The other three are STATIC paintings for now — a living layer for them is
 ## the next version's job, so do not assume one exists:
-##   2 yard      - the trainyard
 ##   3 warden    - the toll gate warden
 ##   4 underpass - the road underpass
 ##   5 counter   - the counter
@@ -24,6 +24,9 @@ const TEX_DRAIN := preload("res://art/gen/menu_drain.png")
 const TEX_DRAIN_RAY := preload("res://art/gen/menu_drain_ray.png")
 const TEX_DRAIN_RIPPLE := preload("res://art/gen/menu_drain_ripple.png")
 const TEX_YARD := preload("res://art/gen/menu_yard.png")
+const TEX_YARD_HALO := preload("res://art/gen/menu_yard_halo.png")
+const TEX_YARD_SPLASH := preload("res://art/gen/menu_yard_splash.png")
+const TEX_YARD_GLINT := preload("res://art/gen/menu_yard_glint.png")
 const TEX_WARDEN := preload("res://art/gen/menu_warden.png")
 const TEX_UNDERPASS := preload("res://art/gen/menu_underpass.png")
 const TEX_COUNTER := preload("res://art/gen/menu_counter.png")
@@ -60,6 +63,14 @@ var _ripple_t: Array[float] = []
 var _ripple_age: Array[float] = []
 var _drip: Sprite2D
 var _drip_t := 0.0
+# yard life
+var _yard_halo: Sprite2D
+var _yard_glint: Sprite2D
+var _yard_leds: Array[Sprite2D] = []
+var _yard_splash: Sprite2D
+var _yard_splash_age := -1.0
+var _yard_drip: Sprite2D
+var _yard_drip_t := 0.0
 
 var _title: TextureRect
 var _title_base_y := 0.0
@@ -85,6 +96,10 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.32", [
+		"the trainyard menu background is alive now. the signal ticks red on a slow beat, the cabinet indicator and the far signal down the line blink on their own timings, drizzle blows through the left of the yard, and water runs off the boxcar roof and bursts on the ballast. the sunset moves in the puddle between the rails",
+		"the painting itself is untouched - every one of those is a light or a moving piece laid over the picture you already approved, checked byte for byte",
+	]],
 	["v0.6.31", [
 		"the menu now changes backdrop every ten seconds instead of thirty",
 	]],
@@ -770,12 +785,14 @@ func _process(delta: float) -> void:
 		_shine_clip.visible = false
 
 	# per-scene life (also during crossfades — anything visible stays alive).
-	# Only 0 and 1 are alive; 2-5 are still paintings and tick nothing, so
-	# they are deliberately absent here rather than missing by accident.
+	# 0-2 are alive; 3-5 are still paintings and tick nothing, so they are
+	# deliberately absent here rather than missing by accident.
 	if _scenes[0].visible:
 		_tick_den()
 	if _scenes[1].visible:
 		_tick_drain(delta)
+	if _scenes[2].visible:
+		_tick_yard(delta)
 
 
 func _menu_reset_windows() -> void:
@@ -902,10 +919,93 @@ func _build_scenes() -> void:
 	add_child(drain)
 	_scenes.append(drain)
 
-	# 3-6: STILL PAINTINGS — no living layer yet, that is the next version.
-	# They rotate on exactly the same footing as the two above; the only
+	# 3: THE YARD — the signal ticks red, two dead-lens LEDs wake on their own
+	# offsets, drizzle blows through the halo, and runoff comes off the near
+	# boxcar's eave to burst on the ballast. Every anchor below is a landmark
+	# named in make_scene_yard's docstring; they are not eyeballed.
+	var yard := Node2D.new()
+	_backdrop(yard, TEX_YARD)
+	_yard_glint = Sprite2D.new()               # sunset in the four-foot puddle
+	_yard_glint.texture = TEX_YARD_GLINT
+	_yard_glint.position = PC + Vector2(286, 418)
+	# NO add_mat here, deliberately — see the note in make_scene_yard. This
+	# one is a reflection on a surface, not light in air, and ADD over a blue
+	# puddle can only make grey.
+	yard.add_child(_yard_glint)
+	_yard_halo = Sprite2D.new()                # the signal lens
+	_yard_halo.texture = TEX_YARD_HALO
+	_yard_halo.position = PC + Vector2(340, 224)
+	_yard_halo.material = add_mat
+	yard.add_child(_yard_halo)
+	# THE +1,+1 IS NOT A FUDGE. TEX_DUST is 3x3, and an ODD-sized sprite
+	# centred on P covers [P-1.5, P+1.5], which rasterises its middle texel
+	# onto pixel P-1 — measured, not guessed: the far eye at CAB_LED/FAR_LED
+	# exactly lit the pixel up-and-left of the baked lens. The anchors below
+	# are the docstring's, plus that one-pixel raster correction. Every other
+	# overlay in this scene has an EVEN size and needs none.
+	for spec in [[Vector2(347, 287), "e8c170", false], [Vector2(306, 258), "cf573c", true]]:
+		var led := Sprite2D.new()              # cabinet indicator, far signal
+		led.texture = TEX_DUST
+		led.modulate = Color(spec[1])
+		led.position = PC + (spec[0] as Vector2)
+		# THE FAR SIGNAL'S EYE IS ADDITIVE AND THE CABINET'S IS NOT, and that
+		# is not an oversight. The cabinet lens sits on grey steel, so a solid
+		# warm dot reads. The far eye is baked 752438 against a de9e41 SUNSET —
+		# a red dot there is DARKER than its own sky and reads as a speck of
+		# dirt. Additive clips it up off the orange instead, which is what a
+		# distant lamp against a bright sky actually does.
+		if spec[2]:
+			led.material = add_mat
+		yard.add_child(led)
+		_yard_leds.append(led)
+	# DRIZZLE, AND IT HAS TO RUN THE WHOLE HEIGHT. A patch of rain hanging in
+	# the sky is a rectangle of rain stopping in mid-air — the first cut sat
+	# it on the signal, on the theory that you only see rain where a light
+	# catches it, and 88px of dashes over a 34px halo read as scattered ticks
+	# instead. So it falls top to bottom, and it is confined to the LEFT of
+	# the frame instead: that is where the boxcar, the poles and the eave
+	# runoff already are, and it keeps every streak out of the button band at
+	# x 400-560. Sparse enough (26 over 380x560) that the right-hand edge of
+	# the veil cannot be perceived as an edge.
+	# The lean is small ON PURPOSE — at the wires' 0.16 the bottom-most
+	# streaks drifted 94px right over their fall and walked into the buttons.
+	var drizzle := CPUParticles2D.new()
+	drizzle.texture = TEX_RAIN
+	drizzle.amount = 54
+	drizzle.lifetime = 3.4                     # ~2.9s of it inside the frame
+	drizzle.preprocess = 3.4
+	drizzle.position = PC + Vector2(160, -20)
+	drizzle.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	drizzle.emission_rect_extents = Vector2(190, 8)
+	drizzle.direction = Vector2(0.06, 1)
+	drizzle.spread = 3.0
+	drizzle.gravity = Vector2(2, 30)
+	drizzle.initial_velocity_min = 130.0
+	drizzle.initial_velocity_max = 160.0
+	# WHITE, not a tint. `color` MULTIPLIES the texture, and rain_streak is
+	# already a 3c5e8b at 20-76% alpha — tinting it 577277 as well took it to
+	# (20,42,65) at a quarter alpha and the drizzle rendered invisible.
+	drizzle.color = Color(1, 1, 1, 0.9)
+	drizzle.color_ramp = _fade_ramp()
+	yard.add_child(drizzle)
+	_yard_splash = Sprite2D.new()
+	_yard_splash.texture = TEX_YARD_SPLASH
+	_yard_splash.hframes = 3
+	_yard_splash.position = PC + Vector2(100, 358)
+	_yard_splash.visible = false
+	yard.add_child(_yard_splash)
+	_yard_drip = Sprite2D.new()
+	_yard_drip.texture = TEX_RAIN
+	_yard_drip.modulate = Color("a8b5b2", 0.75)
+	_yard_drip.visible = false
+	yard.add_child(_yard_drip)
+	add_child(yard)
+	_scenes.append(yard)
+
+	# 4-6: STILL PAINTINGS — living layers for these are the next version.
+	# They rotate on exactly the same footing as the ones above; the only
 	# difference is that nothing in _process ticks them.
-	for texture in [TEX_YARD, TEX_WARDEN, TEX_UNDERPASS, TEX_COUNTER]:
+	for texture in [TEX_WARDEN, TEX_UNDERPASS, TEX_COUNTER]:
 		var still := Node2D.new()
 		_backdrop(still, texture)
 		add_child(still)
@@ -958,6 +1058,51 @@ func _tick_drain(delta: float) -> void:
 			_ripple_age[0] = 0.0
 			_ripples[0].visible = true
 			_ripples[0].frame = 0
+
+
+func _tick_yard(delta: float) -> void:
+	# THE SIGNAL TICKS. A railway lamp does not breathe like a candle — it
+	# comes up, holds, and drops, on a beat you can count. 3.4 s round: up
+	# 0.35, hold 1.15, down 0.5, dark 1.4.
+	var t := fmod(_time, 3.4)
+	var lit := 0.0
+	if t < 0.35:
+		lit = t / 0.35
+	elif t < 1.5:
+		lit = 1.0 - 0.06 * sin(_time * 21.0)     # a little ballast buzz
+	elif t < 2.0:
+		lit = 1.0 - (t - 1.5) / 0.5
+	_yard_halo.modulate.a = clampf(lit, 0.0, 1.0)
+	# the puddle answers the sky, not the signal, so it shimmers on its own
+	# slow beat — two periods that do not divide, so it never pulses.
+	_yard_glint.modulate.a = 0.80 + 0.14 * sin(_time * 0.6) + 0.06 * sin(_time * 1.9)
+	# the cabinet indicator ticks; the far signal HOLDS ITS ASPECT and only
+	# drops out for half a second now and then, because a signal that winks
+	# on for a moment reads as a firefly and this one is the depth cue. No
+	# two of these three periods divide into each other.
+	_yard_leds[0].visible = fmod(_time, 2.6) < 1.5
+	_yard_leds[1].visible = fmod(_time + 3.0, 6.7) >= 0.5
+	# runoff off the near boxcar's eave (x 100), bursting on the ballast
+	if _yard_splash_age >= 0.0:
+		_yard_splash_age += delta
+		var f := int(_yard_splash_age / 0.11)
+		if f > 2:
+			_yard_splash.visible = false
+			_yard_splash_age = -1.0
+		else:
+			_yard_splash.frame = f
+	_yard_drip_t -= delta
+	if _yard_drip_t <= 0.0 and not _yard_drip.visible:
+		_yard_drip_t = randf_range(2.2, 5.5)
+		_yard_drip.visible = true
+		_yard_drip.position = PC + Vector2(100, 143)
+	if _yard_drip.visible:
+		_yard_drip.position.y += 620.0 * delta
+		if _yard_drip.position.y >= PC.y + 356.0:
+			_yard_drip.visible = false
+			_yard_splash.visible = true
+			_yard_splash.frame = 0
+			_yard_splash_age = 0.0
 
 
 func _fade_ramp() -> Gradient:

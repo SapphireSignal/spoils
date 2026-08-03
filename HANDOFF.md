@@ -41,6 +41,64 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-02 — the living layers, one scene at a time
+
+**Shipped:** **v0.6.32** — the trainyard's living layer, the first of the four
+promoted paintings to get one. Migration re-verified first: `--checksec` and
+`--checkdocs` both green at v0.6.31, tree clean, newest tag matching.
+
+**The user's words:** *"im here for the migration, then let's do the living
+layers for backdrops 2-5"*.
+
+**How it was done, and this is the pattern for the remaining three:** the
+overlays are built at the END of `make_scene_yard()`, after every base draw
+and **taking no rng draw**, so the approved painting comes out bit-identical —
+proven by hashing all six backdrops before and after the regen, not assumed.
+Every anchor came out of the docstring's own landmark list (`SIGNAL_LENS`,
+`CAB_LED`, `FAR_LED`, `PUDDLE`, `DRIP_SRC`), and each was confirmed against
+the actual pixels before anything was built.
+
+**Learned — five things the render caught that the code could not:**
+- **A GLOW'S SIZE IS THE WHOLE READ.** 72 px with a 210-alpha core painted a
+  pale disc bigger than the signal head: it read as a MOON rising behind it.
+  34 px with a 2 px core reads as a lamp. Same maths, same colours.
+- **`CPUParticles2D.color` MULTIPLIES the texture.** `rain_streak` is already
+  a 3c5e8b at 20-76% alpha; tinting it 577277 as well took it to (20,42,65)
+  at a quarter alpha and the drizzle rendered *invisible*. Use white.
+- **ADD CANNOT MAKE A WARM THING WARM OVER A BLUE ONE.** The puddle glint is
+  additive gold over a baked 253a5e, and every pixel of it measured warm
+  while the streak as a whole read as a cold grey smudge — because addition
+  can only push a blue base toward grey. Normal alpha REPLACES, so the gold
+  survives. Add is light in air; a reflection on a surface is not that.
+- **AN ODD-SIZED SPRITE LANDS ONE PIXEL UP-AND-LEFT.** `dust.png` is 3×3, and
+  a sprite centred on P rasterises its middle texel onto P-1. Both indicator
+  lamps sat a pixel off their own baked lenses. Measured, corrected, measured
+  again — the anchors in the script are now the docstring's plus that offset,
+  and it is commented so nobody "fixes" it back.
+- **A LIGHT MUST BEAT ITS OWN BACKGROUND, NOT ITS OWN COLOUR.** The far
+  signal's eye is baked 752438 against a `de9e41` SUNSET, so a red lamp there
+  is *darker than its sky* and reads as a speck of dirt. It is additive; the
+  cabinet's lens, on grey steel, is not. Check a light against what is BEHIND
+  it — the same lesson the car tarp taught, in the other direction.
+
+**Also worth knowing:** the drizzle is confined to the LEFT of the frame and
+leans only 0.06, because at the wires' 0.16 the bottom-most streaks drifted
+94 px right over their fall and walked into the button band. And a shot is
+taken 40 frames in, so the eave drip is always caught mid-flight — the SPLASH
+was proven separately by temporarily flying the drip at 2600 px/s, shooting,
+and reverting (verified reverted by grep, not by memory).
+
+**Picked up at:** **the living layers for backdrops 3, 4 and 5** — warden,
+underpass, counter, in that order, one version each. Every one of them has
+its room already documented in its own `make_scene_*` docstring: the warden's
+lamp pool is baked as a solid banded wash with the fuse-box LED left unlit at
+(800-820, 258-276) and a moth lane kept clear; the underpass's sodium tube is
+baked at ~60% with three ceiling leaks at x = 300, 596 and 736; the counter's
+taped splice at (838, 246) has a permanent baked scorch ring under it waiting
+for the ember that drips there. Nothing is blocked. All gates green.
+
+---
+
 ## 2026-08-02 — four backdrops auditioned, and the den and drain repainted
 
 **Shipped:** **v0.6.28** (the migration audit — see the entry below),

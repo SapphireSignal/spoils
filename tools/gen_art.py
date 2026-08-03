@@ -8828,7 +8828,7 @@ def make_scene_den() -> tuple[Canvas, Image.Image, Canvas]:
 
 
 
-def make_scene_yard() -> Canvas:
+def make_scene_yard() -> tuple[Canvas, Image.Image, Canvas, Image.Image]:
     """Menu 3 — THE YARD at dusk: standing on the running line, a dead boxcar
     either side. Promoted 2026-08-02 from the backdrop pitch the user chose to
     keep ("let\'s add all 4 of those menu backdrops to the game").
@@ -8854,14 +8854,16 @@ def make_scene_yard() -> Canvas:
     smaller than ~40 px. No ray-shaped ground edge is allowed to cross it,
     which is why the yard grades by depth and only the LEFT shoulder exists.
 
-    ROOM LEFT FOR A LIVING LAYER (not built here): the signal lens is baked
-    UNLIT at 752438 (glow belongs at SIGNAL_LENS, <= 40 px radius or it walks
-    into the button band); the cabinet indicator is a dead lens at CAB_LED;
-    the far signal on the vanishing point has a dark red eye at FAR_LED; the
-    puddle at PUDDLE is baked wet BUT DARK, so its warm glint strip goes on
-    top rather than into the bake; drizzle would centre on the signal halo.
+    THE LIVING LAYER IS BUILT (2026-08-02) and scripts/main_menu.gd hardcodes
+    the five landmarks below, so an anchor that moves is animation playing in
+    mid-air. The base bake still emits NOTHING — the signal lens stays UNLIT
+    at 752438, the cabinet indicator and the far signal's eye stay dead, and
+    the puddle stays wet BUT DARK — because every one of those is lit by an
+    overlay at runtime and a baked highlight would fight it.
 
-    Returns the base painting."""
+    Returns (base, signal halo, splash strip, puddle glint). The halo and the
+    glint are soft alpha (light, not art, so not palette-checked); the splash
+    is a 3-frame Canvas."""
     # ITS OWN STREAM, and it takes NO draw from any shared generator, so
     # promoting it cannot shift one pixel of the rest of the art set.
     # THE SEED STRING IS THE PITCH'S, NOT f"{SEED}:scene:yard". Every seam,
@@ -10109,7 +10111,93 @@ def make_scene_yard() -> Canvas:
         if not in_band(wx, wy, 20):
             tuft(wx, wy, rng.uniform(0.4, 0.8))
 
-    return c
+    # ---------------------------------------------------- runtime overlays --
+    # Built AFTER every base draw and taking NO rng draw, so the painting the
+    # user signed off is bit-identical to the promoted render. Same contract
+    # as make_scene_den / make_scene_drain: soft-alpha lights are raw RGBA
+    # (never palette-checked, they are light), sprite strips are Canvases.
+
+    # the signal halo, centred on SIGNAL_LENS. THE LENS IS 8px ACROSS, so the
+    # halo is 34 and not the 40 the ceiling allows: a first cut at 72 with a
+    # 210-alpha core painted a pale disc bigger than the signal head and read
+    # as a MOON rising behind it. A lamp is a small hot point with a little
+    # air around it, and this one sits against a maroon sky band that is
+    # already red — so the core has to go pale to be brighter than its own
+    # colour, and it has to stay 2px or it becomes the moon again.
+    gw = gh = 34
+    halo = Image.new("RGBA", (gw, gh), (0, 0, 0, 0))
+    hp = halo.load()
+    for y in range(gh):
+        for x in range(gw):
+            d = math.hypot(x - gw / 2 + 0.5, y - gh / 2 + 0.5) / (gw / 2)
+            if d >= 1.0:
+                continue
+            if d < 0.12:                                  # the lens filament
+                col, a = C("e8c170"), 168
+            elif d < 0.30:                                # the lens glass
+                col, a = C("cf573c"), int(74 + 62 * (1.0 - (d - 0.12) / 0.18))
+            else:                                         # wet air around it
+                col, a = C("a53030"), int(58 * (1.0 - (d - 0.30) / 0.70) ** 2)
+            hp[x, y] = (col[0], col[1], col[2], a)
+
+    # the runoff splash where the eave drip lands on the ballast (x 100,
+    # ground row 358). Low and wide — a ring would be a puddle, and this is
+    # dirt. 3 frames of 14x6.
+    splash = Canvas(42, 6)
+    for f in range(3):
+        ox = f * 14
+        if f == 0:                                        # impact: a tight tick
+            splash.vline(ox + 7, 1, 4, C("a8b5b2"))
+            splash.set(ox + 6, 3, C("577277"))
+            splash.set(ox + 8, 3, C("577277"))
+            splash.set(ox + 7, 5, C("394a50"))
+        elif f == 1:                                      # the throw-out
+            for k, dx in enumerate((-4, -2, 2, 4)):
+                splash.set(ox + 7 + dx, 3 if abs(dx) > 2 else 2,
+                           C("577277") if abs(dx) > 2 else C("a8b5b2"))
+            splash.hline(ox + 5, ox + 9, 5, C("394a50"))
+        else:                                             # the flat, going
+            splash.hline(ox + 3, ox + 11, 5, C("394a50"))
+            splash.set(ox + 7, 4, C("577277"))
+
+    # the puddle glint at PUDDLE — the sunset caught in the four-foot. The
+    # bake is wet BUT DARK on purpose so this goes on TOP, and two things
+    # about it were learned the hard way against the render:
+    #   * IT IS NOT ADDITIVE. The baked puddle is 253a5e, a strong blue, and
+    #     ADD can only ever push that toward grey — a warm wash over it came
+    #     out a cold pale lozenge. Normal alpha REPLACES the blue, so the
+    #     gold survives. Add is for light in air; this is a reflection ON a
+    #     surface, and the two do not blend the same way.
+    #   * IT IS BROKEN INTO DASHES. One smooth lens is the airbrushed ellipse
+    #     floating on the art that the drain redesign was fought over — and
+    #     this painting already states how it draws water reflections, in
+    #     short dashes along the sleepers. This matches that.
+    # The rows are weighted BY HAND, not by an ellipse. A symmetric vertical
+    # falloff put the two gold rows at the top on half the alpha of the brown
+    # rows below them, and the streak averaged out to grey at a glance even
+    # though every pixel in it measured warm. The far lip of a puddle catches
+    # the most sky, so the weight belongs at the TOP.
+    sw, sh = 30, 4
+    ROW = ((C("e8c170"), 0.80), (C("e8c170"), 1.00),
+           (C("be772b"), 0.82), (C("be772b"), 0.44))
+    glint = Image.new("RGBA", (sw, sh), (0, 0, 0, 0))
+    sp = glint.load()
+    for y in range(sh):
+        col, weight = ROW[y]
+        for x in range(sw):
+            u = (x - sw / 2 + 0.5) / (sw / 2)
+            if u * u >= 1.0:
+                continue
+            # the chop that breaks the streak: two periods that do not divide,
+            # so no gap is evenly spaced from the next
+            chop = math.sin(x * 1.15 + 0.7) * 0.5 + math.sin(x * 0.47) * 0.5
+            if chop < -0.42:
+                continue
+            a = int(240 * weight * (1.0 - u * u) ** 0.55
+                    * min(1.0, (chop + 0.42) / 0.5))
+            sp[x, y] = (col[0], col[1], col[2], a)
+
+    return c, halo, splash, glint
 
 
 def make_scene_warden() -> Canvas:
@@ -17310,9 +17398,13 @@ def main() -> None:
     den_base.img.save(OUT / "menu_den.png")
     den_glow.save(OUT / "menu_den_glow.png")            # light: soft alpha
     den_needles.img.save(OUT / "menu_den_needles.png")
-    yard_base = make_scene_yard()
+    yard_base, yard_halo, yard_splash, yard_glint = make_scene_yard()
     assert_palette(yard_base.img, "menu_yard")
+    assert_palette(yard_splash.img, "menu_yard_splash")
     yard_base.img.save(OUT / "menu_yard.png")
+    yard_halo.save(OUT / "menu_yard_halo.png")          # light: soft alpha
+    yard_splash.img.save(OUT / "menu_yard_splash.png")
+    yard_glint.save(OUT / "menu_yard_glint.png")        # light: soft alpha
     warden_base = make_scene_warden()
     assert_palette(warden_base.img, "menu_warden")
     warden_base.img.save(OUT / "menu_warden.png")

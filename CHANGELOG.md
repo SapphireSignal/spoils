@@ -3,6 +3,41 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.32] — 2026-08-02 — the trainyard wakes up
+
+First of the four promoted paintings to get a living layer. All five of the
+menu's existing techniques are used and no new engine work was needed.
+
+### Added
+- **`menu_yard_halo`, `menu_yard_splash`, `menu_yard_glint`** — three runtime
+  overlays built at the end of `make_scene_yard()`, after every base draw and
+  **taking no rng draw**, so the approved painting is bit-identical. Proven by
+  hashing all six backdrops before and after the regen.
+- **`_tick_yard()`** in `main_menu.gd`. The signal *ticks* on a 3.4 s beat
+  (up 0.35 / hold 1.15 / down 0.5 / dark 1.4) rather than breathing like the
+  den's candle — a railway lamp holds an aspect. The cabinet indicator ticks
+  on 2.6 s, the far signal down the line holds its aspect and drops out for
+  half a second every 6.7 s; no two of the three periods divide. Drizzle runs
+  the full height of the LEFT of the frame, and runoff comes off the near
+  boxcar's eave to burst on the ballast in a 3-frame splash.
+
+### Fixed during the pass — every one of these was caught in the render
+- **The halo read as a MOON.** 72 px across with a 210-alpha core painted a
+  pale disc bigger than the signal head. Now 34 px with a 2 px core.
+- **The drizzle rendered invisible.** `CPUParticles2D.color` MULTIPLIES the
+  texture, and `rain_streak` is already a 3c5e8b at 20-76% alpha; tinting it
+  577277 as well took it to (20,42,65) at a quarter alpha. It is white now.
+- **The puddle glint came out a cold grey smudge.** ADD over the baked 253a5e
+  blue can only neutralise toward grey — it is normal-blended now, weighted
+  to its top rows, and broken into dashes like the reflections the painting
+  already draws along the sleepers.
+- **Both indicator lamps sat one pixel off their lenses.** An ODD-sized
+  sprite (`dust.png` is 3×3) centred on P rasterises its middle texel onto
+  P-1. Measured against the bake, corrected, and re-measured.
+- **The far signal's eye is additive and the cabinet's is not.** That eye is
+  baked against a `de9e41` sunset, so a red dot there is darker than its own
+  sky and reads as dirt.
+
 ## [0.6.31] — 2026-08-02 — the menu changes scene faster
 
 ### Changed
