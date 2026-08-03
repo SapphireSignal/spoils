@@ -132,6 +132,7 @@ const YARD_WINDOWS := [Vector2(127, 253), Vector2(155, 253),
 var _yard_wins: Array[Sprite2D] = []
 var _birds: Array[Sprite2D] = []
 var _bird_t: Array[float] = []
+var _bird_fly: Array[bool] = []
 # warden life
 var _w_lamp: Sprite2D
 var _w_spill: Sprite2D
@@ -207,6 +208,10 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.41", [
+		"the birds were flying at exactly the height of the menu buttons, so most of every crossing happened behind them and you only ever caught one in the gap on the right. they fly above the buttons now, over the buildings with the flickering windows",
+		"mara is holding her pencil properly - its drawn behind her hand now so her fingers close over it and the lead reaches the map. her forearms are slimmer and rounded instead of square slabs",
+	]],
 	["v0.6.40", [
 		"rain lands properly now. every drop knows where its own ground is, falls to it, dies there and leaves a splash on that exact spot - the same way rain already works in the raids. the ground splash marks from last version are gone, they were a separate thing lying on the floor and you were right that it wasnt what you meant",
 		"the birds in the trainyard are bigger, there are five of them, and they cross slower so theyre easier to catch",
@@ -1191,7 +1196,8 @@ func _build_scenes() -> void:
 		bd.visible = false
 		yard.add_child(bd)
 		_birds.append(bd)
-		_bird_t.append(0.3 + i * 1.5)
+		_bird_t.append(0.3 + i * 0.55)   # a loose flock, not a queue
+		_bird_fly.append(false)
 	# FIVE points, all on wire pixels sampled out of the bake, and they fire
 	# every 1.4-4.5s instead of every 3.5-9 — user: "make the trainyards
 	# sparks from the poles more noticable, and make more of them".
@@ -1510,24 +1516,40 @@ func _tick_yard(delta: float) -> void:
 	for i in _birds.size():
 		var bd := _birds[i]
 		_bird_t[i] -= delta
-		if not bd.visible:
+		# `flying` is NOT `visible`: a bird is in the air the moment it leaves
+		# the building, but it is only DRAWN once it has cleared the edge.
+		if not _bird_fly[i]:
 			if _bird_t[i] <= 0.0:
-				bd.visible = true
-				# y 232-244, NOT 196: a black silhouette only reads against the
-				# SUNSET band (roughly y 230-260). At 196 they were crossing the
-				# dark purple cloud and were invisible — the user: "i dont see
-				# any birds flying in the back on trainyard anymore". Third time
-				# this session a thing was drawn against its own value.
-				bd.position = PC + Vector2(700.0 + i * 26.0, 232.0 + i * 6.0)
+				_bird_fly[i] = true
+				# THEY SPAWN BEHIND THE RIGHT-HAND BUILDING AND STAY HIDDEN
+				# UNTIL THEY CLEAR IT. Sampling the bake at y 232-262 shows
+				# 151d28/10141f from x 700 rightward — that is the building,
+				# not sky, and the user saw exactly that: "they are on the
+				# thing on the right, they should be in the sky". The open
+				# sunset runs to about x 670, so they are invisible until they
+				# pass it and then emerge from behind its edge, which is a
+				# real entrance rather than a pop.
+				#
+				# AND THE HEIGHT MATTERED MORE THAN ANY OF THAT: at y 234 they
+				# flew at screen row 464, which is INSIDE the "play" button, so
+				# most of every crossing happened BEHIND THE MENU and only a
+				# glimpse in the gap on the right ever showed ("the birds are
+				# still on the right, and i only see one"). y 219-227 sits on
+				# the 752438 maroon band and clears the button top at row 229.
+				bd.position = PC + Vector2(748.0 + i * 30.0, 219.0 + i * 2.0)
 		else:
-			# whole pixels only, and they climb slightly as they go
+			# whole pixels only. It holds its height: this band is the only
+			# lit sky in the frame and climbing out of it makes it vanish.
 			var bp := bd.position
 			bp.x -= 46.0 * delta   # slower: longer on screen, easier to catch
-			bp.y -= 1.6 * delta   # barely climbs: it must stay in the lit band
+			bp.y -= 0.35 * delta   # must not climb out of the maroon band
 			bd.position = Vector2(roundf(bp.x), roundf(bp.y))
 			bd.frame = int(_time * (7.0 + i * 1.3)) % 3
-			if bd.position.x < PC.x + 250.0:
+			# hidden while it is still over the building's silhouette
+			bd.visible = bd.position.x < PC.x + 668.0
+			if bd.position.x < PC.x + 140.0:
 				bd.visible = false
+				_bird_fly[i] = false
 				_bird_t[i] = randf_range(2.0, 6.0)
 	# runoff off the near boxcar's eave (x 100), bursting on the ballast
 	if _yard_splash_age >= 0.0:

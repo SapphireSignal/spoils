@@ -312,6 +312,33 @@ it lands on, MEASURED. That failed four times in one day — the far signal's
 eye, the underpass drip, the rat, the birds — and every time the code was
 perfect and the thing was invisible.
 
+**Then v0.6.41 — THE BIRDS WERE BEHIND THE BUTTONS.** They flew at painting
+y 234, which is screen row 464, which is inside the "play" button. Most of
+every crossing happened behind the menu; only the gap on the right ever showed
+one. They fly at y 219-227 now, above the button band and over the skyline
+whose windows flicker.
+
+**This cost far more than it should have, and the reasons are all recorded in
+CLAUDE.md now:** I offered two theories the user correctly rejected, then ran
+a "force the sprite magenta" test that proved nothing **because `modulate`
+MULTIPLIES — magenta over a near-black sprite is still near-black**. The same
+multiply had already hidden the drizzle, the underpass drip and the rat. What
+finally found it was cropping the flight path and LOOKING at it, which should
+have been the first move rather than the fifth.
+
+**Also v0.6.41 — mara's pencil and forearms, and the constraint was PROVEN.**
+The pencil is drawn BEFORE the hand now so her fingers close over the shaft;
+it used to be drawn after, up and right of her hand, pointing away, touching
+nothing. `limb()` stamped an axis-aligned `c.rect` at every step, which is
+literally why the arms read as planks — it sweeps a rounded section now, wrist
+8 -> 6, bulge 2.2 -> 1.2. **Diffed against the previous commit: the only
+changed region is x 597-766, y 345-417. Her face and hair/headset diff to
+None.** That is what the "constrain the fix and prove the rest" rule asks for,
+and the user's own question about it — *"what if the fix needs more rebuild in
+order to work?"* — has a straight answer: **the rule is not "never rebuild
+more", it is "never rebuild more SILENTLY". Say what will move, get a yes,
+then prove everything else did not.**
+
 **Picked up at:** **nothing is in progress.** A1 in TASKS.md is now DONE — all
 six backdrops exist and all six live. The next items in that list are the
 in-game map screen and the map-select tile; **M2 (guns) still waits on the

@@ -3,6 +3,41 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.41] — 2026-08-03 — the birds were behind the buttons, and mara's grip
+
+### Fixed — the birds, after two wrong answers and a real measurement
+They flew at painting y 234, which is **screen row 464 — inside the "play"
+button**. So most of every crossing happened behind the menu and only the
+gap on the right ever showed one, exactly as the user reported (*"the birds
+are still on the right, and i only see one"*). They now fly at y 219-227, on
+the `752438` maroon band, clearing the button top at row 229 — over the
+skyline buildings whose windows flicker, which is where the user asked for
+them. Five on a tighter stagger so they read as a loose flock.
+
+**How long this took is the lesson.** Two theories offered and rejected, a
+"force it magenta" test that proved nothing **because `modulate` MULTIPLIES
+and magenta over a near-black sprite is still near-black** — the same trap
+that had already hidden the drizzle, the underpass drip and the rat — and a
+diff-against-the-bake that could not see it. What finally worked was cropping
+the flight path and looking at it.
+
+### Fixed — mara's pencil and arms *(base art)*
+User: *"shes not holding the pencil right, like its not in her hands. also
+make her arms not square and a bit smaller"*.
+- **The pencil is drawn BEFORE the hand now**, so her fingers and palm close
+  over the shaft and the lead comes out below onto the map. It used to be
+  drawn after, starting up and to the right of her hand and pointing away, so
+  nothing on screen was touching it.
+- **`limb()` stamped an axis-aligned `c.rect` at every step** — literally why
+  the forearms read as planks. It sweeps a rounded section now, the wrist
+  width went 8 → 6 and the flexor bulge 2.2 → 1.2.
+
+**The constraint was proven, not asserted.** Diffing the painting against the
+previous commit: the only changed region is **x 597-766, y 345-417** — the
+forearms and the pencil. Her face and her hair/headset diff to `None`, i.e.
+byte-identical. That is the rule this project has already had one rejected
+pass over.
+
 ## [0.6.40] — 2026-08-03 — rain that lands, on the raid's own model
 
 ### Added

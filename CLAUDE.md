@@ -35,7 +35,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
 	 form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.40 shipped, 2026-08-03.** Milestone 1 (a walkable world) is DONE.
+**v0.6.41 shipped, 2026-08-03.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 
@@ -753,6 +753,17 @@ then `godot_console --headless --path . --import`.
   it will sit and pick values that clear it by a wide margin** — and remember
   `modulate` MULTIPLIES, so a tint on an already-coloured texture almost
   always goes darker than you expect. A one-line sample beats a re-render.
+- **CHECK WHETHER THE UI IS ON TOP OF IT.** The menu's buttons occupy screen
+  rows ~460-620 and the backdrops are painted UNDER them. The yard's birds
+  were given painting y 234 = screen row 464 and spent most of every crossing
+  behind the "play" button; three sessions' worth of theories went past that
+  before anyone cropped the flight path and looked. **Any moving overlay must
+  have its screen row checked against the button band before anything else.**
+- **`modulate` MULTIPLIES, so "force it bright to see if it renders" DOES NOT
+  WORK on a dark sprite.** Setting a near-black bird to magenta gives
+  (255,0,255) x (9,10,20) = (9,0,20) — still black, and the test proves
+  nothing. To prove a sprite renders, move it somewhere unmistakable or swap
+  its TEXTURE, never its modulate.
 - **DO NOT ANSWER "WHY IS X NOT SHOWING?" WITH A THEORY. MEASURE IT.**
   2026-08-03, the yard's birds: I gave the user TWO confident explanations in
   a row — that they were drawn against too similar a value, then that the new

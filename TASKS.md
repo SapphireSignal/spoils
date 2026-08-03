@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.40.** The release history was renumbered evenly on
+**Current version: v0.6.41.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -182,7 +182,7 @@ the window and wire anchors were.
 Applies to the **trainyard** and the **warden**. Do it before adding rain to
 any other backdrop.
 
-## B0b. Mara's arms and pencil *(user, 2026-08-03)*
+## B0b. Mara's arms and pencil — **DONE in v0.6.41**
 
 *"in maras counter, shes not holding the pencil right, like its not in her
 hands. also make her arms not square and a bit smaller"*.

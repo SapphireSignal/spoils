@@ -16764,12 +16764,25 @@ def make_scene_counter() -> tuple:
                 t = k / float(n)
                 x, y = x0 + (x1 - x0) * t, y0 + (y1 - y0) * t
                 w = (w0 + (w1 - w0) * (t ** 1.4)
-                     + 2.2 * (1.0 - t)
+                     + 1.2 * (1.0 - t)
                      * math.sin(math.pi * min(max((t - 0.06) / 0.44, 0.0), 1.0)))
-                c.rect(int(x - w), int(y - w * 0.62), int(x + w), int(y + w * 0.62),
-                       core)
-                c.hline(int(x - w), int(x + w), int(y - w * 0.62), up)
-                c.hline(int(x - w), int(x + w), int(y + w * 0.62), dn)
+                # A ROUNDED SECTION, not c.rect. Stamping an axis-aligned
+                # rectangle at every step is literally why these read as
+                # planks — user: "make her arms not square and a bit smaller".
+                # The centreline and both end widths are untouched; only the
+                # cross-section and the flexor bulge change, so the cuff still
+                # meets the elbow and the wrist still meets the hand.
+                hh = w * 0.62
+                top = int(y - hh)
+                bot = int(y + hh)
+                for yy in range(top, bot + 1):
+                    v = (yy - y) / max(1.0, hh)
+                    ww = w * math.sqrt(max(0.0, 1.0 - v * v * 0.62))
+                    c.hline(int(x - ww), int(x + ww), yy, core)
+                    if yy == top:
+                        c.hline(int(x - ww), int(x + ww), yy, up)
+                    elif yy == bot:
+                        c.hline(int(x - ww), int(x + ww), yy, dn)
 
         def hand(cx, ytop, ybot, half, digits, thumb):
             for y in range(ytop, ybot + 1):
@@ -16804,7 +16817,7 @@ def make_scene_counter() -> tuple:
         # are the subject of this pitch and they have to be the brightest skin in
         # the frame, not part of a band.
         # ---- her right arm (screen left). Its sleeve ends at (608, 412).
-        limb(608, 410, 646, 392, 11, 8, C("ad7757"), C("c09473"), C("7a4841"))
+        limb(608, 410, 646, 392, 11, 6, C("ad7757"), C("c09473"), C("7a4841"))
         for k in range(30):                                     # cold rim, box side
             c.set(610 + k, 402 - int(k * 0.46), C("3c5e8b"))
         hand(651, 386, 400, 18,
@@ -16812,20 +16825,28 @@ def make_scene_counter() -> tuple:
              (15, 11, 1))
 
         # ---- her left arm (screen right). Its sleeve ends at (754, 412).
-        limb(754, 410, 718, 390, 11, 8, C("ad7757"), C("c09473"), C("7a4841"))
+        limb(754, 410, 718, 390, 11, 6, C("ad7757"), C("c09473"), C("7a4841"))
         for k in range(28):                                     # warm rim, lamp side
             c.set(752 - k, 402 - int(k * 0.48), C("de9e41"))
+        # THE PENCIL GOES IN FIRST, so the hand is drawn OVER it and the
+        # shaft disappears behind her fingers and palm — you see the blunt end
+        # above her grip and the lead below it, on the sheet. It used to be
+        # drawn AFTER the hand, starting up and to the RIGHT of it and
+        # pointing away, so nothing on screen was touching it (user: "shes not
+        # holding the pencil right, like its not in her hands"). Nothing about
+        # the hand itself changes; only the order and the angle.
+        for k in range(47):                                     # the stub pencil
+            x, y = 740 - k, 354 + k
+            c.set(x, y, C("de9e41"))
+            c.set(x + 1, y, C("be772b"))
+            c.set(x, y + 1, C("884b2b"))
+            if k > 6:
+                c.set(x - 1, y, C("e8c170"))
+        c.set(693, 401, C("341c27"))                            # its lead
+        c.set(692, 402, C("090a14"))
         hand(714, 384, 397, 17,
              ((-13, 10, -0.12), (-7, 12, -0.04), (-1, 11, 0.06), (5, 8, 0.14)),
              (-16, 10, -1))
-        for k in range(26):                                     # the stub pencil
-            x, y = 721 + k, 376 - int(k * 0.58)
-            c.set(x, y, C("de9e41"))
-            c.set(x, y + 1, C("be772b"))
-            c.set(x, y + 2, C("884b2b"))
-            c.set(x, y - 1, C("e8c170") if k > 7 else C("de9e41"))
-        c.set(747, 362, C("341c27"))                            # its lead
-        c.set(748, 361, C("090a14"))
         del rng
 
 
