@@ -156,8 +156,12 @@ light spill.
   day and storm-night alike. **Leaks: none.**
   **THE INVARIANT IS THE TREND, NOT THE ABSOLUTE COUNT** — `--leakcheck`
   must print `nodes+0 objects+0 orphans=0` with memory flat to ~0.06 MB.
-  That is the thing to assert. The absolute menu count is **~818 nodes /
-  3362 objects at v0.6.26** and it legitimately creeps: the changelog
+  That is the thing to assert. The absolute menu count is **~1717 nodes /
+  4410 objects at v0.6.44** — it was ~818 / 3362 at v0.6.26 and the jump is
+  not a leak: the living layers added ~740 sprites of simulated rain alone
+  (one per drop plus one per splash, on the yard and the warden), and the
+  drain, underpass and counter each carry their own. It also legitimately
+  creeps: the changelog
   viewer builds a label per bullet, so **every release adds a few nodes**.
   Do not treat a small rise as a leak, and do not bother re-pinning the
   number every version — re-pin it when it is convenient and always quote

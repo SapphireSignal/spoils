@@ -232,14 +232,19 @@ than being scattered through UI/input code — so a server can own them later. N
     text" investigation).
   - Boot scene is the SapphireSignal studio card (`scenes/splash.tscn`), which
     hands off to the main menu (`scenes/menu.tscn`); harness args skip it
-    instantly. The menu rotates TWO generated backdrop scenes with crossfades —
-    0 = the den (the traders at home, with the job board), 1 = the drain (the
-    tunnel under the district) — each with an animated layer. A third, the
-    storm, was retired 2026-08-01 on the user's call; the five further
-    backdrops in TASKS.md are pitches and are NOT wired in. Harness:
-    `--scene=menu` stays on the menu, `--backdrop=N` picks a scene (valid 0-1,
+    instantly. The menu rotates **SIX** generated backdrop scenes with
+    crossfades, one every 15 s, in a shuffle-bag order so none repeats until
+    all six have shown — 0 den, 1 drain, 2 yard, 3 warden, 4 underpass,
+    5 counter. **ALL SIX ARE LIVING** as of v0.6.35: every one has an animated
+    layer, and every layer is an OVERLAY, so all six base paintings are
+    byte-identical to the renders the user approved. (This section said TWO,
+    called the other four "pitches ... NOT wired in", and gave `--backdrop` as
+    valid 0-1 — all three were true in v0.6.29 and wrong from v0.6.30 on.)
+    A seventh, the storm, was retired 2026-08-01 on the user's call. Harness:
+    `--scene=menu` stays on the menu, `--backdrop=N` picks a scene (valid 0-5,
     and it CLAMPS rather than erroring, so a bad index silently re-shoots the
-    drain), `--at=X,Y` teleports the player.
+    counter), `--film=<name>` captures a SEQUENCE for judging motion,
+    `--at=X,Y` teleports the player.
 
 ## 7. Self-verification requirements (non-negotiable)
 

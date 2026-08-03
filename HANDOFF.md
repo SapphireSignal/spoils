@@ -390,6 +390,24 @@ and it is worth repeating to them: no. `art/gen` is committed, players never
 run the generator, and a build with missing art does not load, so `--smoke`
 fails and it cannot be pushed. The cost was a dev loop stopping dead.
 
+**A DOC AUDIT ON THE WAY OUT, because the user asked "everything updated?"
+and that is the one question this project has learned not to answer from
+memory.** All 13 releases (v0.6.32-v0.6.44) check out in the in-game list, in
+CHANGELOG.md and as git tags, and both gates are green. **Two prose claims
+were stale and neither gate could see either:**
+- **DESIGN.md still described a TWO-backdrop menu**, called the other four
+  "pitches ... NOT wired in", and gave `--backdrop` as valid 0-1. True at
+  v0.6.29, wrong from v0.6.30 on — thirteen releases of drift in the document
+  that is supposed to be the source of truth for what we are building.
+- **CLAUDE.md's menu node count** still read ~818 nodes / 3362 objects at
+  v0.6.26. Measured today: **1717 / 4410**. Not a leak — the living layers
+  added ~740 rain sprites alone — but a number nobody could reproduce is
+  exactly what that section warns against, and it had doubled.
+
+Both fixed and the reason written into each. **This is the third audit in
+three sessions to find prose defects while both gates printed PASS.** Stop
+expecting that to change: a check cannot verify a sentence.
+
 **Picked up at:** **nothing is in progress.** A1 in TASKS.md is now DONE — all
 six backdrops exist and all six live. The next items in that list are the
 in-game map screen and the map-select tile; **M2 (guns) still waits on the
