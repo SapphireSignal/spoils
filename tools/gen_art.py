@@ -7977,6 +7977,46 @@ def make_scene_den() -> tuple[Canvas, Image.Image, Canvas]:
     c.hline(KX - 9, KX + 4, 320, C("e7d5b3"))
     c.hline(KX - 8, KX + 2, 321, C("d7b594"))
     c.hline(KX - 6, KX + 1, 324, C("7a4841"))                  # the mouth line
+
+    # ---- MAKE THE BEARD READ AS A BEARD (user, 2026-08-03: "give kettle a
+    # beard on the den backdrop"). He always had one — the block above is
+    # labelled "the white beard" — but it rendered as a bare chin, because a
+    # smooth pale mass in the same value family as skin, with no boundary and
+    # no texture, is a chin. Three things fix that and none of them move the
+    # silhouette: a SHADOW where it meets the cheek so it sits proud of the
+    # face, a RAGGED bottom edge instead of a clean arc, and strands through
+    # the mass. The tones stay warm on purpose — the note above is right that
+    # grey paint goes blue under this candle.
+    brng = random.Random("spoils:den:kettle:beard")
+    for y in range(320, 337):
+        tb = (y - 319) / 19.0
+        hwb = int(13 * max(0.0, 1.0 - tb * tb * 0.94) ** 0.5)
+        c.set(KX - hwb - 1, y, C("7a4841"))                    # cheek shadow
+        c.set(KX + hwb + 1, y, C("4d2b32"))                    # and on the dark
+        c.set(KX + hwb + 2, y, C("341c27"))                    # side, deeper
+    for y in range(331, 340):                                  # a ragged chin
+        tb = (y - 319) / 19.0
+        # max(0.0, ...): past y 337 the bracket goes negative and ** 0.5
+        # returns a COMPLEX number, which kills the build after main() has
+        # already purged art/gen. The original loop stopped at 337; this one
+        # runs two rows further to fray the chin, so it has to clamp.
+        hwb = int(13 * max(0.0, 1.0 - tb * tb * 0.94) ** 0.5)
+        for x in range(KX - hwb - 2, KX + hwb + 3):
+            if brng.random() < 0.42:
+                u = (x - (KX - hwb)) / float(max(1, 2 * hwb))
+                c.set(x, y, C("e7d5b3") if u < 0.35 else
+                      (C("d7b594") if u < 0.7 else C("ad7757")))
+    for sx in (-9, -5, 0, 4, 8):                               # strands, uneven
+        top = 322 + brng.randint(0, 3)
+        for k in range(brng.randint(5, 11)):
+            c.set(KX + sx + k // 5, top + k, C("c09473"))
+    c.hline(KX - 5, KX + 2, 325, C("4d2b32"))                  # under the lip
+    # the moustache overhangs the beard rather than sitting flush on it
+    c.hline(KX - 11, KX + 5, 318, C("d7b594"))
+    c.hline(KX - 12, KX + 6, 319, C("e7d5b3"))
+    c.set(KX - 12, 320, C("c09473"))
+    c.set(KX + 6, 320, C("ad7757"))
+    c.hline(KX - 10, KX + 4, 322, C("ad7757"))                 # its shadow
     for y in range(292, 302):                                  # the flat cap
         t = (y - 292) / 10.0
         hw = int(9 + t * 6)
@@ -13851,14 +13891,79 @@ def make_scene_underpass() -> tuple:
         c.set(hx - 3 - k, hy + 2, C("577277"))
         c.set(hx - 3 - k, hy + 3, C("202e37"))
     c.set(hx - 12, hy + 2, C("c7cfcc"))                       # the tip catches
+    # ---- THE VISION PANEL, and what is on the far side of it (user: "make a
+    # rectangle see through glass on there and show some blood splatter on the
+    # opposite side of the door").
+    #
+    # ORDER IS THE WHOLE TRICK: the dark of the room behind goes down first,
+    # then the blood ON THE FAR FACE of the glass, then the wire mesh, then
+    # the glass's own reflection ON TOP. Painting the reflection last is what
+    # puts the spatter BEHIND the glass instead of on the near face.
+    #
+    # It reads as SPATTER, never as a body: droplets, a spray arc and two
+    # runs, all small and all clearly liquid. A soft mass of red in this
+    # project has been mistaken for a corpse before.
+    gx0, gx1, gy0, gy1 = 843, 881, 260, 302
+    c.rect(gx0 - 2, gy0 - 2, gx1 + 2, gy1 + 2, C("151d28"))   # the bead, shade
+    c.rect(gx0 - 2, gy0 - 2, gx1 + 2, gy0 - 1, C("394a50"))   # lit top of bead
+    c.vline(gx0 - 2, gy0 - 2, gy1 + 2, C("394a50"))           # lit left of bead
+    c.rect(gx0, gy0, gx1, gy1, C("090a14"))                   # the room beyond
+    for y in range(gy0, gy1 + 1):                             # it is not flat
+        u = (y - gy0) / float(gy1 - gy0)
+        if u > 0.62:
+            c.hline(gx0, gx1, y, C("10141f"))
+    grng = random.Random("spoils:underpass:glass")
+    # the spray arc — thrown from low left to upper right, thinning as it goes
+    for k in range(34):
+        u = k / 33.0
+        bx = int(gx0 + 3 + u * (gx1 - gx0 - 6))
+        by = int(gy1 - 6 - u * 26 + grng.uniform(-2.5, 2.5))
+        # SPATTER, not a smear: the heavy end is 1-2px droplets with gaps
+        # between them, never a filled run. A solid red mass at this scale
+        # stops reading as liquid — and in this project a soft red mass has
+        # been mistaken for a body before.
+        r = 1 if u < 0.45 else 0
+        col = C("752438") if u < 0.55 else C("4d2b32")
+        if grng.random() < 0.78:
+            for dy in range(-r, r + 1):
+                c.hline(bx - r, bx + r, by + dy, col)
+            if r >= 1 and grng.random() < 0.35:
+                c.set(bx, by - r - 1, C("a53030"))
+    for _ in range(16):                                       # loose droplets
+        dx_ = grng.randrange(gx0 + 2, gx1 - 1)
+        dy_ = grng.randrange(gy0 + 3, gy1 - 2)
+        c.set(dx_, dy_, C("752438") if grng.random() < 0.6 else C("4d2b32"))
+    for rx in (gx0 + 9, gx0 + 24):                            # two slow runs
+        rl = grng.randint(7, 14)
+        ry = grng.randrange(gy0 + 8, gy0 + 18)
+        for k in range(rl):
+            c.set(rx, ry + k, C("752438") if k < rl - 3 else C("4d2b32"))
+        c.set(rx, ry + rl, C("a53030"))                       # the bead at its end
+    for wy in range(gy0 + 4, gy1, 7):                         # safety wire mesh
+        c.hline(gx0, gx1, wy, C("172038"))
+    for wx in range(gx0 + 4, gx1, 7):
+        c.vline(wx, gy0, gy1, C("172038"))
+    # the glass itself, LAST: one broad reflection off the tube away to the
+    # left, and a hard highlight on the top-left corner
+    for k in range(26):
+        sx = gx0 + 2 + k
+        for dy in range(0, 5):
+            yy = gy0 + 4 + k // 2 + dy
+            if gy0 <= yy <= gy1 and sx <= gx1:
+                c.set(sx, yy, C("202e37") if dy < 3 else C("172038"))
+    c.hline(gx0 + 1, gx0 + 9, gy0 + 1, C("394a50"))
+    c.set(gx0 + 1, gy0 + 2, C("394a50"))
+
     # a kick plate, scuffed, and one dent — a door this old is not flat
     # 172038, NOT 253a5e: a navy kick plate read as a blue stripe painted on
     # the door rather than a scuffed steel plate bolted to it.
     c.rect(lx0 + 2, ly1 - 20, lx1 - 2, ly1 - 1, C("172038"))
     c.hline(lx0 + 2, lx1 - 2, ly1 - 20, C("394a50"))
+    # the third dent used to sit at (lx0+22, ly0+46), which is INSIDE the
+    # vision panel — it drew a navy block over the glass. Moved below it.
     for (px_, py_, pw, ph) in ((lx0 + 9, ly1 - 15, 7, 3),
                                (lx1 - 18, ly1 - 9, 9, 2),
-                               (lx0 + 22, ly0 + 46, 6, 4)):
+                               (lx0 + 22, ly0 + 78, 6, 4)):
         c.rect(px_, py_, px_ + pw, py_ + ph, C("172038"))
     # the tube's warm light just reaches the reveal on the lit side. SOLID —
     # stepping every other row drew a dashed orange line down the door and

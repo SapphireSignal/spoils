@@ -3,6 +3,41 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.43] — 2026-08-03 — glass in the door, and kettle finally has a beard
+
+### Added — the door's vision panel
+A wired glass rectangle with **blood spattered on the FAR side**. The order is
+the whole trick: the dark of the room behind, then the spatter on the far
+face, then the safety mesh, then the glass's own reflection **last** — painting
+the reflection on top is what puts the blood behind the glass rather than on
+the near face.
+
+It is drawn as **spatter, never a mass**: 1-2 px droplets with gaps, a thinning
+spray arc and two slow runs. A soft red mass in this project has been mistaken
+for a body before, and the first cut of this one was filled runs that read as a
+smear until it was broken up.
+
+Also caught: one of the door's wear dents sat at `(lx0+22, ly0+46)` — **inside
+the panel** — and drew a navy block across the glass. Moved below it.
+
+### Fixed — kettle's beard *(base art)*
+The block that draws it is literally labelled "the white beard" and it
+rendered as a **bare chin**, because a smooth pale mass in the same value
+family as skin, with no boundary and no texture, is a chin. Now it has a
+shadow where it meets the cheek so it sits proud of the face, a ragged bottom
+edge instead of a clean arc, strands through the mass, and a moustache that
+overhangs rather than sitting flush. **Tones stay warm on purpose** — the note
+above that block is right that grey paint goes blue under this candle.
+
+Diffed: the only changed region is **x 287-315, y 318-340**, his lower face.
+
+### Broke and fixed in the same pass
+`(1.0 - t*t*0.94) ** 0.5` returns a **complex number** once the bracket goes
+negative, which it does two rows below where the original loop stopped. That
+killed the build *after* `main()` had already purged `art/gen`. Clamped with
+`max(0.0, ...)`. Second time this session a generator crash has left the
+project unloadable — **gen_art deletes before it writes.**
+
 ## [0.6.42] — 2026-08-03 — the underpass door, and two things that never moved
 
 ### Fixed — the bug behind BOTH "I can't see it" reports

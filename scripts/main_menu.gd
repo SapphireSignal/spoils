@@ -212,6 +212,10 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.43", [
+		"the underpass door has a wired glass panel now, and theres blood spattered on the far side of it",
+		"kettle has a proper beard in the den. he was always meant to have one but it rendered as a bare chin - it has an edge against his cheek, strands through it and a ragged bottom now",
+	]],
 	["v0.6.42", [
 		"the thing on the right of the underpass was a bricked-up service door all along - its a real door now, with a frame, ribs, hinges and a handle. and two notices on the wall beside it: a transit shelter sign pointing down into the underworks, and a wardens cordon notice",
 		"the birds and the rat werent moving at all. both of them were rounding their position every frame, and at 240fps thats less than half a pixel of movement, so it got rounded straight back and they sat still. they move now",

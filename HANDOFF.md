@@ -364,6 +364,20 @@ was entirely OFF SCREEN.** The viewport shows painting x 60-900 of a 960-wide
 painting — 60px is cropped off each side. Measure for empty AND check it is
 inside the visible window.
 
+**Then v0.6.43 — glass in the underpass door with blood on the far side, and
+kettle's beard.** The glass works by ORDER: room-dark, then spatter on the far
+face, then the mesh, then the reflection LAST — that final layer is what puts
+the blood behind the glass. Kettle's beard was always drawn and always read as
+a bare chin; what fixed it was a shadow against the cheek, a ragged bottom and
+strands, not a different colour. Both diffs are confined and quoted in the
+changelog.
+
+**`x ** 0.5` RETURNS A COMPLEX NUMBER FOR NEGATIVE x**, and that killed the
+build *after* `main()` had purged `art/gen` — the second unloadable-project
+crash of the session, both from a generator raising mid-run. **gen_art deletes
+before it writes**, so any exception in it leaves nothing on disk. Clamp the
+bracket.
+
 **Picked up at:** **nothing is in progress.** A1 in TASKS.md is now DONE — all
 six backdrops exist and all six live. The next items in that list are the
 in-game map screen and the map-select tile; **M2 (guns) still waits on the
