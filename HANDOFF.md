@@ -106,6 +106,13 @@ unwired pitches, thirteen releases out of date; `CLAUDE.md`'s menu node count
 still read ~818 when it is 1717 (not a leak — ~740 of those are rain sprites).
 Both fixed. A check cannot verify a sentence.
 
+**Two things the user DEFERRED on purpose — they are in `TASKS.md` as C6 and
+C7, and NEITHER blocks a migration:** a **full doc sweep** (*"the sweep will
+happen later"* — only menu-related claims were checked on 08-03, and two of
+those were wrong, so assume more stale prose elsewhere) and **repo weight**
+(*"i will optimize the repo later too"* — `shots/` is 373 files / 77 MB and
+`.git` is 109 MB; 57 files landed in one day of debug captures).
+
 **Picked up at: NOTHING IS IN PROGRESS.** Tree clean, everything pushed, all
 gates green at v0.6.44, leaks flat, 240 fps in a raid and 245 on every menu
 backdrop. `TASKS.md` is accurate and is the work list. The two most useful

@@ -379,6 +379,40 @@ rect edges. The wall art is **already neighbour-masked**, which is the
 piece that makes this feasible. Expect the roof reveal and the map drawing
 to need matching work. Do it sample → sign-off → fleet.
 
+## C6. A full doc sweep *(user, deferred by them 2026-08-03)*
+
+*"the sweep will happen later"* — **deferred on purpose, not forgotten, and it
+does NOT block a migration.**
+
+**Why it is worth doing anyway:** the only defence against a document that
+confidently says something false is reading it, and **three sessions running
+have found stale prose while `--checksec` and `--checkdocs` both printed
+PASS**. A check can prove versions agree and paths exist; it can never prove a
+sentence is true.
+
+On 2026-08-03 only the MENU-related claims were spot-checked, and two of those
+were wrong: `DESIGN.md` still described a two-backdrop menu (thirteen releases
+stale) and `CLAUDE.md`'s menu node count still read ~818 when it is 1717.
+**The rest of `CLAUDE.md`, `DESIGN.md`, `LORE.md` and `TASKS.md` has NOT been
+read against the code since 2026-08-02.** Assume there are more wrong
+sentences in there.
+
+## C7. Repo weight *(user, deferred by them 2026-08-03)*
+
+*"i will optimize the repo later too"* — **their call, and it does NOT block a
+migration.**
+
+Measured 2026-08-03: `shots/` is **373 tracked files / 77 MB**, `.git` is
+**109 MB**, and **57 files went into `shots/` on that day alone** — every
+debug capture from a long bug hunt is committed forever. Tracking shots is the
+project's existing convention (313 of them predate this), which is why nobody
+has changed it unilaterally.
+
+**Options, for the user to pick:** keep curating `docs/` for the README and
+add `shots/` to `.gitignore` going forward; or prune the debug captures and
+keep the deliberate ones; or leave it. A history rewrite would shrink `.git`
+but is a force-push and needs their explicit go.
+
 ## C4. Older standing queue
 
 - **Pickup bed** — shade the interior so it reads as a container, put a
