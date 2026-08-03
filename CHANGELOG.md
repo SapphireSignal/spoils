@@ -3,6 +3,39 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.39] — 2026-08-03 — things that move, on the two quiet scenes
+
+The user kept both tunnel backdrops (*"lets keep both the backdrops for now,
+no harm"*) and asked to press on with the two that still read as photographs.
+Everything here is an **object**, not another light — that was the whole note.
+
+### Added — the trainyard
+- **Birds.** Three, on staggered clocks, crossing ~430 px of the sunset band
+  in about seven seconds each, so one is usually in the air. Hard silhouettes
+  against the one bright thing in the picture.
+- **Five arcs on the pole lines, bigger and far more often** (*"make the
+  trainyards sparks from the poles more noticable, and make more of them"*).
+  The sheet went 20×16 → 26×20 with a much wider fan and a hotter core, and
+  they fire every 1.4-4.5 s instead of every 3.5-9. Every point is a wire
+  pixel sampled out of the bake.
+- **Nine lit windows on the far skyline, flickering** (*"maybe some little
+  windows on some buildings in the background of the trainyard, and have them
+  flicker a bit"*). 2×2 each — at that distance a window is a couple of
+  pixels — on nine periods that share no common factor so the row never
+  pulses together, and one of them has a bad connection. **Every cell was
+  read out of the bake as silhouette with sunset directly behind it**, so
+  none of them floats in open sky.
+
+### Added — mara's counter
+- **A rat** crosses the counter's empty left third, which the painting
+  deliberately keeps as room rather than person. Four frames, legs
+  alternating, body dropping a pixel on each contact.
+
+### Note on the numbers
+`yard` and `counter` still measure ~0.3% mean change. **That is the metric
+failing, not the scenes** — a bird is 7×5 px and a rat 11×8, which is
+0.006% of a 960×544 frame each. Judge these two off the films.
+
 ## [0.6.38] — 2026-08-03 — the drain leaks from the hole, and rain lands
 
 All of this is the user's playtest of v0.6.37, taken point by point.

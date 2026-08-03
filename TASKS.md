@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.38.** The release history was renumbered evenly on
+**Current version: v0.6.39.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -124,6 +124,22 @@ Also asked for: **upgrade the two existing backdrops** (den, drain).
 ---
 
 # B. GAMEPLAY THE USER HAS ASKED FOR
+
+## B0. Mara's arms and pencil *(user, 2026-08-03)* — NEXT UP
+
+*"in maras counter, shes not holding the pencil right, like its not in her
+hands. also make her arms not square and a bit smaller"*.
+
+**This is BASE ART, not a living layer** — `make_scene_counter` in gen_art.py,
+the `_mara_body` / hand / pencil code. The base painting hash WILL change and
+that is expected here; every other backdrop must stay byte-identical.
+
+**CONSTRAIN THE FIX TO THE COMPLAINT** (the shoulder-pass rule, CLAUDE.md):
+only the pencil's position/grip and the arms' width profile may change. Her
+face, hair, headset, jacket, the ledger, the light box, the counter and both
+light pools must come out pixel-identical — **prove it with a diff**, not by
+eye. A pass that rebuilt more than was asked has been rejected on this project
+before and had to be reverted.
 
 ## B1. Sprint *(user)*
 

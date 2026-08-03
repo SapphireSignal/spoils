@@ -8998,38 +8998,42 @@ def make_spark_sheet() -> Canvas:
     Frames: the strike, the fan at its widest, two of throw-off, then embers.
     It is drawn in the palette's hot end and read ADDITIVELY at runtime, so it
     blows out against a night sky the way a real arc does."""
-    s = Canvas(100, 16)
+    # 26x20, not 20x16, and a much wider fan — user: "make the trainyards
+    # sparks from the poles more noticable, and make more of them".
+    s = Canvas(130, 20)
     rng = random.Random("spoils:spark")
     for f in range(5):
-        ox = f * 20
-        cx, cy = ox + 8, 6
+        ox = f * 26
+        cx, cy = ox + 11, 8
         if f == 0:                                   # the strike: a hot core
-            s.rect(cx - 1, cy - 1, cx + 1, cy + 1, C("e7d5b3"))
-            s.set(cx, cy - 2, C("e8c170"))
-            s.set(cx, cy + 2, C("e8c170"))
-            s.set(cx - 2, cy, C("e8c170"))
-            s.set(cx + 2, cy, C("e8c170"))
+            s.rect(cx - 2, cy - 2, cx + 2, cy + 2, C("e7d5b3"))
+            for k in range(3, 6):
+                s.set(cx, cy - k, C("e8c170"))
+                s.set(cx, cy + k, C("e8c170"))
+                s.set(cx - k, cy, C("e8c170"))
+                s.set(cx + k, cy, C("e8c170"))
         elif f < 3:                                  # the fan, thrown DOWNWARD
-            s.rect(cx - 1, cy - 1, cx, cy, C("e8c170") if f == 1 else C("de9e41"))
-            for k in range(7 if f == 1 else 5):
-                a = math.radians(rng.uniform(20.0, 160.0))
-                r = rng.uniform(3.0, 6.0 + f * 2.5)
+            s.rect(cx - 2, cy - 2, cx + 1, cy + 1,
+                   C("e7d5b3") if f == 1 else C("e8c170"))
+            for k in range(18 if f == 1 else 13):
+                a = math.radians(rng.uniform(10.0, 170.0))
+                r = rng.uniform(3.0, 9.0 + f * 3.5)
                 x = int(cx + math.cos(a) * r)
-                y = int(cy + math.sin(a) * r * 0.8)
+                y = int(cy + math.sin(a) * r * 0.85)
                 s.set(x, y, C("e8c170") if k % 2 else C("cf573c"))
                 if rng.random() < 0.5:
                     s.set(x, min(15, y + 1), C("884b2b"))
         else:                                        # embers on their way down
-            for k in range(4 if f == 3 else 2):
-                a = math.radians(rng.uniform(50.0, 130.0))
-                r = rng.uniform(5.0, 9.0 + f)
+            for k in range(10 if f == 3 else 6):
+                a = math.radians(rng.uniform(40.0, 140.0))
+                r = rng.uniform(6.0, 13.0 + f * 2)
                 x = int(cx + math.cos(a) * r)
                 y = int(cy + math.sin(a) * r * 0.95)
                 s.set(x, y, C("cf573c") if f == 3 else C("884b2b"))
     return s
 
 
-def make_scene_yard() -> tuple[Canvas, Image.Image, Canvas, Image.Image]:
+def make_scene_yard() -> tuple:
     """Menu 3 — THE YARD at dusk: standing on the running line, a dead boxcar
     either side. Promoted 2026-08-02 from the backdrop pitch the user chose to
     keep ("let\'s add all 4 of those menu backdrops to the game").
@@ -10398,7 +10402,37 @@ def make_scene_yard() -> tuple[Canvas, Image.Image, Canvas, Image.Image]:
                     * min(1.0, (chop + 0.42) / 0.5))
             sp[x, y] = (col[0], col[1], col[2], a)
 
-    return c, halo, splash, glint
+    # BIRDS. User, on the yard and the counter: "yes continue with maras
+    # counter and trainyard" — after "dont just amp up the current ones, find
+    # new ones on the screen and create some". Rain and sparks are weather and
+    # light; this is an OBJECT crossing the frame, which is the thing both
+    # scenes were missing. A dusk trainyard gets birds, they read as hard
+    # silhouettes against the one bright band in the picture, and they cross
+    # 900px so they are moving for six seconds at a stretch.
+    bird = Canvas(24, 6)
+    for f, (tip, mid) in enumerate(((-2, -1), (0, 0), (2, 1))):
+        ox = f * 8 + 4
+        bird.set(ox, 3, C("090a14"))                 # the body
+        bird.set(ox - 1, 3, C("090a14"))
+        for k in (1, 2):                             # the two wings
+            bird.set(ox - 1 - k, 3 + (tip if k == 2 else mid), C("090a14"))
+            bird.set(ox + k, 3 + (tip if k == 2 else mid), C("090a14"))
+        if f != 1:
+            bird.set(ox - 3, 3 + tip, C("241527"))
+            bird.set(ox + 3, 3 + tip, C("241527"))
+
+    # LIT WINDOWS ON THE FAR BUILDINGS (user: "maybe some little windows on
+    # some buildings in the background of the trainyard, and have them flicker
+    # a bit"). 2x2, because at that distance a window is a couple of pixels —
+    # anything bigger stops being far away. Placed at runtime on silhouette
+    # cells sampled out of this very bake, so none of them floats in the sky.
+    win = Canvas(2, 2)
+    win.set(0, 0, C("e8c170"))
+    win.set(1, 0, C("de9e41"))
+    win.set(0, 1, C("de9e41"))
+    win.set(1, 1, C("be772b"))
+
+    return c, halo, splash, glint, bird, win
 
 
 def make_scene_warden() -> tuple[Canvas, Image.Image, Image.Image, Canvas, Canvas]:
@@ -14980,8 +15014,7 @@ def make_scene_underpass() -> tuple:
     return c, tube, halo, pool, ring, wet, chop, pend, pend_pool, mist
 
 
-def make_scene_counter() -> tuple[Canvas, Image.Image, Image.Image,
-                                  Image.Image, Canvas, Image.Image]:
+def make_scene_counter() -> tuple:
     """Menu 6 - MARA'S COUNTER: the transit booth at conversational distance,
     the job already yours. Promoted 2026-08-02 from the backdrop pitch the user
     chose to keep ("let's add all 4 of those menu backdrops to the game, just
@@ -17269,7 +17302,31 @@ def make_scene_counter() -> tuple[Canvas, Image.Image, Image.Image,
             if d < 1.0:
                 dp[x, y] = (231, 213, 179, int(230 * (1.0 - d * d) ** 1.2))
 
-    return c, box_glow, lamp_glow, arc, flare, dust
+    # A RAT ON THE COUNTER. Mara's booth measured the least motion of all six
+    # and everything added to it so far has been light — so this is a body,
+    # crossing the counter's empty LEFT THIRD, which the painting deliberately
+    # keeps as room rather than person. Near-black on lit wood, so it reads as
+    # a silhouette the way the birds do against the sunset. 4 frames: the legs
+    # alternate and the body drops a pixel on each contact.
+    rat = Canvas(48, 8)
+    for f in range(4):
+        ox = f * 12
+        bob = 1 if f % 2 else 0
+        for x in range(2, 9):                        # the body, a low hump
+            h = 2 if 3 <= x <= 7 else 1
+            for y in range(4 - h + bob, 6 + bob):
+                rat.set(ox + x, y, C("090a14"))
+        rat.set(ox + 8, 3 + bob, C("241527"))        # the head end, lifted
+        rat.set(ox + 9, 4 + bob, C("090a14"))
+        rat.set(ox + 3, 3 + bob, C("241527"))        # a lit ridge along the back
+        rat.set(ox + 5, 3 + bob, C("241527"))
+        for k in range(3):                           # the tail, trailing
+            rat.set(ox + 1 - k // 2, 5 + bob - k // 3, C("090a14"))
+        legs = (2, 7) if f % 2 == 0 else (4, 9)      # alternating
+        for lx in legs:
+            rat.set(ox + lx, 6 + bob, C("090a14"))
+
+    return c, box_glow, lamp_glow, arc, flare, dust, rat
 
 
 def make_menu_map_thumb() -> Canvas:
@@ -17860,13 +17917,18 @@ def main() -> None:
     den_base.img.save(OUT / "menu_den.png")
     den_glow.save(OUT / "menu_den_glow.png")            # light: soft alpha
     den_needles.img.save(OUT / "menu_den_needles.png")
-    yard_base, yard_halo, yard_splash, yard_glint = make_scene_yard()
+    (yard_base, yard_halo, yard_splash,
+     yard_glint, yard_bird, yard_win) = make_scene_yard()
     assert_palette(yard_base.img, "menu_yard")
     assert_palette(yard_splash.img, "menu_yard_splash")
     yard_base.img.save(OUT / "menu_yard.png")
     yard_halo.save(OUT / "menu_yard_halo.png")          # light: soft alpha
     yard_splash.img.save(OUT / "menu_yard_splash.png")
     yard_glint.save(OUT / "menu_yard_glint.png")        # light: soft alpha
+    assert_palette(yard_bird.img, "menu_yard_bird")
+    yard_bird.img.save(OUT / "menu_yard_bird.png")      # 3 frames of wing
+    assert_palette(yard_win.img, "menu_yard_window")
+    yard_win.img.save(OUT / "menu_yard_window.png")     # one 2x2 lit pane
     (warden_base, warden_lamp, warden_spill,
      warden_blink, warden_moth) = make_scene_warden()
     assert_palette(warden_base.img, "menu_warden")
@@ -17891,8 +17953,8 @@ def main() -> None:
     up_pend.save(OUT / "menu_underpass_pend.png")     # light: soft alpha
     up_pend_pool.save(OUT / "menu_underpass_pendpool.png")
     up_mist.save(OUT / "menu_underpass_mist.png")     # light: soft alpha
-    (counter_base, ctr_box, ctr_lamp,
-     ctr_arc, ctr_flare, ctr_dust) = make_scene_counter()
+    (counter_base, ctr_box, ctr_lamp, ctr_arc,
+     ctr_flare, ctr_dust, ctr_rat) = make_scene_counter()
     assert_palette(counter_base.img, "menu_counter")
     assert_palette(ctr_flare.img, "menu_counter_flare")
     counter_base.img.save(OUT / "menu_counter.png")
@@ -17901,6 +17963,8 @@ def main() -> None:
     ctr_arc.save(OUT / "menu_counter_arc.png")          # light: soft alpha
     ctr_flare.img.save(OUT / "menu_counter_flare.png")
     ctr_dust.save(OUT / "menu_counter_dust.png")        # a ROUND mote, not a plus
+    assert_palette(ctr_rat.img, "menu_counter_rat")
+    ctr_rat.img.save(OUT / "menu_counter_rat.png")      # 4 frames of walk
 
     (OUT / "manifest.json").write_text(json.dumps(manifest, indent=2))
 

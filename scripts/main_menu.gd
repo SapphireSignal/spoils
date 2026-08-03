@@ -29,6 +29,8 @@ const TEX_YARD := preload("res://art/gen/menu_yard.png")
 const TEX_YARD_HALO := preload("res://art/gen/menu_yard_halo.png")
 const TEX_YARD_SPLASH := preload("res://art/gen/menu_yard_splash.png")
 const TEX_YARD_GLINT := preload("res://art/gen/menu_yard_glint.png")
+const TEX_YARD_BIRD := preload("res://art/gen/menu_yard_bird.png")
+const TEX_YARD_WIN := preload("res://art/gen/menu_yard_window.png")
 const TEX_WARDEN := preload("res://art/gen/menu_warden.png")
 const TEX_WARDEN_LAMP := preload("res://art/gen/menu_warden_lamp.png")
 const TEX_WARDEN_SPILL := preload("res://art/gen/menu_warden_spill.png")
@@ -50,6 +52,7 @@ const TEX_CTR_LAMP := preload("res://art/gen/menu_counter_lamp.png")
 const TEX_CTR_ARC := preload("res://art/gen/menu_counter_arc.png")
 const TEX_CTR_FLARE := preload("res://art/gen/menu_counter_flare.png")
 const TEX_CTR_DUST := preload("res://art/gen/menu_counter_dust.png")
+const TEX_CTR_RAT := preload("res://art/gen/menu_counter_rat.png")
 const TEX_RAIN := preload("res://art/gen/rain_streak.png")
 const TEX_DUST := preload("res://art/gen/dust.png")
 # SHARED. The same event on the yard's lines, the warden's isolator and
@@ -119,6 +122,16 @@ var _yard_splash: Sprite2D
 var _yard_splash_age := -1.0
 var _yard_drip: Sprite2D
 var _yard_drip_t := 0.0
+# Every one of these is a SILHOUETTE cell read out of the bake with the
+# sunset directly behind it — a lit window floating in open sky would be
+# the exact 'anchor points at nothing' mistake this project keeps making.
+const YARD_WINDOWS := [Vector2(127, 253), Vector2(155, 253),
+	Vector2(176, 256), Vector2(204, 255), Vector2(302, 262),
+	Vector2(323, 262), Vector2(435, 258), Vector2(463, 255),
+	Vector2(484, 252)]
+var _yard_wins: Array[Sprite2D] = []
+var _birds: Array[Sprite2D] = []
+var _bird_t: Array[float] = []
 # warden life
 var _w_lamp: Sprite2D
 var _w_spill: Sprite2D
@@ -153,7 +166,9 @@ var _ctr_flare: Sprite2D
 var _ctr_flare_age := -1.0
 var _ctr_ember: Sprite2D
 var _ctr_ember_t := 1.4
-var _ctr_haze: Sprite2D    # long enough for the arc's swell to read first
+var _ctr_haze: Sprite2D
+var _ctr_rat: Sprite2D
+var _ctr_rat_t := 2.2    # long enough for the arc's swell to read first
 const CTR_SPLICE := Vector2(837, 254)      # the live pilot bead in _cables
 const CTR_TIN_Y := 399.0                   # the parts tin's baked scorch ring
 
@@ -188,6 +203,10 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.39", [
+		"the trainyard and mara's counter have things that actually move in them now, not just more light. birds cross the sunset, the sparks off the pole lines are bigger and there are five of them going much more often, and there are little lit windows on the far buildings that flicker",
+		"and a rat runs along the empty end of mara's counter",
+	]],
 	["v0.6.38", [
 		"backdrops change every fifteen seconds now instead of ten",
 		"the drain: water leaks from the manhole opening itself now, four drips off the rim including one fat slow one, and every drop blows a bubble on the water when it lands - a bigger bubble for the big drop. the sheet from the sluice gate reaches the channel instead of stopping in mid air",
@@ -1180,8 +1199,29 @@ func _build_scenes() -> void:
 	# pixels read out of the bake, not eyeballed.
 	# the yard's ground runs from the far shoulder down to the near four-foot
 	_add_rain_splashes(yard, Vector2(470, 452), Vector2(470, 86), 46)
-	_add_arc(yard, Vector2(170, 175), add_mat, 1.1)
-	_add_arc(yard, Vector2(230, 205), add_mat, 4.6)
+	# THREE BIRDS, on their own staggered clocks, crossing the sunset band —
+	# the one bright thing in the frame, so they read as hard silhouettes.
+	for i in YARD_WINDOWS.size():
+		var w := Sprite2D.new()
+		w.texture = TEX_YARD_WIN
+		w.position = PC + (YARD_WINDOWS[i] as Vector2)
+		yard.add_child(w)
+		_yard_wins.append(w)
+	for i in 3:
+		var bd := Sprite2D.new()
+		bd.texture = TEX_YARD_BIRD
+		bd.hframes = 3
+		bd.visible = false
+		yard.add_child(bd)
+		_birds.append(bd)
+		_bird_t.append(0.4 + i * 2.3)
+	# FIVE points, all on wire pixels sampled out of the bake, and they fire
+	# every 1.4-4.5s instead of every 3.5-9 — user: "make the trainyards
+	# sparks from the poles more noticable, and make more of them".
+	for spec in [[Vector2(170, 175), 0.6], [Vector2(200, 198), 1.9],
+				 [Vector2(230, 205), 3.1], [Vector2(260, 229), 4.4],
+				 [Vector2(182, 183), 5.6]]:
+		_add_arc(yard, spec[0] as Vector2, add_mat, spec[1])
 	add_child(yard)
 	_scenes.append(yard)
 
@@ -1377,6 +1417,11 @@ func _build_scenes() -> void:
 	_ctr_haze.modulate = Color("e8c170")
 	_ctr_haze.material = add_mat
 	counter.add_child(_ctr_haze)
+	_ctr_rat = Sprite2D.new()
+	_ctr_rat.texture = TEX_CTR_RAT
+	_ctr_rat.hframes = 4
+	_ctr_rat.visible = false
+	counter.add_child(_ctr_rat)
 	_ctr_arc = Sprite2D.new()
 	_ctr_arc.texture = TEX_CTR_ARC
 	_ctr_arc.position = PC + CTR_SPLICE
@@ -1489,6 +1534,34 @@ func _tick_yard(delta: float) -> void:
 	# two of these three periods divide into each other.
 	_yard_leds[0].visible = fmod(_time, 2.6) < 1.5
 	_yard_leds[1].visible = fmod(_time + 3.0, 6.7) >= 0.5
+	# the far windows. Nine periods that share no common factor, so the row
+	# never pulses together — some hold, some blink, one is nearly dead.
+	for i in _yard_wins.size():
+		var per := 3.1 + i * 1.37
+		var on := fmod(_time + i * 2.3, per) < per * (0.34 + 0.06 * i)
+		if i == 4:                              # one bad connection
+			on = on and fmod(_time * 7.3, 1.0) > 0.35
+		_yard_wins[i].visible = on
+	# the birds. Each crosses ~430px of sky in about 7 s, so at any moment at
+	# least one of them is usually in the air — that is the point of three on
+	# staggered clocks rather than one on a timer.
+	for i in _birds.size():
+		var bd := _birds[i]
+		_bird_t[i] -= delta
+		if not bd.visible:
+			if _bird_t[i] <= 0.0:
+				bd.visible = true
+				bd.position = PC + Vector2(700.0 + i * 26.0, 196.0 + i * 13.0)
+		else:
+			# whole pixels only, and they climb slightly as they go
+			var bp := bd.position
+			bp.x -= 62.0 * delta
+			bp.y -= 5.0 * delta
+			bd.position = Vector2(roundf(bp.x), roundf(bp.y))
+			bd.frame = int(_time * (7.0 + i * 1.3)) % 3
+			if bd.position.x < PC.x + 250.0:
+				bd.visible = false
+				_bird_t[i] = randf_range(4.0, 11.0)
 	# runoff off the near boxcar's eave (x 100), bursting on the ballast
 	if _yard_splash_age >= 0.0:
 		_yard_splash_age += delta
@@ -1638,6 +1711,22 @@ func _tick_counter(delta: float) -> void:
 			_ctr_flare_age = -1.0
 		else:
 			_ctr_flare.frame = f
+	# THE RAT crosses the counter's empty left third. It is the only body in
+	# this picture besides mara, and it is the reason the scene stopped
+	# reading as a photograph of a room.
+	_ctr_rat_t -= delta
+	if not _ctr_rat.visible:
+		if _ctr_rat_t <= 0.0:
+			_ctr_rat.visible = true
+			_ctr_rat.position = PC + Vector2(24.0, 402.0)
+	else:
+		var rp := _ctr_rat.position
+		rp.x += 34.0 * delta
+		_ctr_rat.position = Vector2(roundf(rp.x), rp.y)
+		_ctr_rat.frame = int(_time * 9.0) % 4
+		if _ctr_rat.position.x > PC.x + 352.0:
+			_ctr_rat.visible = false
+			_ctr_rat_t = randf_range(7.0, 16.0)
 	_ctr_ember_t -= delta
 	if _ctr_ember_t <= 0.0 and not _ctr_ember.visible:
 		_ctr_ember_t = randf_range(6.0, 13.0)
@@ -1705,10 +1794,10 @@ func _tick_arcs(delta: float) -> void:
 		if s.visible:
 			var age: float = a[2] + delta
 			a[2] = age
-			var f := int(age / 0.06)
+			var f := int(age / 0.075)
 			if f > 4:
 				s.visible = false
-				t = randf_range(3.5, 9.0)
+				t = randf_range(1.4, 4.5)
 			else:
 				s.frame = f
 		elif t <= 0.0:
