@@ -1362,6 +1362,84 @@ FY0, FY1 = 280, 324                              # the face box, 35x45
 MCX = 681                                        # her centre line
 
 
+def _knot(t: float, knots) -> float:
+    """Piecewise-linear read of a (t, value) knot list. Every tapered thing on
+    her is built from one of these, because a single lerp from end to end is
+    exactly what made the arms read as planks."""
+    for i in range(len(knots) - 1):
+        (ta, a), (tb, b) = knots[i], knots[i + 1]
+        if ta <= t <= tb:
+            return a + (b - a) * (t - ta) / float(tb - ta)
+    return float(knots[-1][1])
+
+
+def _profile(knots) -> dict:
+    """Row -> outer half-width, one entry per row. A silhouette built this way
+    is a STEPPED CURVE of 1-2 px increments; the thing it replaces was one
+    ruled diagonal."""
+    out = {}
+    for i in range(len(knots) - 1):
+        (ya, a), (yb, b) = knots[i], knots[i + 1]
+        for y in range(ya, yb):
+            out[y] = a + (b - a) * (y - ya) / float(yb - ya)
+    out[knots[-1][0]] = float(knots[-1][1])
+    return out
+
+
+# ---- THE SHOULDERS. The user: "her shoulders look cropped out", and they
+# were right for a reason that measures: the old build stepped out of the
+# collar onto a horizontal shelf, JUMPED 12 px outward in a single row at
+# y=344 where the sleeve mass started, and then ran +-46 at row 344 to +-85 at
+# row 412 as one ruled diagonal, one pixel every other row, IDENTICAL on both
+# sides. A silhouette that leaves the neck on a straight line and never turns
+# has no shoulder in it at all — the eye reads the diagonal as the edge of the
+# frame cutting her off, which is exactly what they said.
+#
+# It is neck -> trapezius -> deltoid cap -> arm now:
+#   * the trapezius leaves the collar FAST (2.5 px of width per row) and
+#     decelerates to nothing by the cap, so the line curves over instead of
+#     ruling;
+#   * the widest point of the shoulder is ~30 rows BELOW where that line
+#     leaves the collar, so the deltoid hangs off the torso as a mass rather
+#     than sitting on it as a shelf;
+#   * and the edge then comes back IN 4 px at the deltoid's insertion before
+#     swinging out to the elbow. That one inflection is what says "ball of
+#     muscle" at this size, and nothing else does.
+#
+# THE TWO SIDES ARE NOT MIRRORED. She leans on her right (screen left), so
+# that cap is 3 px wider and set 4 rows higher; her left arm is the extended
+# one, holding the pencil.
+#
+# LIGHT: this room lights her from BELOW (cold box, warm lamp), so the cap's
+# UNDERSIDE is the lit face and the top of the shoulder falls to shade. The
+# old build ran an a53030 highlight along the TOP of the shelf, which both
+# contradicted the face's lighting and flattened the shelf further.
+JY0, JY1 = 331, 412
+
+SH_L = _profile([(331, 19), (333, 24), (335, 29), (337, 33), (339, 37),
+                 (341, 40), (343, 43), (345, 46), (347, 48), (350, 51),
+                 (353, 54), (356, 56), (359, 58), (362, 59), (365, 59),
+                 (368, 58), (371, 56), (374, 54), (377, 53), (381, 54),
+                 (386, 57), (391, 61), (396, 66), (401, 72), (405, 77),
+                 (408, 81), (411, 84), (412, 85)])
+SH_R = _profile([(331, 18), (333, 22), (335, 26), (337, 30), (339, 33),
+                 (341, 36), (343, 39), (345, 42), (348, 45), (351, 48),
+                 (354, 50), (357, 52), (360, 54), (363, 55), (366, 56),
+                 (369, 56), (372, 55), (375, 53), (378, 51), (382, 52),
+                 (387, 55), (392, 59), (397, 64), (402, 70), (406, 75),
+                 (409, 80), (412, 85)])
+# the arm/torso seam follows the FRONT BORDER OF THE DELTOID. It used to be a
+# ruled vertical trench, which is a second straight line on a figure whose
+# whole problem was straight lines.
+SM_L = _profile([(331, 19), (340, 23), (348, 27), (356, 31), (364, 34),
+                 (372, 37), (384, 42), (396, 47), (412, 55)])
+SM_R = _profile([(331, 18), (340, 22), (348, 26), (356, 30), (364, 33),
+                 (372, 36), (384, 41), (396, 46), (412, 54)])
+# where each cap's widest run sits, and where its insertion crease lands. The
+# left one is higher and rounder because she leans on that arm.
+CAP_L, CAP_R = (357, 374), (361, 378)
+
+
 def _face_hw(y: int) -> int:
     """Half-width of the face at row y — an oval that tapers to the chin, not
     a box. The first render drew a rectangle and it read as a slab. The jaw is
@@ -1396,60 +1474,110 @@ def _mara_body(c: Canvas, rng: random.Random) -> None:
     read as one flat red poncho: torso and upper arm were a single silhouette
     with no seam. They are separate masses now with a shadowed seam between.
     """
-    # ---- torso, oxblood jacket (identity carried over from the den)
-    shoulder_top = {}
-    for y in range(336, 373):
-        t = (y - 336) / 37.0
-        half = int(25 + (t ** 0.45) * 21)               # a ROUND shoulder — a
-        for x in range(MCX - half, MCX + half + 1):     # near-linear taper
-            lit = (x - (MCX - half)) / float(2 * half)  # read as a poncho
-            col = C("752438")
-            if lit < 0.15 or lit > 0.86:
-                col = C("411d31")
+    # ---- torso and shoulders, oxblood jacket (identity carried over from the
+    # den). Driven by SH_L/SH_R/SM_L/SM_R — see the long note above them for
+    # what was wrong and what the curve is doing.
+    top = {}
+    for y in range(JY0, JY1 + 1):
+        oL, oR = int(round(SH_L[y])), int(round(SH_R[y]))
+        mL, mR = int(round(SM_L[y])), int(round(SM_R[y]))
+        for x in range(MCX - oL, MCX + oR + 1):
+            dx = x - MCX
+            o, m = (oL, mL) if dx < 0 else (oR, mR)
+            a = abs(dx)
+            if a <= m:                                  # the torso itself
+                col = C("411d31") if a > m - 2 else C("752438")
+            else:                                       # the arm's own mass
+                d = a - m
+                col = C("752438")
+                # the armhole. ONE STEP of shadow, 2-3 px, dying out top and
+                # bottom: at 341c27 across the full height it stopped being a
+                # seam and read as a bandolier strap laid over her.
+                deep = 3 if 346 < y < 382 else (2 if 338 < y < 392 else 0)
+                if d < deep:
+                    col = C("411d31")
+                elif d < deep + 1 and deep:
+                    col = C("602c2c")
+                elif a > o - 2:
+                    col = C("411d31")
             c.set(x, y, col)
-            shoulder_top.setdefault(x, y)
-        c.set(MCX - half, y, C("3c5e8b"))               # cold rim, box side
-        c.set(MCX - half + 1, y, C("253a5e"))
-        c.set(MCX + half, y, C("884b2b"))               # warm rim, lamp side
-        c.set(MCX + half - 1, y, C("602c2c"))
-    for x, y in shoulder_top.items():                   # highlight FOLLOWS the
-        if abs(x - MCX) > 19:                           # shoulder line instead
-            c.set(x, y + 1, C("a53030"))                # of two ruled strokes
-            c.set(x, y + 2, C("a53030"))
+            top.setdefault(x, y)
 
-    # ---- the sleeves: their own masses, hung off the shoulder points and
-    # swung out to the elbows, with a seam of jacket shadow between
-    def sleeve(sgn):
-        for k in range(140):
-            t = k / 139.0
-            cx_ = MCX + sgn * (30.0 + 38.0 * t + 6.0 * math.sin(t * 2.2))
-            cy_ = 344.0 + t * 68.0
-            w = 15.0 - 3.0 * t
-            roll = t > 0.86                     # the cuff is PART of the sleeve
-            for dx in range(-int(w), int(w) + 1):
-                x = int(round(cx_ + dx))
-                lit = (dx + w) / (2 * w)
-                col = C("411d31")
-                if 0.24 < lit < 0.78:
-                    col = C("752438")
-                if roll:
-                    col = C("341c27") if 0.18 < lit < 0.82 else C("241527")
-                c.set(x, int(cy_), col)
-            c.set(int(round(cx_ - w)), int(cy_),
-                  C("253a5e") if sgn < 0 else C("341c27"))
-            c.set(int(round(cx_ + w)), int(cy_),
-                  C("341c27") if sgn < 0 else C("884b2b"))
-            if 0.855 < t < 0.875:                          # the roll's lit lip
-                for dx in range(-int(w) + 1, int(w)):
-                    c.set(int(round(cx_ + dx)), int(cy_), C("a53030"))
-        # the seam: a shadow trench where the sleeve head meets the body
-        for k in range(30):
-            t = k / 29.0
-            x = int(MCX + sgn * (28.0 + 5.0 * t))
-            c.set(x, 340 + k, C("341c27"))
-            c.set(x + sgn, 340 + k, C("241527"))
-    sleeve(-1)
-    sleeve(1)
+    # the shoulder line falls to SHADE — nothing in this room lights her from
+    # above, and the top of a rounded mass under an uplight is its dark side
+    for x, y in top.items():
+        c.set(x, y + 1, C("411d31"))
+        c.set(x, y + 2, C("411d31"))
+        if abs(x - MCX) > 30:
+            c.set(x, y + 3, C("411d31"))
+
+    # the rim, walked as an UNBROKEN staircase. Set per row it would be a
+    # dashed smear wherever the edge moves 2 px in one row, which is most of
+    # the trapezius. Where the edge steps back IN (the deltoid's insertion) the
+    # rim is laid on the row ABOVE, because that overhang is the underside of
+    # the cap and the underside is the lit face here. The BRIGHT step of each
+    # rim is spent only on the cap's outer curve, which is the one stretch
+    # turned toward its source; carried the whole way it stopped being rim
+    # light and became a keyline drawn around her.
+    for (prof, sgn, steep, graze, cap) in (
+            (SH_L, -1, "3c5e8b", "253a5e", (354, 380)),
+            (SH_R, 1, "884b2b", "602c2c", (358, 384))):
+        prev = None
+        for y in range(JY0, JY1 + 1):
+            o = int(round(prof[y]))
+            if prev is None or o >= prev:
+                span, ry = range(prev if prev is not None else o, o + 1), y
+            else:
+                span, ry = range(o, prev + 1), y - 1
+            hot = cap[0] <= ry <= cap[1] and len(span) == 1
+            for a in span:
+                c.set(MCX + sgn * a, ry, C(steep if hot else graze))
+                c.set(MCX + sgn * (a - 1), ry, C("411d31"))
+            prev = o
+
+    # the deltoid cap's LIT UNDERSIDE, and the crease beneath it. These two
+    # are the whole difference between a shoulder and a shelf: the cap catches
+    # the uplight on its lower curve as a LENS that fattens at the middle and
+    # dies at both ends (a constant-width band beside the edge is a keyline,
+    # not a form), and the hollow where the deltoid inserts into the arm goes
+    # dark right under it on a SAGGING ARC, not a level bar.
+    for (prof, seam, sgn, cap) in ((SH_L, SM_L, -1, CAP_L),
+                                   (SH_R, SM_R, 1, CAP_R)):
+        y0, y1 = cap
+        for y in range(y0, y1 + 1):
+            o, m = int(round(prof[y])), int(round(seam[y]))
+            s = (y - y0) / float(y1 - y0)
+            w = 2 + int(round(8.0 * math.sin(s * math.pi) ** 1.2))
+            lo = max(m + 5, o - 2 - w)
+            for a in range(lo, o - 1):
+                c.set(MCX + sgn * a, y, C("a53030"))
+            # 752438 straight into a53030 is a hue jump, and at 3 px of step
+            # per row the crescent's inner edge read as a blob pasted on the
+            # shoulder. 884b2b sits between them in value and softens it.
+            c.set(MCX + sgn * (lo - 1), y, C("884b2b"))
+            c.set(MCX + sgn * (lo - 2), y, C("884b2b"))
+            c.set(MCX + sgn * (o - 2), y, C("884b2b"))
+        o, m = int(round(prof[y1 + 3])), int(round(seam[y1 + 3]))
+        a0, a1 = m + 3, o - 2
+        for a in range(a0, a1):
+            u = (a - a0) / float(max(1, a1 - a0 - 1))
+            yy = y1 + 1 + int(round(3.6 * math.sin(u * math.pi)))
+            c.set(MCX + sgn * a, yy, C("341c27"))
+            c.set(MCX + sgn * a, yy + 1, C("341c27"))
+            c.set(MCX + sgn * a, yy + 2, C("411d31"))
+            c.set(MCX + sgn * a, yy - 1, C("602c2c"))
+
+    # and the upper arm below it, rolled: a lit band inside the rim so the
+    # limb is a tube and not a flat wedge of cloth. Its width breathes on a
+    # long period — a fixed inset would be one more ruled line.
+    for (prof, seam, sgn, y0) in ((SH_L, SM_L, -1, 384), (SH_R, SM_R, 1, 388)):
+        for y in range(y0, JY1 + 1):
+            o, m = int(round(prof[y])), int(round(seam[y]))
+            w = 4 + int(round(1.8 * math.sin((y - y0) * 0.17)))
+            lo = max(m + 6, o - 3 - w)
+            for a in range(lo, o - 3):
+                c.set(MCX + sgn * a, y, C("a53030"))
+            c.set(MCX + sgn * (lo - 1), y, C("884b2b"))
 
     c.rect(MCX - 18, 330, MCX + 17, 341, C("411d31"))   # collar
     c.hline(MCX - 18, MCX + 17, 330, C("752438"))
@@ -1504,6 +1632,13 @@ def _mara_body(c: Canvas, rng: random.Random) -> None:
         c.vline(px + w, 296 + k, 297 + k, C("602c2c") if t < 0.55 else C("4d2b32"))
     c.rect(MCX - 52, 356, MCX - 39, 366, C("341c27"))   # its tie
     c.hline(MCX - 52, MCX - 39, 356, C("4d2b32"))
+    # HER PONYTAIL LIES ACROSS THAT SHOULDER and has to read as IN FRONT of the
+    # deltoid, not as a hole cut through it — it is the one occluder allowed to
+    # cross the shoulder line. A CAST SHADOW WAS TRIED AND DELETED: the tail's
+    # own right edge is ragged by 1 px per row, so a shadow tracking it combed
+    # into a checkerboard the length of her back — dithering, which this file
+    # bans. What sells the overlap instead is the tail's existing 1 px edge
+    # line plus the lit crescent of the cap continuing out from under it.
 
     # ---- the headset, pushed up onto her crown: she is off-channel, talking
     # to you. Baked in its OFF state — no pilot lamp lit on the cup.
@@ -1685,15 +1820,89 @@ def _mara_arms(c: Canvas, rng: random.Random) -> None:
     The sleeves end at the elbows in _mara_body; every forearm here STARTS at
     the point its sleeve stopped and every hand STARTS at the point its forearm
     stopped: no piece of her floats free of the piece it hangs off."""
-    def limb(x0, y0, x1, y1, w0, w1, core, up, dn):
-        n = 84
+    # HER ARMS WERE SQUARE (user: "in the newer Mara painting, her arms look
+    # square"). The old limb() swept ONE constant blob along a straight line,
+    # so the upper arm, the elbow and the forearm were all the same thickness,
+    # the wrist did not narrow into the hand, and the sleeve stopped on a hard
+    # step with no cuff. Both arms came out as identical pale planks.
+    #
+    # A limb is now a run of VERTICAL SPANS whose half-height comes off a knot
+    # list, so the shape is stated rather than interpolated end to end: the
+    # flexor belly just past the elbow is the thickest point, the taper runs
+    # most of the length, and the WRIST is an explicit minimum that sits 2-3 px
+    # clear of the hand's edge so it is visible before the hand covers it. The
+    # axis sags on a half-sine, so the underside is a curve and not a ruled
+    # parallel to the top.
+    def limb(x0, y0, x1, y1, knots, sag, core, up, dn):
+        step = 1 if x1 >= x0 else -1
+        n = abs(x1 - x0)
+        span = {}
         for k in range(n + 1):
             t = k / float(n)
-            x, y, w = x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, w0 + (w1 - w0) * t
-            c.rect(int(x - w), int(y - w * 0.62), int(x + w), int(y + w * 0.62),
-                   core)
-            c.hline(int(x - w), int(x + w), int(y - w * 0.62), up)
-            c.hline(int(x - w), int(x + w), int(y + w * 0.62), dn)
+            x = x0 + step * k
+            yc = y0 + (y1 - y0) * t + math.sin(t * math.pi) * sag
+            h = _knot(t, knots)
+            yt, yb = int(round(yc - h)), int(round(yc + h))
+            span[x] = (yt, yb)
+            for y in range(yt, yb + 1):
+                c.set(x, y, core)
+            c.set(x, yt, up)                        # the lit ridge along the
+            c.set(x, yt + 1, up)                    # top, where both sources
+            c.set(x, yb, dn)                        # sit above the counter
+            c.set(x, yb - 1, C("ad7757"))
+        return span
+
+    def edge(span, xa, xb, col):
+        """A rim laid ON the limb's own top edge, and walked as a connected
+        staircase — set one pixel per column it breaks into dashes wherever
+        the edge drops a row. The two rims it replaces were ruled by hand off
+        a slope constant, so they drifted off the arm the moment the arm
+        stopped being a straight band."""
+        prev = None
+        for x in range(min(xa, xb), max(xa, xb) + 1):
+            if x not in span:
+                continue
+            yt = span[x][0]
+            for y in range(min(yt, prev if prev is not None else yt),
+                           max(yt, prev if prev is not None else yt) + 1):
+                c.set(x, y, col)
+            prev = yt
+
+    def cuff(span, xa, xb, lean, lip_lit, rim, catch):
+        """The sleeve's rolled end, laid OVER the forearm's root so the jacket
+        visibly STOPS ON SKIN. There was no cuff at all before — the red mass
+        simply ended somewhere under the plank and the arm began."""
+        sgn = 1 if xb >= xa else -1
+        for x in range(min(xa, xb), max(xa, xb) + 1):
+            if x not in span:
+                continue
+            yt, yb = span[x]
+            yc = (yt + yb) * 0.5
+            for y in range(yt - 1, yb + 1):
+                xe = xb + sgn * int(round((y - yc) * lean))
+                if (x - xe) * sgn > 0:
+                    continue
+                near = abs(x - xe) < 2
+                col = C("752438")                   # SLEEVE colour, not a
+                if y <= yt:                         # shadow: at 411d31/241527
+                    col = C("411d31")               # the cuff read as a dark
+                elif y >= yb - 1:                   # hole where the arm went
+                    col = C("341c27")               # into the counter
+                elif y >= yb - 3:
+                    col = C("602c2c")
+                c.set(x, y, C(lip_lit) if near and yt < y < yb - 1 else col)
+        # the sleeve's own outer rim, so the elbow end reads as a rounded cap
+        # turning into the arm rather than a chopped square, with a CATCH on
+        # the outside of the bend — the one thing that says the elbow is a
+        # joint and not just where the plank happened to stop
+        if xa in span:
+            yt, yb = span[xa]
+            for y in range(yt - 1, yb + 1):
+                c.set(xa, y, C(rim))
+            mid = (yt + yb) // 2
+            for y in range(mid, mid + 4):
+                c.set(xa, y, C(catch))
+                c.set(xa - sgn, y, C(catch))
 
     def hand(cx, ytop, ybot, half, digits, thumb):
         for y in range(ytop, ybot + 1):
@@ -1727,18 +1936,29 @@ def _mara_arms(c: Canvas, rng: random.Random) -> None:
     # into one pale plank running the whole width of the light box — the hands
     # are the subject of this pitch and they have to be the brightest skin in
     # the frame, not part of a band.
-    # ---- her right arm (screen left). Its sleeve ends at (608, 412).
-    limb(608, 410, 646, 392, 11, 8, C("ad7757"), C("c09473"), C("7a4841"))
-    for k in range(30):                                     # cold rim, box side
-        c.set(610 + k, 402 - int(k * 0.46), C("3c5e8b"))
+    # THE TWO ARMS ARE NOT A MIRRORED PAIR. She is leaning on her right, so
+    # that one is thicker through the belly, its sleeve is shoved further down
+    # over the joint (a longer cuff, less bare skin showing) and it lies at a
+    # shallower angle. Her left is the working arm, holding the pencil: thinner
+    # everywhere, more forearm out of the sleeve, steeper.
+    # ---- her right arm (screen left), the one she leans on
+    sp = limb(599, 412, 648, 391,
+              ((0.00, 7.8), (0.12, 8.3), (0.28, 7.7), (0.45, 6.9),
+               (0.60, 5.6), (0.72, 4.2), (0.86, 4.2), (1.00, 4.9)),
+              1.3, C("ad7757"), C("c09473"), C("7a4841"))
+    edge(sp, 613, 644, C("3c5e8b"))                         # cold rim, box side
+    cuff(sp, 599, 611, 0.5, "a53030", "253a5e", "3c5e8b")
     hand(651, 386, 400, 18,
          ((-15, 13, -0.16), (-9, 15, -0.05), (-3, 14, 0.05), (3, 11, 0.16)),
          (15, 11, 1))
 
-    # ---- her left arm (screen right). Its sleeve ends at (754, 412).
-    limb(754, 410, 718, 390, 11, 8, C("ad7757"), C("c09473"), C("7a4841"))
-    for k in range(28):                                     # warm rim, lamp side
-        c.set(752 - k, 402 - int(k * 0.48), C("de9e41"))
+    # ---- her left arm (screen right), the working one
+    sp = limb(763, 411, 706, 390,
+              ((0.00, 7.0), (0.10, 7.5), (0.24, 6.9), (0.40, 6.0),
+               (0.52, 4.8), (0.62, 3.8), (0.80, 4.0), (1.00, 4.6)),
+              0.9, C("ad7757"), C("c09473"), C("7a4841"))
+    edge(sp, 710, 754, C("de9e41"))                         # warm rim, lamp side
+    cuff(sp, 763, 754, 0.45, "a53030", "602c2c", "de9e41")
     hand(714, 384, 397, 17,
          ((-13, 10, -0.12), (-7, 12, -0.04), (-1, 11, 0.06), (5, 8, 0.14)),
          (-16, 10, -1))
