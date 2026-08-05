@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.56.** The release history was renumbered evenly on
+**Current version: v0.6.57.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -376,6 +376,47 @@ Also asked for: **upgrade the two existing backdrops** (den, drain).
 ---
 
 # B. GAMEPLAY THE USER HAS ASKED FOR
+
+## B0-NEW. THE 2026-08-05 BACKLOG - "i dont just want my whole game to look
+## square" *(user)*
+
+All of these came in one burst while the terrain blending was being fixed.
+None are started. **The unifying complaint is GEOMETRY: the user can see the
+grid.** Their words: *"all the houses are square too, i want some variation
+to it, you know what i mean? like i dont just want my whole game to look
+square"*.
+
+1. **The rail corridor reads as a hard parallelogram** - *"train tracks road
+   just looks square when blended into the dirt, i dont want to see any
+   square stuff"*. `_cell_material` returns "rail" for `_rail_cells`/
+   `_rail_cross` and `_paint_fringes` skips those cells outright, so the bed
+   never frays. The RAILS should stay crisp; the BALLAST should not. The
+   `fr_gravel_*` overlays already exist and are barely used.
+2. **Houses are rectangles.** Already logged as C3 (non-rectangular
+   buildings) - it is a real builder job: L and T footprints, and every
+   downstream system assumes `Rect2i` (roof, interior reveal, door side,
+   entrance pockets).
+3. **Three trucks parked identically, evenly spaced, same variant** - *"why
+   are these 3 trucks just side by side all perfectly lined up? looks odd"*.
+   This is the standing NO VISUAL REPETITION rule being broken outright.
+   Whatever places the loading-dock trucks needs per-instance offset, spacing
+   jitter and `_pick_variant_varied`.
+4. **A door is invisible against its own wall** - *"the door on this building
+   i can barely see it because its the same colour as the building"*. Same
+   class of defect as the grey house in v0.6.54, and that one was found by
+   COMPARING THE ACTUAL VALUES rather than by eye - do that again.
+5. **Fallen trees** - *"lets make some trees fallen over on the ground, not
+   but alot, maybe like 10% of trees are, not bushes though"*. A new baked
+   variant (`bake_lean` will not do it - a felled trunk is a different
+   sprite), placed at ~10%, trees only. NOTE: it must not change how many
+   variants `_pick_variant` sees for the `tree` family, or the district
+   re-rolls - add them as their own family and roll membership from
+   `_side_rng`.
+6. **Puddles: varied sizes and an animated reflection** - *"make the puddles
+   on the ground from the rain, some bigger, some smaller, make it animated
+   too, like the puddle haas reflection"*. Wet-ground reflections were
+   already on the polish list (section A); this is the same item with a size
+   spread and animation attached.
 
 ## B0. Parking lots and aprons should JOIN the road network *(user, 2026-08-05)*
 

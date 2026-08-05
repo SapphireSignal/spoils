@@ -745,6 +745,14 @@ func _draw_district() -> void:
 		if through2 and z > 1.6:
 			_dashed_line(Vector2(left.x, mid2), Vector2(right.x, mid2),
 				ROAD_CASE, maxf(1.0, z * 0.18), z * 2.2, z * 2.2)
+	# BROKEN STRETCHES, drawn over the road lines. Without these the network is
+	# a set of perfectly ruled bands, which is exactly what the user objected to
+	# ("the straight roads just look really weird, especially on the map"). They
+	# are real: the same cells the world paints as bare earth.
+	for rc in (_vec.get("road_rot", []) as Array):
+		var rcell: Array = rc
+		var rp := _cell_to_screen(Vector2(float(rcell[0]), float(rcell[1])))
+		_canvas.draw_rect(Rect2(rp, Vector2(z, z) * 1.15), DIRT, true)
 	# the rail line, with ties
 	var rail_row := float(_vec["rail_row"])
 	if rail_row > 0.0:

@@ -246,6 +246,28 @@ softer settings had not touched them:
 SHARED EDGE, not what a single tile looks like on its own.** Three of the
 four failures in this system were invisible when looking at one tile.
 
+**Shipped: v0.6.57 - the blending reaches everywhere, and roads rot.**
+- **The fringe pass ran too early.** It was at the end of `_paint_terrain`,
+  but `_place_lone_trees` and others write floor tiles AFTER that pass, so
+  whole areas never got blended - the user found a lone grass tile in the
+  dirt and a pocket under a dead tree, both hard diamonds. It runs once at
+  the END OF THE BUILD now, so it is complete by construction rather than by
+  remembering which passes matter.
+- **Dirt washes two cells ONTO hard surfaces.** A one-cell blend traces a
+  road's outline instead of covering it.
+- **Road decay patches**, clustered off a hash grid, drawn on the map too.
+
+**STILL OPEN - a large user backlog from this session, all in TASKS.md
+B0-NEW.** The unifying complaint is GEOMETRY: *"i dont just want my whole
+game to look square"*. Rail corridor still a hard parallelogram (rails
+should stay crisp, the BALLAST should fray - `fr_gravel_*` already exists);
+houses are rectangles (C3); three trucks parked identically in a row; a door
+invisible against its own wall; fallen trees at ~10%; puddles with varied
+sizes and an animated reflection. Plus the earlier B0/B0b: parking lots
+joined to roads, and broken cars reading as broken. **UI and icons remain
+PARKED mid-way** - `make_ui_frames`/`make_ui_icons` exist in gen_art and are
+not wired.
+
 **Picked up at: the polish pass, ART half — three of six done.** Shipped this
 session: the title (v0.6.51), the map screen redo (v0.6.52), the layout
 revision (v0.6.53), terrain blending + house contrast (v0.6.54), the blend

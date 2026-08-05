@@ -3,6 +3,47 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.57] - 2026-08-05 - the blending reaches everywhere, and roads rot
+
+### Fixed - whole areas were never blended at all
+The user found a lone grass tile inside the dirt and another under a dead
+tree, both hard unblended diamonds: *"just a random tile inside of the dirt,
+looks completely off, can you make sure its not like that anywhere else"*,
+*"for everywhere in my map not just in these screenshots"*.
+
+**The fringe pass ran at the end of `_paint_terrain` - far too early.**
+`_place_lone_trees`, `_place_scrapyard` and several others write floor tiles
+and add cells to `_forest`/`_dirt_path` AFTER the terrain pass, so anything
+they painted never got a fringe. It now runs once, at the end of the whole
+build, where it sees the FINAL ground whatever wrote it - complete by
+construction rather than by listing the passes that matter.
+
+### Changed - dirt spreads ONTO hard surfaces, two cells deep
+*"the dirt on the road looks odd in this picture, its ok to go over the road
+with some stuff, liek the road doesnt need to be perfect, but in that picture
+the dirt should be filled up, it can overlap the road"*. A one-cell blend
+traces the road's outline rather than covering it, so the road read as a
+clean shape with a ragged border drawn around it. Dirt now washes two cells
+in, thinning with distance, and the fringe frays the new outer edge.
+
+### Added - road decay
+*"can we make some spots on the main roads broken, and the broken pieces are
+like all blended into whatever is near ... because the straight roads just
+look really weird, especially on the map"*. Clustered patches - a coarse hash
+grid picks which blocks carry one and a rounded blob keeps it off the block
+edges, because a per-cell roll scatters single broken tiles and reads as
+noise. A decayed cell becomes bare earth, so the blending frays it into the
+asphalt for free. Intersections are never eaten. **The map draws them too**,
+so its roads are no longer perfect ruled lines.
+
+### Changed - more grass on the transition tiles
+*"the stone tiles that have little grass specks on them, can you make the
+specks have a bit more specks"*. Roughly double the clumps and blades.
+
+### Verified
+`SMOKE PASS`, 240 fps, worst frame 5.69 ms, `DOORS` 16 on unchanged cells.
+All of it is hash-driven, so it costs the layout rng nothing.
+
 ## [0.6.56] - 2026-08-05 - the last straight lines out of the blending
 
 User: *"theres still some lines on the grass, like i can tell it doesnt look

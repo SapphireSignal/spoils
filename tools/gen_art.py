@@ -307,17 +307,23 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
         # transition tile: concrete with grass CREEPING onto it in clumps —
         # placed automatically wherever concrete touches woodland, so biome
         # edges blend instead of snapping tile-to-tile
+        # DENSER since 2026-08-05 (user: "the stone tiles that have little
+        # grass specks on them, can you make the specks have a bit more
+        # specks"). Roughly double the clumps and stray blades. The clumps do
+        # the work — they are small SOLID patches, so this stays the right
+        # side of the no-dot-noise rule; the blades only fleck the gaps
+        # between them.
         region = _floor_base(c, rng, CONC_BASE, CONC_D1, CONC_L1, 0.028, 0.012)
-        for _ in range(rng.randint(4, 6)):
+        for _ in range(rng.randint(8, 12)):
             patch = blob(rng, 6 + rng.randrange(52), 4 + rng.randrange(24),
-                         rng.randint(8, 20), region)
+                         rng.randint(10, 26), region)
             for (x, y) in patch:
-                if rng.random() < 0.8:
+                if rng.random() < 0.82:
                     c.set(x, y, C("19332d") if rng.random() < 0.7 else C("25562e"))
-        for _ in range(10 + variant * 6):  # stray blades
+        for _ in range(22 + variant * 10):  # stray blades
             x, y = 4 + rng.randrange(56), 2 + rng.randrange(28)
             if (x, y) in region:
-                c.set(x, y, C("25562e"))
+                c.set(x, y, C("25562e") if rng.random() < 0.75 else C("19332d"))
 
     elif kind.startswith("sidewalk"):
         # walkway slabs flanking roads: lighter than the asphalt, with joint

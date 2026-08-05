@@ -73,6 +73,7 @@ var _wall_h := 40
 var _story_h := 32
 var _floor_layer: TileMapLayer
 var _fringe_layer: TileMapLayer
+var _road_rot: Dictionary = {}   # road cells worn back to bare earth
 var _flat: Node2D                    # flat decals (cables) over the tiles
 var _occ: Node2D                     # light occluders (wall lines) — never drawn
 var _sway_shader: Shader             # foliage sway, compiled once
@@ -233,6 +234,19 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 	await _fill_dead_spots()
 	await _collect_puddle_spots()
 	await _collect_fog_spots()
+	# MATERIAL BOUNDARIES LAST. This used to run at the end of _paint_terrain,
+	# which is far too early: _place_lone_trees, _place_scrapyard and several
+	# others write floor tiles and add cells to _forest / _dirt_path AFTER the
+	# terrain pass. Anything they painted never got a fringe, so it rendered as
+	# a hard unblended diamond - the user caught two, a lone grass pocket under
+	# a dead tree and one inside the dirt ("just a random tile inside of the
+	# dirt, looks completely off, can you make sure its not like that anywhere
+	# else ... for everywhere in my map not just in these screenshots").
+	#
+	# Running it here means it sees the FINAL ground, whatever wrote it, which
+	# is the only version of this that can be complete by construction.
+	await _wash_dirt_over_hard()
+	await _paint_fringes()
 	_build_border_collision(root)
 	# the map bake and vector plan walk every cell — they yield on the same
 	# budget as everything above, instead of stalling the deploy tail
@@ -1489,6 +1503,20 @@ func _paint_terrain() -> void:
 					tile_name = "asphalt_crack_%d" % _rng.randi_range(0, 1)
 				elif _rng.randf() < 0.02:
 					tile_name = "asphalt_hole_%d" % _rng.randi_range(0, 1)
+				# ROAD DECAY (user: "can we make some spots on the main roads
+				# broken, and the broken pieces are like all blended into whatever
+				# is near", "because the straight roads just look really weird").
+				# A patch where the surface has gone completely: it becomes bare
+				# earth, which _cell_material then reports as dirt, so the fringe
+				# pass frays it into the asphalt around it for free.
+				#
+				# EVERY DRAW ABOVE IS STILL TAKEN and only the RESULT is replaced -
+				# the patch test and its variant are hashes. A draw here would shift
+				# the stream and re-roll the district.
+				if cw == "" and _road_decayed(cell):
+					tile_name = "dirt_%d" % posmod(hash(Vector3i(cell.x, cell.y,
+						_zone_salt ^ 0x2c7f)), 4)
+					_road_rot[cell] = true
 			elif _sidewalk.has(cell) and not is_forest \
 					and _cell_inset(cell) >= BARRIER_INSET - 2:
 				# sidewalks BEAT dirt trails (a trail used to paint straight
@@ -1516,7 +1544,6 @@ func _paint_terrain() -> void:
 					tile_name = "dirt_blend_%d" % _rng.randi_range(0, 2)
 			_set_tile(cell, tile_name)
 		await _tick()
-	await _paint_fringes()
 
 
 func _dash_here(along: int, road_pos: int) -> bool:
@@ -1557,6 +1584,30 @@ const FRINGE_RANK := {
 const FRINGE_ORDER := ["grass", "dirt", "gravel"]
 
 
+func _road_decayed(cell: Vector2i) -> bool:
+	## Is this road cell inside a patch that has broken up completely?
+	##
+	## CLUSTERED, never per-cell: a per-cell roll scatters single broken tiles
+	## down a road, which reads as noise rather than as a stretch nobody has
+	## repaired. A coarse hash grid picks which 8x8 blocks carry a patch, and
+	## a rounded blob inside the block keeps the patch off the block edges so
+	## it never reads as a square.
+	##
+	## Hash-only, so it costs the layout rng nothing and cannot crawl.
+	if _road_v_at(cell) >= 0 and _road_h_at(cell) >= 0:
+		return false                       # never eat an intersection
+	var gx := cell.x >> 3
+	var gy := cell.y >> 3
+	if posmod(hash(Vector3i(gx, gy, _zone_salt ^ 0x51ab)), 100) >= 16:
+		return false
+	var cx := (gx << 3) + 2 + posmod(hash(Vector3i(gx, gy, 7)), 4)
+	var cy := (gy << 3) + 2 + posmod(hash(Vector3i(gx, gy, 11)), 4)
+	var r := 2 + posmod(hash(Vector3i(gx, gy, 13)), 2)
+	var dx := cell.x - cx
+	var dy := cell.y - cy
+	return dx * dx + dy * dy <= r * r
+
+
 func _cell_material(cell: Vector2i) -> String:
 	## Derived, never stored: every field it reads already exists, and a
 	## parallel copy would be one more thing to drift.
@@ -1568,6 +1619,8 @@ func _cell_material(cell: Vector2i) -> String:
 		return "dirt"
 	if _ballast.has(cell):
 		return "gravel"
+	if _road_rot.has(cell):
+		return "dirt"                     # the surface is gone: bare earth
 	if _road_v_at(cell) >= 0 or _road_h_at(cell) >= 0:
 		return "asphalt"
 	if _sidewalk.has(cell):
@@ -1575,6 +1628,53 @@ func _cell_material(cell: Vector2i) -> String:
 	if _plaza.has(cell) or _apron.has(cell):
 		return "paved"
 	return "stone"
+
+
+func _wash_dirt_over_hard() -> void:
+	## Dirt spreads ONTO the hard surfaces it meets, two cells deep.
+	##
+	## Without this the blend is one cell wide, which is what the user saw:
+	## "the dirt on the road looks odd in this picture, its ok to go over the
+	## road with some stuff, liek the road doesnt need to be perfect, but in
+	## that picture the dirt should be filled up, it can overlap the road". A
+	## single blended ring traces the road's outline instead of covering it, so
+	## the road reads as a clean shape with a ragged border drawn round it.
+	##
+	## Grown OUT FROM the dirt rather than scanned for: walking every cell and
+	## measuring its distance to the nearest dirt is 25 lookups x 65k cells.
+	## Expanding from the earth itself is a few thousand.
+	##
+	## Hash-only. No _rng draws, so the district cannot re-roll, and a wash
+	## cannot crawl between builds.
+	var seeds: Array = _dirt_path.keys()
+	var add: Dictionary = {}
+	for s in seeds:
+		var d: Vector2i = s
+		for dy in range(-2, 3):
+			for dx in range(-2, 3):
+				var dist := absi(dx) + absi(dy)
+				if dist == 0 or dist > 2:
+					continue
+				var n := Vector2i(d.x + dx, d.y + dy)
+				if _dirt_path.has(n) or add.has(n) or _forest.has(n):
+					continue
+				if _cell_inset(n) < BARRIER_INSET - 6:
+					continue
+				var mat := _cell_material(n)
+				if mat != "asphalt" and mat != "stone" and mat != "walk" 						and mat != "paved":
+					continue
+				# thins with distance, so the wash has a soft outer reach rather
+				# than a hard two-cell step
+				var p := 74 if dist == 1 else 30
+				if posmod(hash(Vector3i(n.x, n.y, _zone_salt ^ 0x6d31)), 100) < p:
+					add[n] = true
+		await _tick()
+	for n in add:
+		var cell: Vector2i = n
+		_set_tile(cell, "dirt_%d" % posmod(hash(Vector3i(cell.x, cell.y,
+			_zone_salt ^ 0x2c7f)), 4))
+		_road_rot[cell] = true
+		await _tick()
 
 
 func _paint_fringes() -> void:
@@ -1595,7 +1695,7 @@ func _paint_fringes() -> void:
 				continue
 			# an INTERSECTION keeps its markings clean (user, standing: no grass
 			# on intersections) - a crosswalk with grass through it is unreadable
-			if _road_v_at(cell) >= 0 and _road_h_at(cell) >= 0:
+			if _road_v_at(cell) >= 0 and _road_h_at(cell) >= 0 					and not _road_rot.has(cell):
 				continue
 			var my_rank: int = FRINGE_RANK.get(mine, 99)
 			var best := ""
@@ -4089,6 +4189,11 @@ func _map_vectors() -> Dictionary:
 		# nothing but a word floating over them)
 		"areas": _map_areas(),
 		"spawn_cell": [_spawn_cell.x, _spawn_cell.y],
+		# bare-earth cells, so the map's roads are not perfect ruled lines
+		# either (user: "the straight roads just look really weird,
+		# especially on the map")
+		"road_rot": _road_rot.keys().map(func(c: Vector2i) -> Array:
+			return [c.x, c.y]),
 	}
 
 

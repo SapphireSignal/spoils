@@ -206,6 +206,12 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.57", [
+		"whole patches of ground were never getting blended at all - a lone bit of grass in the dirt, or the pocket under a dead tree, stayed a hard diamond. the blending now runs at the very end of building the world, so it covers everything no matter what put it there",
+		"dirt spreads onto the roads properly now instead of just outlining them. it can wash right over the tarmac, which is what it should have looked like",
+		"some stretches of road have broken up completely and gone back to bare earth, and they blend into whatever is around them. the map shows them too, so the roads arent perfectly straight lines on it any more",
+		"more grass coming through the cracks on the stone tiles",
+	]],
 	["v0.6.56", [
 		"the last hard lines are out of the ground blending. two tiles were each growing into the other, which meant they still met in a straight line right on the join - now only one side of any boundary spreads, so the only edge you see is a ragged one in the middle of a tile",
 		"and the grass can no longer thin out to nothing along an edge, which was leaving short straight gaps of bare concrete",
