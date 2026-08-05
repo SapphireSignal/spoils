@@ -85,8 +85,44 @@ and `_roads_h` index 1, the crosstown route kept whole so the district stays
 drivable). Draw those as arterials and it is TRUE. The rest of the grid
 symmetry is the FIXED district and is not the map's to fix.
 
-**Picked up at:** the map rebuild, TASKS.md A1 item 1. Nothing else in
-progress. v0.6.51 is tagged, smoked and pushed.
+**Shipped: v0.6.52 — the map is a game map now.** Terrain coloured by what it
+is (open land, city blocks, paved aprons, dirt yards, dim ground beyond the
+wire), woods as canopy masses with a light direction instead of hatch
+strokes, a road hierarchy, markers keyed to what a place is FOR (green = a way
+out, red = home, blue = somewhere to go), and ground mottle hashed off the
+cell so it cannot crawl while you pan.
+
+**Three things from it that will bite again:**
+- **`antialiased: true` on `draw_circle` is expensive, and the cost is
+  PER FRAME.** The rebuild measured 240 -> 210 fps and 4.61 -> 7.09 ms worst
+  frame with the map open over a live raid. AA off on the grove and mottle
+  circles: **240.0 fps / 4.45 ms**, no visible difference. The district layer
+  is re-rasterised every frame even though its draw callback only runs on pan
+  and zoom — so primitive count there is not a one-off cost. I nearly shipped
+  the regression on the strength of a screenshot's fps counter; `--perf
+  --map=transit` is what caught it.
+- **Patch size decides whether mottle reads as texture or as a fault.** First
+  cut was 1.6-4.3 CELLS across and read as grey smudges drifting over the
+  district.
+- **The road hierarchy had to be earned, not invented.** Every road in the
+  world is `Vector2i(base, 4)` — four cells, all of them — so the old map was
+  telling the truth. The honest signal is the SPAN: a road that crosses the
+  whole district is a through route, one that stops short is a stub. That is
+  real, it is in the data, and it is the distinction a player acts on.
+
+**NOT DONE, and deliberately — it needs the user's call.** They also said
+*"all the roads are symmetrical, the POIs too"*. That is the DISTRICT, not
+the drawing, and **THE MAP IS FIXED** is a standing rule: changing it means a
+new `DISTRICT_SEED` or a builder change, and it moves every building, POI and
+the safehouse. Written up as TASKS.md **A1b** with a cheaper middle ground
+(the road jitter is only ±4 cells on a ~124-cell span). Do not start it
+without asking.
+
+**Picked up at: the polish pass, ART half — three of six done.** Shipped this
+session: the title (v0.6.51), the map screen redo (v0.6.52). **Still
+untouched: ui and icons, the player model, world objects and textures.**
+Engine half still open: wet-ground reflections, window light spill, heat
+shimmer. Nothing in progress, nothing blocked, all gates green.
 
 ---
 

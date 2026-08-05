@@ -206,6 +206,13 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.52", [
+		"the map has colour on it now. it was all one shade of brown like a paper map youd unfold - the ground, the woods, the yards and the buildings are all their own colour, so you can tell what youre looking at without reading the labels",
+		"the woods are actual trees instead of little scratchy lines - clumps of canopy with light coming from one side, and the turned autumn patch stands out in orange",
+		"the roads arent all the same any more. the ones that run right through the district are wide and bright with a dashed line down the middle, the ones that stop halfway are thinner and duller - so you can see at a glance which way you can actually drive",
+		"every place on the map is colour coded by what its for - green means you can get out there, red is your safehouse, blue is somewhere worth going. they used to all be the same symbol in the same little box",
+		"still 240fps with the map open over a live raid",
+	]],
 	["v0.6.51", [
 		"the title on the menu is cast metal now instead of a flat white word - it has thickness, its lit from above, and its got wear and rust on it like everything else in the game does",
 		"light moves across it properly. it used to be a straight-edged bar that slid over the letters once every six seconds and did nothing in between - now theres a soft angled gleam that never stops drifting, and a brighter one that sweeps through now and then",

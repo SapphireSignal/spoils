@@ -3,6 +3,74 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.52] — 2026-08-05 — the map is a game map, not a paper one
+
+v0.6.46 rebuilt the map screen as a surveyor's chart — aged paper, sepia ink
+on every edge, woods as diagonal hatch strokes, a symbol on a paper disc for
+every place. It was internally consistent, and the user rejected it:
+
+> *"the in game map looks like an actual map that youd hold, i dont want it
+> like that, i want there to be colour on there, the trees are just lines in
+> there too, and all the roads are the same size oin the map, all the pois are
+> like in the same spot ... the map just looks like squares and lines, doesnt
+> look like an actual map. remember i dont want a real looking map i just want
+> it to look like a good real map that youd see in other video games"*
+
+**The old scheme's mistake, named so it is not repeated:** it answered "this
+reads as a diagram" with "make it look hand-drawn", when the real problem was
+that everything was the *same* — one hue, one road width, one marker
+treatment. Sameness is what reads as a diagram, not colour.
+
+### Changed — terrain instead of paper
+Ground is coloured by what it is: open land, denser city blocks, paved
+aprons, dirt yards, dim ground beyond the wire. Areas are drawn as a **72%
+tint rather than a fill** — the trainyard is a whole block and at full opacity
+it landed as one solid slab, which is the "squares" read being fixed.
+
+### Changed — the woods are canopy masses
+Each grove is a clump of overlapping discs with a deep tone under, a canopy
+over and a sunlit cap offset up-left, so a wood has a light direction like
+everything else in the game. The autumn stand keeps its own ramp. An
+irregular edge is what stops a blob reading as a diagram — not a different
+stroke, which is what the hatching was.
+
+### Changed — the roads have a hierarchy
+They did not, and neither does the world: `_plan_roads` appends
+`Vector2i(base, 4)` for every road, so all of them really are four cells wide
+and the old map was telling the truth. **The honest hierarchy is the span** —
+a road crossing the whole district is a through route you can drive end to
+end, one that stops short is a stub the council never finished. Through
+routes are wide and bright with a dashed centre line; stubs are narrow and
+dull. Nothing invents a width the world lacks; it picks which roads to
+emphasise, which is what a map is for.
+
+### Changed — markers keyed to what a place is FOR
+Green is a way out of the district, red is home, blue is somewhere to go.
+Every marker used to be the same ink symbol on the same paper disc inside the
+same thin hollow rectangle, so an extraction and a lootable building were
+visually identical.
+
+### Added — ground mottle
+Broken concrete and weeds, hashed off the cell so it cannot crawl while you
+pan. The first cut used patches 1.6–4.3 **cells** across at 0.16 alpha and
+read as grey smudges drifting over the district; patch size is what decides
+whether this lands as texture or as a rendering fault, and it is well under a
+cell now.
+
+### Fixed — the frame rate it cost
+The rebuild measured **240 → 210 fps, worst frame 4.61 → 7.09 ms** with the
+map open over a live raid. The cause was `antialiased: true` on the grove and
+mottle circles — the most numerous primitive on the map by far, and the
+district layer is re-rasterised every frame whether or not the draw callback
+re-runs, so it was a per-frame cost. Antialiasing off: **240.0 fps, worst
+frame 4.45 ms**, and no visible difference at these radii.
+
+### Still open — the layout itself, which is NOT the map's to fix
+The user also said *"all the roads are symmetrical, the POIs too"*. That is
+the **district**, not the drawing: the grid is a jittered 3×3 and the POIs sit
+where the builder put them. The map is fixed by standing rule, so changing it
+is a deliberate map revision and the user's call. Logged in `TASKS.md`.
+
 ## [0.6.51] — 2026-08-05 — the title is cast metal
 
 ### Changed — the menu wordmark

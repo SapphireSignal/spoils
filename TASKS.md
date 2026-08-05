@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.51.** The release history was renumbered evenly on
+**Current version: v0.6.52.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -167,6 +167,62 @@ light); and OVERCAST weather so a dry day isn't automatically a sunny one.
 
 Agreed order for the remaining art work:
 
+1. **The in-game map screen (M) — REDONE in v0.6.52. v0.6.46 built the wrong
+   thing and this entry is kept as the record of it.**
+
+   v0.6.46 (below) chased *"its like some minecraft map"* and landed on a
+   surveyor's paper chart. The user rejected it outright: *"the in game map
+   looks like an actual map that youd hold, i dont want it like that, i want
+   there to be colour on there, the trees are just lines in there too, and all
+   the roads are the same size oin the map, all the pois are like in the same
+   spot ... the map just looks like squares and lines, doesnt look like an
+   actual map. remember i dont want a real looking map i just want it to look
+   like a good real map that youd see in other video games"*
+
+   **THE LESSON, and it is the useful part:** v0.6.46 answered "this reads as
+   a diagram" with *"make it look hand-drawn"*. The real problem was that
+   everything was the SAME — one hue, one road width, one marker treatment.
+   **Sameness is what reads as a diagram, not colour.** The paper look then
+   made it worse by forcing every element into one sepia family.
+
+   v0.6.52: terrain coloured by what it is, woods as canopy masses with a
+   light direction, a road hierarchy off the SPAN (through routes wide and
+   bright with a centre line, stubs narrow and dull — the world really does
+   make every road 4 cells wide, so span is the only honest hierarchy in the
+   data), markers keyed to what a place is FOR, and ground mottle hashed off
+   the cell.
+
+   **Two measurements worth keeping:**
+   - **`antialiased: true` on `draw_circle` is the expensive thing here.**
+     The rebuild cost 240 -> 210 fps and 4.61 -> 7.09 ms worst frame with the
+     map open over a live raid; turning AA off on the grove and mottle circles
+     restored 240.0 fps / 4.45 ms with no visible difference. **The district
+     layer is re-rasterised every frame even though its draw callback only
+     runs on pan and zoom**, so primitive count there is a per-frame cost, not
+     a one-off.
+   - **Patch size decides whether mottle reads as texture or as a fault.** At
+     1.6-4.3 cells across it looked like grey smudges drifting over the
+     district. Under a cell, it reads as ground.
+
+## A1b. The district layout itself *(user, 2026-08-05)* — NEEDS THEIR CALL
+
+Alongside the map complaint the user said **"all the roads are symmetrical,
+the POIs too"**. That one is NOT the map screen's to fix and was deliberately
+not touched: the roads are a jittered 3x3 grid (`_plan_roads`, ROAD_COUNT per
+axis, +/-4 cells of jitter) and the POIs sit where the builder puts them.
+
+**THE MAP IS FIXED is a standing rule** (user call 2026-08-01, retroactive to
+day one) — quests point at real addresses and players learn streets — so
+changing this is a deliberate map revision: a new `DISTRICT_SEED` or a builder
+change, re-auditioned and changelogged. It would move every building, every
+POI and the safehouse.
+
+Cheaper middle ground if they want less symmetry without a full reroll: the
+jitter is only +/-4 cells on a ~124-cell span, and `_plan_road_spans` already
+stubs some roads. Widening the jitter alone would break the grid read while
+keeping the same seed family. **Do not start either without asking.**
+
+### the v0.6.46 chart (superseded, kept for the record)
 1. **The in-game map screen (M) — DONE in v0.6.46.**
    *(user: "its like some minecraft map")* Rebuilt as a drawn chart:
    aged-paper sheet with a ruled ink border, roads CASED (an ink stroke with

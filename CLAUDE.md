@@ -35,7 +35,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
 	 form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.51 shipped, 2026-08-05.** Milestone 1 (a walkable world) is DONE.
+**v0.6.52 shipped, 2026-08-05.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 
@@ -66,19 +66,35 @@ toolkit to turn up the atmosphere"**
 work — lighting, shaders, particles, camera — which improves everything at
 once instead of one sprite family at a time, and it is far faster. Shipped
 so far: camera kick, hit-stop, per-sprite hit flash, a full-screen colour
-grade, dust motes, sun shafts, indoor weather muffling, and **real 2D
-shadows** (v0.6.45 — wall occluders; it closed the flashlight-through-walls
-bug in the same stroke) and **the player's directional shadow** (v0.6.48 —
-thrown away from the sun, long when it is low, gone under cloud). Still to
-do and listed in TASKS.md: **prop** cast shadows (a NEW system — props have
-no shadow node at all, `shadow.png`'s only user is `player.gd`, so this is
-not a tweak and the naive version costs thousands of nodes), wet-ground
-reflections, contact shadows, window light spill,
-tree sway — plus most of the ART half of the pass. **The map screen is DONE
-(v0.6.46** — a drawn paper chart with inked edges, hatched woods and a
-symbol for every place, replacing the flat rectangles the user called "some
-minecraft map"**)**; the map-select tile, the title, ui and icons, the
-player model and world objects are all still untouched.
+grade, dust motes, sun shafts, indoor weather muffling, **real 2D shadows**
+(v0.6.45 — wall occluders; it closed the flashlight-through-walls bug in the
+same stroke), **the player's directional shadow** (v0.6.48 — thrown away from
+the sun, long when it is low, gone under cloud), **foliage sway** (v0.6.49)
+and the wordmark's **gleam** (v0.6.51).
+
+**ENGINE HALF — still to do, all listed in TASKS.md:** wet-ground
+reflections, window light spill, heat shimmer. **Built, measured and
+REJECTED:** glow/bloom (see below) and **prop contact shadows** — the
+one-node `_draw()` architecture was right and free, but clustered props stack
+semi-transparent blobs that compound into a grey smear. Do not retry that one
+by lowering the alpha. **Prop CAST shadows are a separate, unstarted job:**
+props have no shadow node at all (`shadow.png`'s only user is `player.gd`),
+Godot 2D has no shadow-casting sun, and the real mechanism is
+`SHADOW_VERTEX` — not a tweak, and it needs a deliberate cost decision.
+
+**ART HALF — three of six.** Shipped: the map screen, the map-select tile
+(v0.6.50), the title (v0.6.51). **Still untouched: ui and icons, the player
+model, world objects and textures.**
+
+**THE MAP SCREEN WAS BUILT TWICE.** v0.6.46 made it a drawn paper chart —
+inked edges, hatched woods, a symbol per place — and **the user rejected it**
+(*"i dont want it like that"*, *"the trees are just lines"*, *"squares and
+lines"*). v0.6.52 rebuilt it as a GAME map: terrain coloured by what it is,
+woods as canopy masses, a road hierarchy off the span, markers keyed to what
+a place is for. **The lesson is in TASKS.md A1 and it generalises: v0.6.46
+answered "this reads as a diagram" with "make it hand-drawn", when the real
+fault was that everything was the SAME — one hue, one road width, one marker.
+Sameness is what reads as a diagram, not colour.**
 
 **GLOW/BLOOM IS NO LONGER ON THAT LIST — it was built, measured and
 REJECTED in v0.6.45**, and TASKS.md carries the numbers. Godot's 2D glow is
