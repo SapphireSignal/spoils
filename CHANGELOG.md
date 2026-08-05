@@ -3,6 +3,51 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.46] — 2026-08-05 — the map is a drawn map now
+
+### Changed — the map screen, rebuilt as a chart
+The user's verdict on it was *"its like some minecraft map"*: flat coloured
+rectangles, roads as grey bands, and every place a bare word floating on open
+ground. It is drawn now, not diagrammed.
+
+- an **aged-paper sheet** with a ruled ink border
+- roads **CASED** — an ink stroke with a pale channel inside it, the way a
+  road is drawn on paper
+- **the woods are hatched**, short diagonal strokes instead of filled blobs.
+  The stroke pattern is hashed off each grove's own cell, never rolled, so it
+  is identical on every redraw — anything random there would crawl while you
+  pan
+- the rail is a ladder, the wire a broken red ink line
+- **every place has its own drawn symbol**: a bus for the depot, a crane and
+  hook for the scrapyard, a shed and chimney for the warehouses, a swing for
+  the playground, a mast with signal arcs for comms, a boom for the toll
+  gate, a fountain for the courtyard, a boxcar for the trainyard, a framed
+  picture for the gallery, an H pad for the lift, a bell for the school, and
+  a red home marker for the safehouse. Anything without its own symbol still
+  gets a surveyor's ringed dot rather than nothing
+- every building footprint is **inked**, which is most of what stops them
+  reading as coloured blocks
+
+Regions — town, forest, warehouse, trainyard — keep a name and take no
+symbol, which is the cartographic convention and stops a zone's several
+rectangles carpeting the sheet with repeats.
+
+### Fixed — three things that were making it worse, all found by looking
+- The town blocks were a SOLID fill covering nearly the whole sheet, so the
+  paper only survived as margins: brown boxes with pale gaps, which is the
+  same complaint again. They are a 45% tint now and the paper reads through.
+- Vehicle name labels switched on at zoom 3.0 **and the map opens at ~3.6**,
+  so all ~33 printed the instant you pressed m and carpeted the district. The
+  dots already say a vehicle is there; the names wait for zoom 7.0.
+- The safehouse no longer prints its name. You spawn on it, so the live "me"
+  marker sat on top of the word for the first stretch of every raid.
+
+### Performance
+**240 fps, worst frame 4.61 ms** with the map held open over a live raid —
+it deliberately does not pause the tree, so this is the one place a UI panel
+can cost real frames. The symbols cost nothing per-frame: they are drawn on
+the map's own canvas, which only redraws when you pan or zoom.
+
 ## [0.6.45] — 2026-08-04 — walls stop light
 
 ### Added — real 2D shadows

@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.45.** The release history was renumbered evenly on
+**Current version: v0.6.46.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -74,15 +74,36 @@ light); and OVERCAST weather so a dry day isn't automatically a sunny one.
 
 Agreed order for the remaining art work:
 
-1. **The in-game map screen (M).** *(user: "its like some minecraft map")*
-   It is drawn as flat coloured rectangles — building footprints as solid
-   fills, roads as grey bands — so it reads as a diagram. It should read
-   as a DRAWN MAP: paper-toned base, ink edges, hatching for the woods,
-   the rail as a ladder, the wire as a broken red ink line. **Every POI
-   gets its own drawn glyph** instead of a text label — a bus for the
-   depot, a crane hook for the scrapyard, a chimney for the warehouse, a
-   swing for the playground, a mast for comms, a boom for the toll gate,
-   a home marker for the safehouse.
+1. **The in-game map screen (M) — DONE in v0.6.46.**
+   *(user: "its like some minecraft map")* Rebuilt as a drawn chart:
+   aged-paper sheet with a ruled ink border, roads CASED (an ink stroke with
+   a pale channel inside), **woods hatched** with short diagonal strokes
+   instead of filled blobs, the rail a ladder, the wire a broken red ink
+   line, and **every place carries its own drawn symbol** — a bus, a crane
+   and hook, a shed and chimney, a swing, a mast with signal arcs, a boom, a
+   fountain, a boxcar, a framed picture, an H pad, a schoolhouse bell, and a
+   red home marker for the safehouse.
+
+   **Three things learned doing it, all found by shooting it and looking:**
+   - The town blocks were drawn as a SOLID fill and covered nearly the whole
+     sheet, so the paper only survived as margins — brown boxes with pale
+     gaps, which is the same "diagram" read the user complained about. They
+     are a 45% tint now.
+   - The vehicle name labels turned on at `_zoom >= 3.0` **and the map opens
+     at ~3.6**, so all ~33 of them printed at once and carpeted the map. The
+     dots already say "a vehicle is here"; the threshold is 7.0 now.
+   - The safehouse gets NO text label. You spawn on it, so the live "me"
+     marker sat on top of its name for the first stretch of every raid. Its
+     red home glyph and the red ring round its footprint are unmistakable
+     without it, and the hover blurb still names it.
+
+   **One deliberate deviation from the brief above:** it said each POI gets a
+   glyph *instead of* a text label. It got the glyph **and** the name,
+   because a symbol with no toponym is unreadable until you have memorised
+   the set — and that is how real drawn maps do it. Regions (town, forest,
+   warehouse, trainyard) get the name only, with no symbol, which is also the
+   cartographic convention and stops a zone's several rects carpeting the
+   sheet with repeats. Easy to change if the user wants it literal.
 2. **The map-select tile.** *(user)* Currently a 96×96 mini-map of grid
    and orange/green blobs, stretched 1.25× into a 120×120 button — so it
    is blurred as well as dull. Wants "an actual picture of the map from a

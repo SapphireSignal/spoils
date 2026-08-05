@@ -212,6 +212,11 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.46", [
+		"the map is a proper drawn map now instead of coloured squares - paper, inked edges, roads with a pale channel down the middle, the woods hatched in, the rail as a ladder and the wire as a broken red line",
+		"every place on it has its own little drawn symbol - a bus at the depot, a crane at the scrapyard, a swing at the playground, a mast at comms, the boom at the toll gate, an h pad at the lift, and a red house on your safehouse",
+		"the car and truck names dont print until you zoom in. all thirty-odd of them used to appear the moment you opened the map and you couldnt see the map for the labels",
+	]],
 	["v0.6.45", [
 		"walls block light now. lamps, room lights, your flashlight and car headlights all stop at a wall instead of shining straight through it, so standing in a dark house with the torch on no longer lights up the street outside",
 		"light still comes through a doorway - an open door lets it through, a shut one blocks it, and a wall thats been blown open leaves a gap the light falls through",

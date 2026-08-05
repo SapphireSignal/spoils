@@ -41,7 +41,36 @@ chat that dies mid-session still leaves a record.
 
 ---
 
-## 2026-08-04 — walls stop light, and glow was measured and thrown away
+## 2026-08-04 → 08-05 — walls stop light, and the map became a map
+
+*(Amended before the final push, which is the rule this file learned the hard
+way: an entry written mid-session goes stale the instant the session carries
+on. It was written at v0.6.45 and v0.6.46 shipped after it.)*
+
+**Also shipped: v0.6.46 — the map screen**, item 1 of the art half and the
+one the user sees every raid. It was flat coloured rectangles with a bare
+word on each place — *"its like some minecraft map"*. It is a drawn chart
+now: aged paper, a ruled ink border, roads CASED with a pale channel inside
+an ink stroke, the woods HATCHED instead of blobbed, the rail a ladder, the
+wire a broken red ink line, and **a drawn symbol for every place** (bus,
+crane, chimney, swing, mast, boom, fountain, boxcar, picture frame, H pad,
+bell, and a red home for the safehouse).
+
+**Three defects in it that only showed up by shooting it and looking** — the
+same lesson as the birds, and it is cheap to relearn badly:
+- the town blocks were a SOLID fill covering nearly the whole sheet, so the
+  paper only survived as margins. Brown boxes with pale gaps — the exact
+  "diagram" read being fixed. A 45% tint now.
+- the vehicle labels turned on at zoom 3.0 **and the map opens at ~3.6**, so
+  all ~33 printed at once and carpeted it. Threshold is 7.0 now.
+- the safehouse's name printed under the live "me" marker, because you spawn
+  on it. It has no name now; the red home glyph and ring carry it.
+
+**One deliberate deviation, flagged so nobody thinks it was missed:** the
+brief said a glyph *instead of* a text label. It got the glyph **and** the
+name — a symbol with no toponym is unreadable until the set is memorised, and
+real drawn maps carry both. Regions take the name only. Trivial to make
+literal if the user wants it.
 
 **Shipped: v0.6.45.** Real 2D shadows — the biggest item left on the visual
 polish pass. `LightOccluder2D` on every building wall segment, built off the
@@ -97,10 +126,12 @@ on 2026-08-02. Both deleted.
 **Picked up at: THE POLISH PASS IS NOT FINISHED — see TASKS.md section A.**
 Engine side still open: directional cast shadows from props and the player
 (everything shares one static blob), wet-ground reflections, contact shadows,
-window light spill, tree sway. **The entire ART half is untouched**, and it
-is the half the user's original quote was actually about. `map_view.gd` still
-draws buildings as filled rectangles and POIs as text labels — item 1 and the
-one they see every raid. Nothing is blocked. All gates green at v0.6.45.
+window light spill, tree sway. **The art half is five-sixths untouched** —
+the map screen landed in v0.6.46, and the map-select tile, the title, ui and
+icons, the player model and world objects have not been started. Each of
+those is a real job in an 18,000-line generator, not a tweak; do not read
+"finish the pass" as a short list. Nothing is blocked. All gates green at
+v0.6.46.
 
 ---
 

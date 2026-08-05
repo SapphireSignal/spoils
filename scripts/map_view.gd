@@ -12,24 +12,32 @@ extends CanvasLayer
 ## did nothing (user report).
 
 const TOOLTIP_DELAY := 0.5
-# the map's own palette — a drawn chart, not a screenshot of the ground
-const LAND := Color(0.118, 0.153, 0.196)         # the district's ground
-const BLOCK := Color(0.129, 0.165, 0.208)        # barely off the ground:
-                                                 # blocks are where roads
-                                                 # AREN'T, not boxes drawn
-                                                 # on top of it
-const ROAD := Color(0.353, 0.400, 0.443)         # tarmac stroke
-const ROAD_EDGE := Color(0.235, 0.278, 0.310)
-const GREEN := Color(0.145, 0.310, 0.235)        # the woods
-const GREEN_AUTUMN := Color(0.310, 0.251, 0.153)  # turned, not bleeding
-const BUILDING := Color(0.545, 0.600, 0.627)
-const BUILDING_WARM := Color(0.565, 0.373, 0.271)
-const RAIL := Color(0.294, 0.212, 0.208)
-const RING := Color(0.694, 0.259, 0.180)
-const ME := Color(0.976, 0.910, 0.702)
-const CAR_DOT := Color(0.871, 0.620, 0.255)      # amber
-const TRUCK_DOT := Color(0.310, 0.494, 0.827)    # blue, so the two read apart
-const LABEL := Color(0.804, 0.851, 0.839)
+# ---------------------------------------------------------------------------
+# THE MAP'S PALETTE — a DRAWN CHART, not a screenshot and not a diagram.
+#
+# It was a dark blue-grey scheme of flat filled rectangles and the user's
+# verdict was "its like some minecraft map". The fix is not more colours: it
+# is to draw the thing the way a paper map is drawn — aged paper, sepia INK
+# for every edge, pale channels for roads, hatching for woods, and a symbol
+# for every place instead of a word floating on open ground.
+#
+# All Apollo, like everything else in the project.
+# ---------------------------------------------------------------------------
+const PAPER := Color("d7b594")                   # the sheet itself
+const PAPER_HI := Color("e7d5b3")                # roads, paved ground
+const PAPER_LO := Color("c09473")                # town blocks, a shade down
+const INK := Color("341c27")                     # every edge and every glyph
+const INK_SOFT := Color("4d2b32")                # secondary rules, ties
+const GREEN := Color("25562e")                   # the woods, hatched
+const GREEN_AUTUMN := Color("884b2b")            # turned, not bleeding
+const BUILDING := Color("819796")                # civic / warehouse
+const BUILDING_WARM := Color("ad7757")           # houses
+const RAIL := Color("4d2b32")
+const RING := Color("602c2c")                    # the wire: broken red ink
+const ME := Color("a53030")                      # you. The loudest thing here.
+const CAR_DOT := Color("be772b")                 # amber
+const TRUCK_DOT := Color("3c5e8b")               # blue, so the two read apart
+const LABEL := Color("341c27")                   # place names are ink too
 
 var _player: Player
 var _environment: Node
@@ -121,15 +129,20 @@ func _build_poi_list(info: Dictionary) -> void:
 		var r: Array = poi[key]
 		if r.size() < 4 or int(r[2]) <= 0:
 			continue
+		# a PLACE gets a drawn symbol (see _draw_poi_glyph)
 		_pois.append({"name": key,
 			"rect": Rect2(float(r[0]), float(r[1]), float(r[2]), float(r[3])),
-			"blurb": blurbs.get(key, key), "label": true})
+			"blurb": blurbs.get(key, key), "label": true, "glyph": true})
 	var zones: Dictionary = info.get("zones", {})
 	for zone_name in ["town", "forest", "warehouse", "trainyard"]:
 		for r in (zones.get(zone_name, []) as Array):
+			# a REGION gets a name and no symbol — that is how a drawn map
+			# handles an area, and a zone repeats over several rects, so a
+			# symbol on each would carpet the sheet
 			_pois.append({"name": zone_name,
 				"rect": Rect2(float(r[0]), float(r[1]), float(r[2]), float(r[3])),
-				"blurb": blurbs.get(zone_name, zone_name), "label": true})
+				"blurb": blurbs.get(zone_name, zone_name), "label": true,
+				"glyph": false})
 
 
 func _build_ui() -> void:
@@ -525,25 +538,48 @@ func _draw_district() -> void:
 	var w := float((_vec["size"] as Array)[0])
 	var h := float((_vec["size"] as Array)[1])
 
-	# the ground the district stands on
+	# THE SHEET. Paper first, then a ruled ink border. Everything below is
+	# drawn ON it, which is the whole difference between a chart and a
+	# screenshot of the ground.
 	var land := Rect2(_cell_to_screen(Vector2(inset, inset)),
 		Vector2(w - inset * 2.0, h - inset * 2.0) * z)
-	_canvas.draw_rect(land, LAND)
-	# city blocks: a shade up from the ground, so the grain of the town
+	_canvas.draw_rect(land, PAPER)
+	_canvas.draw_rect(land.grow(1.0), INK_SOFT, false, 1.0)
+	# city blocks: a shade DOWN from the paper now, so the grain of the town
 	# reads without any of the hollow boxes the old map drew
 	for b in (_vec["blocks"] as Array):
 		var br := Rect2(_cell_to_screen(Vector2(float(b[0]), float(b[1]))),
 			Vector2(float(b[2]), float(b[3])) * z)
-		_canvas.draw_rect(br, BLOCK)
-	# the woods, as soft overlapping blobs
+		# A TINT, not a fill. At full opacity the blocks cover almost the whole
+		# sheet and the paper only survives as margins, which inverts the whole
+		# look — you get brown boxes with pale gaps instead of a paper map with
+		# the town shaded on it. It also buried the buildings, which are warm
+		# brown themselves.
+		_canvas.draw_rect(br, Color(PAPER_LO.r, PAPER_LO.g, PAPER_LO.b, 0.45))
+	# THE WOODS ARE HATCHED, not blobbed — short diagonal strokes, the way a
+	# surveyor draws tree cover. A filled circle was the single most "diagram"
+	# thing on the old map.
+	#
+	# The stroke pattern is HASHED OFF THE GROVE'S OWN CELL, never rolled: this
+	# runs on every redraw, so anything random would crawl while you pan.
 	for g in (_vec["groves"] as Array):
 		var density := float(g[2])
 		if density < 2.0:
 			continue
-		var centre := _cell_to_screen(Vector2(float(g[0]) + 1.5, float(g[1]) + 1.5))
+		var gx := int(g[0])
+		var gy := int(g[1])
+		var centre := _cell_to_screen(Vector2(float(gx) + 1.5, float(gy) + 1.5))
 		var radius := (1.4 + minf(density, 9.0) * 0.16) * z
 		var col: Color = GREEN_AUTUMN if int(g[3]) == 1 else GREEN
-		_canvas.draw_circle(centre, radius, col, true, -1.0, true)
+		var strokes := clampi(int(density * 0.8), 2, 8)
+		var sl := maxf(1.5, z * 0.45)
+		for i in strokes:
+			var hsh: int = absi((gx * 73856093) ^ (gy * 19349663) ^ (i * 83492791))
+			var ang := float(hsh & 1023) / 1023.0 * TAU
+			var rr := radius * (0.2 + float((hsh >> 10) & 255) / 255.0 * 0.75)
+			var at := centre + Vector2(cos(ang), sin(ang)) * rr
+			_canvas.draw_line(at + Vector2(-sl, sl), at + Vector2(sl, -sl),
+				col, maxf(1.0, z * 0.15), true)
 	# the plaza and the depot apron: paved clearings
 	for paved in [_vec["plaza"], _vec["apron"]]:
 		var pr: Array = paved
@@ -551,7 +587,7 @@ func _draw_district() -> void:
 			continue
 		_canvas.draw_rect(Rect2(
 			_cell_to_screen(Vector2(float(pr[0]), float(pr[1]))),
-			Vector2(float(pr[2]), float(pr[3])) * z), ROAD_EDGE)
+			Vector2(float(pr[2]), float(pr[3])) * z), PAPER_HI)
 	# the places that aren't paved get an OUTLINE, so the lz, the gallery,
 	# the comms relay and the trainyard read as somewhere instead of a
 	# word floating over open ground (user call)
@@ -562,7 +598,7 @@ func _draw_district() -> void:
 		_canvas.draw_rect(Rect2(
 			_cell_to_screen(Vector2(float(ar[0]), float(ar[1]))),
 			Vector2(float(ar[2]), float(ar[3])) * z),
-			ROAD_EDGE.lightened(0.18), false, maxf(1.0, z * 0.22))
+			INK_SOFT, false, maxf(1.0, z * 0.18))
 	# roads: real strokes, edged, with a hairline centre — a chart, not
 	# a grid of squares (user: "just make it a normal map")
 	for r in (_vec["roads_v"] as Array):
@@ -574,10 +610,11 @@ func _draw_district() -> void:
 		var top := _cell_to_screen(Vector2(x, maxf(from_y, inset)))
 		var bot := _cell_to_screen(Vector2(x, minf(to_y, h - inset)))
 		var mid := top.x + rw * 0.5
+		# CASED like a drawn road: an ink stroke with a pale channel inside it
 		_canvas.draw_line(Vector2(mid, top.y), Vector2(mid, bot.y),
-			ROAD_EDGE, rw + 2.0, true)
+			INK, rw + 2.0, true)
 		_canvas.draw_line(Vector2(mid, top.y), Vector2(mid, bot.y),
-			ROAD, rw, true)
+			PAPER_HI, rw, true)
 	for r in (_vec["roads_h"] as Array):
 		var y := float(r[0])
 		var rw2 := float(r[1]) * z
@@ -587,9 +624,9 @@ func _draw_district() -> void:
 		var right := _cell_to_screen(Vector2(minf(to_x, w - inset), y))
 		var mid2 := left.y + rw2 * 0.5
 		_canvas.draw_line(Vector2(left.x, mid2), Vector2(right.x, mid2),
-			ROAD_EDGE, rw2 + 2.0, true)
+			INK, rw2 + 2.0, true)
 		_canvas.draw_line(Vector2(left.x, mid2), Vector2(right.x, mid2),
-			ROAD, rw2, true)
+			PAPER_HI, rw2, true)
 	# the rail line, with ties
 	var rail_row := float(_vec["rail_row"])
 	if rail_row > 0.0:
@@ -601,7 +638,7 @@ func _draw_district() -> void:
 		var tie := rx0
 		while tie < rx1:
 			_canvas.draw_line(Vector2(tie, ry - z), Vector2(tie, ry + z),
-				RAIL.lightened(0.25), 1.0, true)
+				INK, 1.0, true)
 			tie += maxf(6.0, z * 3.0)
 	# buildings: solid footprints with a lit north edge
 	for b in (_vec["buildings"] as Array):
@@ -614,15 +651,17 @@ func _draw_district() -> void:
 		elif kind == "school":
 			col = BUILDING_WARM.lightened(0.12)
 		_canvas.draw_rect(rect, col)
-		_canvas.draw_line(rect.position, rect.position + Vector2(rect.size.x, 0.0),
-			col.lightened(0.25), 1.0, true)
-		if int(b[5]) == 2:                       # two-story: a soft core
-			_canvas.draw_rect(rect.grow(-maxf(1.0, z * 0.6)), col.lightened(0.10))
+		# EVERY FOOTPRINT IS INKED. This one line is most of what stops the
+		# buildings reading as flat coloured blocks — on a drawn map a
+		# structure has an edge, and the fill is only what sits inside it.
+		_canvas.draw_rect(rect, INK, false, maxf(1.0, z * 0.15))
+		if int(b[5]) == 2:                       # two-story: a lighter core
+			_canvas.draw_rect(rect.grow(-maxf(1.0, z * 0.5)), col.lightened(0.14))
 		if kind == "safehouse":
 			# home is RINGED, not lit up: a bright slab here competed with
 			# the "me" marker that stands on it half the time
 			_canvas.draw_rect(rect.grow(maxf(1.5, z * 0.4)),
-				Color("de9e41"), false, 1.5)
+				ME, false, 1.5)
 	# the wire: a broken red line all the way round the playable district
 	var ring := Rect2(_cell_to_screen(Vector2(inset, inset)),
 		Vector2(w - inset * 2.0, h - inset * 2.0) * z)
@@ -651,6 +690,106 @@ func _draw_dashed_rect(on: Control, rect: Rect2, col: Color, width: float,
 			t = t2 + gap
 
 
+func _draw_poi_glyph(on: Control, name: String, at: Vector2) -> void:
+	## ONE DRAWN SYMBOL PER PLACE, in ink. The old map put a word on open
+	## ground and nothing else, which is most of why it read as a diagram
+	## (user: "its like some minecraft map").
+	##
+	## FIXED PIXEL SIZE on purpose — a map symbol does not grow when you zoom,
+	## and these have to stay readable at whole-district zoom, which is where
+	## the map opens. Each sits on a paper disc so it survives landing on a
+	## road, a wood or a rooftop, the same job the text halo does.
+	const S := 5.0
+	const LW := 1.4
+	on.draw_circle(at, S + 2.0, Color(PAPER.r, PAPER.g, PAPER.b, 0.88),
+		true, -1.0, true)
+	on.draw_arc(at, S + 2.0, 0.0, TAU, 20, INK_SOFT, 1.0, true)
+	match name:
+		"bus depot":                                  # a bus
+			on.draw_rect(Rect2(at + Vector2(-S, -S * 0.75),
+				Vector2(S * 2.0, S * 1.3)), INK, false, LW)
+			on.draw_line(at + Vector2(-S + 1.0, -S * 0.2),
+				at + Vector2(S - 1.0, -S * 0.2), INK, 1.0, true)
+			on.draw_circle(at + Vector2(-S * 0.45, S * 0.75), 1.1, INK, true, -1.0, true)
+			on.draw_circle(at + Vector2(S * 0.45, S * 0.75), 1.1, INK, true, -1.0, true)
+		"scrapyard":                                  # a crane and its hook
+			on.draw_line(at + Vector2(-S * 0.3, S), at + Vector2(-S * 0.3, -S), INK, LW, true)
+			on.draw_line(at + Vector2(-S, -S), at + Vector2(S, -S), INK, LW, true)
+			on.draw_line(at + Vector2(S * 0.6, -S), at + Vector2(S * 0.6, S * 0.2), INK, 1.0, true)
+			on.draw_arc(at + Vector2(S * 0.6, S * 0.45), 1.5, PI, TAU + 0.7, 10, INK, 1.0, true)
+		"warehouse":                                  # a shed with a chimney
+			on.draw_rect(Rect2(at + Vector2(-S, 0.0), Vector2(S * 2.0, S)), INK, false, LW)
+			on.draw_line(at + Vector2(-S, 0.0), at + Vector2(0.0, -S * 0.85), INK, LW, true)
+			on.draw_line(at + Vector2(S, 0.0), at + Vector2(0.0, -S * 0.85), INK, LW, true)
+			on.draw_line(at + Vector2(S * 0.5, -S * 0.42), at + Vector2(S * 0.5, -S * 1.3),
+				INK, LW, true)
+		"playground":                                 # a swing
+			on.draw_line(at + Vector2(-S, S), at + Vector2(0.0, -S), INK, LW, true)
+			on.draw_line(at + Vector2(S, S), at + Vector2(0.0, -S), INK, LW, true)
+			on.draw_line(at + Vector2(-S * 0.6, -S * 0.1), at + Vector2(S * 0.6, -S * 0.1),
+				INK, 1.0, true)
+			on.draw_line(at + Vector2(S * 0.2, -S * 0.1), at + Vector2(S * 0.2, S * 0.55),
+				INK, 1.0, true)
+			on.draw_line(at + Vector2(S * 0.55, S * 0.55), at + Vector2(-S * 0.15, S * 0.55),
+				INK, LW, true)
+		"comms":                                      # a mast, still blinking
+			on.draw_line(at + Vector2(-S * 0.7, S), at + Vector2(0.0, -S), INK, LW, true)
+			on.draw_line(at + Vector2(S * 0.7, S), at + Vector2(0.0, -S), INK, LW, true)
+			on.draw_line(at + Vector2(-S * 0.45, S * 0.3), at + Vector2(S * 0.45, S * 0.3),
+				INK, 1.0, true)
+			on.draw_arc(at + Vector2(0.0, -S), 2.6, PI * 1.15, PI * 1.85, 8, INK, 1.0, true)
+			on.draw_arc(at + Vector2(0.0, -S), 4.0, PI * 1.2, PI * 1.8, 8, INK, 1.0, true)
+		"toll gate":                                  # the boom across the road
+			on.draw_line(at + Vector2(-S * 0.8, S), at + Vector2(-S * 0.8, -S * 0.5),
+				INK, LW, true)
+			on.draw_line(at + Vector2(-S * 0.8, -S * 0.3), at + Vector2(S, S * 0.5),
+				INK, LW, true)
+			on.draw_line(at + Vector2(-S * 1.3, S), at + Vector2(-S * 0.3, S), INK, LW, true)
+		"safehouse":                                  # home
+			on.draw_line(at + Vector2(-S, 0.0), at + Vector2(0.0, -S), ME, LW, true)
+			on.draw_line(at + Vector2(S, 0.0), at + Vector2(0.0, -S), ME, LW, true)
+			on.draw_rect(Rect2(at + Vector2(-S * 0.7, 0.0),
+				Vector2(S * 1.4, S * 0.9)), ME, false, LW)
+			on.draw_rect(Rect2(at + Vector2(-S * 0.2, S * 0.3),
+				Vector2(S * 0.45, S * 0.6)), ME, false, 1.0)
+		"lz":                                         # the landing pad: an H
+			on.draw_arc(at, S * 0.95, 0.0, TAU, 22, INK, LW, true)
+			on.draw_line(at + Vector2(-S * 0.4, -S * 0.5), at + Vector2(-S * 0.4, S * 0.5),
+				INK, LW, true)
+			on.draw_line(at + Vector2(S * 0.4, -S * 0.5), at + Vector2(S * 0.4, S * 0.5),
+				INK, LW, true)
+			on.draw_line(at + Vector2(-S * 0.4, 0.0), at + Vector2(S * 0.4, 0.0), INK, LW, true)
+		"school":                                     # a schoolhouse bell
+			on.draw_rect(Rect2(at + Vector2(-S, -S * 0.2),
+				Vector2(S * 2.0, S * 1.1)), INK, false, LW)
+			on.draw_line(at + Vector2(-S, -S * 0.2), at + Vector2(0.0, -S * 0.9), INK, LW, true)
+			on.draw_line(at + Vector2(S, -S * 0.2), at + Vector2(0.0, -S * 0.9), INK, LW, true)
+			on.draw_arc(at + Vector2(0.0, -S * 0.95), 1.5, PI, TAU, 8, INK, LW, true)
+		"courtyard":                                  # the dry fountain
+			on.draw_arc(at, S * 0.9, 0.0, TAU, 22, INK, LW, true)
+			on.draw_arc(at, S * 0.35, 0.0, TAU, 12, INK, 1.0, true)
+			on.draw_line(at + Vector2(0.0, -S * 0.35), at + Vector2(0.0, -S * 0.95),
+				INK, 1.0, true)
+		"trainyard":                                  # a boxcar on rails
+			on.draw_rect(Rect2(at + Vector2(-S, -S * 0.8),
+				Vector2(S * 2.0, S * 1.2)), INK, false, LW)
+			on.draw_line(at + Vector2(-S, S * 0.85), at + Vector2(S, S * 0.85), INK, 1.0, true)
+			on.draw_circle(at + Vector2(-S * 0.45, S * 0.5), 1.0, INK, true, -1.0, true)
+			on.draw_circle(at + Vector2(S * 0.45, S * 0.5), 1.0, INK, true, -1.0, true)
+		"gallery":                                    # a framed picture
+			on.draw_rect(Rect2(at + Vector2(-S * 0.9, -S * 0.8),
+				Vector2(S * 1.8, S * 1.6)), INK, false, LW)
+			on.draw_line(at + Vector2(-S * 0.6, S * 0.5), at + Vector2(-S * 0.05, -S * 0.3),
+				INK, 1.0, true)
+			on.draw_line(at + Vector2(-S * 0.05, -S * 0.3), at + Vector2(S * 0.6, S * 0.5),
+				INK, 1.0, true)
+		_:
+			# anything without its own symbol still gets a surveyor's mark
+			# rather than nothing — a ringed dot reads as "a place".
+			on.draw_circle(at, 1.6, INK, true, -1.0, true)
+			on.draw_arc(at, S * 0.75, 0.0, TAU, 16, INK, 1.0, true)
+
+
 func _draw_poi_labels(on: Control) -> void:
 	# POI names ON the map — no boxes any more (user: "remove all of the
 	# squares"), just type with a dark halo so it reads over anything.
@@ -661,12 +800,21 @@ func _draw_poi_labels(on: Control) -> void:
 		if not bool(poi["label"]):
 			continue
 		var text := str(poi["name"])
+		var has_glyph := bool(poi.get("glyph", false))
 		var centre: Vector2 = _cell_to_screen((poi["rect"] as Rect2).get_center())
 		var tw := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1,
 			_font_size).x
-		var pos := (centre + Vector2(-tw * 0.5, float(_font_size) * 0.5)).round()
+		# the name sits UNDER its symbol; a region has no symbol and keeps the
+		# centred placement it always had
+		var drop := 13.0 if has_glyph else float(_font_size) * 0.5
+		var pos := (centre + Vector2(-tw * 0.5, drop)).round()
 		var bounds := Rect2(pos - Vector2(3.0, float(_font_size)),
 			Vector2(tw + 6.0, float(_font_size) + 4.0))
+		if has_glyph:
+			# the symbol is part of what must not be landed on, or a
+			# neighbour's name prints straight through it
+			bounds = bounds.merge(Rect2(centre - Vector2(8.0, 8.0),
+				Vector2(16.0, 16.0)))
 		var clash := false
 		for r in drawn:
 			if r.intersects(bounds):
@@ -675,7 +823,16 @@ func _draw_poi_labels(on: Control) -> void:
 		if clash:
 			continue
 		drawn.append(bounds)
-		_halo_text(on, pos, text, ME if text == "safehouse" else LABEL)
+		if has_glyph:
+			_draw_poi_glyph(on, text, centre)
+		# THE SAFEHOUSE GETS NO NAME. You spawn on it, so the live "me" marker
+		# sits on top of it for the first stretch of every raid and the two
+		# labels printed straight through each other. Its red home glyph and
+		# the red ring round its footprint already make it the one unmistakable
+		# building on the sheet, and the hover blurb still says what it is.
+		if text == "safehouse":
+			continue
+		_halo_text(on, pos, text, LABEL)
 
 
 func _draw_markers() -> void:
@@ -692,10 +849,15 @@ func _draw_markers() -> void:
 		var truck := car != null and car.kind == "truck"
 		_markers.draw_circle(at, maxf(1.5, _zoom * 0.45),
 			TRUCK_DOT if truck else CAR_DOT, true, -1.0, true)
-		# the name only when the map is zoomed in far enough to read it —
-		# at a whole-district zoom every label would land on its neighbour
-		# and the whole thing turns to soup
-		if _zoom >= 3.0:
+		# the name only when the map is zoomed in far enough to read it — at
+		# a whole-district zoom every label would land on its neighbour and
+		# the whole thing turns to soup.
+		#
+		# THIS THRESHOLD WAS 3.0 AND THE MAP OPENS AT ~3.6, so every one of the
+		# ~33 vehicles printed its name the moment you pressed m and carpeted
+		# the sheet. The dots alone say "a vehicle is here"; the word is only
+		# worth the ink once you have zoomed in to go and find it.
+		if _zoom >= 7.0:
 			var word := "truck" if truck else "car"
 			var f: Font = _tiny_font if _tiny_font != null else _font
 			var fs: int = _tiny_size if _tiny_font != null else _font_size
@@ -719,7 +881,8 @@ func _draw_markers() -> void:
 			for off in [Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1),
 					Vector2(0, 1)]:
 				_markers.draw_string(f, tp + off, word,
-					HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0.04, 0.05, 0.09, 0.9))
+					HORIZONTAL_ALIGNMENT_LEFT, -1, fs,
+					Color(PAPER.r, PAPER.g, PAPER.b, 0.9))
 			_markers.draw_string(f, tp, word, HORIZONTAL_ALIGNMENT_LEFT, -1, fs,
 				TRUCK_DOT if truck else CAR_DOT)
 	# ME: impossible to lose (user: "alot more noticable"). A pulsing ring,
@@ -760,11 +923,13 @@ func _draw_markers() -> void:
 
 
 func _halo_text(on: Control, pos: Vector2, text: String, col: Color) -> void:
-	# a dark halo instead of a label box — legible over roads, woods or
-	# rooftops without cutting a rectangle out of the map
+	# a PAPER halo instead of a label box — ink type stays legible over a
+	# road, a wood or a rooftop without cutting a rectangle out of the map.
+	# (This was a DARK halo, which was correct while the sheet was dark and
+	# turns the type to mud now that the sheet is paper.)
 	for off in [Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1),
 			Vector2(-1, -1), Vector2(1, 1), Vector2(-1, 1), Vector2(1, -1)]:
 		on.draw_string(_font, pos + off, text, HORIZONTAL_ALIGNMENT_LEFT, -1,
-			_font_size, Color(0.043, 0.055, 0.086, 0.92))
+			_font_size, Color(PAPER.r, PAPER.g, PAPER.b, 0.92))
 	on.draw_string(_font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1,
 		_font_size, col)

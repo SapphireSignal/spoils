@@ -35,7 +35,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
 	 form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.45 shipped, 2026-08-04.** Milestone 1 (a walkable world) is DONE.
+**v0.6.46 shipped, 2026-08-05.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 
@@ -70,9 +70,11 @@ grade, dust motes, sun shafts, indoor weather muffling, and **real 2D
 shadows** (v0.6.45 — wall occluders; it closed the flashlight-through-walls
 bug in the same stroke). Still to do and listed in TASKS.md: directional
 cast shadows, wet-ground reflections, contact shadows, window light spill,
-tree sway — **plus the entire ART half of the pass, which has NOT been
-started**: the map screen, the map-select tile, the title, ui and icons,
-the player model, world objects and textures.
+tree sway — plus most of the ART half of the pass. **The map screen is DONE
+(v0.6.46** — a drawn paper chart with inked edges, hatched woods and a
+symbol for every place, replacing the flat rectangles the user called "some
+minecraft map"**)**; the map-select tile, the title, ui and icons, the
+player model and world objects are all still untouched.
 
 **GLOW/BLOOM IS NO LONGER ON THAT LIST — it was built, measured and
 REJECTED in v0.6.45**, and TASKS.md carries the numbers. Godot's 2D glow is
