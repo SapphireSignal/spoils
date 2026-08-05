@@ -191,14 +191,34 @@ read as a black bar. **Both are in this file already. Read the lessons before
 drawing, not after.**
 
 **Picked up at: THE POLISH PASS IS NOT FINISHED — see TASKS.md section A.**
-Engine side still open: directional cast shadows from props and the player
-(everything shares one static blob), wet-ground reflections, contact shadows,
-window light spill, tree sway. **The art half is five-sixths untouched** —
-the map screen landed in v0.6.46, and the map-select tile, the title, ui and
-icons, the player model and world objects have not been started. Each of
-those is a real job in an 18,000-line generator, not a tweak; do not read
-"finish the pass" as a short list. Nothing is blocked. All gates green at
-v0.6.46.
+Six versions shipped this session, v0.6.45 → v0.6.50.
+
+- **ENGINE HALF — done bar three small items.** Shipped: wall occluder
+  shadows (+ B7), the player's sun-tracking shadow, foliage sway. Built,
+  measured and REJECTED: glow/bloom, and prop contact shadows. Still open:
+  **wet-ground reflections, window light spill, heat shimmer.**
+- **ART HALF — two of six.** Shipped: the map screen (v0.6.46), the
+  map-select tile (v0.6.50). **Still untouched: the title, ui and icons, the
+  player model, world objects and textures.** Each is a real job in an
+  18,000-line generator, not a tweak — do not read "finish the pass" as a
+  short list.
+- **NEXT UP was THE TITLE** (*"its just white, and it goes up and down a bit
+  thats all, it seems boring"*), TASKS.md section A item 3.
+
+**Nothing is in progress and nothing is blocked.** Tree clean, everything
+pushed, **all gates green at v0.6.50** (`SEC PASS`, `DOCS PASS`,
+`CLAIMS PASS`, `SMOKE PASS`), 240 fps held in every case measured — forest at
+midday 4.63 ms, storm night 4.79 ms, map open over a live raid 4.61 ms, nodes
+~8.0k. Some untracked debug shots sit in `shots/`; they were deliberately not
+committed (see C7, repo weight) and can be deleted freely.
+
+**Two process failures worth not repeating.** A chained `git tag` fired twice
+while the command before it had failed, landing the tag on the PREVIOUS
+release's commit both times — caught by `git tag --points-at HEAD` before
+pushing, undone with `git tag -d`. **Tag on its own line, and verify before
+pushing.** And a commit message with double quotes inside a PowerShell
+here-string split the argument, exactly as this file already warns: **use
+`git commit -F`, always.**
 
 ---
 
