@@ -71,6 +71,12 @@ func board_ride(what: Node2D, offset: Vector2) -> void:
 
 var _sprite: Sprite2D
 var _shadow: Sprite2D
+# THE SUN, pushed from main.gd every frame (it owns the environment). The
+# shadow is thrown away from it and leans with it, so it sweeps across the
+# ground through the day instead of sitting as one dead blob underfoot.
+var _sun_dir := Vector2(0.6, 0.45).normalized()  # screen dir the shadow throws
+var _sun_low := 0.0        # 0 sun overhead .. 1 sun down on the horizon
+var _sun_strength := 0.0   # 0 no sun at all (night, rain, cloud) .. 1 hard sun
 var _tex_stand: Texture2D
 var _tex_crouch: Texture2D
 var _tex_prone: Texture2D
@@ -169,6 +175,16 @@ func _ready() -> void:
 	camera.make_current()
 	# anything that wants to kick the camera finds the player through this
 	add_to_group("player_shake")
+
+
+func set_sun(dir: Vector2, low: float, strength: float) -> void:
+	## Pushed from main.gd, which owns the environment and already reads the
+	## clock every frame for the grade and the sun shafts. Driving it from
+	## there keeps ONE reading of the clock instead of the player growing its
+	## own reference to the environment.
+	_sun_dir = dir
+	_sun_low = low
+	_sun_strength = strength
 
 
 func take_hit(bone: String = "", who: String = "") -> void:
@@ -336,7 +352,10 @@ func _process(delta: float) -> void:
 	# is readable at a glance (user request). Same ramp speed as foliage.
 	var hide_a := 0.5 if (hidden_in_bush and not dead) else 1.0
 	_sprite.modulate.a = move_toward(_sprite.modulate.a, hide_a, delta * 4.0)
-	_shadow.modulate.a = _sprite.modulate.a
+	# a hard sun casts a firm shadow; an overcast day or a night leaves only
+	# the soft contact darkening under your feet. It never reaches zero — with
+	# no shadow at all the character reads as floating.
+	_shadow.modulate.a = _sprite.modulate.a * (0.34 + 0.66 * _sun_strength)
 
 	_update_camera(delta)
 	_animate(input_vec, delta)
@@ -363,7 +382,15 @@ func _update_camera(delta: float) -> void:
 	var visual_err := snapped_pos - global_position
 	var lift := Vector2(0.0, -floor_lift)
 	_sprite.position = visual_err + lift
-	_shadow.position = visual_err + lift
+	# THROWN AND SHEARED BY THE SUN. The blob is a SOFT-ALPHA texture, which is
+	# the one class this project lets off the pixel grid (the same exemption
+	# the LZ beacon's ground wash and the freight's steam already use) — so it
+	# can lean without breaking anything the pixel rules protect. The throw is
+	# still rounded to WHOLE PIXELS, because that part slides under a sprite
+	# that is itself parked on the grid, and a subpixel offset there shimmers.
+	var throw := (_sun_dir * (1.5 + 10.0 * _sun_low) * _sun_strength).round()
+	_shadow.position = visual_err + lift + throw
+	_shadow.skew = _sun_dir.x * _sun_low * _sun_strength * 0.55
 	# the flashlight rides the same lift — it lagged behind on the second
 	# floor and sat "inside" the character (user report)
 	_light.position = Vector2(0.0, -14.0) + lift

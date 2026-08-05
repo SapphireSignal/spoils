@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.47.** The release history was renumbered evenly on
+**Current version: v0.6.48.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -62,11 +62,32 @@ light); and OVERCAST weather so a dry day isn't automatically a sunny one.
     glow sprites**, the way `lamp_glow.png` already works on lamps and
     interior lights. Costs nothing, cannot smear the pixel grid, and is
     per-object controllable. Lit WINDOWS are the obvious next customer.
-- **Directional cast shadows** from props and the player, angled to the
-  sun and swinging through the day. Everything shares one static blob now.
+- **Directional cast shadows — THE PLAYER IS DONE (v0.6.48). PROPS ARE NOT,
+  and that is a decision, not an oversight.**
+
+  The player's shadow is thrown away from the sun, leans with it, stretches
+  as the sun drops and shrinks to almost nothing at midday, and fades to a
+  soft contact darkening at night or under heavy cloud. Driven from
+  `main.gd`'s existing clock read (the one that already feeds the grade and
+  the sun shafts), so the clock is read once, not twice. Verified across
+  three times of day: thrown LEFT at 07:00, compact under the feet at 13:00,
+  thrown RIGHT at 19:55.
+
+  It is legal under the no-runtime-transform rule because the blob is a
+  SOFT-ALPHA texture — the same carve-out the LZ beacon's ground wash and the
+  freight's steam already use. The throw is still rounded to whole pixels,
+  because it slides under a sprite that is itself parked on the grid.
+
+  **PROPS HAVE NO SHADOW NODE AT ALL.** This task said "everything shares one
+  static blob"; that was wrong. `shadow.png` has exactly ONE user in the
+  whole project — `player.gd`. Prop shading is baked into the art. So giving
+  props cast shadows is not a tweak to an existing system, it is a new one,
+  and the obvious version (a Sprite2D per prop) would add **thousands** of
+  nodes against a ~8.0k budget. **It needs the shader route below, and it
+  needs a deliberate decision about cost — do not start it casually.**
 
   **THE PREMISE WAS CHECKED BEFORE STARTING (2026-08-05) AND IT IS NOT WHAT
-  YOU WOULD ASSUME. Read this before writing a line:**
+  YOU WOULD ASSUME. Read this before writing a line of the PROP version:**
   - **Godot 2D has no sun / directional light that casts shadows.** Still an
     open engine issue (godotengine/godot#25486). So this CANNOT come from a
     `Light2D`, and it is not an extension of the v0.6.45 wall occluders.

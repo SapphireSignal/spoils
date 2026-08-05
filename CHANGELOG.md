@@ -3,6 +3,38 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.48] — 2026-08-05 — your shadow follows the sun
+
+### Added — a directional shadow on the player
+It was one static blob underfoot that never changed. It now behaves like a
+shadow: **thrown away from the sun, leaning with it, long when the sun is
+low and almost nothing at midday**, fading to a soft contact darkening at
+night or under heavy cloud — because an overcast sky does not cast one.
+
+**Verified across three times of day, not eyeballed once:** thrown LEFT at
+07:00, compact under the feet at 13:00 (highest sun, strongest shadow),
+thrown RIGHT at 19:55.
+
+It rides `main.gd`'s existing clock read — the one already feeding the colour
+grade and the sun shafts — so the clock is read once per frame, not twice.
+It is legal under the never-transform-a-pixel-sprite rule because the blob is
+a **soft-alpha texture**, the same carve-out the LZ beacon's ground wash and
+the freight's steam already use; the throw is still rounded to whole pixels
+because it slides under a sprite parked on the grid.
+
+### Not done, and it is a decision rather than an oversight — props
+`TASKS.md` said "everything shares one static blob". **That was wrong.**
+`shadow.png` has exactly one user in the entire project: the player. Prop
+shading is baked into the art, so props have no shadow node at all.
+
+Giving them cast shadows is therefore a new system, not a tweak — and the
+obvious version, a sprite per prop, would add **thousands of nodes against a
+~8.0k budget**. It needs the shader route, and it needs a deliberate call on
+cost. The premise research is recorded in `TASKS.md` so it is not re-derived:
+Godot 2D has no sun light that casts shadows, and in isometric an occluder
+shadow projects across a wall as if it were not there, so this cannot be
+done with more `LightOccluder2D`.
+
 ## [0.6.47] — 2026-08-05 — a gate for the numbers, and the log gets quiet
 
 **No game change.** Tooling and one long-standing noise bug.

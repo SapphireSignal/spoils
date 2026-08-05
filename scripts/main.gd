@@ -562,6 +562,21 @@ func _process(delta: float) -> void:
 		# rain OR cloud blots out the sun — an overcast day must not get
 		# beams just because it isn't raining
 		var wet := float(_environment.call("sun_blocked"))
+		# THE PLAYER'S SHADOW RIDES THE SAME CLOCK READ. The sun is up from
+		# 05:00 to 21:00 (see the day arc in CLAUDE.md), so u runs 0..1 across
+		# the lit part of the day and the elevation is a single arc over it:
+		# flat on the horizon at both ends, highest in the middle. A low sun
+		# throws a long shadow, a high one throws almost none.
+		if _player != null:
+			var u := clampf((d - 0.2083) / (0.875 - 0.2083), 0.0, 1.0)
+			var elev := sin(u * PI)
+			# the sun crosses east to west, so the shadow is thrown the other
+			# way and sweeps back across the ground through the day
+			var sun_dir := Vector2(lerpf(-1.0, 1.0, u), 0.45).normalized()
+			# no sun means no cast shadow: night, rain and heavy cloud all kill
+			# it, leaving only the soft contact darkening underfoot
+			var sun_str := clampf(elev * 1.5, 0.0, 1.0) * lit * (1.0 - wet * 0.9)
+			_player.set_sun(sun_dir, 1.0 - elev, clampf(sun_str, 0.0, 1.0))
 		var low := maxf(_bump(d, 0.335, 0.075), _bump(d, 0.700, 0.095))
 		var want := clampf(low * lit * (1.0 - wet * 0.92), 0.0, 1.0)
 		if _last_roof_cell != Vector2i(-9999, -9999) and _indoors_now:

@@ -145,6 +145,21 @@ light to fix any structural issues you find. build anything you want"*):
   errors. **If a future session sees that spam again, the guard has been
   removed; do not re-adapt the docs around it.**
 
+**Also shipped: v0.6.48 — the player's shadow follows the sun.** Thrown away
+from it, leaning with it, long at dawn and dusk, almost nothing at midday,
+faded to a soft contact patch under cloud or at night. Rides main.gd's
+EXISTING clock read (the one already feeding the grade and the shafts), so
+the clock is read once. Verified at three times of day rather than eyeballed
+once — left at 07:00, under the feet at 13:00, right at 19:55.
+
+**And a TASKS.md claim disproved while doing it:** it said "everything shares
+one static blob now". **Wrong.** `shadow.png` has exactly ONE user in the
+project — `player.gd`. **Props have no shadow node at all**; their shading is
+baked into the art. So prop cast shadows are a NEW SYSTEM, not a tweak, and
+the naive version (a sprite per prop) costs thousands of nodes against a
+~8.0k budget. Left undone deliberately and written up as such — that is a
+cost decision the user should make, not one to slip into a polish batch.
+
 **Picked up at: THE POLISH PASS IS NOT FINISHED — see TASKS.md section A.**
 Engine side still open: directional cast shadows from props and the player
 (everything shares one static blob), wet-ground reflections, contact shadows,

@@ -212,6 +212,10 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.48", [
+		"your shadow follows the sun now. it used to be one blob under your feet that never changed - it stretches out long in the early morning, shrinks to almost nothing at midday, and swings round to the other side by evening",
+		"it fades out under heavy cloud and at night, because there isnt a sun to cast it - you keep a soft dark patch underfoot so you dont look like youre floating",
+	]],
 	["v0.6.47", [
 		"nothing you can see in game - this one is about keeping the notes honest. the docs are full of numbers about how the game is built, and a few of them had quietly gone wrong over time. theres a check now that reads each number out of the notes and compares it against what the game actually does, and the build fails if they disagree",
 		"the games own test log used to print about fifty harmless errors every run, which made a real error easy to miss. it prints none now",

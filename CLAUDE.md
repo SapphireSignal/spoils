@@ -35,7 +35,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
 	 form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.47 shipped, 2026-08-05.** Milestone 1 (a walkable world) is DONE.
+**v0.6.48 shipped, 2026-08-05.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 
@@ -68,8 +68,12 @@ once instead of one sprite family at a time, and it is far faster. Shipped
 so far: camera kick, hit-stop, per-sprite hit flash, a full-screen colour
 grade, dust motes, sun shafts, indoor weather muffling, and **real 2D
 shadows** (v0.6.45 — wall occluders; it closed the flashlight-through-walls
-bug in the same stroke). Still to do and listed in TASKS.md: directional
-cast shadows, wet-ground reflections, contact shadows, window light spill,
+bug in the same stroke) and **the player's directional shadow** (v0.6.48 —
+thrown away from the sun, long when it is low, gone under cloud). Still to
+do and listed in TASKS.md: **prop** cast shadows (a NEW system — props have
+no shadow node at all, `shadow.png`'s only user is `player.gd`, so this is
+not a tweak and the naive version costs thousands of nodes), wet-ground
+reflections, contact shadows, window light spill,
 tree sway — plus most of the ART half of the pass. **The map screen is DONE
 (v0.6.46** — a drawn paper chart with inked edges, hatched woods and a
 symbol for every place, replacing the flat rectangles the user called "some
