@@ -437,57 +437,64 @@ square"*.
    elsewhere**, most likely `environment_system.gd`'s `_leaf_near`
    encoding (`>=100000 = red`). Measure before changing anything.
 
-10. **A one-off visual hitch while exploring** *(user, 2026-08-05)* - *"i
-    only see it while im walking and i only see it once, when i try and walk
-    back where i was to see if it happens again, it doesnt happen"*, *"like
-    sometimes i see it happen on a wall on a house"*, *"random stuff glitch
-    for like a milisecond"*.
+10. **A one-frame visual POP while walking** *(user, 2026-08-05)* -
+    **NEXT STEP IS THE FRAME-DIFF, described at the bottom of this item. The
+    user asked to resume here.**
 
-    **NOT DIAGNOSED - DO NOT GUESS AT THIS ONE.** "Once per thing, never
-    again in the same place" is the signature of a FIRST-USE cost, but which
-    one is unproven, and `--perf` holds a static camera so it cannot see it.
-    Candidates, in the order worth testing:
-    - `main.gd::_prewarm_textures` calls `load()` on every PNG and its
-      comment claims that does "decode + GPU upload". **Verify that claim** -
-      if the upload is actually deferred to first DRAW, the prewarm is not
-      doing what it says and the fix is to draw each texture once behind the
-      deploy screen.
-    - a shader PIPELINE variant compiling on first draw with new state, which
-      `shader_warm.gd` would not cover (it warms shaders, not every variant).
-    - the roof-reveal and interior-light nodes, which are created or toggled
-      the first time a building is approached.
+    Their words, in the order given - the LAST one is the important one and
+    it overturned the earlier reading:
+    - *"i only see it while im walking and i only see it once, when i try and
+      walk back where i was to see if it happens again, it doesnt happen"*
+    - *"like sometimes i see it happen on a wall on a house"*
+    - *"random stuff glitch for like a milisecond"*
+    - *"the weird glitch happens on things next to my character too, like not
+      when it first appears on the screen"*
 
-    **MEASURED 2026-08-05 with the new `--perf-walk`, and the answer is that
-    IT IS NOT FRAME RATE.** Sweeping the player ~9000 px across unvisited
-    ground: 5761 frames, **240.0 fps, worst frame 6.91 ms, ZERO frames over
-    8.34 ms**. The user's own counter agrees ("i look at my fps too and its
-    solid"). So this is a ONE-FRAME VISUAL POP - a draw-order or visibility
-    flip - and not a hitch. Any fix aimed at performance is aimed at the
-    wrong thing.
+    **MEASURED, so do not re-derive it: IT IS NOT FRAME RATE.** `--perf-walk`
+    (added v0.6.61) swept the player ~9000 px across unvisited ground: 5761
+    frames, **240.0 fps, worst frame 6.91 ms, ZERO frames over 8.34 ms**. The
+    user's own counter agrees (*"i look at my fps too and its solid"*). It is
+    a DRAW-ORDER or VISIBILITY flip lasting one frame. **Any fix aimed at
+    performance is aimed at the wrong thing.**
 
-    **The user then corrected the symptom, which rules out the first theory:**
-    *"the weird glitch happens on things next to my character too, like not
-    when it first appears on the screen"*. So it is NOT a first-use cost, and
-    `_prewarm_textures` is off the hook.
+    **RULED OUT - do not spend time here again:**
+    - *A first-use / first-draw cost.* Killed by the user's last quote: it
+      happens on things ALREADY on screen beside them. `_prewarm_textures`
+      and `shader_warm.gd` are both off the hook. (An unrelated note kept
+      because it is still true: `_prewarm_textures`'s comment claims `load()`
+      performs the GPU upload, and that claim is unverified. It is not the
+      cause of THIS, but it may still be wrong.)
 
-    **The live candidate, NOT YET PROVEN - do not ship a fix without proof:**
-    the player's Y-SORT KEY AND ITS DRAWN POSITION ARE DIFFERENT VALUES.
-    `player.gd` keeps `global_position` continuous and draws the sprite at
-    `snapped_pos` via `_sprite.position = visual_err` (rule 1 - the sprite
-    parks on the screen-pixel grid). But y-sorting sorts on the NODE's
-    global y, i.e. the UNSNAPPED value. So the player can sort against a wall
-    a frame before or after the drawn sprites actually cross, which reads as
-    a wall popping in front of the character for one frame, only while
-    moving, and unreproducible because it depends on the sub-pixel phase.
-    Every detail of the report fits - which is exactly why it needs proving
-    rather than believing.
+    **THE LIVE CANDIDATE - NOT PROVEN. DO NOT SHIP A FIX WITHOUT THE
+    FRAME-DIFF.** The player's Y-SORT KEY AND ITS DRAWN POSITION ARE DIFFERENT
+    VALUES. `player.gd` keeps `global_position` continuous and draws the
+    sprite at `snapped_pos` via `_sprite.position = visual_err` (rule 1 - the
+    sprite parks on the screen-pixel grid), but y-sorting sorts on the NODE's
+    global y, the UNSNAPPED value. So the player can sort against a wall a
+    frame before or after the drawn sprites actually cross: a wall pops in
+    front of the character for one frame, only while moving, and
+    unreproducible because it depends on the sub-pixel phase. Every detail of
+    the report fits, **which is exactly why it must be proven rather than
+    believed** - this project has twice acted on a confident wrong diagnosis.
 
-    **How to prove it**: film while walking (`--film` already writes frames)
-    and DIFF CONSECUTIVE FRAMES, the same technique that settled the menu
-    birds. A pop shows as a large localised change between two frames with
-    the frames either side identical. Do that before changing player.gd -
-    snapping the node's position instead would quantise movement, which is
-    the v0.2.1 "low fps walk" bug this project already paid for once.
+    **HOW TO PROVE IT (the next session's first job):**
+    1. Film while walking. `--film` already writes frames to `shots/`; it
+       will need the same collision-off sweep `--perf-walk` uses, or the
+       player never leaves the safehouse (see that function's comment).
+    2. **DIFF CONSECUTIVE FRAMES**, the technique that settled the menu
+       birds. A pop shows as a large LOCALISED change between two frames with
+       the frames either side identical - distinct from motion, which changes
+       smoothly frame to frame.
+    3. Crop the flagged frame pair and LOOK at it. If a wall swaps in front
+       of the player and back, the sort theory is confirmed.
+
+    **IF CONFIRMED, MIND THE FIX.** Snapping the node's own position is the
+    obvious move and it is WRONG: quantising the true position inflates and
+    deflates speed, which is the v0.2.1 "low fps walk" bug this project has
+    already paid for once (rule 1). The fix has to make the SORT KEY agree
+    with the drawn position without quantising movement - e.g. sorting on a
+    value derived from `snapped_pos` while movement keeps using the
+    continuous one.
 
 ## B0. Parking lots and aprons should JOIN the road network *(user, 2026-08-05)*
 

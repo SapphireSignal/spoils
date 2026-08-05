@@ -368,6 +368,13 @@ frame before or after the sprites visually cross. Full write-up and proof
 method in TASKS.md B0-NEW item 10. Snapping the node instead would quantise
 movement - that is the v0.2.1 "low fps walk" bug, already paid for once.
 
+**THE USER ASKED TO RESUME ON THE ONE-FRAME POP.** Their words on the way
+out: *"is continuing on this glitch saved? ... you were talking about some
+frame by frame thing, lets do that when i get back"*. It is TASKS.md B0-NEW
+item 10, and that entry now leads with the measured conclusion and the exact
+next step (film while walking -> diff consecutive frames -> crop the flagged
+pair). **Start there, not at the top of the backlog.**
+
 **Picked up at: the polish pass, ART half — three of six done.** Shipped this
 session: the title (v0.6.51), the map screen redo (v0.6.52), the layout
 revision (v0.6.53), terrain blending + house contrast (v0.6.54), the blend
