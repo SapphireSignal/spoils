@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.59.** The release history was renumbered evenly on
+**Current version: v0.6.60.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -436,6 +436,30 @@ square"*.
    this exact bug was fixed once before - so **the remaining cause is
    elsewhere**, most likely `environment_system.gd`'s `_leaf_near`
    encoding (`>=100000 = red`). Measure before changing anything.
+
+10. **A one-off visual hitch while exploring** *(user, 2026-08-05)* - *"i
+    only see it while im walking and i only see it once, when i try and walk
+    back where i was to see if it happens again, it doesnt happen"*, *"like
+    sometimes i see it happen on a wall on a house"*, *"random stuff glitch
+    for like a milisecond"*.
+
+    **NOT DIAGNOSED - DO NOT GUESS AT THIS ONE.** "Once per thing, never
+    again in the same place" is the signature of a FIRST-USE cost, but which
+    one is unproven, and `--perf` holds a static camera so it cannot see it.
+    Candidates, in the order worth testing:
+    - `main.gd::_prewarm_textures` calls `load()` on every PNG and its
+      comment claims that does "decode + GPU upload". **Verify that claim** -
+      if the upload is actually deferred to first DRAW, the prewarm is not
+      doing what it says and the fix is to draw each texture once behind the
+      deploy screen.
+    - a shader PIPELINE variant compiling on first draw with new state, which
+      `shader_warm.gd` would not cover (it warms shaders, not every variant).
+    - the roof-reveal and interior-light nodes, which are created or toggled
+      the first time a building is approached.
+
+    **How to measure it**: `--perf` with the player WALKING through unvisited
+    ground, reporting worst-frame and where it occurred - the existing perf
+    mode does not move, so it has never been able to catch this.
 
 ## B0. Parking lots and aprons should JOIN the road network *(user, 2026-08-05)*
 

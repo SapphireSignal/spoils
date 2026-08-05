@@ -1767,6 +1767,8 @@ func _probe_world() -> void:
 	var vec: Dictionary = info.get("map_vec", {})
 	print("ROADS_V %s" % [vec.get("roads_v", [])])
 	print("ROADS_H %s" % [vec.get("roads_h", [])])
+	var wb_stats: Dictionary = info.get("fringe_stats", {})
+	print("FRINGE %s" % str(wb_stats))
 	print("SHEDDERS green=%d red=%d needle=%d" % [
 		(info.get("leaf_trees", PackedVector2Array()) as PackedVector2Array).size(),
 		(info.get("leaf_trees_red", PackedVector2Array()) as PackedVector2Array).size(),

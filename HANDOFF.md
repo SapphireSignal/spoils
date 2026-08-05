@@ -315,6 +315,26 @@ starting anything** - several items are still open and at least one (the map
 redesign as "a painting") is a direction change that needs their sign-off on
 a sample first.
 
+**Shipped: v0.6.60 - brown dirt, and the wash stops running straight.**
+- **Brown vs red is decided by how far GREEN clears BLUE.** `7a4841` clears
+  it by 7 and still reads warm; `884b2b`/`ad7757` clear it by 32. Measure the
+  channels, do not judge the swatch.
+- **A uniform-probability spread makes a STRAIGHT band.** The dirt wash was
+  ~solid at one cell and sparse at two, so it hugged its source: ragged at
+  the pixel level, dead straight in SHAPE. A coarse per-block reach makes it
+  lobed. **Shape is what the user sees, not pixel-level raggedness** - that
+  distinction cost several iterations.
+- `--probe-world` prints `FRINGE {...}` now. It settled this one: 1000+
+  overlays were being placed, which ruled out the fringe pass and pointed at
+  the wash. **Add the measurement before the third guess, not after.**
+
+**OPEN AND EXPLICITLY NOT GUESSED AT: a one-off visual hitch while walking**
+(TASKS.md B0-NEW item 10). "Once per thing, never again in the same spot" is
+a first-use cost. `--perf` holds a STATIC camera so it has never been able to
+see it; the first job is a walking perf mode, not a fix. Note
+`_prewarm_textures`'s comment claims `load()` does the GPU upload - that
+claim is unverified and is the first thing to test.
+
 **Picked up at: the polish pass, ART half — three of six done.** Shipped this
 session: the title (v0.6.51), the map screen redo (v0.6.52), the layout
 revision (v0.6.53), terrain blending + house contrast (v0.6.54), the blend

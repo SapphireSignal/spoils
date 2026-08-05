@@ -74,6 +74,7 @@ var _story_h := 32
 var _floor_layer: TileMapLayer
 var _fringe_layer: TileMapLayer
 var _road_rot: Dictionary = {}   # road cells worn back to bare earth
+var _fringe_stats: Dictionary = {}   # diagnostic: overlays placed, by material
 var _indoors: Dictionary = {}    # building interior cells - see _wash_dirt_over_hard
 var _flat: Node2D                    # flat decals (cables) over the tiles
 var _occ: Node2D                     # light occluders (wall lines) — never drawn
@@ -275,6 +276,7 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 		"bushes": _bush_nodes,
 		"walk_cells": _sidewalk.size(),
 		"fog_spots": _fog_spots,
+		"fringe_stats": _fringe_stats,
 		"leaf_trees": _leaf_trees,
 		"leaf_trees_red": _leaf_trees_red,
 		"leaf_trees_needle": _leaf_trees_needle,
@@ -1651,10 +1653,10 @@ func _wash_dirt_over_hard() -> void:
 	var add: Dictionary = {}
 	for s in seeds:
 		var d: Vector2i = s
-		for dy in range(-2, 3):
-			for dx in range(-2, 3):
+		for dy in range(-3, 4):
+			for dx in range(-3, 4):
 				var dist := absi(dx) + absi(dy)
-				if dist == 0 or dist > 2:
+				if dist == 0 or dist > 3:
 					continue
 				var n := Vector2i(d.x + dx, d.y + dy)
 				if _dirt_path.has(n) or add.has(n) or _forest.has(n):
@@ -1666,9 +1668,22 @@ func _wash_dirt_over_hard() -> void:
 				var mat := _cell_material(n)
 				if mat != "asphalt" and mat != "stone" and mat != "walk" 						and mat != "paved":
 					continue
-				# thins with distance, so the wash has a soft outer reach rather
-				# than a hard two-cell step
-				var p := 74 if dist == 1 else 30
+				# LOBED, not a uniform band. A flat "74% at one cell, 30% at two"
+				# makes an almost solid ring one cell thick, which hugs whatever it
+				# grew from - so along a straight road the wash came out as a
+				# straight band. Ragged at the pixel level, dead straight in SHAPE,
+				# and shape is what the user was seeing ("i still see some square
+				# ground here").
+				#
+				# A COARSE hash gives each 4x4 block its own reach, so the wash
+				# pushes three cells deep in places and stops short in others. The
+				# outline becomes lobed instead of parallel to its source.
+				var lobe := posmod(hash(Vector3i(n.x >> 2, n.y >> 2,
+					_zone_salt ^ 0x11c7)), 100)
+				var reach_here := 1 if lobe < 26 else (2 if lobe < 66 else 3)
+				if dist > reach_here:
+					continue
+				var p := 92 - (dist - 1) * 22
 				if posmod(hash(Vector3i(n.x, n.y, _zone_salt ^ 0x6d31)), 100) < p:
 					add[n] = true
 		await _tick()
@@ -1725,6 +1740,7 @@ func _paint_fringes() -> void:
 				continue
 			var tc: Array = _floor_coords[tile]
 			_fringe_layer.set_cell(cell, 0, Vector2i(int(tc[0]), int(tc[1])))
+			_fringe_stats[best] = int(_fringe_stats.get(best, 0)) + 1
 		await _tick()
 
 

@@ -206,6 +206,10 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.60", [
+		"the dirt is properly brown now instead of leaning red",
+		"where dirt spreads over a road it spreads in uneven lobes instead of a neat band following the kerb, so it doesnt read as a straight strip any more",
+	]],
 	["v0.6.59", [
 		"those little squiggles that looked like question marks are gone from every surface. the routine that was meant to paint small wear patches was actually drawing a wandering one-pixel line, so the whole game had tiny glyphs scattered over the ground",
 		"buildings dont have dirt blowing through their walls any more - every building keeps its own clean floor",

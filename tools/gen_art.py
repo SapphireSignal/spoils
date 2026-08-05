@@ -329,10 +329,17 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
         # Darkened by COVERAGE, not by picking a darker base: every Apollo
         # brown below 7a4841 goes blue-over-green and turns mauve again. More
         # shadow and more grey mud drops the value while the hue stays earth.
-        region = _floor_base(c, rng, C("7a4841"), C("4d2b32"), C("ad7757"),
-                             0.20, 0.035)
-        speckle(c, rng, region, [C("202e37"), C("394a50")], [0.15, 0.06])
-        _tonal(c, rng, region, [C("4d2b32"), C("884b2b")], 3, 16, 34)
+        # BROWNER AGAIN (user: "the dirt seems still a bit red, lets make it
+        # more brown"). Measured rather than eyeballed - how far GREEN clears
+        # BLUE is what decides brown-vs-red, and 7a4841 only clears it by 7.
+        # 884b2b and ad7757 both clear it by 32, so the base moves up to
+        # 884b2b and the highlight to ad7757. 4d2b32 is kept ONLY as the
+        # shadow: it is -7 (blue over green) and would pull the whole surface
+        # back toward wine if it were the base.
+        region = _floor_base(c, rng, C("884b2b"), C("4d2b32"), C("ad7757"),
+                             0.16, 0.10)
+        speckle(c, rng, region, [C("202e37"), C("394a50")], [0.17, 0.07])
+        _tonal(c, rng, region, [C("7a4841"), C("ad7757")], 3, 16, 34)
         for i in range(rng.randint(10, 14)):
             x = 6 + rng.randrange(52)
             y = 4 + rng.randrange(24)
@@ -759,7 +766,17 @@ def _wander(s: float, ph: float, reach: float) -> float:
     n = (0.55 * math.sin(s * 2.3 + ph)
          + 0.30 * math.sin(s * 5.1 - ph * 1.7)
          + 0.15 * math.sin(s * 9.7 + ph * 2.9))
-    return reach * max(0.24, 0.58 + 0.62 * n)
+    # THE CEILING MATTERS AS MUCH AS THE FLOOR, and it is the subtler of the
+    # two. `d` runs 0 at the masked edge to 2 at the far vertex, so a front
+    # much past 0.85 can cover a whole tile - especially with two edges
+    # masked. A fully covered tile looks like the other material, but it
+    # still REPORTS as its own, so the next tile along gets no overlay and
+    # the visible boundary jumps to that tile's edge: a dead straight run,
+    # several tiles long. Capping it guarantees the base always shows
+    # through, so every boundary tile carries the ragged front itself.
+    # (Width of the transition comes from the WASH, which genuinely converts
+    # cells, not from letting one overlay swallow a tile.)
+    return min(0.85, reach * max(0.24, 0.58 + 0.62 * n))
 
 
 def make_fringe_overlay(over: Image.Image, mask: int, variant: int,

@@ -3,6 +3,44 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.60] - 2026-08-05 - brown dirt, and the wash stops running straight
+
+### Changed - the dirt is brown, measured rather than judged
+*"the dirt seems still a bit red, lets make it more brown"*. **How far GREEN
+clears BLUE is what decides brown against red.** `7a4841` clears it by only
+7, which still reads warm; `884b2b` and `ad7757` both clear it by 32. The
+base moves up to `884b2b` with `ad7757` highlights. `4d2b32` stays as the
+shadow ONLY - it is -7, blue over green, and would drag the whole surface
+back toward wine if it were the base.
+
+### Fixed - the dirt wash ran in straight bands
+*"i still see some square ground here"*. The wash used a flat "74% at one
+cell, 30% at two", which makes an almost solid ring one cell thick. That ring
+hugs whatever it grew from, so along a straight road the wash came out as a
+straight band - **ragged at the pixel level and dead straight in SHAPE**, and
+shape is what was being seen.
+
+A coarse hash now gives each 4x4 block its own reach, so the wash pushes
+three cells deep in places and stops short in others, and its outline is
+lobed instead of parallel to its source.
+
+### Changed - the overlay front has a ceiling as well as a floor
+`d` runs 0 at the masked edge to 2 at the far vertex, so a front much past
+0.85 can swallow a whole tile - especially with two edges masked. A fully
+covered tile looks like the other material but still REPORTS as its own, so
+the next tile gets no overlay and the visible boundary jumps to that tile's
+edge. The width of a transition comes from the wash, which genuinely
+converts cells; an overlay's job is only to ragged the edge.
+
+### Added - a fringe diagnostic
+`--probe-world` prints `FRINGE {grass: n, dirt: n, gravel: n}`, so "is the
+blending running at all" is now a measurement rather than a guess. It was
+the thing that settled this one: 1000+ overlays were being placed, which
+ruled the pass out and pointed at the wash instead.
+
+### Verified
+`SMOKE PASS`, 240 fps, worst frame 4.79 ms, `DOORS` 16 on unchanged cells.
+
 ## [0.6.59] - 2026-08-05 - the question marks, and dirt indoors
 
 ### Fixed - `blob()` was a random walk, not a blob
