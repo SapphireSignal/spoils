@@ -119,6 +119,8 @@ func _ready() -> void:
 			_shot.call_deferred(arg.trim_prefix("--shot="))
 		elif arg.begins_with("--film="):
 			_film.call_deferred(arg.trim_prefix("--film="))
+		elif arg == "--perf-walk":
+			_perf_walk.call_deferred()
 		elif arg == "--perf":
 			_perf.call_deferred()
 		elif arg == "--probe-world":
@@ -1580,6 +1582,68 @@ func _perf() -> void:
 		frames, frames / seconds, worst_ms,
 		Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0,
 		int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT))])
+	get_tree().quit(0)
+
+
+func _perf_walk() -> void:
+	## Frame pacing WHILE MOVING THROUGH UNVISITED GROUND.
+	##
+	## --perf holds a STATIC camera, so it can only ever measure a settled
+	## view. That makes it structurally blind to a FIRST-USE cost - anything
+	## paid the first time a thing is drawn - which is exactly what the user
+	## reported: "i only see it while im walking and i only see it once, when
+	## i try and walk back where i was to see if it happens again, it doesnt
+	## happen". Every perf figure quoted before this was from a stationary
+	## camera and could not have caught it.
+	##
+	## This sweeps the player across the district and reports the WORST FRAMES
+	## WITH THE CELL THEY HAPPENED AT, so a hitch can be gone back to and
+	## looked at rather than guessed about.
+	await _ensure_game_scene()
+	_apply_env_flags()
+	var player := _find_player()
+	if player == null:
+		print("PERFWALK ERROR: no player")
+		get_tree().quit(1)
+		return
+	# THE PLAYER FIGHTS THE SWEEP OTHERWISE. They spawn INSIDE the safehouse,
+	# and player._process runs move_and_slide() every frame, which depenetrates
+	# them straight back out of whatever this teleports them into - so the
+	# first cut of this probe never left the spawn building and measured a
+	# stationary camera all over again, which is the exact blind spot it exists
+	# to remove. Collision off for the duration.
+	for shape in player.find_children("*", "CollisionShape2D", true, false):
+		(shape as CollisionShape2D).set_deferred("disabled", true)
+	player.collision_mask = 0
+	for i in 60:
+		await get_tree().process_frame
+	# a long diagonal sweep across the playable band, on the iso ground axis
+	var dir := Vector2(2.0, 1.0).normalized()
+	var speed := 420.0
+	var samples: Array = []
+	var frames := 0
+	var t0 := Time.get_ticks_usec()
+	var prev_us := t0
+	while Time.get_ticks_usec() - t0 < 24_000_000:
+		await get_tree().process_frame
+		var now_us := Time.get_ticks_usec()
+		var dt_ms := float(now_us - prev_us) / 1000.0
+		prev_us = now_us
+		frames += 1
+		player.global_position += dir * speed * (dt_ms / 1000.0)
+		samples.append([dt_ms, player.global_position.round()])
+	var seconds := float(Time.get_ticks_usec() - t0) / 1_000_000.0
+	samples.sort_custom(func(a, b): return float(a[0]) > float(b[0]))
+	var over := 0
+	for s in samples:
+		if float(s[0]) > 8.34:            # a dropped frame at 120hz or worse
+			over += 1
+	print("PERFWALK frames=%d avg_fps=%.1f worst_ms=%.2f over8ms=%d nodes=%d" % [
+		frames, frames / seconds, float(samples[0][0]), over,
+		int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT))])
+	for i in mini(8, samples.size()):
+		print("PERFWALK hitch %.2f ms at %s" % [
+			float(samples[i][0]), str(samples[i][1])])
 	get_tree().quit(0)
 
 

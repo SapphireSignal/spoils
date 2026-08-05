@@ -3,6 +3,47 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.61] - 2026-08-05 - a walking perf probe, and what it ruled out
+
+### Added - `--perf-walk`
+`--perf` holds a STATIC camera, so it can only measure a settled view. That
+made it structurally blind to anything paid the first time a thing is drawn -
+which is what the user reported: *"i only see it while im walking and i only
+see it once, when i try and walk back where i was to see if it happens again,
+it doesnt happen"*. **Every perf figure this project has ever quoted came
+from a stationary camera.**
+
+`--perf-walk` sweeps the player across the district and reports the worst
+frames with the position each happened at.
+
+**The player fights the sweep** unless collision is disabled: they spawn
+inside the safehouse and `player._process` runs `move_and_slide()` every
+frame, which depenetrates them straight back out of whatever a teleport puts
+them in. The first cut of this probe never left the spawn building and
+measured a stationary camera all over again - the exact blind spot it exists
+to remove. Collision is disabled for the duration now.
+
+### Measured - it is NOT frame rate
+Sweeping ~9000 px across unvisited ground: **5761 frames, 240.0 fps, worst
+frame 6.91 ms, zero frames over 8.34 ms**. The user's own counter agrees. So
+the artefact is a ONE-FRAME VISUAL POP - a draw-order or visibility flip -
+and not a hitch. Any fix aimed at performance would be aimed at the wrong
+thing.
+
+The user then corrected the symptom - *"the weird glitch happens on things
+next to my character too, like not when it first appears on the screen"* -
+which rules out a first-use cost and clears `_prewarm_textures`.
+
+### Not fixed - and deliberately not guessed at
+A live candidate is written up in `TASKS.md` with the proof method: the
+player's **y-sort key and its drawn position are different values**
+(`global_position` stays continuous, the sprite is drawn at `snapped_pos`),
+so sorting against a wall can flip a frame before or after the sprites
+visually cross. Every detail of the report fits, which is exactly why it
+needs proving by frame-diff before anything in `player.gd` changes -
+snapping the node instead would quantise movement, which is the v0.2.1 "low
+fps walk" bug already paid for once.
+
 ## [0.6.60] - 2026-08-05 - brown dirt, and the wash stops running straight
 
 ### Changed - the dirt is brown, measured rather than judged

@@ -335,6 +335,39 @@ see it; the first job is a walking perf mode, not a fix. Note
 `_prewarm_textures`'s comment claims `load()` does the GPU upload - that
 claim is unverified and is the first thing to test.
 
+**Shipped: v0.6.61 - `--perf-walk`, and what it RULED OUT.**
+
+**EVERY PERF NUMBER THIS PROJECT HAS EVER QUOTED CAME FROM A STATIONARY
+CAMERA.** `--perf` never moved, so it was structurally blind to anything paid
+on first draw. That is a real gap in the verification workflow, not just a
+missing feature.
+
+Measured with the player sweeping ~9000 px across unvisited ground: **5761
+frames, 240.0 fps, worst 6.91 ms, ZERO over 8.34 ms**, and the user's own
+counter agrees. **So the thing they can see is NOT frame rate** - it is a
+one-frame draw-order or visibility pop. Aiming a fix at performance would
+have been aiming at the wrong thing entirely.
+
+**Gotcha in the probe itself:** the player spawns INSIDE the safehouse and
+`player._process` runs `move_and_slide()` every frame, which depenetrates
+them back out of anything a teleport puts them in - the first cut never left
+the spawn building and measured a static camera again. Collision off for the
+duration.
+
+**The user corrected the symptom mid-investigation** - *"the weird glitch
+happens on things next to my character too, like not when it first appears on
+the screen"* - which killed the first-use theory and cleared
+`_prewarm_textures`. **Listen for that: they had described it as
+first-appearance twice before that correction.**
+
+**LIVE CANDIDATE, NOT PROVEN, DO NOT SHIP A FIX WITHOUT THE FRAME-DIFF:** the
+player's y-sort key and drawn position are different values.
+`global_position` stays continuous while the sprite draws at `snapped_pos`,
+but y-sorting sorts on the NODE's y - so the player can sort against a wall a
+frame before or after the sprites visually cross. Full write-up and proof
+method in TASKS.md B0-NEW item 10. Snapping the node instead would quantise
+movement - that is the v0.2.1 "low fps walk" bug, already paid for once.
+
 **Picked up at: the polish pass, ART half — three of six done.** Shipped this
 session: the title (v0.6.51), the map screen redo (v0.6.52), the layout
 revision (v0.6.53), terrain blending + house contrast (v0.6.54), the blend

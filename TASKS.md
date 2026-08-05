@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.60.** The release history was renumbered evenly on
+**Current version: v0.6.61.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -457,9 +457,37 @@ square"*.
     - the roof-reveal and interior-light nodes, which are created or toggled
       the first time a building is approached.
 
-    **How to measure it**: `--perf` with the player WALKING through unvisited
-    ground, reporting worst-frame and where it occurred - the existing perf
-    mode does not move, so it has never been able to catch this.
+    **MEASURED 2026-08-05 with the new `--perf-walk`, and the answer is that
+    IT IS NOT FRAME RATE.** Sweeping the player ~9000 px across unvisited
+    ground: 5761 frames, **240.0 fps, worst frame 6.91 ms, ZERO frames over
+    8.34 ms**. The user's own counter agrees ("i look at my fps too and its
+    solid"). So this is a ONE-FRAME VISUAL POP - a draw-order or visibility
+    flip - and not a hitch. Any fix aimed at performance is aimed at the
+    wrong thing.
+
+    **The user then corrected the symptom, which rules out the first theory:**
+    *"the weird glitch happens on things next to my character too, like not
+    when it first appears on the screen"*. So it is NOT a first-use cost, and
+    `_prewarm_textures` is off the hook.
+
+    **The live candidate, NOT YET PROVEN - do not ship a fix without proof:**
+    the player's Y-SORT KEY AND ITS DRAWN POSITION ARE DIFFERENT VALUES.
+    `player.gd` keeps `global_position` continuous and draws the sprite at
+    `snapped_pos` via `_sprite.position = visual_err` (rule 1 - the sprite
+    parks on the screen-pixel grid). But y-sorting sorts on the NODE's
+    global y, i.e. the UNSNAPPED value. So the player can sort against a wall
+    a frame before or after the drawn sprites actually cross, which reads as
+    a wall popping in front of the character for one frame, only while
+    moving, and unreproducible because it depends on the sub-pixel phase.
+    Every detail of the report fits - which is exactly why it needs proving
+    rather than believing.
+
+    **How to prove it**: film while walking (`--film` already writes frames)
+    and DIFF CONSECUTIVE FRAMES, the same technique that settled the menu
+    birds. A pop shows as a large localised change between two frames with
+    the frames either side identical. Do that before changing player.gd -
+    snapping the node's position instead would quantise movement, which is
+    the v0.2.1 "low fps walk" bug this project already paid for once.
 
 ## B0. Parking lots and aprons should JOIN the road network *(user, 2026-08-05)*
 

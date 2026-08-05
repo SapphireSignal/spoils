@@ -206,6 +206,10 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.61", [
+		"nothing you can see - this one is measuring the thing you noticed while walking around. the games frame timer only ever watched a still camera, so it could never have caught it",
+		"there is a moving one now, and it says the frame rate is genuinely solid while walking - 240fps with nothing dropped over nine thousand pixels of ground. so what you were seeing isnt the framerate, its something drawing in the wrong order for a single frame, which is a different problem and is written up",
+	]],
 	["v0.6.60", [
 		"the dirt is properly brown now instead of leaning red",
 		"where dirt spreads over a road it spreads in uneven lobes instead of a neat band following the kerb, so it doesnt read as a straight strip any more",
