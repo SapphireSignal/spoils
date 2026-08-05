@@ -72,6 +72,7 @@ var _families: Dictionary = {}
 var _wall_h := 40
 var _story_h := 32
 var _floor_layer: TileMapLayer
+var _fringe_layer: TileMapLayer
 var _flat: Node2D                    # flat decals (cables) over the tiles
 var _occ: Node2D                     # light occluders (wall lines) — never drawn
 var _sway_shader: Shader             # foliage sway, compiled once
@@ -159,6 +160,20 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 	_floor_layer.name = "Floor"
 	_floor_layer.tile_set = _make_tileset()
 	root.add_child(_floor_layer)
+
+	# THE FRINGE LAYER: material boundaries, drawn as transparent overlays on
+	# top of the ordinary floor. It shares the floor's tileset, so it costs one
+	# node and no extra texture.
+	#
+	# Why a layer and not a tile: a fringe baked per MATERIAL PAIR explodes
+	# combinatorially, so only a few pairs ever existed and the rest of the
+	# district kept hard edges - and replacing the tile threw away the crack,
+	# stain and worn variants underneath. One overlay per INTRUDING material
+	# composites over anything and leaves the base wear showing through.
+	_fringe_layer = TileMapLayer.new()
+	_fringe_layer.name = "Fringe"
+	_fringe_layer.tile_set = _floor_layer.tile_set
+	root.add_child(_fringe_layer)
 
 	# FLAT DECALS (cables): above the floor, under everything that stands on
 	# it. This needs its own layer — a z_index of -1 inside the y-sorted
@@ -981,6 +996,18 @@ func _place_safehouse_ring() -> void:
 		var pad_fam := "vehicle_ne" if pad.position.x > ring.end.x \
 			else "vehicle_nw"
 		var pad_variant := _pick_variant(pad_fam)
+		# YOUR car, so it always runs (user: "the car that spawns next to the
+		# safehouse should be working, not a broken one"). Variants _5 and _6 are
+		# the wrecks, and the roll could hand you one - a dead car on your own
+		# drive reads as scenery, not as the vehicle you start with.
+		#
+		# The ROLL IS STILL TAKEN and only its RESULT is remapped: re-rolling
+		# until it came up intact would consume extra draws from the layout rng
+		# and shift every placement after it, re-rolling the fixed district.
+		if pad_variant.ends_with("_5"):
+			pad_variant = pad_variant.trim_suffix("_5") + "_0"
+		elif pad_variant.ends_with("_6"):
+			pad_variant = pad_variant.trim_suffix("_6") + "_1"
 		var pad_pos := _floor_layer.map_to_local(Vector2i(
 			pad.position.x + 1, pad.position.y + 1)) + Vector2(
 			_rng.randf_range(-3.0, 3.0), _rng.randf_range(-2.0, 2.0))
@@ -1479,40 +1506,17 @@ func _paint_terrain() -> void:
 					tile_name = "sidewalk_%s_0" % str(_sidewalk[cell])
 			elif not is_forest and not is_dirt:
 				# biome blending: concrete touching grass grows grass; concrete
-				# touching a dirt path picks up dirt — no hard tile seams.
+				# touching a dirt path picks up dirt. This is only the SPECKLE
+				# under the boundary now - the ragged edge itself is drawn by the
+				# Fringe overlay layer, see _paint_fringes.
 				# NEVER against asphalt (user: no grass on intersections)
-				# DIRECTIONAL NOW. This picked one of three grass_blend tiles at
-				# random, which could not soften anything: the tile had grass
-				# scattered generally over it with NO IDEA WHICH SIDE the grass
-				# was on, so the boundary stayed a razor-straight 64x32 diamond
-				# (user: "yes they are hard edges blocks everywhere").
-				#
-				# STILL EXACTLY ONE _rng DRAW EACH, as before. The mask is read
-				# off neighbouring cells and costs the layout stream nothing;
-				# changing the draw count here re-rolls every prop after it.
 				if _touches(cell, _forest) and not _next_to_road(cell):
-					tile_name = "grass_fringe_%d_%d" % [
-						_fringe_mask(cell, _forest), _rng.randi_range(0, 2)]
+					tile_name = "grass_blend_%d" % _rng.randi_range(0, 2)
 				elif _touches(cell, _dirt_path):
-					tile_name = "dirt_fringe_%d_%d" % [
-						_fringe_mask(cell, _dirt_path), _rng.randi_range(0, 2)]
-			elif is_forest and _cell_inset(cell) >= BARRIER_INSET - 2:
-				if not _plaza.has(cell) and not _apron.has(cell):
-					# ...and the WOOD frays into the open ground too, not just the
-					# ground into the wood. A one-sided blend still leaves a hard
-					# edge - it only moves it one cell over.
-					#
-					# THE VARIANT IS HASHED, NOT ROLLED. This branch is NEW, and an
-					# _rng draw here would shift every draw after it and re-roll the
-					# district - the same trap the road nudge had to dodge. A hash is
-					# stable per cell, so it cannot crawl between rebuilds either.
-					var smask := _open_ground_mask(cell)
-					if smask != 0:
-						tile_name = "stone_fringe_%d_%d" % [smask,
-							posmod(hash(Vector3i(cell.x, cell.y,
-								_zone_salt ^ 0x3f1d)), 3)]
+					tile_name = "dirt_blend_%d" % _rng.randi_range(0, 2)
 			_set_tile(cell, tile_name)
 		await _tick()
+	await _paint_fringes()
 
 
 func _dash_here(along: int, road_pos: int) -> bool:
@@ -1522,43 +1526,92 @@ func _dash_here(along: int, road_pos: int) -> bool:
 	return posmod(hash(Vector3i(along, road_pos, _zone_salt)), 100) < 96
 
 
-func _fringe_mask(cell: Vector2i, field: Dictionary) -> int:
-	## Which of this tile's four ISO EDGES face `field`. The bit order is a
-	## CONTRACT shared with gen_art.py's fringe tiles - see the block comment
-	## above FRINGE_VARIANTS there before changing it. World is
-	## ((x-y)*32, (x+y)*16), so UP is the up-right (NE) edge on screen, RIGHT
-	## is down-right (SE), DOWN is down-left, LEFT is up-left.
+## MATERIAL BOUNDARIES. Every ground material frays into its neighbour
+## instead of meeting it at a hard 64x32 diamond (user: "i want it to look
+## naturally blended together with whatever other tile is next to a tile",
+## "for every tile in the game", "some parts of the road are still square
+## too, and some parts of the grass, like all over the map").
+##
+## Priority decides who wins a boundary when a cell touches two different
+## materials: whatever is TAKING GROUND BACK pushes in, and the hard surface
+## only creeps the other way. Reaches are baked into the overlays themselves
+## (gen_art._fringe_entries), so this only has to pick the intruder.
+const FRINGE_ORDER := ["grass", "dirt", "gravel", "stone"]
+const FRINGE_ACCEPTS := {
+	# intruder: the materials it is allowed to creep over
+	"grass": ["stone", "paved", "asphalt", "walk", "gravel", "dirt"],
+	"dirt": ["stone", "paved", "asphalt", "walk", "gravel"],
+	"gravel": ["stone", "dirt", "grass"],
+	# pavement only frays back into soft ground, which is what keeps a
+	# boundary ONE ragged line rather than two bands facing each other
+	"stone": ["grass", "dirt"],
+}
+
+
+func _cell_material(cell: Vector2i) -> String:
+	## Derived, never stored: every field it reads already exists, and a
+	## parallel copy would be one more thing to drift.
+	if _rail_cells.has(cell) or _rail_cross.has(cell):
+		return "rail"                     # track stays crisp, always
+	if _forest.has(cell):
+		return "grass"
+	if _dirt_path.has(cell):
+		return "dirt"
+	if _ballast.has(cell):
+		return "gravel"
+	if _road_v_at(cell) >= 0 or _road_h_at(cell) >= 0:
+		return "asphalt"
+	if _sidewalk.has(cell):
+		return "walk"
+	if _plaza.has(cell) or _apron.has(cell):
+		return "paved"
+	return "stone"
+
+
+func _paint_fringes() -> void:
+	## Runs AFTER the floor is laid, over the same cells.
 	##
-	## Costs the layout rng NOTHING: it only reads neighbouring cells.
-	var m := 0
-	if field.has(cell + Vector2i.UP):
-		m |= 1
-	if field.has(cell + Vector2i.RIGHT):
-		m |= 2
-	if field.has(cell + Vector2i.DOWN):
-		m |= 4
-	if field.has(cell + Vector2i.LEFT):
-		m |= 8
-	return m
-
-
-func _open_ground_mask(cell: Vector2i) -> int:
-	## The mirror of _fringe_mask for a FOREST cell: which edges face ordinary
-	## open ground. "Open" means not more forest and nothing that owns its own
-	## surface - a road, sidewalk, rail, ballast, plaza or apron edge has to
-	## stay crisp, or the wood starts fraying out over the kerb.
-	var m := 0
+	## IT TAKES NO _rng DRAWS AT ALL - the variant is hashed off the cell. A
+	## draw here would shift every draw after it and re-roll the whole fixed
+	## district, the same trap the road nudge and the fringe tiles both had to
+	## dodge. A hash is also stable, so a boundary cannot crawl between builds.
 	var dirs := [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]
-	for i in dirs.size():
-		var n: Vector2i = cell + dirs[i]
-		if _forest.has(n) or _dirt_path.has(n) or _plaza.has(n) or _apron.has(n):
-			continue
-		if _rail_cells.has(n) or _ballast.has(n) or _rail_cross.has(n):
-			continue
-		if _sidewalk.has(n) or _road_v_at(n) >= 0 or _road_h_at(n) >= 0:
-			continue
-		m |= 1 << i
-	return m
+	for y in MAP_H:
+		for x in MAP_W:
+			var cell := Vector2i(x, y)
+			if _cell_inset(cell) < BARRIER_INSET - 6:
+				continue
+			var mine := _cell_material(cell)
+			if mine == "rail":
+				continue
+			# an INTERSECTION keeps its markings clean (user, standing: no grass
+			# on intersections) - a crosswalk with grass through it is unreadable
+			if _road_v_at(cell) >= 0 and _road_h_at(cell) >= 0:
+				continue
+			var best := ""
+			var best_mask := 0
+			for pri in FRINGE_ORDER:
+				if pri == mine or not FRINGE_ACCEPTS.has(pri):
+					continue
+				if not (FRINGE_ACCEPTS[pri] as Array).has(mine):
+					continue
+				var m := 0
+				for i in dirs.size():
+					if _cell_material(cell + dirs[i]) == pri:
+						m |= 1 << i
+				if m != 0:
+					best = pri
+					best_mask = m
+					break
+			if best == "":
+				continue
+			var v := posmod(hash(Vector3i(cell.x, cell.y, _zone_salt ^ 0x7ac3)), 3)
+			var tile := "fr_%s_%d_%d" % [best, best_mask, v]
+			if not _floor_coords.has(tile):
+				continue
+			var tc: Array = _floor_coords[tile]
+			_fringe_layer.set_cell(cell, 0, Vector2i(int(tc[0]), int(tc[1])))
+		await _tick()
 
 
 func _touches(cell: Vector2i, field: Dictionary) -> bool:
@@ -1618,12 +1671,20 @@ func _add_prop(prop_name: String, pos: Vector2) -> Node2D:
 	# half pixel would sit off the world's pixel grid
 	node.position = pos.round()
 	var sprite := _prop_sprite(prop_name)
-	# FOLIAGE SWAYS. Match the PREFIX, never a substring — "street_lamp"
-	# contains "tree", and a contains() check would have every lamp post in the
-	# district waving in the wind.
-	if prop_name.begins_with("tree_"):
+	# FOLIAGE SWAYS - AND THE MANIFEST SAYS WHICH, not the name.
+	#
+	# This matched the prefix "tree_", which catches the DEAD trees: they are
+	# variants 7 and 8 of the same family. A bare trunk has no crown for a
+	# height-weighted sway to move, so the whole stick waved (user: "i only
+	# want that on the bushes and trees with leaves on them, right now the
+	# sticks are moving back and forth"). Only the generator knows which
+	# variants it drew bare, so it writes a "sway" field and this reads it.
+	# (The prefix warning still stands for anything that goes back to names:
+	# "street_lamp" CONTAINS "tree".)
+	var sway_kind := str((_manifest["props"][prop_name] as Dictionary).get("sway", ""))
+	if sway_kind == "tree":
 		sprite.material = _sway_material(2.0)
-	elif prop_name.begins_with("bush_"):
+	elif sway_kind == "bush":
 		sprite.material = _sway_material(1.0)
 	node.add_child(sprite)
 	_ysort.add_child(node)

@@ -3,6 +3,72 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.55] — 2026-08-05 — the blend rebuilt, plus four things the user caught
+
+### Changed — terrain blending, rebuilt on the right architecture
+v0.6.54's fringe was **wrong twice over**, and the user saw both:
+
+> *"the grass just has some gras line around it all now, it still looks
+> weird, i want it to look naturally blended together with whatever other
+> tile is next to a tile"* … *"for every tile in the game"* … *"some parts of
+> the road are still square too, and some parts of the grass, like all over
+> the map"*
+
+1. **The boundary ran parallel to the tile edge.** The tear was varied by
+   screen x/y, so the overlay came out as a band hugging the edge — piping
+   traced around every tile. The front is now driven by a coordinate that
+   runs **along** each edge, so it wanders *across* the tile the way a real
+   material boundary does.
+2. **Baking a fringe per MATERIAL PAIR does not scale.** It exploded
+   combinatorially, so only three pairs ever existed and every other
+   boundary in the district stayed hard. Replacing the whole tile also threw
+   away the crack/stain/worn variant underneath.
+
+Now there is **one overlay per intruding material** (grass, dirt, stone,
+gravel × 15 edge masks × 3 variants = 180), drawn on a second `TileMapLayer`
+above the floor. One overlay composites over *anything* — grass onto
+concrete, asphalt, ballast or paving from the same tile — and the base
+tile's own wear still shows through. Reach is per material, so whatever is
+taking ground back pushes deep while pavement only creeps a little: a
+boundary is one ragged line, not two bands facing each other.
+
+Intersections still keep clean markings — a crosswalk with grass through it
+is unreadable, which is the standing "no grass on intersections" call.
+
+**Zero `_rng` draws**: the pass hashes its variant off the cell. `DOORS`
+stayed 16 on identical cells, so nothing rerolled.
+
+### Fixed — bare trees were swaying
+*"you made all of the trees with no leaves on them swing back and forth, i
+only want that on the bushes and trees with leaves on them, right now the
+sticks are moving back and forth"*. The sway was applied by name prefix, and
+`tree_` catches the **dead** trees — they are variants 7 and 8 of the same
+family. A bare trunk has no crown for a height-weighted sway to move, so the
+whole stick waved.
+
+The generator is the only thing that knows which variants it drew bare, so
+it now writes a `sway` field into the manifest and the game reads that
+instead of guessing from a name. The dead trees deliberately stay inside the
+`tree` family — splitting them out would change how many variants
+`_pick_variant` sees and reroll the district.
+
+### Fixed — the safehouse car could spawn wrecked
+*"the car that spawns next to the safehouse should be working, not a broken
+one"*. Variants `_5`/`_6` are the wrecks and the roll could hand you one. The
+roll is **still taken** and only its result is remapped — re-rolling until it
+came up intact would consume extra draws and shift every placement after it.
+
+### Fixed — the bodies past the wire had no blood
+*"the dead bodies outside of the map dont have any blood"*. There *was* a
+stain, and it could not be seen: 5–9 **single pixels** of `241527` (near
+black, on ground that is already dark), drawn *under* the figure so the body
+covered most of it. It was also, strictly, the single-pixel dot noise banned
+everywhere else in this project. It is a solid pool now that spreads out from
+under the body, in reds that clear the concrete it lands on.
+
+### Verified
+`SMOKE PASS`, 240 fps, worst frame 4.75 ms, `DOORS` 16 on unchanged cells.
+
 ## [0.6.54] — 2026-08-05 — the ground blends, and grey houses have a silhouette
 
 ### Changed — directional terrain fringes

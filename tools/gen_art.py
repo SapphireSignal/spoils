@@ -636,28 +636,56 @@ FLOOR_TILES = [
 #   bit 3 = cell (x-1, y)  -> up-left              -> NW edge
 FRINGE_VARIANTS = 3
 
-def _fringe_depth(u: float, v: float, mask: int) -> float:
-    """How far inside the diamond this pixel is from the nearest MASKED edge.
-    0 at the edge itself, larger toward the middle. In diamond coordinates
-    |u| + |v| <= 1, the four edges are u-v=1 (NE), u+v=1 (SE), v-u=1 (SW)
-    and -u-v=1 (NW)."""
-    d = 9.0
-    if mask & 1:
-        d = min(d, 1.0 - (u - v))
-    if mask & 2:
-        d = min(d, 1.0 - (u + v))
-    if mask & 4:
-        d = min(d, 1.0 - (v - u))
-    if mask & 8:
-        d = min(d, 1.0 + u + v)
-    return d
+# EDGE COORDINATES. For each of the four diamond edges, `depth` is how far a
+# pixel lies INSIDE from that edge (0 on the edge) and `along` runs ALONG it.
+# Having both is the whole trick: the first cut varied the boundary by screen
+# x/y, which meant the tear ran roughly PARALLEL to the tile edge and read as
+# a green outline tracing every tile — user: "the grass just has some gras
+# line around it all now, it still looks weird". A front that wanders as a
+# function of `along` cuts across the tile instead, which is what a real
+# material boundary does.
+_EDGE_COORDS = (
+    (lambda u, v: 1.0 - (u - v), lambda u, v: u + v),   # bit 0: NE
+    (lambda u, v: 1.0 - (u + v), lambda u, v: u - v),   # bit 1: SE
+    (lambda u, v: 1.0 - (v - u), lambda u, v: u + v),   # bit 2: SW
+    (lambda u, v: 1.0 + u + v, lambda u, v: u - v),     # bit 3: NW
+)
+
+def _wander(s: float, ph: float, reach: float) -> float:
+    """How deep the other material has pushed in at position `s` along an
+    edge. Three octaves, no octave dominant, so the front has both broad
+    lobes and small bites and never repeats visibly inside one tile."""
+    n = (0.55 * math.sin(s * 2.3 + ph)
+         + 0.30 * math.sin(s * 5.1 - ph * 1.7)
+         + 0.15 * math.sin(s * 9.7 + ph * 2.9))
+    return reach * (0.55 + 0.62 * n)
 
 
-def make_fringe_tile(base: Image.Image, over: Image.Image, mask: int,
-                     variant: int) -> Image.Image:
-    out = base.copy()
+def make_fringe_overlay(over: Image.Image, mask: int, variant: int,
+                        reach: float = 1.15) -> Image.Image:
+    """The intruding material alone, TRANSPARENT everywhere it has not
+    reached. Meant to sit on a second TileMapLayer over the ordinary floor.
+
+    This replaced baking a fringe per MATERIAL PAIR, which was the wrong
+    architecture twice over. It exploded combinatorially, so only three pairs
+    ever got made and every other boundary in the district stayed a hard
+    diamond (user: "some parts of the road are still square too, and some
+    parts of the grass, like all over the map"). And because the fringe
+    replaced the whole tile, a blended cell lost the crack, stain and worn
+    variants underneath it.
+
+    One overlay per INTRUDING material composites over anything: grass onto
+    concrete, onto asphalt, onto ballast, all from the same tile, with the
+    base's own wear still showing through.
+
+    `reach` scales how far it pushes in. Deep on the receiving side, shallow
+    coming back the other way, so a boundary is ONE ragged line and not two
+    symmetric bands facing each other across the join - which is exactly what
+    read as piping around every tile.
+    """
+    out = Image.new("RGBA", (64, 32), (0, 0, 0, 0))
     bp, op = out.load(), over.load()
-    ph = 1.7 + variant * 2.3
+    ph = 1.7 + variant * 2.9
     for y in range(32):
         span = diamond_span(y)
         if span is None:
@@ -666,41 +694,53 @@ def make_fringe_tile(base: Image.Image, over: Image.Image, mask: int,
             if op[x, y][3] == 0:
                 continue
             u, v = (x - 32) / 32.0, (y - 16) / 16.0
-            d = _fringe_depth(u, v, mask)
-            # a torn edge from two out-of-phase waves — never a per-pixel roll
-            t = (0.42
-                 + 0.20 * math.sin(x * 0.21 + y * 0.37 + ph)
-                 + 0.11 * math.sin(x * 0.09 - y * 0.53 + ph * 1.9))
-            take = d < t
-            if not take:
-                # a few clumps that have taken hold past the tear line
-                blob = (0.5 * math.sin(x * 0.34 + ph * 3.1)
-                        + 0.5 * math.sin(y * 0.61 - ph * 1.3))
-                take = d < t + 0.30 and blob > 0.86
+            take = False
+            for bit in range(4):
+                if not (mask & (1 << bit)):
+                    continue
+                depth_fn, along_fn = _EDGE_COORDS[bit]
+                d = depth_fn(u, v)
+                s = along_fn(u, v)
+                front = _wander(s, ph + bit * 1.31, reach)
+                if d < front:
+                    take = True
+                    break
+                # islands that have seeded ahead of the front, and they are
+                # SOLID CLUMPS - a per-pixel roll here would be the
+                # single-pixel dot noise banned project-wide
+                if d < front + 0.42 * reach:
+                    isl = (math.sin(s * 7.3 + ph * 3.1)
+                           + math.sin(d * 11.0 - ph * 2.2))
+                    if isl > 1.42:
+                        take = True
+                        break
             if take:
                 bp[x, y] = op[x, y]
     return out
 
 
 def _fringe_entries() -> list[tuple[str, Image.Image]]:
-    """(name, image) for every fringe tile. Built from the SAME makers the
-    plain tiles use, so the two can never diverge."""
+    """(name, image) for every fringe OVERLAY. Built from the same makers the
+    plain tiles use, so the two can never diverge.
+
+    One set per intruding material, not per pair - see make_fringe_overlay.
+    `reach` is per material: whatever is taking the ground over pushes deep,
+    and the hard surface only creeps back a little, so each boundary reads as
+    one wandering line instead of two facing bands.
+    """
     out: list[tuple[str, Image.Image]] = []
-    pairs = [
-        # name,      base under,          material creeping in
-        ("grass", ("concrete", 0), ("forest", 0)),
-        ("dirt", ("concrete", 0), ("dirt", 0)),
-        # and the other way, so a wood's edge frays into the pavement too
-        # rather than only the pavement fraying into the wood
-        ("stone", ("forest", 0), ("concrete", 0)),
+    intruders = [
+        ("grass", ("forest", 0), 1.25),    # vegetation wins ground back
+        ("dirt", ("dirt", 0), 1.05),       # worn tracks and bare earth
+        ("stone", ("concrete", 0), 0.62),  # pavement only creeps back
+        ("gravel", ("ballast", 0), 0.70),
     ]
-    for label, (bk, bv), (ok, ov) in pairs:
-        base = make_floor_tile(bk, bv).img
+    for label, (ok, ov), reach in intruders:
         over = make_floor_tile(ok, ov).img
         for mask in range(1, 16):
             for variant in range(FRINGE_VARIANTS):
-                out.append(("%s_fringe_%d_%d" % (label, mask, variant),
-                            make_fringe_tile(base, over, mask, variant)))
+                out.append(("fr_%s_%d_%d" % (label, mask, variant),
+                            make_fringe_overlay(over, mask, variant, reach)))
     return out
 
 
@@ -735,6 +775,9 @@ WALL_H = 40
 SEG_THICK = 2  # cap depth in screen px — slim and flush with the wall
                # (a wide cap read as a fat lid on a thin wall; the ROOF's eave
                # modules are what overhang, not the wall itself)
+
+SWAY_NONE: set[str] = set()   # props with no foliage - see the manifest
+                             # "sway" pass in build_manifest
 
 BRICK_STYLES = {
     # two clearly different materials (user: buildings must not match)
@@ -2751,9 +2794,43 @@ def make_body(variant: int) -> tuple[Canvas, tuple, list | None]:
     }
     c = Canvas(34, 44)
     view = ("side", "front", "diag_front")[rng.randrange(3)]
-    # dried stain beneath, dark and subtle
-    for i in range(rng.randint(5, 9)):
-        c.set(12 + rng.randint(-4, 6), 30 + rng.randint(-3, 2), C("241527"))
+    # THE POOL. User: "the dead bodies outside of the map dont have any
+    # blood". There WAS a stain here and it could not be seen for two
+    # reasons: it was 5-9 SINGLE PIXELS of 241527 - near black, on ground
+    # that is already dark - and it sat under the figure, which then covered
+    # most of it. It was also, strictly, the single-pixel dot noise this
+    # project bans everywhere else.
+    #
+    # Now it is a solid pool that spreads OUT from under the body so it
+    # actually shows, in reds that clear the ground it lands on: past the
+    # barricades that ground is concrete (394a50 / 202e37), so 602c2c
+    # separates on hue as well as value.
+    pool_cx, pool_cy = 15 + rng.randint(-2, 2), 31 + rng.randint(-2, 1)
+    rx, ry = rng.uniform(7.0, 10.0), rng.uniform(3.4, 4.8)
+    lean = rng.uniform(-0.5, 0.5)
+    for y in range(c.h):
+        for x in range(c.w):
+            dx, dy = x - pool_cx, y - pool_cy
+            dx -= dy * lean                     # spilled downhill a little
+            ang = math.atan2(dy, dx if dx else 0.01)
+            # a wandering rim, so it is a spill and not an ellipse
+            wob = (1.0 + 0.22 * math.sin(ang * 3.0 + variant)
+                   + 0.13 * math.sin(ang * 5.0 - variant * 1.7))
+            d = (dx / (rx * wob)) ** 2 + (dy / (ry * wob)) ** 2
+            if d <= 1.0:
+                c.set(x, y, C("602c2c") if d < 0.62 else C("411d31"))
+    # the wet middle, and a couple of runs off the edge
+    for i in range(rng.randint(2, 4)):
+        a = rng.uniform(0.0, math.tau)
+        for step in range(rng.randint(3, 6)):
+            sx = int(pool_cx + math.cos(a) * (rx * 0.7 + step))
+            sy = int(pool_cy + math.sin(a) * (ry * 0.7 + step * 0.5))
+            c.set(sx, sy, C("411d31"))
+            c.set(sx + 1, sy, C("411d31"))
+    for y in range(pool_cy - 2, pool_cy + 2):
+        for x in range(pool_cx - 4, pool_cx + 4):
+            if c.get(x, y)[3] > 0 and rng.random() < 0.55:
+                c.set(x, y, C("752438"))
     _lying_figure(c, view, rng.choice((-1, 0, 1)), 0, colors,
                   hat=hat, beard=(hat is None and rng.random() < 0.45),
                   has_pack=rng.random() < 0.35)
@@ -5062,6 +5139,7 @@ def prop_inventory() -> tuple[dict, dict]:
         fam("tree", 4 + i, make_tree("oak", i))
     for i in range(2):
         fam("tree", 7 + i, make_tree("dead", i))
+        SWAY_NONE.add(f"tree_{7 + i}")   # bare trunk: nothing to sway
     for i in range(3):
         fam("tree_autumn", i, make_tree("autumn", i))
     props["street_lamp"] = make_street_lamp("working")
@@ -5910,6 +5988,202 @@ def make_title() -> tuple[Image.Image, Image.Image]:
 
     tag = _render_word("loot. extract. survive.", C("c7cfcc"), C("819796"))
     return c.img, tag
+
+# ------------------------------------------------------------- ui frames -----
+# NINE-PATCH frames for the panels and buttons (v0.6.55).
+#
+# The whole UI was StyleBoxFlat with a uniform 1 px border on every side, so a
+# panel, a button and a dropdown were the SAME rectangle at three sizes: no
+# depth, no hierarchy, nothing to say which of them you could press. Flat
+# boxes were also the one part of the game still untouched by the polish pass,
+# next to a wordmark that is now cast metal and ground that has weathering.
+#
+# A StyleBoxFlat cannot bevel: it has ONE border colour for all four sides.
+# Lit top-left and shaded bottom-right needs per-side colour, so these are
+# textures nine-patched instead — which also puts the UI's look in the
+# generator, where the rest of the art already lives.
+#
+# Rule 7 still holds: near-black translucent fill, light border, so these read
+# on every backdrop. The fill alphas below are the ones the flat styleboxes
+# used, carried over deliberately.
+
+def _ui_frame(w: int, h: int, fill, top, side_bottom, inner=None,
+              corner=None) -> Image.Image:
+    """A bevelled plate: `top` lights the top and left edges, `side_bottom`
+    shades the bottom and right, so it reads lit from above-left like every
+    other surface in the game."""
+    c = Canvas(w, h)
+    c.rect(0, 0, w - 1, h - 1, fill)
+    c.hline(0, w - 1, 0, top)
+    c.vline(0, 0, h - 1, top)
+    c.hline(0, w - 1, h - 1, side_bottom)
+    c.vline(w - 1, 0, h - 1, side_bottom)
+    if inner is not None:
+        c.hline(1, w - 2, 1, inner)
+        c.vline(1, 1, h - 2, inner)
+    # clipped corners: a hard 90-degree corner is what makes a box read as a
+    # box. One pixel is enough to stop it.
+    for (x, y) in ((0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1)):
+        c.set(x, y, (0, 0, 0, 0))
+    if corner is not None:
+        # corner ticks - field-equipment feel, and they give the eye something
+        # to land on other than four identical straight runs
+        for (x, y, dx, dy) in ((1, 1, 1, 1), (w - 2, 1, -1, 1),
+                               (1, h - 2, 1, -1), (w - 2, h - 2, -1, -1)):
+            c.set(x, y, corner)
+            c.set(x + dx, y, corner)
+            c.set(x, y + dy, corner)
+    return c.img
+
+
+def make_ui_frames() -> dict[str, Image.Image]:
+    out: dict[str, Image.Image] = {}
+    a = lambda name, alpha: C(name)[:3] + (int(alpha * 255),)
+    # buttons: 12x12 with a 4 px nine-patch margin
+    out["ui_btn"] = _ui_frame(12, 12, a("090a14", 0.72), a("a8b5b2", 0.85),
+                              a("394a50", 0.85))
+    out["ui_btn_hover"] = _ui_frame(12, 12, a("151d28", 0.86), a("ebede9", 0.95),
+                                    a("577277", 0.9))
+    # PRESSED INVERTS THE BEVEL - lit edge on the bottom, shade on top, so the
+    # plate reads as pushed in rather than merely recoloured
+    out["ui_btn_press"] = _ui_frame(12, 12, a("090a14", 0.9), a("394a50", 0.9),
+                                    a("a8b5b2", 0.8))
+    # panels: 16x16 with a 6 px margin, and a darker inner rule so the frame
+    # has thickness instead of being one hairline
+    out["ui_panel"] = _ui_frame(16, 16, a("151d28", 0.94), a("577277", 0.9),
+                                a("202e37", 0.95), inner=a("10141f", 0.9),
+                                corner=a("819796", 0.95))
+    # dropdown / value fields: recessed, so they read as somewhere a value
+    # LIVES rather than as another button
+    out["ui_field"] = _ui_frame(12, 12, a("10141f", 0.8), a("202e37", 0.9),
+                                a("577277", 0.85))
+    return out
+
+# -------------------------------------------------------------- ui icons -----
+# The user asked for "the ui, the icons"; there were NO icons in the project
+# at all, only text. 11x11 so a glyph has a centre pixel and still reads at
+# 1x next to 9 px type.
+
+def _icon(draw) -> Image.Image:
+    c = Canvas(11, 11)
+    draw(c)
+    c.outline_auto(C("090a14"))
+    return c.img
+
+
+def make_ui_icons() -> dict[str, Image.Image]:
+    L, D = C("ebede9"), C("819796")
+    A = C("de9e41")
+    R = C("cf573c")
+
+    def play(c: Canvas) -> None:
+        for i in range(9):
+            half = min(i, 8 - i)
+            c.vline(2 + i // 2, 5 - half // 1, 5 + half, L) if i % 2 == 0 else None
+        for row in range(9):
+            span = min(row, 8 - row)
+            c.hline(3, 3 + span, 1 + row, L)
+
+    def gear(c: Canvas) -> None:
+        c.rect(3, 3, 7, 7, L)
+        c.rect(4, 4, 6, 6, C("151d28"))
+        for (x, y) in ((5, 1), (5, 9), (1, 5), (9, 5)):
+            c.rect(x - 0, y, x + 0, y, L)
+        c.hline(4, 6, 1, L)
+        c.hline(4, 6, 9, L)
+        c.vline(1, 4, 6, L)
+        c.vline(9, 4, 6, L)
+
+    def power(c: Canvas) -> None:
+        c.hline(3, 7, 2, L)
+        c.vline(2, 3, 7, L)
+        c.vline(8, 3, 7, L)
+        c.hline(3, 7, 8, L)
+        c.vline(5, 0, 4, L)
+
+    def back(c: Canvas) -> None:
+        for i in range(5):
+            c.vline(2 + i, 5 - i, 5 + i, L) if i == 0 else c.set(2 + i, 5 - i, L)
+        for i in range(1, 5):
+            c.set(2 + i, 5 - i, L)
+            c.set(2 + i, 5 + i, L)
+        c.vline(2, 4, 6, L)
+        c.hline(3, 8, 5, L)
+
+    def speaker(c: Canvas) -> None:
+        c.rect(1, 4, 2, 6, L)
+        for i in range(4):
+            c.vline(3 + i, 4 - i, 6 + i, L)
+        c.set(9, 3, D)
+        c.set(10, 4, D)
+        c.set(10, 6, D)
+        c.set(9, 7, D)
+
+    def key(c: Canvas) -> None:
+        c.rect(1, 3, 4, 7, L)
+        c.rect(2, 4, 3, 6, C("151d28"))
+        c.hline(5, 10, 5, L)
+        c.vline(8, 5, 7, L)
+        c.vline(10, 5, 7, L)
+
+    def mapicon(c: Canvas) -> None:
+        c.rect(0, 2, 10, 8, L)
+        c.rect(1, 3, 9, 7, C("151d28"))
+        c.vline(3, 2, 8, L)
+        c.vline(7, 2, 8, L)
+
+    def notes(c: Canvas) -> None:
+        c.rect(1, 1, 9, 9, L)
+        c.rect(2, 2, 8, 8, C("151d28"))
+        for y in (3, 5, 7):
+            c.hline(3, 7, y, L)
+
+    def flag(c: Canvas) -> None:
+        c.vline(2, 1, 9, L)
+        c.rect(3, 1, 8, 5, R)
+
+    def monitor(c: Canvas) -> None:
+        c.rect(0, 1, 10, 7, L)
+        c.rect(1, 2, 9, 6, C("151d28"))
+        c.hline(3, 7, 9, L)
+        c.vline(5, 8, 9, L)
+
+    def gauge(c: Canvas) -> None:
+        c.hline(2, 8, 8, L)
+        for i in range(4):
+            c.set(1 + i, 7 - i, L)
+            c.set(9 - i, 7 - i, L)
+        c.set(5, 3, L)
+        c.vline(5, 4, 7, A)
+
+    def sync(c: Canvas) -> None:
+        c.hline(2, 8, 2, L)
+        c.hline(2, 8, 8, L)
+        c.set(3, 1, L)
+        c.set(3, 3, L)
+        c.set(7, 7, L)
+        c.set(7, 9, L)
+        c.vline(8, 2, 5, L)
+        c.vline(2, 5, 8, L)
+
+    def eye(c: Canvas) -> None:
+        for i in range(5):
+            c.set(1 + i, 5 - i if i < 3 else i - 1, L)
+        c.hline(1, 9, 5, L)
+        for i in range(4):
+            c.set(2 + i, 3, L)
+            c.set(2 + i, 7, L)
+        c.rect(4, 4, 6, 6, A)
+
+    return {
+        "icon_play": _icon(play), "icon_gear": _icon(gear),
+        "icon_power": _icon(power), "icon_back": _icon(back),
+        "icon_volume": _icon(speaker), "icon_key": _icon(key),
+        "icon_map": _icon(mapicon), "icon_notes": _icon(notes),
+        "icon_flag": _icon(flag), "icon_monitor": _icon(monitor),
+        "icon_gauge": _icon(gauge), "icon_sync": _icon(sync),
+        "icon_eye": _icon(eye),
+    }
 
 # ---------------------------------------------------------- menu backdrops ---
 # TWO rotating main-menu scenes, 960x544 (covers the expanded view on any
@@ -18463,6 +18737,26 @@ def main() -> None:
     for name, kind in VEHICLE_KINDS.items():
         if name in manifest["props"]:
             manifest["props"][name]["vehicle_kind"] = kind
+    # WHICH PROPS HAVE FOLIAGE TO MOVE. The sway shader used to be applied by
+    # NAME PREFIX in the game, and "tree_" catches the DEAD trees too - they
+    # are variants 7 and 8 of the same family. User: "you made all of the
+    # trees with no leaves on them swing back and forth, i only want that on
+    # the bushes and trees with leaves on them, right now the sticks are
+    # moving back and forth". A bare trunk has no crown for a height-weighted
+    # sway to move, so the whole stick waves, which reads as a fault.
+    #
+    # The generator is the only thing that KNOWS which variants it drew bare,
+    # so it says so here rather than the game guessing from a name. Keeping
+    # the dead trees inside the "tree" family is deliberate: splitting them
+    # out would change how many variants _pick_variant sees and re-roll the
+    # fixed district.
+    for name in manifest["props"]:
+        if name in SWAY_NONE:
+            continue
+        if name.startswith("tree_"):
+            manifest["props"][name]["sway"] = "tree"
+        elif name.startswith("bush_"):
+            manifest["props"][name]["sway"] = "bush"
     for name, extra in DOOR_COLLIDERS.items():
         manifest["props"][name]["collider_open"] = extra["open"]
         manifest["props"][name]["collider_open_out"] = extra["open_out"]

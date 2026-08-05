@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.54.** The release history was renumbered evenly on
+**Current version: v0.6.55.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -376,6 +376,36 @@ Also asked for: **upgrade the two existing backdrops** (den, drain).
 ---
 
 # B. GAMEPLAY THE USER HAS ASKED FOR
+
+## B0. Parking lots and aprons should JOIN the road network *(user, 2026-08-05)*
+
+Their words: *"lets make all parking lots or roads connected to eachother,
+like a parking lot can have a small road going from it and then it connects
+into the road"*. Today the depot apron, the safehouse pad and the stalls are
+islands of asphalt with no route onto the grid - you drive over grass to
+reach them.
+
+**NOT STARTED.** It is a layout change, so it inherits the whole discipline
+from the v0.6.53 road nudge:
+- **Zero `_rng` draws**, or the fixed district rerolls. Use `_side_rng` or a
+  hash seeded off `DISTRICT_SEED`.
+- **Re-probe `DOORS` after.** It is the cheapest detector of the
+  squeezed-block bug, and an access road eats block cells.
+- The spur wants the same fringe treatment as everything else or it will
+  reintroduce hard edges the blending just removed.
+
+## B0b. Broken cars must READ as broken *(user, 2026-08-05)*
+
+*"lets make all broken cars more distinct, i cant even tell it was broken,
+like make the door opened with some stuff on the ground near it, the
+windshield can be broken, little bit of smoke can come out of the engine
+too"*. **NOT STARTED.** Wreck variants are `_5`/`_6` of each `vehicle_*`
+family (that is also what the safehouse pad now remaps away from). The ask is
+three separate pieces: a sprung door and spill on the ground (generator), a
+broken windshield (generator), and a thin smoke wisp (runtime, and the
+soft-alpha carve-out already lets that scale - see the LZ beacon).
+
+
 
 ## B0c. The underpass door and posters — **DONE in v0.6.42**
 

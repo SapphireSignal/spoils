@@ -310,545 +310,725 @@
       3,
       18
     ],
-    "grass_fringe_1_0": [
+    "fr_grass_1_0": [
       0,
       19
     ],
-    "grass_fringe_1_1": [
+    "fr_grass_1_1": [
       1,
       19
     ],
-    "grass_fringe_1_2": [
+    "fr_grass_1_2": [
       2,
       19
     ],
-    "grass_fringe_2_0": [
+    "fr_grass_2_0": [
       3,
       19
     ],
-    "grass_fringe_2_1": [
+    "fr_grass_2_1": [
       0,
       20
     ],
-    "grass_fringe_2_2": [
+    "fr_grass_2_2": [
       1,
       20
     ],
-    "grass_fringe_3_0": [
+    "fr_grass_3_0": [
       2,
       20
     ],
-    "grass_fringe_3_1": [
+    "fr_grass_3_1": [
       3,
       20
     ],
-    "grass_fringe_3_2": [
+    "fr_grass_3_2": [
       0,
       21
     ],
-    "grass_fringe_4_0": [
+    "fr_grass_4_0": [
       1,
       21
     ],
-    "grass_fringe_4_1": [
+    "fr_grass_4_1": [
       2,
       21
     ],
-    "grass_fringe_4_2": [
+    "fr_grass_4_2": [
       3,
       21
     ],
-    "grass_fringe_5_0": [
+    "fr_grass_5_0": [
       0,
       22
     ],
-    "grass_fringe_5_1": [
+    "fr_grass_5_1": [
       1,
       22
     ],
-    "grass_fringe_5_2": [
+    "fr_grass_5_2": [
       2,
       22
     ],
-    "grass_fringe_6_0": [
+    "fr_grass_6_0": [
       3,
       22
     ],
-    "grass_fringe_6_1": [
+    "fr_grass_6_1": [
       0,
       23
     ],
-    "grass_fringe_6_2": [
+    "fr_grass_6_2": [
       1,
       23
     ],
-    "grass_fringe_7_0": [
+    "fr_grass_7_0": [
       2,
       23
     ],
-    "grass_fringe_7_1": [
+    "fr_grass_7_1": [
       3,
       23
     ],
-    "grass_fringe_7_2": [
+    "fr_grass_7_2": [
       0,
       24
     ],
-    "grass_fringe_8_0": [
+    "fr_grass_8_0": [
       1,
       24
     ],
-    "grass_fringe_8_1": [
+    "fr_grass_8_1": [
       2,
       24
     ],
-    "grass_fringe_8_2": [
+    "fr_grass_8_2": [
       3,
       24
     ],
-    "grass_fringe_9_0": [
+    "fr_grass_9_0": [
       0,
       25
     ],
-    "grass_fringe_9_1": [
+    "fr_grass_9_1": [
       1,
       25
     ],
-    "grass_fringe_9_2": [
+    "fr_grass_9_2": [
       2,
       25
     ],
-    "grass_fringe_10_0": [
+    "fr_grass_10_0": [
       3,
       25
     ],
-    "grass_fringe_10_1": [
+    "fr_grass_10_1": [
       0,
       26
     ],
-    "grass_fringe_10_2": [
+    "fr_grass_10_2": [
       1,
       26
     ],
-    "grass_fringe_11_0": [
+    "fr_grass_11_0": [
       2,
       26
     ],
-    "grass_fringe_11_1": [
+    "fr_grass_11_1": [
       3,
       26
     ],
-    "grass_fringe_11_2": [
+    "fr_grass_11_2": [
       0,
       27
     ],
-    "grass_fringe_12_0": [
+    "fr_grass_12_0": [
       1,
       27
     ],
-    "grass_fringe_12_1": [
+    "fr_grass_12_1": [
       2,
       27
     ],
-    "grass_fringe_12_2": [
+    "fr_grass_12_2": [
       3,
       27
     ],
-    "grass_fringe_13_0": [
+    "fr_grass_13_0": [
       0,
       28
     ],
-    "grass_fringe_13_1": [
+    "fr_grass_13_1": [
       1,
       28
     ],
-    "grass_fringe_13_2": [
+    "fr_grass_13_2": [
       2,
       28
     ],
-    "grass_fringe_14_0": [
+    "fr_grass_14_0": [
       3,
       28
     ],
-    "grass_fringe_14_1": [
+    "fr_grass_14_1": [
       0,
       29
     ],
-    "grass_fringe_14_2": [
+    "fr_grass_14_2": [
       1,
       29
     ],
-    "grass_fringe_15_0": [
+    "fr_grass_15_0": [
       2,
       29
     ],
-    "grass_fringe_15_1": [
+    "fr_grass_15_1": [
       3,
       29
     ],
-    "grass_fringe_15_2": [
+    "fr_grass_15_2": [
       0,
       30
     ],
-    "dirt_fringe_1_0": [
+    "fr_dirt_1_0": [
       1,
       30
     ],
-    "dirt_fringe_1_1": [
+    "fr_dirt_1_1": [
       2,
       30
     ],
-    "dirt_fringe_1_2": [
+    "fr_dirt_1_2": [
       3,
       30
     ],
-    "dirt_fringe_2_0": [
+    "fr_dirt_2_0": [
       0,
       31
     ],
-    "dirt_fringe_2_1": [
+    "fr_dirt_2_1": [
       1,
       31
     ],
-    "dirt_fringe_2_2": [
+    "fr_dirt_2_2": [
       2,
       31
     ],
-    "dirt_fringe_3_0": [
+    "fr_dirt_3_0": [
       3,
       31
     ],
-    "dirt_fringe_3_1": [
+    "fr_dirt_3_1": [
       0,
       32
     ],
-    "dirt_fringe_3_2": [
+    "fr_dirt_3_2": [
       1,
       32
     ],
-    "dirt_fringe_4_0": [
+    "fr_dirt_4_0": [
       2,
       32
     ],
-    "dirt_fringe_4_1": [
+    "fr_dirt_4_1": [
       3,
       32
     ],
-    "dirt_fringe_4_2": [
+    "fr_dirt_4_2": [
       0,
       33
     ],
-    "dirt_fringe_5_0": [
+    "fr_dirt_5_0": [
       1,
       33
     ],
-    "dirt_fringe_5_1": [
+    "fr_dirt_5_1": [
       2,
       33
     ],
-    "dirt_fringe_5_2": [
+    "fr_dirt_5_2": [
       3,
       33
     ],
-    "dirt_fringe_6_0": [
+    "fr_dirt_6_0": [
       0,
       34
     ],
-    "dirt_fringe_6_1": [
+    "fr_dirt_6_1": [
       1,
       34
     ],
-    "dirt_fringe_6_2": [
+    "fr_dirt_6_2": [
       2,
       34
     ],
-    "dirt_fringe_7_0": [
+    "fr_dirt_7_0": [
       3,
       34
     ],
-    "dirt_fringe_7_1": [
+    "fr_dirt_7_1": [
       0,
       35
     ],
-    "dirt_fringe_7_2": [
+    "fr_dirt_7_2": [
       1,
       35
     ],
-    "dirt_fringe_8_0": [
+    "fr_dirt_8_0": [
       2,
       35
     ],
-    "dirt_fringe_8_1": [
+    "fr_dirt_8_1": [
       3,
       35
     ],
-    "dirt_fringe_8_2": [
+    "fr_dirt_8_2": [
       0,
       36
     ],
-    "dirt_fringe_9_0": [
+    "fr_dirt_9_0": [
       1,
       36
     ],
-    "dirt_fringe_9_1": [
+    "fr_dirt_9_1": [
       2,
       36
     ],
-    "dirt_fringe_9_2": [
+    "fr_dirt_9_2": [
       3,
       36
     ],
-    "dirt_fringe_10_0": [
+    "fr_dirt_10_0": [
       0,
       37
     ],
-    "dirt_fringe_10_1": [
+    "fr_dirt_10_1": [
       1,
       37
     ],
-    "dirt_fringe_10_2": [
+    "fr_dirt_10_2": [
       2,
       37
     ],
-    "dirt_fringe_11_0": [
+    "fr_dirt_11_0": [
       3,
       37
     ],
-    "dirt_fringe_11_1": [
+    "fr_dirt_11_1": [
       0,
       38
     ],
-    "dirt_fringe_11_2": [
+    "fr_dirt_11_2": [
       1,
       38
     ],
-    "dirt_fringe_12_0": [
+    "fr_dirt_12_0": [
       2,
       38
     ],
-    "dirt_fringe_12_1": [
+    "fr_dirt_12_1": [
       3,
       38
     ],
-    "dirt_fringe_12_2": [
+    "fr_dirt_12_2": [
       0,
       39
     ],
-    "dirt_fringe_13_0": [
+    "fr_dirt_13_0": [
       1,
       39
     ],
-    "dirt_fringe_13_1": [
+    "fr_dirt_13_1": [
       2,
       39
     ],
-    "dirt_fringe_13_2": [
+    "fr_dirt_13_2": [
       3,
       39
     ],
-    "dirt_fringe_14_0": [
+    "fr_dirt_14_0": [
       0,
       40
     ],
-    "dirt_fringe_14_1": [
+    "fr_dirt_14_1": [
       1,
       40
     ],
-    "dirt_fringe_14_2": [
+    "fr_dirt_14_2": [
       2,
       40
     ],
-    "dirt_fringe_15_0": [
+    "fr_dirt_15_0": [
       3,
       40
     ],
-    "dirt_fringe_15_1": [
+    "fr_dirt_15_1": [
       0,
       41
     ],
-    "dirt_fringe_15_2": [
+    "fr_dirt_15_2": [
       1,
       41
     ],
-    "stone_fringe_1_0": [
+    "fr_stone_1_0": [
       2,
       41
     ],
-    "stone_fringe_1_1": [
+    "fr_stone_1_1": [
       3,
       41
     ],
-    "stone_fringe_1_2": [
+    "fr_stone_1_2": [
       0,
       42
     ],
-    "stone_fringe_2_0": [
+    "fr_stone_2_0": [
       1,
       42
     ],
-    "stone_fringe_2_1": [
+    "fr_stone_2_1": [
       2,
       42
     ],
-    "stone_fringe_2_2": [
+    "fr_stone_2_2": [
       3,
       42
     ],
-    "stone_fringe_3_0": [
+    "fr_stone_3_0": [
       0,
       43
     ],
-    "stone_fringe_3_1": [
+    "fr_stone_3_1": [
       1,
       43
     ],
-    "stone_fringe_3_2": [
+    "fr_stone_3_2": [
       2,
       43
     ],
-    "stone_fringe_4_0": [
+    "fr_stone_4_0": [
       3,
       43
     ],
-    "stone_fringe_4_1": [
+    "fr_stone_4_1": [
       0,
       44
     ],
-    "stone_fringe_4_2": [
+    "fr_stone_4_2": [
       1,
       44
     ],
-    "stone_fringe_5_0": [
+    "fr_stone_5_0": [
       2,
       44
     ],
-    "stone_fringe_5_1": [
+    "fr_stone_5_1": [
       3,
       44
     ],
-    "stone_fringe_5_2": [
+    "fr_stone_5_2": [
       0,
       45
     ],
-    "stone_fringe_6_0": [
+    "fr_stone_6_0": [
       1,
       45
     ],
-    "stone_fringe_6_1": [
+    "fr_stone_6_1": [
       2,
       45
     ],
-    "stone_fringe_6_2": [
+    "fr_stone_6_2": [
       3,
       45
     ],
-    "stone_fringe_7_0": [
+    "fr_stone_7_0": [
       0,
       46
     ],
-    "stone_fringe_7_1": [
+    "fr_stone_7_1": [
       1,
       46
     ],
-    "stone_fringe_7_2": [
+    "fr_stone_7_2": [
       2,
       46
     ],
-    "stone_fringe_8_0": [
+    "fr_stone_8_0": [
       3,
       46
     ],
-    "stone_fringe_8_1": [
+    "fr_stone_8_1": [
       0,
       47
     ],
-    "stone_fringe_8_2": [
+    "fr_stone_8_2": [
       1,
       47
     ],
-    "stone_fringe_9_0": [
+    "fr_stone_9_0": [
       2,
       47
     ],
-    "stone_fringe_9_1": [
+    "fr_stone_9_1": [
       3,
       47
     ],
-    "stone_fringe_9_2": [
+    "fr_stone_9_2": [
       0,
       48
     ],
-    "stone_fringe_10_0": [
+    "fr_stone_10_0": [
       1,
       48
     ],
-    "stone_fringe_10_1": [
+    "fr_stone_10_1": [
       2,
       48
     ],
-    "stone_fringe_10_2": [
+    "fr_stone_10_2": [
       3,
       48
     ],
-    "stone_fringe_11_0": [
+    "fr_stone_11_0": [
       0,
       49
     ],
-    "stone_fringe_11_1": [
+    "fr_stone_11_1": [
       1,
       49
     ],
-    "stone_fringe_11_2": [
+    "fr_stone_11_2": [
       2,
       49
     ],
-    "stone_fringe_12_0": [
+    "fr_stone_12_0": [
       3,
       49
     ],
-    "stone_fringe_12_1": [
+    "fr_stone_12_1": [
       0,
       50
     ],
-    "stone_fringe_12_2": [
+    "fr_stone_12_2": [
       1,
       50
     ],
-    "stone_fringe_13_0": [
+    "fr_stone_13_0": [
       2,
       50
     ],
-    "stone_fringe_13_1": [
+    "fr_stone_13_1": [
       3,
       50
     ],
-    "stone_fringe_13_2": [
+    "fr_stone_13_2": [
       0,
       51
     ],
-    "stone_fringe_14_0": [
+    "fr_stone_14_0": [
       1,
       51
     ],
-    "stone_fringe_14_1": [
+    "fr_stone_14_1": [
       2,
       51
     ],
-    "stone_fringe_14_2": [
+    "fr_stone_14_2": [
       3,
       51
     ],
-    "stone_fringe_15_0": [
+    "fr_stone_15_0": [
       0,
       52
     ],
-    "stone_fringe_15_1": [
+    "fr_stone_15_1": [
       1,
       52
     ],
-    "stone_fringe_15_2": [
+    "fr_stone_15_2": [
       2,
       52
+    ],
+    "fr_gravel_1_0": [
+      3,
+      52
+    ],
+    "fr_gravel_1_1": [
+      0,
+      53
+    ],
+    "fr_gravel_1_2": [
+      1,
+      53
+    ],
+    "fr_gravel_2_0": [
+      2,
+      53
+    ],
+    "fr_gravel_2_1": [
+      3,
+      53
+    ],
+    "fr_gravel_2_2": [
+      0,
+      54
+    ],
+    "fr_gravel_3_0": [
+      1,
+      54
+    ],
+    "fr_gravel_3_1": [
+      2,
+      54
+    ],
+    "fr_gravel_3_2": [
+      3,
+      54
+    ],
+    "fr_gravel_4_0": [
+      0,
+      55
+    ],
+    "fr_gravel_4_1": [
+      1,
+      55
+    ],
+    "fr_gravel_4_2": [
+      2,
+      55
+    ],
+    "fr_gravel_5_0": [
+      3,
+      55
+    ],
+    "fr_gravel_5_1": [
+      0,
+      56
+    ],
+    "fr_gravel_5_2": [
+      1,
+      56
+    ],
+    "fr_gravel_6_0": [
+      2,
+      56
+    ],
+    "fr_gravel_6_1": [
+      3,
+      56
+    ],
+    "fr_gravel_6_2": [
+      0,
+      57
+    ],
+    "fr_gravel_7_0": [
+      1,
+      57
+    ],
+    "fr_gravel_7_1": [
+      2,
+      57
+    ],
+    "fr_gravel_7_2": [
+      3,
+      57
+    ],
+    "fr_gravel_8_0": [
+      0,
+      58
+    ],
+    "fr_gravel_8_1": [
+      1,
+      58
+    ],
+    "fr_gravel_8_2": [
+      2,
+      58
+    ],
+    "fr_gravel_9_0": [
+      3,
+      58
+    ],
+    "fr_gravel_9_1": [
+      0,
+      59
+    ],
+    "fr_gravel_9_2": [
+      1,
+      59
+    ],
+    "fr_gravel_10_0": [
+      2,
+      59
+    ],
+    "fr_gravel_10_1": [
+      3,
+      59
+    ],
+    "fr_gravel_10_2": [
+      0,
+      60
+    ],
+    "fr_gravel_11_0": [
+      1,
+      60
+    ],
+    "fr_gravel_11_1": [
+      2,
+      60
+    ],
+    "fr_gravel_11_2": [
+      3,
+      60
+    ],
+    "fr_gravel_12_0": [
+      0,
+      61
+    ],
+    "fr_gravel_12_1": [
+      1,
+      61
+    ],
+    "fr_gravel_12_2": [
+      2,
+      61
+    ],
+    "fr_gravel_13_0": [
+      3,
+      61
+    ],
+    "fr_gravel_13_1": [
+      0,
+      62
+    ],
+    "fr_gravel_13_2": [
+      1,
+      62
+    ],
+    "fr_gravel_14_0": [
+      2,
+      62
+    ],
+    "fr_gravel_14_1": [
+      3,
+      62
+    ],
+    "fr_gravel_14_2": [
+      0,
+      63
+    ],
+    "fr_gravel_15_0": [
+      1,
+      63
+    ],
+    "fr_gravel_15_1": [
+      2,
+      63
+    ],
+    "fr_gravel_15_2": [
+      3,
+      63
     ]
   },
   "props": {
@@ -6704,7 +6884,8 @@
       "collider": [
         "circle",
         5.5
-      ]
+      ],
+      "sway": "tree"
     },
     "tree_1": {
       "size": [
@@ -6718,7 +6899,8 @@
       "collider": [
         "circle",
         5.5
-      ]
+      ],
+      "sway": "tree"
     },
     "tree_2": {
       "size": [
@@ -6732,7 +6914,8 @@
       "collider": [
         "circle",
         5.5
-      ]
+      ],
+      "sway": "tree"
     },
     "tree_3": {
       "size": [
@@ -6746,7 +6929,8 @@
       "collider": [
         "circle",
         5.5
-      ]
+      ],
+      "sway": "tree"
     },
     "tree_4": {
       "size": [
@@ -6760,7 +6944,8 @@
       "collider": [
         "circle",
         5.5
-      ]
+      ],
+      "sway": "tree"
     },
     "tree_5": {
       "size": [
@@ -6774,7 +6959,8 @@
       "collider": [
         "circle",
         5.5
-      ]
+      ],
+      "sway": "tree"
     },
     "tree_6": {
       "size": [
@@ -6788,7 +6974,8 @@
       "collider": [
         "circle",
         5.5
-      ]
+      ],
+      "sway": "tree"
     },
     "tree_7": {
       "size": [
@@ -6830,7 +7017,8 @@
       "collider": [
         "circle",
         5.5
-      ]
+      ],
+      "sway": "tree"
     },
     "tree_autumn_1": {
       "size": [
@@ -6844,7 +7032,8 @@
       "collider": [
         "circle",
         5.5
-      ]
+      ],
+      "sway": "tree"
     },
     "tree_autumn_2": {
       "size": [
@@ -6858,7 +7047,8 @@
       "collider": [
         "circle",
         5.5
-      ]
+      ],
+      "sway": "tree"
     },
     "street_lamp": {
       "size": [
@@ -7397,7 +7587,8 @@
         21,
         40
       ],
-      "collider": null
+      "collider": null,
+      "sway": "bush"
     },
     "bush_1": {
       "size": [
@@ -7408,7 +7599,8 @@
         24,
         43
       ],
-      "collider": null
+      "collider": null,
+      "sway": "bush"
     },
     "bush_2": {
       "size": [
@@ -7419,7 +7611,8 @@
         21,
         39
       ],
-      "collider": null
+      "collider": null,
+      "sway": "bush"
     },
     "tuft_0": {
       "size": [
@@ -7889,32 +8082,32 @@
     "body_0": {
       "size": [
         34,
-        13
+        15
       ],
       "origin": [
         16,
-        9
+        10
       ],
       "collider": null
     },
     "body_1": {
       "size": [
-        18,
-        26
+        25,
+        25
       ],
       "origin": [
-        7,
+        11,
         19
       ],
       "collider": null
     },
     "body_2": {
       "size": [
-        18,
+        27,
         25
       ],
       "origin": [
-        10,
+        14,
         19
       ],
       "collider": null
@@ -7943,11 +8136,11 @@
     },
     "body_5": {
       "size": [
-        18,
-        25
+        21,
+        26
       ],
       "origin": [
-        7,
+        8,
         19
       ],
       "collider": null

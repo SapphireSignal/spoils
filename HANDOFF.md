@@ -182,9 +182,57 @@ sniper warning up. The cells `--probe-world` prints are aimable as-is.
   `--check-only --script <file>` diagnoses it in seconds. Do not put a literal
   backslash in heredoc'd source; restructure so none is needed.
 
+**Shipped: v0.6.55 — the blend rebuilt, plus four things the user caught.**
+
+**THE BLENDING TOOK THREE ARCHITECTURES AND THE FIRST TWO ARE THE LESSON:**
+- v0.6.54 baked a fringe **per material pair**. It explodes combinatorially,
+  so only three pairs existed and the rest of the district kept hard edges —
+  *"some parts of the road are still square too, and some parts of the grass,
+  like all over the map"*. It also REPLACED the tile, throwing away the
+  crack/stain/worn variant underneath.
+- Its tear was varied by **screen x/y**, so the boundary ran roughly PARALLEL
+  to the tile edge and read as piping traced around every tile — *"the grass
+  just has some gras line around it all now, it still looks weird"*.
+- **What works: one overlay per INTRUDING material on a second TileMapLayer.**
+  180 tiles (4 materials x 15 edge masks x 3 variants) composite over
+  anything, base wear shows through, and the front wanders along a coordinate
+  that runs ALONG the edge so it cuts across the tile. Reach is per material,
+  so a boundary is one ragged line and not two bands facing each other.
+
+**The user's words, all of them worth keeping:**
+- *"i want it to look naturally blended together with whatever other tile is
+  next to a tile"*, *"for every tile in the game"*
+- *"you made all of the trees with no leaves on them swing back and forth, i
+  only want that on the bushes and trees with leaves on them, right now the
+  sticks are moving back and forth"* — sway matched the prefix `tree_`, which
+  catches the DEAD trees (variants 7-8 of the same family). **Now
+  manifest-driven**: the generator writes a `sway` field, because only it
+  knows which variants it drew bare. Dead trees stay IN the `tree` family on
+  purpose — splitting them out changes what `_pick_variant` sees and rerolls
+  the district.
+- *"the car that spawns next to the safehouse should be working, not a broken
+  one"* — the roll is still TAKEN and only its result remapped; re-rolling
+  would shift every draw after it.
+- *"the dead bodies outside of the map dont have any blood"* — there was a
+  stain: 5-9 SINGLE PIXELS of `241527`, near-black on dark ground, drawn
+  under the figure. Invisible, and strictly the dot noise this project bans.
+
+**STILL OPEN, asked for this session and NOT started** — all in TASKS.md:
+- **Parking lots / aprons joined to the road network** by short access roads
+  (*"a parking lot can have a small road going from it and then it connects
+  into the road"*). A layout change; needs the same zero-draw discipline.
+- **Broken cars made distinct** — *"i cant even tell it was broken, like make
+  the door opened with some stuff on the ground near it, the windshield can
+  be broken, little bit of smoke can come out of the engine too"*.
+- **UI and icons** — PARKED MID-WAY. `make_ui_frames`/`make_ui_icons` exist in
+  `tools/gen_art.py` and are **not called or wired**; `scripts/ui_theme.gd` is
+  untouched. The plan: nine-patch frames because a StyleBoxFlat has one border
+  colour for all four sides and so cannot bevel.
+
 **Picked up at: the polish pass, ART half — three of six done.** Shipped this
 session: the title (v0.6.51), the map screen redo (v0.6.52), the layout
-revision (v0.6.53), terrain blending + house contrast (v0.6.54). **Still untouched: ui and icons, the player model, world
+revision (v0.6.53), terrain blending + house contrast (v0.6.54), the blend
+rebuild + four fixes (v0.6.55). **Still untouched: ui and icons, the player model, world
 objects and textures.** Engine half still open: wet-ground reflections,
 window light spill, heat shimmer. Nothing in progress, nothing blocked, all
 gates green.
