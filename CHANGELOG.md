@@ -3,6 +3,36 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.56] - 2026-08-05 - the last straight lines out of the blending
+
+User: *"theres still some lines on the grass, like i can tell it doesnt look
+natural"*. They were right, and both causes were GEOMETRIC rather than a
+matter of tuning - which is why v0.6.55's softer settings had not removed
+them.
+
+### Fixed - the blend ran BOTH WAYS across every boundary
+Grass crept into concrete and concrete crept back into grass. Both overlays
+sit hard against the **shared tile edge** - grass on the concrete tile's side
+of it, concrete on the grass tile's side - so the join came out as a
+dead-straight line at the iso angle. Reducing the reverse direction's reach
+in v0.6.55 only made the line thinner.
+
+Materials are now **totally ordered** by what is taking ground back
+(grass > dirt > gravel > every hard surface) and a material may only creep
+DOWN the ranking. Across any boundary exactly one side carries an overlay, so
+the only edge the eye can find is that overlay's wandering front, well inside
+a tile. The `fr_stone_*` overlays are gone with it.
+
+### Fixed - the front could recede to nothing
+`_wander` was free to return zero, and wherever it did, bare concrete met
+solid grass along a stretch of the tile join - another straight segment. It
+now has a floor of `0.24 * reach`, so an overlay always covers the whole of
+its masked edge and meets the neighbouring tile's material continuously.
+Deep variation is fine; reaching zero is not.
+
+### Verified
+`SMOKE PASS`, 240 fps, worst frame 4.71 ms, `DOORS` 16 on unchanged cells.
+
 ## [0.6.55] — 2026-08-05 — the blend rebuilt, plus four things the user caught
 
 ### Changed — terrain blending, rebuilt on the right architecture

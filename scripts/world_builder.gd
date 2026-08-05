@@ -1536,16 +1536,25 @@ func _dash_here(along: int, road_pos: int) -> bool:
 ## materials: whatever is TAKING GROUND BACK pushes in, and the hard surface
 ## only creeps the other way. Reaches are baked into the overlays themselves
 ## (gen_art._fringe_entries), so this only has to pick the intruder.
-const FRINGE_ORDER := ["grass", "dirt", "gravel", "stone"]
-const FRINGE_ACCEPTS := {
-	# intruder: the materials it is allowed to creep over
-	"grass": ["stone", "paved", "asphalt", "walk", "gravel", "dirt"],
-	"dirt": ["stone", "paved", "asphalt", "walk", "gravel"],
-	"gravel": ["stone", "dirt", "grass"],
-	# pavement only frays back into soft ground, which is what keeps a
-	# boundary ONE ragged line rather than two bands facing each other
-	"stone": ["grass", "dirt"],
+## STRICTLY ONE DIRECTION PER PAIR. This is the whole reason a boundary
+## reads as natural, and getting it wrong is subtle:
+##
+## If grass creeps into concrete AND concrete creeps back into grass, both
+## overlays sit hard against the SHARED TILE EDGE - grass on the concrete
+## tile's side of it, concrete on the grass tile's side. The result is a
+## dead-straight line at the iso angle, right on the tile join, which is the
+## exact artefact the blending exists to remove (user: "theres still some
+## lines on the grass, like i can tell it doesnt look natural").
+##
+## So materials are TOTALLY ORDERED by what is taking ground back, and only
+## a higher-ranked material may creep into a lower-ranked one. Across any
+## boundary exactly one side carries an overlay, so the only edge the eye
+## finds is that overlay's wandering front, well inside a tile.
+const FRINGE_RANK := {
+	"grass": 0, "dirt": 1, "gravel": 2,
+	"stone": 3, "paved": 3, "walk": 3, "asphalt": 3,
 }
+const FRINGE_ORDER := ["grass", "dirt", "gravel"]
 
 
 func _cell_material(cell: Vector2i) -> String:
@@ -1588,12 +1597,12 @@ func _paint_fringes() -> void:
 			# on intersections) - a crosswalk with grass through it is unreadable
 			if _road_v_at(cell) >= 0 and _road_h_at(cell) >= 0:
 				continue
+			var my_rank: int = FRINGE_RANK.get(mine, 99)
 			var best := ""
 			var best_mask := 0
 			for pri in FRINGE_ORDER:
-				if pri == mine or not FRINGE_ACCEPTS.has(pri):
-					continue
-				if not (FRINGE_ACCEPTS[pri] as Array).has(mine):
+				# only ever DOWN the ranking, never both ways across a pair
+				if int(FRINGE_RANK[pri]) >= my_rank:
 					continue
 				var m := 0
 				for i in dirs.size():

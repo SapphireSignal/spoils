@@ -654,11 +654,20 @@ _EDGE_COORDS = (
 def _wander(s: float, ph: float, reach: float) -> float:
     """How deep the other material has pushed in at position `s` along an
     edge. Three octaves, no octave dominant, so the front has both broad
-    lobes and small bites and never repeats visibly inside one tile."""
+    lobes and small bites and never repeats visibly inside one tile.
+
+    THE FLOOR IS LOAD-BEARING, not a safety clamp. The overlay has to cover
+    the whole of its masked edge: the neighbouring tile is solid grass right
+    up to that same edge, so any stretch where the front receded to nothing
+    left concrete meeting grass along a piece of the tile join - a dead
+    straight line at the iso angle, which is exactly what the user could
+    still see ("theres still some lines on the grass, like i can tell it
+    doesnt look natural"). Deep variation is fine; reaching zero is not.
+    """
     n = (0.55 * math.sin(s * 2.3 + ph)
          + 0.30 * math.sin(s * 5.1 - ph * 1.7)
          + 0.15 * math.sin(s * 9.7 + ph * 2.9))
-    return reach * (0.55 + 0.62 * n)
+    return reach * max(0.24, 0.58 + 0.62 * n)
 
 
 def make_fringe_overlay(over: Image.Image, mask: int, variant: int,
@@ -729,11 +738,15 @@ def _fringe_entries() -> list[tuple[str, Image.Image]]:
     one wandering line instead of two facing bands.
     """
     out: list[tuple[str, Image.Image]] = []
+    # ONE DIRECTION PER PAIR - see FRINGE_ACCEPTS in world_builder.gd. There
+    # used to be a "stone" intruder here so pavement could fray back into
+    # grass; it is gone, because a two-way blend puts BOTH materials hard
+    # against the shared tile edge and draws the exact straight line the
+    # whole system exists to remove.
     intruders = [
         ("grass", ("forest", 0), 1.25),    # vegetation wins ground back
         ("dirt", ("dirt", 0), 1.05),       # worn tracks and bare earth
-        ("stone", ("concrete", 0), 0.62),  # pavement only creeps back
-        ("gravel", ("ballast", 0), 0.70),
+        ("gravel", ("ballast", 0), 0.85),
     ]
     for label, (ok, ov), reach in intruders:
         over = make_floor_tile(ok, ov).img

@@ -206,6 +206,10 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.56", [
+		"the last hard lines are out of the ground blending. two tiles were each growing into the other, which meant they still met in a straight line right on the join - now only one side of any boundary spreads, so the only edge you see is a ragged one in the middle of a tile",
+		"and the grass can no longer thin out to nothing along an edge, which was leaving short straight gaps of bare concrete",
+	]],
 	["v0.6.55", [
 		"the ground blending is rebuilt. the last go left a thin line of grass tracing round every tile, which looked worse than the hard edges did - now one material genuinely wanders into the next, and it works on every surface instead of only three of them, so roads and paving fray too",
 		"the tile underneath keeps its own cracks and stains now instead of being replaced",

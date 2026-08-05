@@ -229,6 +229,23 @@ sniper warning up. The cells `--probe-world` prints are aimable as-is.
   untouched. The plan: nine-patch frames because a StyleBoxFlat has one border
   colour for all four sides and so cannot bevel.
 
+**Shipped: v0.6.56 - the last straight lines out of the blending.** User:
+*"theres still some lines on the grass, like i can tell it doesnt look
+natural"*. Both causes were GEOMETRIC, not tuning, which is why v0.6.55's
+softer settings had not touched them:
+- **The blend ran BOTH WAYS across every boundary.** Grass into concrete AND
+  concrete back into grass puts both overlays hard against the SHARED TILE
+  EDGE, so the join is a dead-straight line at the iso angle. Reducing the
+  reverse reach only thinned it. Materials are totally ordered now
+  (grass > dirt > gravel > hard surfaces) and may only creep DOWN the
+  ranking, so exactly one side of any boundary carries an overlay.
+- **The front could recede to zero**, leaving bare concrete meeting solid
+  grass along a stretch of the join. `_wander` has a floor now.
+
+**The generalisable bit: with tile-based blending, ask what happens AT THE
+SHARED EDGE, not what a single tile looks like on its own.** Three of the
+four failures in this system were invisible when looking at one tile.
+
 **Picked up at: the polish pass, ART half — three of six done.** Shipped this
 session: the title (v0.6.51), the map screen redo (v0.6.52), the layout
 revision (v0.6.53), terrain blending + house contrast (v0.6.54), the blend
