@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.50.** The release history was renumbered evenly on
+**Current version: v0.6.51.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -218,9 +218,36 @@ Agreed order for the remaining art work:
 
    Verified only `menu_map_transit.png` changed in `art/gen` — the generator
    rewrites everything, so that check is what proves no other art moved.
-3. **The title.** *(user: "its just white, and it goes up and down a bit
-   thats all, it seems boring")* Needs real treatment — weight, depth, a
-   material, something happening beyond a bob.
+3. **The title — DONE in v0.6.51.** *(user: "its just white, and it goes up
+   and down a bit thats all, it seems boring")* Both halves of that were
+   real and both were fixed.
+
+   **"just white"** — it was the 1× font blown up 7×, two flat tones split by
+   a hard seam across every letter, five colours in the whole image. The
+   blow-up was the root cause: every edge was a 7 px slab while the rest of
+   the menu renders at 1 px, so it read as a placeholder pasted over finished
+   art. The letterforms still come from the game's own font (rule 2 — it is
+   the only lowercase cut), but the DETAIL is native resolution now: a banded
+   cel gradient with wavy seams, 1 px lit and shaded rims, chamfered corners
+   so the silhouette is not an 8 px staircase, directional weathering, and a
+   real extrusion so the letters have thickness.
+
+   **"goes up and down a bit thats all"** — `scripts/gleam.gdshader`. The old
+   gleam was a 34 px `clip_contents` Control sliding a flat silver copy
+   across: a hard-edged vertical bar, and **idle 5.1 seconds out of every 6**.
+   Now a wide dim band drifts continuously and a bright one sweeps
+   diagonally every six seconds. The bob went 1.3 → 0.6 rad/s; letters that
+   heavy should not bounce.
+
+   **Two things worth keeping from it:**
+   - **Depth must be well under the stroke width.** A 45° extrusion as deep
+     as the stroke is thick fills the letters' own counters — the hole in the
+     `o` closed up and the word stopped being readable at DEPTH 7 of an 8 px
+     stroke. It is 4.
+   - **Gradient over the INKED rows, not the glyph cell.** Spanning the full
+     9-row cell put every letter in the middle bands, because nothing in
+     "spoils" fills the ascender and descender space — the wordmark came out
+     uniformly grey, the exact opposite of the fix.
 4. **UI and icons** — buttons, panels, the HUD.
 5. **The player model.**
 6. **World objects and textures.**
@@ -551,6 +578,17 @@ stale) and `CLAUDE.md`'s menu node count still read ~818 when it is 1717.
 **The rest of `CLAUDE.md`, `DESIGN.md`, `LORE.md` and `TASKS.md` has NOT been
 read against the code since 2026-08-02.** Assume there are more wrong
 sentences in there.
+
+## C7b. `tools/__pycache__` is TRACKED
+
+`tools/__pycache__/gen_art.cpython-314.pyc` is in git, so every generator
+edit dirties a binary blob and it rides along in the commit. It wants
+`git rm -r --cached tools/__pycache__` plus a `.gitignore` line. Left alone
+for now because it is pure noise, not a bug — but note the `.gitignore` half
+has a real cost worth reading first: `--checksec` scans only files git will
+LIST, so anything added to `.gitignore` becomes invisible to it. A `.pyc` is
+not in any of its scanned suffixes today, so this particular line costs
+nothing; the general rule still stands.
 
 ## C7. Repo weight *(user, deferred by them 2026-08-03)*
 

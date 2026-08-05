@@ -41,6 +41,55 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-05 — the title got a material; the map got sent back
+
+**Shipped: v0.6.51 — the title is cast metal.** Both halves of the user's
+complaint were real. *"just white"*: the wordmark was the 1× font blown up 7×
+in two flat tones, five colours in the whole image, and — the root cause —
+every edge was a 7 px slab while the rest of the menu renders at 1 px, so it
+read as a placeholder over finished art. Letterforms still come from the
+game's own font; the DETAIL is native resolution now (banded cel gradient,
+1 px lit/shaded rims, chamfered corners, directional weathering, a real
+extrusion). *"goes up and down a bit thats all"*: `scripts/gleam.gdshader`,
+which replaced a 34 px `clip_contents` bar that was **idle 5.1 seconds out of
+every 6**. Full write-up in TASKS.md A3.
+
+**The user's words:**
+- *"finish the polish pass"* — the same pass as the last session's, so the
+  waiver they gave then (batching allowed, no per-item screenshot sign-off)
+  still reads as live. Do NOT extend it past this pass.
+- **On the map screen, which v0.6.46 marked DONE:** *"the in game map looks
+  like an actual map that youd hold, i dont want it like that, i want there to
+  be colour on there, the trees are just lines in there too, and all the roads
+  are the same size oin the map, all the pois are like in the same spot, the
+  map just doesnt look good, like all the roads are symmetrical, the POIs too,
+  i just want it to at least look real a bit. like the map just looks like
+  squares and lines, doesnt look like an actual map. remember i dont want a
+  real looking map i just want it to look like a good real map that youd see
+  in other video games"*
+
+**THE MAP IS REOPENED. A1 item 1 is NOT done — v0.6.46 built the wrong
+thing.** It chased "a chart, not a screenshot of the ground" and landed on a
+surveyor's paper sheet: monochrome sienna, woods drawn as diagonal hatch
+strokes, every road an identical pale band, every POI an identical bordered
+square. The user wants a VIDEO GAME map — coloured terrain, tree masses,
+road hierarchy, POIs that read apart from each other.
+
+**Verified before touching anything, and one finding changes the brief:**
+**every road in the world is literally width 4** — `_plan_roads` appends
+`Vector2i(base, 4)` for all of them, vertical and horizontal. So *"all the
+roads are the same size"* is true of the WORLD, not just the drawing. The map
+cannot invent a hierarchy without lying — except that two roads genuinely are
+the through-routes (`keep_v`, the middle vertical carrying the toll crossing,
+and `_roads_h` index 1, the crosstown route kept whole so the district stays
+drivable). Draw those as arterials and it is TRUE. The rest of the grid
+symmetry is the FIXED district and is not the map's to fix.
+
+**Picked up at:** the map rebuild, TASKS.md A1 item 1. Nothing else in
+progress. v0.6.51 is tagged, smoked and pushed.
+
+---
+
 ## 2026-08-04 → 08-05 — walls stop light, and the map became a map
 
 *(Amended before the final push, which is the rule this file learned the hard

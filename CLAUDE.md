@@ -35,7 +35,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
 	 form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.50 shipped, 2026-08-05.** Milestone 1 (a walkable world) is DONE.
+**v0.6.51 shipped, 2026-08-05.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 
@@ -631,12 +631,13 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   card and the menu, with a "compiling shaders" bar that only appears if
   the work exceeds 120 ms. Fingerprints the engine build plus every
   `.gdshader` into `user://`, so it runs only after an update. There are
-  **FOUR** shaders (`flash`, `grade`, `sunshafts`, `sway` — all documented
-  individually in this section); this line claimed one, then three, so treat
+  **FIVE** shaders (`flash`, `grade`, `sunshafts`, `sway`, `gleam` — all
+  documented individually in this section); this line claimed one, then three,
+  then four, so treat
   its old "40 ms" as unmeasured. That figure decides whether the 120 ms bar
   ever shows, so re-measure before relying on it. **It DISCOVERS shaders by
   scanning the folder**, so a new `.gdshader` is picked up with no change
-  here — which is why `sway` needed no wiring.
+  here — which is why `sway` and `gleam` both needed no wiring.
 - `scripts/sway.gdshader` — foliage sway (v0.6.49). A WHOLE-PIXEL horizontal
   UV shift in the FRAGMENT stage, weighted by height so the trunk is pinned
   and only the crown moves. **Per-instance phase is hashed from the
@@ -646,6 +647,16 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   rng draw**, which would otherwise have re-rolled the FIXED district.
   Applied in `_add_prop` by PREFIX (`tree_`, `bush_`): `street_lamp`
   contains "tree", so a substring test waves every lamp post.
+- `scripts/gleam.gdshader` — the menu wordmark's moving light (v0.6.51). Two
+  layers on one diagonal coordinate: a wide dim band drifting forever, and a
+  narrow bright sweep every six seconds. Added to RGB and scaled by the
+  sprite's own alpha (the `flash.gdshader` guarantee — the silhouette cannot
+  fatten). **Intensity is QUANTISED to whole steps**, which both matches the
+  banded cel light of the menu paintings and means the ramp cannot band, so it
+  needs no dither of its own. It replaced a 34 px `clip_contents` Control
+  sliding a flat silver copy of the title across — a hard-edged vertical bar,
+  idle 5.1 seconds out of every 6. The `title_shine.png` it needed went with
+  it, and `make_title()` returns two images now, not three.
 - `Player.shake(strength, seconds)` — camera kick in WHOLE SCREEN PIXELS,
   applied inside `_camera_target` so it rides the same grid the camera
   already snaps to. Anything can find the player via group `player_shake`.

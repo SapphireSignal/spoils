@@ -5634,35 +5634,160 @@ def _render_word(word: str, upper_col, lower_col) -> Image.Image:
                         break
     return text
 
-def make_title() -> tuple[Image.Image, Image.Image, Image.Image]:
-    """Returns (wordmark, silver shine layer, tagline). The tagline is its own
-    static image (user: smaller, not animated with the title); the shine layer
-    is the wordmark in silver, swept across at runtime for a gleam."""
-    text = _render_word("spoils", C("ebede9"), C("819796"))
-    scale = 7
-    big = text.resize((text.width * scale, text.height * scale), Image.NEAREST)
-    title = Image.new("RGBA", (big.width + 4, big.height + 10), (0, 0, 0, 0))
-    shadow = Image.new("RGBA", big.size, (0, 0, 0, 0))
-    spx, bpx = shadow.load(), big.load()
-    for y in range(big.height):
-        for x in range(big.width):
-            if bpx[x, y][3] > 0:
-                spx[x, y] = (9, 10, 20, 140)
-    title.paste(shadow, (4, 8), shadow)
-    title.paste(big, (0, 0), big)
+def make_title() -> tuple[Image.Image, Image.Image]:
+    """Returns (wordmark, tagline). The tagline is its own static image (user:
+    smaller, not animated with the title).
 
-    # shine: letter pixels only (not outline/shadow), in bright silver
-    shine = Image.new("RGBA", title.size, (0, 0, 0, 0))
-    shp = shine.load()
-    tp = title.load()
-    for y in range(title.height):
-        for x in range(title.width):
-            p = tp[x, y]
-            if p[3] > 0 and p[:3] in (C("ebede9")[:3], C("819796")[:3]):
-                shp[x, y] = C("ebede9") if p[:3] == C("ebede9")[:3] else C("c7cfcc")
+    There used to be a third output, `title_shine.png` — a flat silver copy of
+    the wordmark that a narrow clipping Control swept across for a gleam. It
+    is gone: `scripts/gleam.gdshader` does that on the wordmark itself, with a
+    diagonal soft band instead of a hard-edged 34 px rectangle, and it costs
+    two fewer nodes and one fewer texture.
+
+    The wordmark is CAST METAL LETTERS STANDING OFF THE BACKDROP. It used to
+    be the 1x font blown up 7x in two flat tones — near-white above a hard
+    seam straight across every letter, grey below it — over a soft offset
+    drop shadow. Five colours in the whole image. The user's verdict: "its
+    just white, and it goes up and down a bit thats all, it seems boring".
+
+    The blow-up was the root of it. Every edge was a 7 px slab while the rest
+    of the menu renders at 1 px, so the wordmark read as a placeholder pasted
+    over finished art. The letterforms still come from the game's own font —
+    it is the only lowercase cut there is, and rule 2 says no other — but the
+    DETAIL is native resolution now: a banded cel gradient down the face with
+    wavy seams (the same treatment as the menu paintings), a 1 px lit rim on
+    the top-left edges, a 1 px shaded rim on the bottom-right, chamfered
+    corners so the silhouette is not an 8 px staircase, chips and rust, and a
+    real extrusion to the bottom-right so the letters have thickness. The
+    soft drop shadow is GONE — the extrusion does that job and does it with a
+    light direction, which the shadow never had.
+    """
+    import gen_font
+    rng = random.Random("title-cast-metal")
+
+    # ---- the letterforms, as 1x font cells
+    cells: set[tuple[int, int]] = set()
+    cx = 0
+    for ch in "spoils":
+        rows = gen_font.GLYPHS[ch]
+        for y, row in enumerate(rows):
+            for x, cell in enumerate(row):
+                if cell == "#":
+                    cells.add((cx + x, y))
+        cx += len(rows[0]) + 1
+    CW, CH = cx - 1, gen_font.GLYPH_H
+
+    # DEPTH is deliberately well under S. At 45 degrees a depth equal to the
+    # stroke width fills the letters' own counters — the hole in the o closed
+    # up and the word stopped being readable.
+    S, DEPTH, CHAMFER, PAD = 8, 4, 2, 1
+    W = CW * S + DEPTH + PAD * 2
+    H = CH * S + DEPTH + PAD * 2
+
+    def has(gx: int, gy: int) -> bool:
+        return (gx, gy) in cells
+
+    # ---- blow the cells up, chamfering OUTER corners so the silhouette does
+    # not read as a staircase of 8 px steps. A cell with fewer than two
+    # orthogonal neighbours is a stroke END (the stem of an l, the dot of an
+    # i); it is left square, because chamfering both its corners sharpens the
+    # cap to a point and the letter stops matching the font.
+    face: set[tuple[int, int]] = set()
+    for (gx, gy) in cells:
+        x0, y0 = PAD + gx * S, PAD + gy * S
+        cut: set[tuple[int, int]] = set()
+        if sum(has(gx + dx, gy + dy) for dx, dy in
+               ((1, 0), (-1, 0), (0, 1), (0, -1))) >= 2:
+            for dx, dy in ((-1, -1), (1, -1), (-1, 1), (1, 1)):
+                if has(gx + dx, gy) or has(gx, gy + dy):
+                    continue                       # not an outer corner
+                lx, sx = (0, 1) if dx < 0 else (S - 1, -1)
+                ly, sy = (0, 1) if dy < 0 else (S - 1, -1)
+                for i in range(CHAMFER):
+                    for j in range(CHAMFER - i):
+                        cut.add((lx + i * sx, ly + j * sy))
+        for y in range(S):
+            for x in range(S):
+                if (x, y) not in cut:
+                    face.add((x0 + x, y0 + y))
+
+    # ---- chip the odd corner. Six years outdoors is not factory-fresh. The
+    # bites are 1-2 px and land on the OUTER boundary only, so nothing that
+    # carries the letter shape is eaten.
+    edge = sorted(p for p in face
+                  if not all((p[0] + dx, p[1] + dy) in face
+                             for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))))
+    for _ in range(8):
+        ex, ey = rng.choice(edge)
+        for dy in range(rng.randint(1, 2)):
+            for dx in range(rng.randint(1, 2)):
+                face.discard((ex + dx, ey + dy))
+
+    c = Canvas(W, H)
+
+    # ---- the extruded side, deepest first so the near face wins the overlap
+    for d in range(DEPTH, 0, -1):
+        col = C("151d28") if d > 5 else (C("202e37") if d > 2 else C("394a50"))
+        for (x, y) in face:
+            if (x + d, y + d) not in face:
+                c.set(x + d, y + d, col)
+
+    # ---- the face: a banded cel gradient with wavy seams, lit from above.
+    # The wave is what stops it reading as a ruler-straight seam across the
+    # whole word, which is exactly what the old two-tone split did.
+    RAMP = [C("202e37"), C("394a50"), C("577277"), C("819796"),
+            C("a8b5b2"), C("c7cfcc"), C("ebede9")]
+    BANDS = [6, 5, 4, 3, 2]                        # ramp index, top to bottom
+    # Over the INKED rows, not the 9-row glyph cell. The cell includes the
+    # ascender and descender space no letter in "spoils" fills top to bottom,
+    # so spanning it put every letter in the middle bands and the whole
+    # wordmark came out grey — the opposite of the fix.
+    top = min(y for _, y in face)
+    span = max(y for _, y in face) - top + 1
+    lvl: dict[tuple[int, int], int] = {}
+    for (x, y) in face:
+        wave = 2.0 * math.sin(x * 0.055 + 1.7) + 1.2 * math.sin(x * 0.11)
+        t = (y - top + wave) / span
+        v = BANDS[min(len(BANDS) - 1, max(0, int(t * len(BANDS))))]
+        # 1 px rims. Bottom-right wins any tie: that is the side the
+        # extrusion runs down, so the light has to agree with it.
+        if (x, y + 1) not in face or (x + 1, y) not in face:
+            v = max(0, v - 2)
+        elif (x, y - 1) not in face or (x - 1, y) not in face:
+            v = min(len(RAMP) - 1, v + 1)
+        lvl[(x, y)] = v
+
+    # ---- weathering, and it has a DIRECTION. The first cut used the prop
+    # wear helpers — speckle patches plus diagonal scratches — and on a
+    # wordmark they read as scattered stickers and little orange arrows, not
+    # as a material. What reads is water: grime runs DOWN from whatever edge
+    # it collects on, so these are vertical streaks starting at a top edge,
+    # one ramp step darker than whatever band they cross.
+    tops = sorted(p for p in face if (p[0], p[1] - 1) not in face)
+    for _ in range(16):
+        sx, sy = rng.choice(tops)
+        for w in range(rng.choice((1, 1, 2))):
+            x, y = sx + w, sy + rng.randint(0, 1)
+            for _ in range(rng.randint(4, 20)):
+                if (x, y) not in lvl:
+                    break
+                lvl[(x, y)] = max(0, lvl[(x, y)] - 1)
+                y += 1
+
+    for (x, y) in face:
+        c.set(x, y, RAMP[lvl[(x, y)]])
+
+    # ---- rust, only where water sits: the bottom edge of a letter. Solid
+    # patches, never dot noise (standing rule).
+    base = [p for p in face if (p[0], p[1] + 1) not in face
+            and p[1] > top + span * 0.55]
+    if base:
+        speckle(c, rng, base, [C("7a4841"), C("884b2b")], [0.09, 0.06])
+
+    c.outline_auto(OUTLINE)
 
     tag = _render_word("loot. extract. survive.", C("c7cfcc"), C("819796"))
-    return title, shine, tag
+    return c.img, tag
 
 # ---------------------------------------------------------- menu backdrops ---
 # TWO rotating main-menu scenes, 960x544 (covers the expanded view on any
@@ -18236,9 +18361,8 @@ def main() -> None:
         "dirs": [d for d, _, _ in DIR_VIEWS],
     }
 
-    title_img, shine_img, tagline_img = make_title()
+    title_img, tagline_img = make_title()
     title_img.save(OUT / "title.png")
-    shine_img.save(OUT / "title_shine.png")
     tagline_img.save(OUT / "tagline.png")
     make_vignette().save(OUT / "vignette.png")    # soft alpha by design
     make_dither().save(OUT / "dither.png")        # anti-banding film

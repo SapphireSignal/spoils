@@ -68,15 +68,11 @@ const TEX_DRAIN_DROP := preload("res://art/gen/menu_drain_drop.png")
 const TEX_VIGNETTE := preload("res://art/gen/vignette.png")
 const TEX_MAP_THUMB := preload("res://art/gen/menu_map_transit.png")
 const TEX_TITLE := preload("res://art/gen/title.png")
-const TEX_SHINE := preload("res://art/gen/title_shine.png")
 const TEX_TAGLINE := preload("res://art/gen/tagline.png")
+const SHADER_GLEAM := preload("res://scripts/gleam.gdshader")
 
 # painting-space -> scene-space (backdrops are 960x544, centered on origin)
 const PC := Vector2(-480, -272)
-
-const SHINE_PERIOD := 6.0   # seconds between gleams
-const SHINE_SWEEP := 0.9    # gleam travel time
-const SHINE_WIDTH := 34.0
 
 var _scenes: Array[Node2D] = []
 var _scene_index := 0
@@ -190,8 +186,6 @@ var _rain: Array[Dictionary] = []
 
 var _title: TextureRect
 var _title_base_y := 0.0
-var _shine_clip: Control
-var _shine: TextureRect
 var _buttons: VBoxContainer
 var _settings: SettingsPanel
 var _keybinds: KeybindsPanel
@@ -212,6 +206,11 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.51", [
+		"the title on the menu is cast metal now instead of a flat white word - it has thickness, its lit from above, and its got wear and rust on it like everything else in the game does",
+		"light moves across it properly. it used to be a straight-edged bar that slid over the letters once every six seconds and did nothing in between - now theres a soft angled gleam that never stops drifting, and a brighter one that sweeps through now and then",
+		"it floats slower too. heavy metal letters bouncing looked wrong",
+	]],
 	["v0.6.50", [
 		"the transit tile on the map-select screen is an actual picture now instead of a little top-down diagram - the district at dusk, the spires on the horizon, the sun going down behind the roofs, the comms mast, the treeline, and the wire in front of it all",
 		"its drawn at the exact size of the button, so its sharp - the old one was a smaller image stretched up, which is why it looked soft",
@@ -964,20 +963,10 @@ func _process(delta: float) -> void:
 		_rotate_timer = 0.0
 		_activate(_bag_next(), false)
 
-	_title.position.y = _title_base_y + roundf(sin(_time * 1.3) * 2.0)
-
-	# silver gleam sweeping across the wordmark every few seconds
-	var phase := fmod(_time, SHINE_PERIOD)
-	if phase < SHINE_SWEEP:
-		_shine_clip.visible = true
-		var title_pos := _title.global_position
-		var travel := _title.size.x + SHINE_WIDTH * 2.0
-		_shine_clip.global_position = Vector2(
-			roundf(title_pos.x - SHINE_WIDTH + travel * (phase / SHINE_SWEEP)),
-			title_pos.y)
-		_shine.global_position = title_pos
-	else:
-		_shine_clip.visible = false
+	# A SLOW float, and it is no longer the only thing the title does. The bob
+	# ran at 1.3 rad/s, which on cast letters this heavy read as bouncing;
+	# gleam.gdshader now carries the life, so this only has to breathe.
+	_title.position.y = _title_base_y + roundf(sin(_time * 0.6) * 2.0)
 
 	# per-scene life (also during crossfades — anything visible stays alive).
 	# ALL SIX are alive as of v0.6.35. A seventh would tick nothing until it
@@ -2025,20 +2014,14 @@ func _build_ui() -> void:
 	_title.stretch_mode = TextureRect.STRETCH_KEEP
 	_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_title_base_y = _title.offset_top
+	# the gleam rides the wordmark itself. It used to be a second TextureRect
+	# holding a flat silver copy, shown through a 34 px clipping Control that
+	# slid across — a hard-edged vertical bar, and dark for 5.1 of every 6
+	# seconds. The shader does it diagonally, softly, and never goes idle.
+	var gleam := ShaderMaterial.new()
+	gleam.shader = SHADER_GLEAM
+	_title.material = gleam
 	root.add_child(_title)
-
-	# gleam layer: a narrow clipping window sweeps over a silver copy
-	_shine_clip = Control.new()
-	_shine_clip.clip_contents = true
-	_shine_clip.size = Vector2(SHINE_WIDTH, _title.texture.get_height())
-	_shine_clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_shine_clip.visible = false
-	_shine = TextureRect.new()
-	_shine.texture = TEX_SHINE
-	_shine.stretch_mode = TextureRect.STRETCH_KEEP
-	_shine.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_shine_clip.add_child(_shine)
-	root.add_child(_shine_clip)
 
 	# tagline: its own small static image (not animated with the title)
 	var tagline := TextureRect.new()

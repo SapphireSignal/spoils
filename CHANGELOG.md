@@ -3,6 +3,44 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.51] — 2026-08-05 — the title is cast metal
+
+### Changed — the menu wordmark
+It was the 1× bitmap font blown up 7×, in two flat tones split by a hard seam
+straight across every letter, over a soft offset drop shadow — **five colours
+in the whole image**. The user: *"its just white, and it goes up and down a
+bit thats all, it seems boring"*.
+
+The blow-up was the root of it. Every edge was a 7 px slab while the rest of
+the menu renders at 1 px, so the wordmark read as a placeholder pasted over
+finished art. The letterforms still come from the game's own font — it is the
+only lowercase cut there is — but **the detail is native resolution now**: a
+banded cel gradient down the face with wavy seams, a 1 px lit rim on the
+top-left edges and a 1 px shaded rim on the bottom-right, chamfered corners so
+the silhouette is not an 8 px staircase, and **a real extrusion to the
+bottom-right** so the letters have thickness. The drop shadow is gone; the
+extrusion does that job and does it with a light direction.
+
+### Changed — the gleam, and `scripts/gleam.gdshader` (new)
+The old one was a 34 px-wide `Control` with `clip_contents` sliding a flat
+silver copy of the title across it: a **hard-edged vertical rectangle**, and
+dark for 5.1 of every 6 seconds. Metal does not gleam in vertical bars.
+
+It is a shader on the wordmark itself now, with two layers on one diagonal
+coordinate — a wide dim band that never stops drifting, and a narrow bright
+sweep every six seconds. Both add to RGB scaled by the sprite's own alpha, the
+same guarantee `flash.gdshader` gives, so the silhouette cannot fatten.
+**The intensity is quantised to whole steps**, which matches the banded cel
+light the menu paintings use and means a gradual ramp cannot band.
+
+It also costs **two fewer nodes and one texture less**: `title_shine.png` is
+gone, and `shader_warm.gd` picks the new shader up on its own because it
+discovers them by scanning the folder.
+
+### Changed — the float
+The bob ran at 1.3 rad/s, which on letters this heavy read as bouncing. It is
+0.6 now, and it is no longer the only thing the title does.
+
 ## [0.6.50] — 2026-08-05 — the map-select tile is a picture now
 
 ### Changed — the transit tile on the map-select screen
