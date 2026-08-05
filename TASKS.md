@@ -102,9 +102,45 @@ light); and OVERCAST weather so a dry day isn't automatically a sunny one.
     rotation or scale — so it fits the standing pixel-grid rules.
   - Sources: the Godot 2D lights and shadows docs, godotshaders' "2D cast
     shadow", and Connor Wolf's write-up on isometric lighting in 4.4.
-- **Wet-ground reflections** in rain; **contact shadows** so props sit in
-  the world rather than on it; **window light spill** onto pavement at
+- **Wet-ground reflections** in rain; **window light spill** onto pavement at
   night; **heat shimmer** at midday.
+
+- **Contact shadows so props sit in the world rather than on it — ATTEMPTED
+  2026-08-05, BUILT, MEASURED AND BACKED OUT. Read this before retrying: the
+  architecture was right and the TUNING is what failed.**
+
+  **The problem is real and confirmed.** Props cast nothing at all, verified
+  three ways: `shadow.png` has exactly ONE loader in the project
+  (`player.gd`), `_add_prop` builds only a Sprite2D plus an optional collider
+  with no shadow child, and a midday crop of open pavement shows a planter
+  and a vending machine with no darkening under them whatever. They read as
+  pasted on rather than standing there.
+
+  **The cheap architecture WORKS — reuse it.** Not a Sprite2D per prop; that
+  is thousands of nodes against a ~8.0k budget for something that never
+  moves. One `Node2D` with a custom `_draw()` that draws every blob is **1
+  node**, `_draw` runs once, the renderer caches it, per-frame cost nil.
+
+  **What actually killed it: OVERLAP.** Clustered props — `_place_pile` puts
+  an anchor plus thinning satellites — stack their blobs, and semi-transparent
+  shadows COMPOUND where they overlap. Four on top of each other read as one
+  grey rectangular smear, not as four things sitting on the ground.
+
+  **Two findings worth keeping:**
+  - **Integer scale only.** Sizing the blob continuously off the footprint
+    stretched the 24x12 texture to ~67x34 — a 2.8x nearest-neighbour blow-up
+    that lands blocks of uneven size and reads as a slab. This game renders
+    on an integer pixel ladder and its shadows have to as well.
+  - **The footprints are SMALL, so the native blob is already about right.**
+    `planter_0` is `['diamond', 10.0, 5.0]`, `barrel_0` is `['circle', 9.0]`.
+    Sizing was never the problem.
+
+  **Where to start next time:** gate on footprint so small clutter takes no
+  shadow at all — that alone removes most of the soup — and/or composite the
+  layer with MAX alpha instead of letting overlaps accumulate, so a cluster
+  gets one merged silhouette rather than four stacked blobs. Note
+  `shadow.png` is a 24x12 ellipse whose own peak alpha is only ~50%, so it is
+  already faint: the fix is NOT simply turning the alpha down further.
 - **Sway shader** on bushes and trees — a WHOLE-PIXEL horizontal offset,
   never a rotation.
 - NOT recommended: depth of field, chromatic aberration, motion blur.
