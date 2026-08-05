@@ -123,6 +123,28 @@ CLAUDE.md's own systems map says so three sections above its own wrong line.
 A fresh session would have asked the user to re-decide something they settled
 on 2026-08-02. Both deleted.
 
+**Also shipped: v0.6.47 — two structural fixes, on the user's explicit green
+light** (*"i give you clear creative direction, validation, and the green
+light to fix any structural issues you find. build anything you want"*):
+
+- **`--checkclaims`, the numbers gate.** `--checkdocs` cannot verify a
+  sentence — but **the sentences that rot here are overwhelmingly NUMERIC**,
+  and a number is checkable. It reads each claim out of CLAUDE.md's own prose
+  (no duplicated copy to drift) and compares it against the constant the game
+  really uses, read at runtime off `WorldBuilder`/`EnvironmentSystem` rather
+  than regexed out of source. Covers the day length, `DAY_SECONDS`,
+  `BARRIER_INSET`, `MAP_W`, `DISTRICT_SEED`. Runs inside `--smoke`.
+  **It FAILS CLOSED** — reword a sentence so its number stops parsing and you
+  get a failure naming the pattern. All five claims AND the fail-closed path
+  were fire-tested by planting real violations; CLAUDE.md was restored
+  byte-identical afterwards, verified with `git diff`.
+- **The headless log is quiet.** ~50 `Not supported by this display server`
+  blocks per run, all from `Settings.bind_label` asking headless to translate
+  a physical keycode. **50 → 0.** That noise is why the docs had to tell every
+  session to check the HEAD of the log for `Parse Error` — it buried real
+  errors. **If a future session sees that spam again, the guard has been
+  removed; do not re-adapt the docs around it.**
+
 **Picked up at: THE POLISH PASS IS NOT FINISHED — see TASKS.md section A.**
 Engine side still open: directional cast shadows from props and the player
 (everything shares one static blob), wet-ground reflections, contact shadows,

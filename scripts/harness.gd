@@ -16,6 +16,13 @@ extends Node
 ##                    and no doc names a file that does not exist. Runs
 ##                    inside --smoke too; this flag is the one-second
 ##                    standalone version. Must print "DOCS PASS".
+##   --checkclaims    THE NUMBERS GATE. Reads numeric claims out of
+##                    CLAUDE.md's own prose and compares each against the
+##                    constant the game actually uses at runtime. Exists
+##                    because --checkdocs cannot verify a sentence, and the
+##                    sentences that rot here are overwhelmingly numeric.
+##                    Fails closed: a claim it can no longer parse is a
+##                    FAIL. Must print "CLAIMS PASS".
 ##   --checksec       the security audit: the git remote has not moved, no
 ##                    network calls exist anywhere, the python toolchain
 ##                    imports only vetted modules, shelling out is confined
@@ -130,6 +137,8 @@ func _ready() -> void:
 			_shaderwarm.call_deferred()
 		elif arg == "--checkdocs":
 			_checkdocs.call_deferred()
+		elif arg == "--checkclaims":
+			_checkclaims.call_deferred()
 		elif arg == "--checksec":
 			_checksec.call_deferred()
 		else:
@@ -146,7 +155,8 @@ func _ready() -> void:
 		printerr("HARNESS: expected --smoke, --shot=<name>, "
 			+ "--shot-splash=<name>, --perf, "
 			+ "--perf-deploy, --probe-world, --probe-sniper, "
-			+ "--probe-exclusive, --shaderwarm, --checkdocs, --checksec or "
+			+ "--probe-exclusive, --shaderwarm, --checkdocs, --checkclaims, "
+			+ "--checksec or "
 			+ "--leakcheck. --toll/--freight/--at=/--seed= are MODIFIERS, "
 			+ "not actions of their own — and --seed= pins the district for "
 			+ "ANY action that builds a world (--shot, --probe-world, "
@@ -185,6 +195,7 @@ func _smoke() -> void:
 	# DOCS FIRST. It costs a millisecond, needs no world, and a stale handoff
 	# is a real failure — there is no sense building a district to find it.
 	var failures: Array[String] = _check_docs()
+	failures.append_array(_check_claims())
 	failures.append_array(_check_security())
 	await _ensure_game_scene()
 
@@ -1229,6 +1240,88 @@ func _check_security() -> Array[String]:
 				fails.append("%s contains something shaped like a secret "
 					% rel + "(pattern %d) — check before it is pushed" % i)
 	return fails
+
+
+func _check_claims() -> Array[String]:
+	## THE NUMBERS GATE.
+	##
+	## `--checkdocs` proves a version agrees and a path exists. It cannot read
+	## a SENTENCE, and CLAUDE.md says so plainly — "a check cannot verify
+	## prose". That is true, and it is not the whole story, because the
+	## sentences that have actually rotted on this project were overwhelmingly
+	## NUMERIC. Every one of these was written down as fact and was false:
+	##
+	##   "~818 nodes" (1717)        "~34k nodes" (~8k)
+	##   "~34 buildings" (15)       "a 20 min day" (18)
+	##   "BARRIER_INSET 72" (66)    "3 rotating backdrops" (2)
+	##   "clear 52%, the most common weather" (overcast, and 42%)
+	##
+	## A NUMBER IS CHECKABLE. This reads the claim out of the doc's own prose —
+	## no duplicated copy that can drift from the sentence beside it — and
+	## compares it against the value THE GAME ACTUALLY USES, read off the real
+	## constant at runtime rather than regexed out of the source, so the code
+	## side cannot be fooled by formatting or by a comment.
+	##
+	## IT FAILS CLOSED, deliberately. If a sentence is reworded so its number
+	## no longer parses, that is a FAILURE and not a pass. The alternative is
+	## the vacuous green this project has already been bitten by twice: the
+	## door smoke test that stayed green for three releases without touching a
+	## door, and `_read_doc` returning "" for a missing file so every pattern
+	## below it matched nothing and reported nothing.
+	var fails: Array[String] = []
+	var claude := _read_doc("CLAUDE.md")
+	if claude.strip_edges().is_empty():
+		fails.append("CLAUDE.md is missing or empty — not one claim could be checked")
+		return fails
+
+	var claims := [
+		{"what": "the day length in minutes",
+			"re": "day/night tint \\(\\*\\*(\\d+) min\\*\\*",
+			"is": EnvironmentSystem.DAY_SECONDS / 60.0},
+		{"what": "DAY_SECONDS itself",
+			"re": "`DAY_SECONDS` ([0-9.]+)",
+			"is": EnvironmentSystem.DAY_SECONDS},
+		{"what": "the barricade ring inset",
+			"re": "BARRICADE RING at inset (\\d+)",
+			"is": float(WorldBuilder.BARRIER_INSET)},
+		{"what": "the planned map size in cells",
+			"re": "(\\d+)×\\d+ planned map",
+			"is": float(WorldBuilder.MAP_W)},
+	]
+	for c in claims:
+		var found := _first_match(claude, str(c["re"]))
+		if found.is_empty():
+			fails.append(("CLAUDE.md no longer states %s in a form this check "
+				+ "can read (pattern /%s/). Fix the sentence or fix the "
+				+ "pattern — an unreadable claim FAILS, it never passes.")
+				% [str(c["what"]), str(c["re"])])
+			continue
+		if absf(found.to_float() - float(c["is"])) > 0.001:
+			fails.append("CLAUDE.md says %s is %s — the code says %s"
+				% [str(c["what"]), found, str(c["is"])])
+
+	# the district seed is a STRING, not a number, and it is the one value the
+	# whole fixed-map promise rests on: change it and every quest address,
+	# every screenshot and every remembered street moves.
+	var seed_said := _first_match(claude, "DISTRICT_SEED = \"([a-z0-9-]+)\"")
+	if seed_said.is_empty():
+		fails.append("CLAUDE.md no longer states DISTRICT_SEED in a readable "
+			+ "form (pattern /DISTRICT_SEED = \"...\"/)")
+	elif seed_said != WorldBuilder.DISTRICT_SEED:
+		fails.append("CLAUDE.md says the district seed is \"%s\" — the code says \"%s\""
+			% [seed_said, WorldBuilder.DISTRICT_SEED])
+	return fails
+
+
+func _checkclaims() -> void:
+	var fails := _check_claims()
+	if fails.is_empty():
+		print("CLAIMS PASS")
+		get_tree().quit(0)
+	else:
+		for failure in fails:
+			printerr("CLAIMS FAIL: " + failure)
+		get_tree().quit(1)
 
 
 func _checksec() -> void:

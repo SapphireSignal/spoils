@@ -212,6 +212,10 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.47", [
+		"nothing you can see in game - this one is about keeping the notes honest. the docs are full of numbers about how the game is built, and a few of them had quietly gone wrong over time. theres a check now that reads each number out of the notes and compares it against what the game actually does, and the build fails if they disagree",
+		"the games own test log used to print about fifty harmless errors every run, which made a real error easy to miss. it prints none now",
+	]],
 	["v0.6.46", [
 		"the map is a proper drawn map now instead of coloured squares - paper, inked edges, roads with a pale channel down the middle, the woods hatched in, the rail as a ladder and the wire as a broken red line",
 		"every place on it has its own little drawn symbol - a bus at the depot, a crane at the scrapyard, a swing at the playground, a mast at comms, the boom at the toll gate, an h pad at the lift, and a red house on your safehouse",

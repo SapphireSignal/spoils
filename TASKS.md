@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.46.** The release history was renumbered evenly on
+**Current version: v0.6.47.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -64,6 +64,23 @@ light); and OVERCAST weather so a dry day isn't automatically a sunny one.
     per-object controllable. Lit WINDOWS are the obvious next customer.
 - **Directional cast shadows** from props and the player, angled to the
   sun and swinging through the day. Everything shares one static blob now.
+
+  **THE PREMISE WAS CHECKED BEFORE STARTING (2026-08-05) AND IT IS NOT WHAT
+  YOU WOULD ASSUME. Read this before writing a line:**
+  - **Godot 2D has no sun / directional light that casts shadows.** Still an
+    open engine issue (godotengine/godot#25486). So this CANNOT come from a
+    `Light2D`, and it is not an extension of the v0.6.45 wall occluders.
+  - **In isometric specifically, occluder shadows project across a wall as
+    if it were not there** — a wall sprite has no height as far as the engine
+    is concerned. So adding `LightOccluder2D` to props would produce a flat,
+    wrong-looking result. The wall occluders are the right tool for BLOCKING
+    light and the wrong tool for CASTING a prop's shadow.
+  - **The real mechanism is `SHADOW_VERTEX`**, a CanvasItem shader built-in
+    that displaces shadow geometry: you shear a sprite's shadow by the sun
+    angle. It is a shader, it moves in whole pixels, and it needs no runtime
+    rotation or scale — so it fits the standing pixel-grid rules.
+  - Sources: the Godot 2D lights and shadows docs, godotshaders' "2D cast
+    shadow", and Connor Wolf's write-up on isometric lighting in 4.4.
 - **Wet-ground reflections** in rain; **contact shadows** so props sit in
   the world rather than on it; **window light spill** onto pavement at
   night; **heat shimmer** at midday.

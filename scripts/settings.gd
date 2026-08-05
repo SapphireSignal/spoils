@@ -165,6 +165,18 @@ func reset_binds() -> void:
 
 func bind_label(action: String) -> String:
 	var code: int = binds[action]
+	# HEADLESS HAS NO KEYBOARD, and asking it to translate a physical keycode
+	# pushed an ERROR plus a five-frame stack trace EVERY TIME. The keybind
+	# panel builds a row per action and gets built on the menu, on the pause
+	# menu and again on every harness run, so a headless --smoke printed ~50 of
+	# them. That noise is not free: it buried real errors, and this project's
+	# own docs had to tell every session "the verdict prints at the END, check
+	# the HEAD for Parse Error" precisely because the signal was lost in it.
+	#
+	# The physical->keycode step is a courtesy for non-qwerty layouts, and
+	# there is no layout without a display server, so skipping it loses nothing.
+	if DisplayServer.get_name() == "headless":
+		return OS.get_keycode_string(code)
 	var keycode := DisplayServer.keyboard_get_keycode_from_physical(code)
 	var label := OS.get_keycode_string(keycode)
 	return label if label != "" else OS.get_keycode_string(code)

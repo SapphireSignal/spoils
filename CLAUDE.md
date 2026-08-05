@@ -35,7 +35,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
 	 form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.46 shipped, 2026-08-05.** Milestone 1 (a walkable world) is DONE.
+**v0.6.47 shipped, 2026-08-05.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 
@@ -287,7 +287,11 @@ gates printed PASS — including that the very first command at the top of this
 file (`godot_console …`) resolved to nothing on this machine.
 
 **A CHECK CANNOT VERIFY PROSE.** This is the permanent limit, so do not
-mistake a green gate for a true document. `--checkdocs` can only test
+mistake a green gate for a true document. **One slice of it IS checked now**
+— `--checkclaims` (v0.6.47) verifies numeric and fixed-string claims against
+the constants the game really uses, because most of the rot found on this
+project turned out to be numbers rather than reasoning. That narrows the gap.
+Everything below still stands for every claim that is not a number. `--checkdocs` can only test
 mechanically checkable facts — versions agree, paths exist, commands resolve.
 It can never test that a SENTENCE is true. "3 rotating backdrops" when there
 are 2, "the boot scene is the menu" when it is the splash, "a 320×320 map"
@@ -733,6 +737,34 @@ before the world builds, so a stale handoff is a red build rather than
 something the next session discovers hours in. **If it fails, fix the docs
 before writing code** — that is the whole point of it.
 
+`godot_console --headless --path . -- --checkclaims` → must print
+`CLAIMS PASS`. **THE NUMBERS GATE (v0.6.47).** "A check cannot verify prose"
+is true and it is not the whole story: **the sentences that have actually
+rotted here were overwhelmingly NUMERIC** — "~818 nodes" (1717), "~34k nodes"
+(~8k), "~34 buildings" (15), "a 20 min day" (18), "BARRIER_INSET 72" (66),
+"3 rotating backdrops" (2). A number IS checkable, so these now are.
+
+It reads each claim **out of CLAUDE.md's own prose** — never a duplicated
+copy, which would just be one more thing to drift — and compares it against
+the constant **the game actually uses, read at runtime** off `WorldBuilder`
+and `EnvironmentSystem` rather than regexed out of the source, so the code
+side cannot be fooled by a comment or by formatting. Covered today: the day
+length in minutes, `DAY_SECONDS`, `BARRIER_INSET`, `MAP_W`, and the
+`DISTRICT_SEED` string. It runs inside `--smoke` too.
+
+**IT FAILS CLOSED, and that is the point.** Reword a sentence so its number
+no longer parses and you get a FAIL naming the pattern, not a silent pass —
+the vacuous-green failure mode that produced the door test which touched no
+door. **So if you reword one of those sentences, expect to update the
+pattern; that is the cost of the guarantee, and it is deliberate.**
+**All five claims and the fail-closed path were verified to actually FIRE**
+by planting a real violation of each and watching it fail.
+
+**What it still cannot do:** anything that is not a number or a fixed string.
+"overcast is the most common weather", "the safehouse is in the north-east",
+"one door per building" — all still prose, all still only checkable by
+reading. This narrows the gap; it does not close it.
+
 
 **`gen_art.py` NO LONGER WIPES `art/gen` UP FRONT** (v0.6.44). It writes
 everything and purges untouched files at the END, so a crash mid-run leaves
@@ -753,12 +785,18 @@ then `godot_console --headless --path . --import`.
   → must print `SMOKE PASS` (covers movement, crouch, border, roofs, doors,
   edge sniper, pause; `harness.gd`'s `_smoke()` is the source of truth for
   coverage — the three extractions are NOT in it, check those as shots).
-  **Its output looks alarming and is fine.** A headless run prints ~50
-  blocks of `ERROR: Not supported by this display server` from
-  `keyboard_get_keycode_from_physical` (the keybind panel asking for key
-  names with no display server), and on exit `4 ObjectDB instances were
-  leaked` / `2 resources still in use`. Both are headless-teardown noise and
-  neither contradicts the "Leaks: none" baseline above, which is measured by
+  **THE ~50 BLOCKS OF `Not supported by this display server` ARE GONE**
+  (v0.6.47). `Settings.bind_label` asked the display server to translate a
+  physical keycode, and headless has no keyboard, so every keybind row
+  printed an ERROR plus a five-frame stack trace — on the menu, on the pause
+  menu, and again on every harness run. It now returns the plain keycode
+  string when `DisplayServer.get_name() == "headless"`, which loses nothing
+  (the physical→keycode step is a courtesy for non-qwerty layouts, and there
+  is no layout without a display server). **That noise was not free: it
+  buried real errors**, which is exactly why the rule below had to exist.
+  A run still prints `4 ObjectDB instances were leaked` / `2 resources still
+  in use` on exit — that IS harmless teardown noise, and it does not
+  contradict the "Leaks: none" baseline above, which is measured by
   `--leakcheck` inside a running game, not at process exit. **What matters is
   `SMOKE PASS` at the END and zero `Parse Error` at the HEAD.**
 - Shots: `godot_console --path . -- --shot=<name>` (+ optional flags:

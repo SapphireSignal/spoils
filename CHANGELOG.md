@@ -3,6 +3,50 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.47] — 2026-08-05 — a gate for the numbers, and the log gets quiet
+
+**No game change.** Tooling and one long-standing noise bug.
+
+### Added — `--checkclaims`, the numbers gate
+`--checkdocs` proves a version agrees and a path exists. It cannot read a
+sentence, and `CLAUDE.md` has said so for a while: *"a check cannot verify
+prose"*. True — and not the whole story, because **the sentences that have
+actually rotted on this project were overwhelmingly numeric.** Every one of
+these was written down as fact and was false: `~818 nodes` (1717) ·
+`~34k nodes` (~8k) · `~34 buildings` (15) · `a 20 min day` (18) ·
+`BARRIER_INSET 72` (66) · `3 rotating backdrops` (2).
+
+A number is checkable, so these are now. The gate reads each claim **out of
+`CLAUDE.md`'s own prose** — never a duplicated copy, which would only be one
+more thing to drift — and compares it against the constant **the game
+actually uses, read at runtime** off `WorldBuilder` and `EnvironmentSystem`
+rather than regexed out of the source, so the code side cannot be fooled by
+a comment or by formatting. It covers the day length, `DAY_SECONDS`,
+`BARRIER_INSET`, `MAP_W` and the `DISTRICT_SEED` string, and runs inside
+`--smoke`.
+
+**It fails closed.** Reword a sentence so its number no longer parses and you
+get a failure naming the pattern, not a silent pass — the vacuous-green mode
+that once produced a door test which never touched a door.
+
+**All five claims and the fail-closed path were fire-tested** by planting a
+real violation of each and watching it fail, then restoring `CLAUDE.md`
+byte-identical. A check that has only ever passed proves nothing.
+
+### Fixed — the headless log is quiet now
+A headless run printed **~50 blocks** of `ERROR: Not supported by this
+display server`, each with a five-frame stack trace. `Settings.bind_label`
+asked the display server to translate a physical keycode; headless has no
+keyboard, so every keybind row raised one — on the menu, on the pause menu,
+and again on every harness run.
+
+That noise was not free. **It buried real errors**, and it is the reason the
+docs have to tell every session "the verdict prints at the END, check the
+HEAD for `Parse Error`". The fix returns the plain keycode string when the
+display server is headless, which loses nothing: the physical→keycode step
+is a courtesy for non-qwerty layouts, and there is no layout without a
+display server. **Measured: 50 → 0.**
+
 ## [0.6.46] — 2026-08-05 — the map is a drawn map now
 
 ### Changed — the map screen, rebuilt as a chart
