@@ -212,6 +212,10 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.50", [
+		"the transit tile on the map-select screen is an actual picture now instead of a little top-down diagram - the district at dusk, the spires on the horizon, the sun going down behind the roofs, the comms mast, the treeline, and the wire in front of it all",
+		"its drawn at the exact size of the button, so its sharp - the old one was a smaller image stretched up, which is why it looked soft",
+	]],
 	["v0.6.49", [
 		"the trees and bushes move now. every one of them leans in the wind on its own timing, with the trunk staying put and only the leaves shifting, so a wood doesnt look like a field of identical statues any more",
 		"it shifts by whole pixels only, so nothing goes blurry, and it costs nothing - still 240fps in the middle of the forest and on a storm night",

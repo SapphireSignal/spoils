@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.49.** The release history was renumbered evenly on
+**Current version: v0.6.50.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -197,12 +197,27 @@ Agreed order for the remaining art work:
    warehouse, trainyard) get the name only, with no symbol, which is also the
    cartographic convention and stops a zone's several rects carpeting the
    sheet with repeats. Easy to change if the user wants it literal.
-2. **The map-select tile.** *(user)* Currently a 96×96 mini-map of grid
-   and orange/green blobs, stretched 1.25× into a 120×120 button — so it
-   is blurred as well as dull. Wants "an actual picture of the map from a
-   scenic view, very detailed". **Generate at exactly 120×120** so it maps
-   1:1. (This said the overlook backdrop could serve double duty; that
-   pitch was dropped 2026-08-02, so the tile needs its own art now.)
+2. **The map-select tile — DONE in v0.6.50.** *(user: "an actual picture of
+   the map from a scenic view, very detailed")* It was a 96×96 top-down
+   diamond of grid lines and blobs, stretched 1.25× into a 120×120 button —
+   blurred as well as dull. It is now a **painted dusk vista at exactly
+   120×120**, so it maps 1:1 and no scaling touches it: banded cel sky with
+   wavy seams, the spires on the horizon, the low sun, the town's roofs with
+   lit windows, the comms mast and its red light, a treeline, the rail, and
+   **the wire in silhouette across the foreground** — the district's whole
+   premise as the nearest thing in frame.
+
+   **Two defects caught by looking at it, both already-known lessons:**
+   - The treeline was first built from `abs(sin(x))`, which gave a regular
+     **sawtooth that reads as a mountain range** — the exact failure recorded
+     in HANDOFF.md. Rebuilt from overlapping crowns of varying width and
+     height. **Never build a natural silhouette from a periodic function.**
+   - The chain-link mesh was `10141f` on a `090a14` fence — four values apart,
+     so the whole fence read as a black bar. Every new element must beat the
+     background it lands on, measured, not assumed.
+
+   Verified only `menu_map_transit.png` changed in `art/gen` — the generator
+   rewrites everything, so that check is what proves no other art moved.
 3. **The title.** *(user: "its just white, and it goes up and down a bit
    thats all, it seems boring")* Needs real treatment — weight, depth, a
    material, something happening beyond a bob.

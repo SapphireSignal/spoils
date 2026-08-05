@@ -17633,41 +17633,119 @@ def make_menu_map_thumb() -> Canvas:
     to DISTRICT_SEED "transit-01", so every deploy is bit-identical and a
     faithful bake IS possible if this is ever redone.)"""
     rng = random.Random(f"{SEED}:mapthumb")
-    c = Canvas(96, 96)
-    cx = cy = 48
-    for y in range(96):
-        for x in range(96):
-            if abs(x - cx) + abs(y - cy) * 2 < 88:
-                c.set(x, y, C("10141f"))
-    for y in range(96):                        # the playable diamond
-        for x in range(96):
-            if abs(x - cx) + abs(y - cy) * 2 < 62:
-                c.set(x, y, C("202e37"))
-    for i in range(4):                         # road grid, both axes
-        off = -24 + i * 16 + rng.randint(-2, 2)
-        for t in range(-40, 41):
-            px_, py_ = cx + t + off, cy + t // 2 - off // 2
-            if abs(px_ - cx) + abs(py_ - cy) * 2 < 60:
-                c.set(px_, py_, C("151d28"))
-            px2, py2 = cx + t - off, cy - t // 2 - off // 2
-            if abs(px2 - cx) + abs(py2 - cy) * 2 < 60:
-                c.set(px2, py2, C("151d28"))
-    for i in range(60):                        # the woods, one corner
-        bx = cx - 20 + rng.randint(-8, 8)
-        by = cy + 8 + rng.randint(-5, 5)
-        if abs(bx - cx) + abs(by - cy) * 2 < 58:
-            c.set(bx, by, C("19332d"))
-            c.set(bx + 1, by, C("19332d"))
-    for t in range(-30, 31):                   # the rail line
-        px_, py_ = cx + t, cy - 10 + t // 4
-        if abs(px_ - cx) + abs(py_ - cy) * 2 < 58:
-            c.set(px_, py_, C("341c27"))
-    for i in range(7):                         # town blocks
-        bx = cx + 6 + rng.randint(-3, 12)
-        by = cy + 2 + rng.randint(-8, 8)
-        if abs(bx - cx) + abs(by - cy) * 2 < 52:
-            c.rect(bx, by, bx + 3, by + 2, C("884b2b"))
-    c.rect(cx - 2, cy - 2, cx + 1, cy, C("819796"))   # the courtyard glint
+    W = H = 120
+    HZ = 58                                    # the horizon line
+    c = Canvas(W, H)
+
+    # --- sky: banded cel dusk with WAVY seams. Straight seams read as
+    # stripes; the wobble is the house style for every menu painting.
+    bands = [(0, "172038"), (9, "1e1d39"), (17, "253a5e"), (24, "402751"),
+             (31, "411d31"), (38, "752438"), (44, "884b2b"), (49, "be772b"),
+             (53, "de9e41")]
+    for x in range(W):
+        wob = math.sin(x * 0.11) * 1.7 + math.sin(x * 0.041) * 1.3
+        for y in range(HZ):
+            col = bands[0][1]
+            for start, hexv in bands:
+                if y >= start + wob:
+                    col = hexv
+            c.set(x, y, C(col))
+
+    # the low sun, just clear of the roofline
+    sx, sy, sr = 88, 48, 6
+    for y in range(sy - sr - 1, sy + sr + 2):
+        for x in range(sx - sr - 1, sx + sr + 2):
+            d = (x - sx) ** 2 + (y - sy) ** 2
+            if d <= sr * sr:
+                c.set(x, y, C("e8c170"))
+            elif d <= (sr + 2) ** 2:
+                c.set(x, y, C("de9e41"))
+
+    # --- THE SPIRES, far off and flat. End-game skyline, LORE section 3 —
+    # they belong on the horizon of every district and are reachable from none.
+    for bx, bw, bh in ((6, 5, 25), (13, 4, 17), (19, 7, 31), (28, 4, 14),
+                       (100, 5, 19), (107, 6, 26)):
+        c.rect(bx, HZ - bh, bx + bw - 1, HZ - 1, C("341c27"))
+        c.rect(bx, HZ - bh, bx, HZ - 1, C("411d31"))          # a lit edge
+
+    # --- the ground the district stands on, receding to the horizon
+    for y in range(HZ, H):
+        t = (y - HZ) / float(H - HZ)
+        col = "202e37" if t < 0.34 else ("1a2530" if False else "151d28")
+        c.rect(0, y, W - 1, y, C(col))
+
+    # --- the town: roofs stepping back, lit faces west toward the sun
+    roofs = []
+    for i in range(11):
+        rw = rng.randint(9, 17)
+        rh = rng.randint(5, 11)
+        rx = rng.randint(-4, W - 6)
+        ry = HZ - 2 + rng.randint(0, 16)
+        roofs.append((rx, ry, rw, rh))
+    roofs.sort(key=lambda r: r[1])             # far ones first, near ones over
+    for rx, ry, rw, rh in roofs:
+        c.rect(rx, ry - rh, rx + rw, ry, C("202e37"))          # shade face
+        c.rect(rx, ry - rh, rx + rw, ry - rh + 1, C("394a50"))  # lit roof cap
+        c.rect(rx + rw, ry - rh, rx + rw, ry, C("151d28"))      # far edge
+        # lit windows — STRUCTURE, not speckle: a row at a fixed height
+        for wx in range(rx + 2, rx + rw - 1, 4):
+            if rng.random() < 0.4:
+                c.set(wx, ry - rh + 3, C("e8c170"))
+
+    # --- the comms mast, the district's landmark, with its red light
+    mx = 46
+    for y in range(HZ - 26, HZ + 4):
+        c.set(mx, y, C("394a50"))
+        if (y - HZ) % 6 == 0:
+            c.rect(mx - 2, y, mx + 2, y, C("202e37"))
+    c.set(mx, HZ - 27, C("a53030"))
+
+    # --- the rail, running out of the district toward the wire
+    for x in range(0, W):
+        ry = 98 + int(math.sin(x * 0.02) * 1.5)
+        c.rect(x, ry, x, ry + 1, C("602c2c"))       # 4d2b32 vanished on 151d28
+        if x % 5 == 0:
+            c.rect(x, ry - 1, x, ry + 2, C("7a4841"))
+
+    # --- the woods: a MASS with a ragged top and ONE common baseline. Drawn
+    # as scattered clumps at scattered heights they read as lily pads floating
+    # over the ground, which is exactly what the first cut looked like.
+    # Built from OVERLAPPING CROWNS of varying width and height, never from a
+    # height function of x. A smooth periodic function gives a regular
+    # sawtooth that reads as a mountain range — the exact failure already
+    # recorded in HANDOFF.md, and the first cut of this walked straight into
+    # it again.
+    tree_base = 93
+    tx = 56
+    while tx < W + 5:
+        r = rng.randint(3, 6)
+        h = rng.randint(5, 11)
+        for yy in range(tree_base - h, tree_base + 1):
+            t = (tree_base - yy) / float(max(1, h))
+            half = int(round(r * (1.0 - t * t * 0.8)))
+            lit = (tree_base - yy) > h - 3
+            for xx in range(tx - half, tx + half + 1):
+                if 0 <= xx < W:
+                    c.set(xx, yy, C("25562e" if lit else "19332d"))
+        tx += rng.randint(3, 6)
+
+    # --- THE WIRE across the foreground: this is the district's whole
+    # premise, so it is the nearest thing in frame and reads as silhouette.
+    fy = 103
+    c.rect(0, fy + 12, W - 1, H - 1, C("090a14"))          # near ground
+    # the mesh has to CLEAR its own silhouette or the fence is a black bar —
+    # 10141f on 090a14 is four values apart and read as nothing
+    for x in range(W):                                     # chain-link mesh
+        for k in range(-1, 2):
+            y1 = fy + ((x + k * 6) % 12) // 2
+            if fy <= y1 < fy + 12:
+                c.set(x, y1, C("202e37"))
+            y2 = fy + 11 - ((x + k * 6) % 12) // 2
+            if fy <= y2 < fy + 12:
+                c.set(x, y2, C("202e37"))
+    for px_ in range(6, W, 27):                            # posts and rail
+        c.rect(px_, fy - 5, px_ + 1, fy + 13, C("090a14"))
+    c.rect(0, fy - 5, W - 1, fy - 4, C("090a14"))
     return c
 
 def make_vignette() -> Image.Image:

@@ -3,6 +3,35 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.50] — 2026-08-05 — the map-select tile is a picture now
+
+### Changed — the transit tile on the map-select screen
+It was a 96×96 top-down diamond of grid lines and coloured blobs, which Godot
+then stretched 1.25× into a 120×120 button — so it was blurred as well as
+dull. The user asked for *"an actual picture of the map from a scenic view,
+very detailed"*.
+
+It is now a **painted dusk vista, drawn at exactly 120×120** so it lands 1:1
+in the slot and nothing resamples it: banded cel sky with wavy seams, the
+spires on the far horizon, the low sun, the town's roofs with lit windows,
+the comms mast and its red light, a treeline, the rail running out toward the
+wire, and **the wire itself in silhouette across the foreground** — the
+district's whole premise as the nearest thing in frame.
+
+### Fixed while drawing it — two already-known lessons, relearned
+- The treeline was first built from `abs(sin(x))` and came out a **regular
+  sawtooth that reads as a mountain range** — the exact failure already
+  recorded in `HANDOFF.md`. Rebuilt from overlapping crowns of varying width
+  and height. **A natural silhouette must never come from a periodic
+  function.**
+- The chain-link mesh was drawn `10141f` on an `090a14` fence — four values
+  apart, so the entire fence read as a solid black bar. Every new element has
+  to beat the background it lands on, and that is measured, not assumed.
+
+Verified that **only `menu_map_transit.png` changed** in `art/gen`. The
+generator rewrites every file on every run, so that diff is the thing that
+proves no other art moved.
+
 ## [0.6.49] — 2026-08-05 — the trees move
 
 ### Added — foliage sway

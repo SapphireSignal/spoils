@@ -178,6 +178,18 @@ killed it was OVERLAP — clustered props stack semi-transparent blobs and they
 compound into a grey smear. Full write-up with a starting point is in
 TASKS.md. **Do not re-attempt it by just lowering the alpha.**
 
+**Also shipped: v0.6.50 — the map-select tile.** A painted dusk vista of the
+district at EXACTLY 120x120 (the button size, so nothing resamples it),
+replacing a 96x96 top-down diagram that Godot stretched 1.25x. Spires, low
+sun, lit windows, comms mast, treeline, rail, and the wire in silhouette
+across the foreground. **Two already-recorded lessons were relearned the hard
+way while drawing it:** a treeline built from `abs(sin(x))` came out a regular
+SAWTOOTH that reads as a mountain range (rebuilt from overlapping crowns —
+never build a natural silhouette from a periodic function), and the chain-link
+mesh at `10141f` on an `090a14` fence was four values apart so the whole fence
+read as a black bar. **Both are in this file already. Read the lessons before
+drawing, not after.**
+
 **Picked up at: THE POLISH PASS IS NOT FINISHED — see TASKS.md section A.**
 Engine side still open: directional cast shadows from props and the player
 (everything shares one static blob), wet-ground reflections, contact shadows,
