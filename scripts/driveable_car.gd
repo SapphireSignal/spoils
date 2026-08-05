@@ -91,6 +91,10 @@ func setup(start_variant: String, start_heading: String, manifest: Dictionary) -
 		light.color = Color("e7d5b3")
 		light.energy = 1.1
 		light.enabled = false
+		# headlights cast too — driving at night now throws the shell of a
+		# building across the road ahead instead of lighting straight through it
+		light.shadow_enabled = true
+		light.shadow_filter = Light2D.SHADOW_FILTER_NONE
 		add_child(light)
 		_lights.append(light)
 	_aim_lights()

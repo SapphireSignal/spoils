@@ -147,6 +147,15 @@ func _build_world() -> void:
 	ysort.add_child(motes)
 	motes.setup(_player)
 
+	# NO WorldEnvironment GLOW HERE, and it is not an oversight — see the
+	# measurement recorded in TASKS.md. Godot's 2D glow does nothing at all
+	# unless rendering/viewport/hdr_2d is on, and turning that on re-renders
+	# the canvas in linear space: the whole tuned night went near-black and
+	# the frame rate fell 240 -> 183. Without it the glow pass is a literal
+	# no-op (two shots came out byte-identical). Bright things bleed via
+	# ADDITIVE GLOW SPRITES instead, which cost nothing and cannot smear the
+	# pixel grid.
+
 	# SUN SHAFTS, under the grade so the grade treats them as part of the
 	# picture rather than paint on top of it
 	var shaft_layer := CanvasLayer.new()

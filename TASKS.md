@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.44.** The release history was renumbered evenly on
+**Current version: v0.6.45.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -36,13 +36,32 @@ light); and OVERCAST weather so a dry day isn't automatically a sunny one.
 
 **STILL TO DO, biggest first:**
 
-- **Real 2D shadows.** `LightOccluder2D` on the wall segments so lamps and
-  the flashlight cast actual shadows. Single biggest atmosphere change
-  left, and it fixes B7 (flashlight through walls) in the same stroke.
-- **Glow / bloom** via a `WorldEnvironment`. The renderer is Forward+, so
-  it is available. Lamps, lit windows, sparks, the muzzle flash and the LZ
-  smoke would bleed light properly instead of being flat bright pixels;
-  right now the grade only fakes it with a highlight lift.
+- **Real 2D shadows — DONE in v0.6.45.** `LightOccluder2D` runs on the wall
+  segments, built in `_build_shell` from the cell EDGE the wall art already
+  occupies. One occluder per contiguous RUN, not per segment (+113 nodes,
+  not ~330), and a gap in the wall breaks the run so light spills through a
+  doorway or a blown-out ruin corner. The door carries its own, toggled in
+  lockstep with its collider off the same manifest polygon. Lamps, interior
+  lights, the flashlight and car headlights all cast. **This closed B7 too.**
+
+- **Glow / bloom — ATTEMPTED AND REJECTED, with numbers. Do not retry it
+  blind.** This item used to read "via a `WorldEnvironment`; the renderer is
+  Forward+, so it is available". It is available and it does not work here:
+  - Godot's 2D glow is a **no-op unless `rendering/viewport/hdr_2d` is on**.
+    Measured: a WorldEnvironment with glow enabled and the threshold at 0.85
+    produced a frame **byte-identical** to one with no glow at all.
+  - Turning `hdr_2d` on re-renders the canvas in linear space. The tuned
+    night went **near-black** — the whole day/night gradient, the grade and
+    every light energy are authored for sRGB — and the frame rate fell
+    **240 -> 183 fps**. Both were shot and measured, not estimated.
+  - Making it work means re-tuning the day arc, `grade.gdshader` and every
+    light energy against a linear pipeline, then paying that 24% anyway. That
+    is a re-tune of work the user has already signed off, not a polish pass.
+  - **The intent is still worth delivering** — "lamps, lit windows and sparks
+    should bleed light instead of being flat bright pixels" — via **additive
+    glow sprites**, the way `lamp_glow.png` already works on lamps and
+    interior lights. Costs nothing, cannot smear the pixel grid, and is
+    per-object controllable. Lit WINDOWS are the obvious next customer.
 - **Directional cast shadows** from props and the player, angled to the
   sun and swinging through the day. Everything shares one static blob now.
 - **Wet-ground reflections** in rain; **contact shadows** so props sit in
@@ -282,14 +301,21 @@ nearest POI — reuse `_walk_dirt_path(from, to)` with the safehouse's
 `door_out` cell and the closest POI centre; it already skips roads and
 slabs. Keep it restrained.
 
-## B7. Flashlight shines through walls
+## B7. Flashlight shines through walls — **DONE in v0.6.45**
 
-Standing inside a building, the cone is visible outside. Godot 2D lights
-ignore walls without occluders. Either add `LightOccluder2D` to the wall
-segments built in `_build_shell`, or take the cheap route: `main.gd`
-already tracks which interior cells the player is in for the roof reveal,
-so the cone can be masked or shrunk while inside. **Check the same leak**
-on the interior room lights and on street lamps standing near buildings.
+Fixed properly, with the occluders, not with the cheap interior-cell mask.
+`_build_shell` now hangs a `LightOccluder2D` on every wall segment, so the
+cone is stopped by the wall itself.
+
+**Verified by measurement, not by eye:** stood inside a building at midnight
+with the flashlight on, a brightness scan straight out through the lit cone
+reads 90-334 inside the shell and a flat 52-56 — the pure ambient night
+floor — for the entire street beyond it. Nothing leaks.
+
+**The same leak on the other two lights is closed by the same change.**
+Interior room lights no longer wash onto the street; `interior_light.gd` was
+carrying a deliberately tight `texture_scale` to hide exactly that, and the
+comment there now says so.
 
 ## B8. Warden: opposite sidewalk, facing the road
 
@@ -468,7 +494,12 @@ Juice.
     font, not ffmpeg's text drawing — it keeps the pixel look exact and
     avoids a font mismatch between the cards and the footage.
   - Nothing was built yet; no cinematic harness mode exists.
-- **Which menu backdrops to keep**, once all five are painted.
+
+*(A third item lived here — "which menu backdrops to keep, once all five are
+painted". **Deleted 2026-08-04 as false.** All SIX are painted, shipped and
+living since v0.6.35, which section A1 above says plainly; the user chose
+them back on 2026-08-02. CLAUDE.md carried the same dead claim and it went
+with it.)*
 
 ---
 

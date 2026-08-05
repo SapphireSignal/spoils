@@ -48,6 +48,12 @@ func setup(is_working: bool, seed_value: int) -> void:
 	_light.energy = 0.0
 	_light.texture_scale = _rng.randf_range(1.3, 1.7)
 	_light.position = LIGHT_OFFSET
+	# REAL SHADOWS: the wall occluders stop this pool at the building line
+	# instead of washing through it. NO PCF blur — a soft shadow edge fights
+	# the pixel grid, and the light texture is already smooth alpha, so a hard
+	# boundary against it reads correctly.
+	_light.shadow_enabled = true
+	_light.shadow_filter = Light2D.SHADOW_FILTER_NONE
 	add_child(_light)
 
 

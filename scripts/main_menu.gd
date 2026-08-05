@@ -212,6 +212,11 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.45", [
+		"walls block light now. lamps, room lights, your flashlight and car headlights all stop at a wall instead of shining straight through it, so standing in a dark house with the torch on no longer lights up the street outside",
+		"light still comes through a doorway - an open door lets it through, a shut one blocks it, and a wall thats been blown open leaves a gap the light falls through",
+		"no cost to it: still 240fps at midnight with every working lamp casting",
+	]],
 	["v0.6.44", [
 		"a safety fix in the art generator. it used to delete all the games art first and then redraw it, so any small mistake in one drawing left the art folder empty until it was run again - that happened twice yesterday. it now writes everything first and only clears out leftovers at the very end, so a mistake leaves your art exactly where it was",
 	]],

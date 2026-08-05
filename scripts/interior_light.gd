@@ -51,6 +51,12 @@ func setup(sprite_offset: Vector2, seed_value: int, does_flicker: bool) -> void:
 	# straight through the walls and lit the street outside.
 	_light.texture_scale = _rng.randf_range(0.55, 0.75)
 	_light.position = Vector2(0.0, -6.0)
+	# REAL SHADOWS. This is the honest fix for the wash the tight radius above
+	# was working around: the walls now stop the pool themselves, so a room
+	# light lights its room because the room has walls, not because its
+	# texture_scale was tuned small enough to hide the leak.
+	_light.shadow_enabled = true
+	_light.shadow_filter = Light2D.SHADOW_FILTER_NONE
 	add_child(_light)
 
 	add_to_group("street_lamps")   # rides the environment's night broadcast

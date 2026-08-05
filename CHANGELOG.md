@@ -3,6 +3,50 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.45] — 2026-08-04 — walls stop light
+
+### Added — real 2D shadows
+Every building wall segment now carries a `LightOccluder2D`, so lamps,
+interior lights, the flashlight and car headlights are stopped by walls
+instead of shining through them. The biggest remaining item on the visual
+polish pass.
+
+The occluder line is the **cell edge the wall art already sits on** — the
+same two verts the corner posts hang off — so the shadow boundary can never
+drift from the wall the way a hand-derived offset once put a door's collider
+a cell from its own art.
+
+**One occluder per contiguous RUN, not per segment.** A building's four sides
+become a handful of nodes instead of ~22: `+113` nodes across the district
+rather than ~330, and the shadow rasterizer is what pays per occluder. A gap
+breaks the run, which is the good part — light genuinely spills through a
+doorway or a blown-out ruin corner. The door carries its own occluder,
+toggled in lockstep with its collider and built from the same manifest
+polygon, so a doorway you can walk through is one you can see through.
+
+Shadows are hard-edged on purpose (no PCF): a soft shadow edge fights the
+pixel grid, and the light textures are already smooth alpha.
+
+### Fixed — the flashlight no longer shines through walls
+The long-standing B7. Stood inside a building at midnight, a brightness scan
+straight out through the lit cone reads 90-334 inside the shell and a flat
+52-56 — the pure ambient night floor — across the entire street beyond it.
+The same change closes the same leak on interior room lights, which had been
+carrying a deliberately tight radius to hide it.
+
+### Measured and rejected — glow / bloom
+`WorldEnvironment` glow was built, measured and **backed out**; the reasoning
+is recorded in `TASKS.md` so nobody retries it blind. Godot's 2D glow does
+nothing unless `hdr_2d` is on — with it off, a glowing frame and a
+non-glowing frame came out **byte-identical**. With it on, the canvas renders
+in linear space, the tuned night went near-black and the frame rate fell
+**240 -> 183 fps**. The intent is still worth having and wants additive glow
+sprites instead, the way lamps already work.
+
+### Performance
+Unchanged where it counts: **240 fps, worst frame 4.64 ms** at midnight with
+every lamp casting, against a 4.5 ms baseline. `SMOKE PASS`.
+
 ## [0.6.44] — 2026-08-03 — a bad drawing can no longer empty `art/gen`
 
 **No game change.** `tools/gen_art.py` only.

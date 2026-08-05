@@ -35,7 +35,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
 	 form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.44 shipped, 2026-08-03.** Milestone 1 (a walkable world) is DONE.
+**v0.6.45 shipped, 2026-08-04.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 
@@ -66,12 +66,21 @@ toolkit to turn up the atmosphere"**
 work — lighting, shaders, particles, camera — which improves everything at
 once instead of one sprite family at a time, and it is far faster. Shipped
 so far: camera kick, hit-stop, per-sprite hit flash, a full-screen colour
-grade, dust motes, sun shafts, indoor weather muffling. Still to do and
-listed in TASKS.md: real 2D shadows via wall occluders (the biggest one
-left, and it also fixes the flashlight-through-walls bug), glow/bloom via
-a WorldEnvironment (the renderer is Forward+, so it is available),
-directional cast shadows, wet-ground reflections, contact shadows, window
-light spill.
+grade, dust motes, sun shafts, indoor weather muffling, and **real 2D
+shadows** (v0.6.45 — wall occluders; it closed the flashlight-through-walls
+bug in the same stroke). Still to do and listed in TASKS.md: directional
+cast shadows, wet-ground reflections, contact shadows, window light spill,
+tree sway — **plus the entire ART half of the pass, which has NOT been
+started**: the map screen, the map-select tile, the title, ui and icons,
+the player model, world objects and textures.
+
+**GLOW/BLOOM IS NO LONGER ON THAT LIST — it was built, measured and
+REJECTED in v0.6.45**, and TASKS.md carries the numbers. Godot's 2D glow is
+a no-op unless `rendering/viewport/hdr_2d` is on (a glowing frame and a
+non-glowing one came out byte-identical), and turning that on renders the
+canvas in linear space: the tuned night went near-black and the frame rate
+fell 240 -> 183. **Do not re-add a WorldEnvironment expecting it to work.**
+Deliver the intent with additive glow sprites, the way lamps already do.
 
 ### Lessons from this session that will bite again
 
@@ -152,8 +161,10 @@ light spill.
   `spoils_tiny` (3 in 6) for map dot labels. Both are BITMAP fonts — asking
   either for a different size resamples and blurs it. If text must be
   smaller, draw a new cut in `tools/gen_font.py`.
-- **Perf baseline:** 240 fps, ~4.5 ms worst frame, ~7.9k nodes in a raid,
-  day and storm-night alike. **Leaks: none.**
+- **Perf baseline:** 240 fps, ~4.6 ms worst frame, **~8.0k nodes** in a raid,
+  day and storm-night alike. (Was ~7.9k / ~4.5 ms; v0.6.45's wall occluders
+  added **+113 nodes** and ~0.14 ms, measured at midnight with every working
+  lamp casting a shadow. Not a leak.) **Leaks: none.**
   **THE INVARIANT IS THE TREND, NOT THE ABSOLUTE COUNT** — `--leakcheck`
   must print `nodes+0 objects+0 orphans=0` with memory flat to ~0.06 MB.
   That is the thing to assert. The absolute menu count is **~1717 nodes /
@@ -395,11 +406,16 @@ road, and his dialogue is a monologue rather than a conversation.
 1. **M2 "go"** — guns + tunnels + the story opening (v0.7.0). The gunplay
    design is settled; see the bottom of TASKS.md for what the panel
    decided and the two traps it caught.
-2. **Which menu backdrops to build.** FOUR pitches are on the table and the
-   user picks a couple to make (TASKS.md A1). The fifth, "the overlook", was
-   the only one ever painted and they **dropped it on sight** (2026-08-02);
-   its generator function is deleted. Nothing is painted right now.
-3. **The trailer is PARKED, not dropped** (user, 2026-08-02). Concept (a)
+
+*(A third item lived here until 2026-08-04 — "which menu backdrops to build …
+nothing is painted right now". **It was false**, and had been for fourteen
+releases: all SIX backdrops are painted, shipped and living, which the
+systems map in this very file says three sections above. The user chose them
+twice — "let's add all 4 of those menu backdrops to the game" — and a fresh
+session reading the old line would have asked them to re-decide it. Deleted,
+along with the matching line in TASKS.md's WAITING ON THE USER. This is the
+"docs that lie" failure mode again, with nobody pushing.)*
+2. **The trailer is PARKED, not dropped** (user, 2026-08-02). Concept (a)
    "the wire" is the one to build. **ffmpeg IS NOW INSTALLED** (Gyan
    8.1.2 via winget) — the old note in this file saying otherwise is
    dead, and the pipeline is no longer blocked on tooling. Full state in
@@ -477,7 +493,20 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
 - `scripts/street_lamp.gd` — working/dead lamps; working ones glow + cast a
   PointLight2D pool at night with per-lamp flicker/dropouts.
 - `scripts/door.gd` — closed-by-default door: F toggles, 4-frame swing,
-  thin wall-line collider disabled while open, group "doors".
+  thin wall-line collider disabled while open, group "doors". Since v0.6.45
+  it also carries a `LightOccluder2D` built from the SAME manifest polygon
+  as that collider and toggled with it, so a doorway you can walk through is
+  one you can see through.
+- **LIGHT OCCLUDERS (v0.6.45).** `_build_shell` records the cell EDGE every
+  wall segment sits on and `_emit_occluder_runs` turns them into
+  `LightOccluder2D` polylines under a dedicated `Occluders` node — **one per
+  contiguous RUN, not per segment** (+113 nodes district-wide, not ~330; the
+  shadow rasterizer pays per occluder). `closed = false` is load-bearing: a
+  closed polygon would fill the building solid and black out its own
+  interior. A gap in the run is deliberate — light spills through a doorway
+  or a blown-out ruin corner. Casting lights are the street lamps, interior
+  lights, the flashlight and car headlights, all with `SHADOW_FILTER_NONE`
+  because a soft edge fights the pixel grid.
 - `scripts/stairs.gd` — second-story flight, group "stairs", F flips the
   floor via main.gd. `scripts/driveable_car.gd` — intact cars as
   CharacterBody2D: F enter/exit w/ door frames+sounds, WASD drive, E

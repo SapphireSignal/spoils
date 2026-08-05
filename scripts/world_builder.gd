@@ -73,6 +73,7 @@ var _wall_h := 40
 var _story_h := 32
 var _floor_layer: TileMapLayer
 var _flat: Node2D                    # flat decals (cables) over the tiles
+var _occ: Node2D                     # light occluders (wall lines) — never drawn
 var _ysort: Node2D
 var _roofs: Array[RoofReveal] = []
 var _occupied: Dictionary = {}
@@ -164,6 +165,13 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 	_flat = Node2D.new()
 	_flat.name = "Flat"
 	root.add_child(_flat)
+
+	# LIGHT OCCLUDERS. Invisible and unsorted — they render nothing, they only
+	# tell the 2D lights where the walls are. Their own container so they can
+	# be counted and cleared without walking the y-sorted world.
+	_occ = Node2D.new()
+	_occ.name = "Occluders"
+	root.add_child(_occ)
 
 	_ysort = Node2D.new()
 	_ysort.name = "World"
@@ -1623,6 +1631,57 @@ func _edge_sides(cell: Vector2i, interior: Rect2i) -> Array[String]:
 	return sides
 
 
+func _emit_occluder_runs(segs: Dictionary) -> void:
+	## Turn one building's wall segments into LightOccluder2D polylines.
+	##
+	## ONE NODE PER CONTIGUOUS RUN, not per segment. A building's four sides
+	## become a handful of occluders instead of the ~22 its cells would give,
+	## and the shadow rasterizer pays per occluder, so this is the difference
+	## between a few hundred and a few thousand across the district.
+	##
+	## A GAP BREAKS THE RUN, which is the good part: the doorway (the door
+	## carries its own, toggled with the swing) and a blown-out ruin corner
+	## both leave a hole that light genuinely spills through.
+	for side in segs:
+		var list: Array = segs[side]
+		if list.is_empty():
+			continue
+		# sort ALONG the wall line so contiguous pieces meet end to end. Every
+		# side's segments chain p1 -> p0 once ordered this way; the two iso
+		# ground axes both work out, which is why this is one code path.
+		var first: Array = list[0]
+		var dir: Vector2 = ((first[1] as Vector2) - (first[0] as Vector2)).normalized()
+		list.sort_custom(func(a, b): return (a[0] as Vector2).dot(dir) \
+			< (b[0] as Vector2).dot(dir))
+		var run := PackedVector2Array()
+		for seg in list:
+			var p0: Vector2 = seg[0]
+			var p1: Vector2 = seg[1]
+			if run.is_empty():
+				run.append(p0)
+				run.append(p1)
+			elif run[run.size() - 1].is_equal_approx(p0):
+				run.append(p1)
+			else:
+				_add_occluder(run)       # a hole — start a fresh run past it
+				run = PackedVector2Array([p0, p1])
+		if run.size() >= 2:
+			_add_occluder(run)
+
+
+func _add_occluder(points: PackedVector2Array) -> void:
+	var occ := LightOccluder2D.new()
+	var poly := OccluderPolygon2D.new()
+	poly.polygon = points
+	# a wall is a LINE, not a filled shape. Closed, the polygon would fill the
+	# building solid and shadow its own interior — every room lit from inside
+	# would go black.
+	poly.closed = false
+	poly.cull_mode = OccluderPolygon2D.CULL_DISABLED   # blocks from both sides
+	occ.occluder = poly
+	_occ.add_child(occ)
+
+
 func _roll_door_cell(interior: Rect2i, door_side: String) -> Vector2i:
 	var door_cell := Vector2i(
 		interior.end.x - 1 if door_side == "xp" else 0,
@@ -1644,6 +1703,9 @@ func _build_shell(plot: Dictionary) -> void:
 	var interior: Rect2i = rect.grow(-1)
 	var ruin_corner: Vector2i = interior.end - Vector2i(1, 1)
 	var posts: Dictionary = {}
+	# every wall segment actually placed, per side, as the line it occupies —
+	# turned into LightOccluder2D runs once the perimeter is walked
+	var occ_segs := {"yp": [], "yn": [], "xp": [], "xn": []}
 	# the door cell is rolled at PLAN time now (the house paths need it
 	# before terrain paints); legacy fallback for plots without one
 	var door_cell: Vector2i = plot.get("door_cell", Vector2i(-99, -99))
@@ -1703,6 +1765,16 @@ func _build_shell(plot: Dictionary) -> void:
 					_window_cells[Vector3i(cell.x, cell.y,
 						(_EDGE_SIDE_IDS[side] as int))] = true
 				_add_prop(piece, center + (_EDGE_OFFSET[side] as Vector2))
+				# this wall blocks light. The occluder line is the cell EDGE
+				# itself — the same two verts the corner posts hang off — so
+				# the shadow boundary lands exactly on the wall plane the art
+				# draws, not on a hand-derived offset. (That is the door-collider
+				# lesson: a derived offset sat a cell away from its own art.)
+				(occ_segs[side] as Array).append([
+					(center + (verts[0] as Vector2)).round(),
+					(center + (verts[1] as Vector2)).round()])
+
+	_emit_occluder_runs(occ_segs)
 
 	var corner_cells := [
 		[interior.position, Vector2(0, -16)],

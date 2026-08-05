@@ -142,6 +142,12 @@ func _init() -> void:
 	_light.energy = 1.35  # nights are DARK now; the beam has to earn its keep
 	_light.position = Vector2(0, -14)
 	_light.enabled = false
+	# REAL SHADOWS — and this is the fix for the cone shining THROUGH walls
+	# (TASKS.md B7). Stood inside a building the beam now stops at the shell
+	# instead of lighting the street outside, and stood outside it no longer
+	# lights the room behind the wall.
+	_light.shadow_enabled = true
+	_light.shadow_filter = Light2D.SHADOW_FILTER_NONE
 	add_child(_light)
 
 	camera = Camera2D.new()

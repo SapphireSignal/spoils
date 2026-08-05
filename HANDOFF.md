@@ -41,6 +41,69 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-04 — walls stop light, and glow was measured and thrown away
+
+**Shipped: v0.6.45.** Real 2D shadows — the biggest item left on the visual
+polish pass. `LightOccluder2D` on every building wall segment, built off the
+cell EDGE the wall art already occupies, merged into one occluder per
+contiguous RUN (+113 nodes, not ~330). The door carries its own, toggled in
+lockstep with its collider off the same manifest polygon. Lamps, interior
+lights, the flashlight and headlights all cast. **This closed B7** — the
+flashlight no longer shines through walls — and closed the same leak on
+interior room lights, which had been hiding it behind a small radius.
+
+**The user's words** (whole day in `docs/sessions/2026-08-04.md`):
+- *"im here for migration for my spoils gam"* — the migration was clean:
+  both gates green, tree clean, tag and remote in sync at v0.6.44.
+- *"the visual polish pass isnt done yet is it?"* — correct, and worth being
+  blunt about: the ENGINE half was about half done and the **ART half had
+  not been started at all** (map screen, map tile, title, ui/icons, player
+  model, world objects — zero of six).
+- *"sure pick whatever you want just finish the polish pass"*, then
+  *"lets not do the screenshot thing, just finish the polish pass please"*,
+  then *"you dont need to do one item per version either"*, then
+  *"ship whenever you think its a good time for it"*.
+  **They waived the one-family-per-version + screenshot sign-off rule for
+  THIS PASS.** I raised it once, they reaffirmed twice, and that is their
+  call. Do NOT read it as a permanent repeal of the sample → sign-off → fleet
+  rule; it was scoped to finishing this pass.
+
+**Learned:**
+- **GLOW/BLOOM VIA `WorldEnvironment` DOES NOT WORK HERE. Built it, measured
+  it, threw it away** — and the numbers are in TASKS.md so nobody retries it
+  blind. Godot's 2D glow is a **no-op unless `rendering/viewport/hdr_2d` is
+  on**: a glowing frame and a non-glowing frame came out **byte-identical**.
+  Turn `hdr_2d` on and the canvas renders in linear space — the tuned night
+  went **near-black** and fps fell **240 -> 183**. TASKS.md had recommended
+  it on the grounds that "the renderer is Forward+, so it is available".
+  Available is not the same as viable.
+- **The occluder must be an OPEN polyline.** `closed = true` fills the
+  building solid and blacks out its own interior.
+- **Measure the light, do not look at it.** The flashlight fix was confirmed
+  with a brightness scan straight out through the cone — 90-334 inside the
+  shell, a flat 52-56 (pure ambient) across the whole street beyond. The
+  first lamp shot LOOKED like it had no shadow; it was simply too far from
+  the house to cast one. Nearly wrote that up as a bug.
+
+**Wrong prose found and fixed (fourth session running, both gates green
+throughout):** `CLAUDE.md`'s OPEN DECISIONS said *"which menu backdrops to
+build … nothing is painted right now"* and TASKS.md said *"which menu
+backdrops to keep, once all five are painted"*. **Both false for fourteen
+releases** — all six are painted, shipped and living since v0.6.35, and
+CLAUDE.md's own systems map says so three sections above its own wrong line.
+A fresh session would have asked the user to re-decide something they settled
+on 2026-08-02. Both deleted.
+
+**Picked up at: THE POLISH PASS IS NOT FINISHED — see TASKS.md section A.**
+Engine side still open: directional cast shadows from props and the player
+(everything shares one static blob), wet-ground reflections, contact shadows,
+window light spill, tree sway. **The entire ART half is untouched**, and it
+is the half the user's original quote was actually about. `map_view.gd` still
+draws buildings as filled rectangles and POIs as text labels — item 1 and the
+one they see every raid. Nothing is blocked. All gates green at v0.6.45.
+
+---
+
 ## 2026-08-02 → 08-03 — every backdrop made to move, and four bugs that hid
 
 **Shipped: v0.6.32 → v0.6.44, thirteen releases, plus a README rewrite.**

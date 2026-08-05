@@ -14,6 +14,8 @@ const FRAMES := 4          # frames per swing; the sheet holds two swings
 const FRAME_TIME := 0.06
 
 var _sprite: Sprite2D
+var _occ: LightOccluder2D          # blocks LIGHT exactly when _poly blocks bodies
+var _occ_poly: OccluderPolygon2D
 var _poly: CollisionPolygon2D      # the leaf across the doorway, closed
 var _leaf: CollisionPolygon2D      # the leaf standing open INTO the room
 var _leaf_out: CollisionPolygon2D  # ...and open out into the street
@@ -42,6 +44,16 @@ func setup(texture: Texture2D, origin: Vector2, poly_points: PackedVector2Array,
 	_poly = CollisionPolygon2D.new()
 	_poly.polygon = poly_points
 	add_child(_poly)
+	# The shut panel blocks LIGHT as well as bodies, off the SAME manifest
+	# polygon — so the shadow and the collider can never disagree about where
+	# the door is. Toggled in lockstep with _poly in _process: a doorway you
+	# can walk through is one you can see through.
+	_occ_poly = OccluderPolygon2D.new()
+	_occ_poly.polygon = poly_points
+	_occ_poly.cull_mode = OccluderPolygon2D.CULL_DISABLED
+	_occ = LightOccluder2D.new()
+	_occ.occluder = _occ_poly
+	add_child(_occ)
 	# one swung leaf per direction; only the one actually being used is on
 	_leaf = CollisionPolygon2D.new()
 	_leaf.polygon = open_points
@@ -178,8 +190,10 @@ func _process(delta: float) -> void:
 		set_process(false)
 		if _open:
 			_poly.set_deferred("disabled", true)    # the gap is real now
+			_occ.occluder = null                    # ...and light comes through
 		else:
 			_poly.set_deferred("disabled", false)
+			_occ.occluder = _occ_poly
 			_leaf.set_deferred("disabled", true)
 			_leaf_out.set_deferred("disabled", true)
 		return
