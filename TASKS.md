@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.52.** The release history was renumbered evenly on
+**Current version: v0.6.53.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -204,23 +204,44 @@ Agreed order for the remaining art work:
      1.6-4.3 cells across it looked like grey smudges drifting over the
      district. Under a cell, it reads as ground.
 
-## A1b. The district layout itself *(user, 2026-08-05)* — NEEDS THEIR CALL
+## A1b. The district layout — DONE in v0.6.53 *(user-approved map revision)*
 
-Alongside the map complaint the user said **"all the roads are symmetrical,
-the POIs too"**. That one is NOT the map screen's to fix and was deliberately
-not touched: the roads are a jittered 3x3 grid (`_plan_roads`, ROAD_COUNT per
-axis, +/-4 cells of jitter) and the POIs sit where the builder puts them.
+The user asked for it directly: **"yeah but just by a little bit, like you can
+move it a couple centimeters around. currently its like perfect, the raods,
+the pois"**. Road pitch was a flat 36 cells with +/-4 jitter (4% — invisible),
+and every POI was placed with exact arithmetic: `_court_rect` dead centre,
+`_corner_pos` at exactly +1 into a corner, `_playground` flush at +2 both
+sides. Now 40/33/33 and 41/33/36, and the POIs sit off their marks.
 
-**THE MAP IS FIXED is a standing rule** (user call 2026-08-01, retroactive to
-day one) — quests point at real addresses and players learn streets — so
-changing this is a deliberate map revision: a new `DISTRICT_SEED` or a builder
-change, re-auditioned and changelogged. It would move every building, every
-POI and the safehouse.
+**THE SEED DID NOT CHANGE.** `DISTRICT_SEED` is still `"transit-01"`, so any
+capture from before 2026-08-05 shows a different district than the same seed
+builds now.
 
-Cheaper middle ground if they want less symmetry without a full reroll: the
-jitter is only +/-4 cells on a ~124-cell span, and `_plan_road_spans` already
-stubs some roads. Widening the jitter alone would break the grid read while
-keeping the same seed family. **Do not start either without asking.**
+**HOW IT COST THE LAYOUT RNG ZERO DRAWS, which is the whole reason the
+district did not reroll:** every nudge reads `_side_rng` (roads) or a local
+RNG seeded off `DISTRICT_SEED` plus a per-place key (POIs). A single `_rng`
+draw here would have re-rolled every block assignment, plot and prop after it
+— a new map, which is not what was asked for.
+
+**THE MEASUREMENTS, because three of the four attempts broke something:**
+- **`--probe-world`'s DOORS count is the cheapest detector of the
+  squeezed-block bug.** Baseline 15. First attempt: **10**. The blocks between
+  the roads ARE the districts and a narrow one fits fewer house plots.
+- **The courtyard nudge alone cost TWO houses** (15 -> 13), isolated by
+  neutralising it on its own. The ring of plots is laid around it, so shifting
+  it three cells squeezes one side below a plot width. **It was reverted and
+  the courtyard stays dead centre** — a town square being central is also just
+  correct. Do not re-attempt it without re-probing DOORS.
+- **`MIN_PITCH` is what makes a wide nudge safe.** Rolling each road
+  independently at +/-7 could bring two 14 cells together. Clamping every road
+  to a minimum pitch from its neighbours after the roll (forward pass, then a
+  backward pass so overflow does not pile onto the barricade) holds the block
+  floor. NUDGE 5 / MIN_PITCH 33 lands DOORS at **16**, one better than
+  baseline.
+- Verified beyond the probe: `SMOKE PASS`, 240 fps / 4.62 ms, UPPERS 6 with
+  floorless=0 propless=0, and **all three extractions re-checked because they
+  moved** — toll gate dialogue opens, LZ counts down on its pad, rail line
+  intact. The safehouse did not move ([174, 73]).
 
 ### the v0.6.46 chart (superseded, kept for the record)
 1. **The in-game map screen (M) — DONE in v0.6.46.**

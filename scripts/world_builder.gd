@@ -355,7 +355,64 @@ func _plan_roads() -> void:
 		var base := lo + span * i / (ROAD_COUNT - 1)
 		_roads_h.append(Vector2i(clampi(base + _rng.randi_range(-4, 4),
 			lo - 2, MAP_H - lo - 2), 4))
+	_nudge_roads()
 	_plan_road_spans()
+
+
+func _nudge_roads() -> void:
+	## USER-APPROVED MAP REVISION, 2026-08-05. Their words, on the district
+	## being too regular: "yeah but just by a little bit, like you can move it
+	## a couple centimeters around. currently its like perfect, the raods, the
+	## pois".
+	##
+	## The grid above is ROAD_COUNT roads per axis on an even 36-cell pitch
+	## with +/-4 cells of jitter. Four percent of the pitch does not read as
+	## anything, so the district looks ruler-drawn. This adds a second, wider
+	## nudge on top.
+	##
+	## IT COMES FROM _side_rng, NOT _rng, AND THAT IS THE WHOLE TRICK. A draw
+	## from the layout stream re-rolls every block assignment, every plot and
+	## every prop after it — the user asked for a nudge, not a new map. The
+	## side stream costs the layout stream nothing (same tool, and the same
+	## reason, as _plan_road_spans below).
+	##
+	## MIN_PITCH IS LOAD-BEARING, and it is why this is not just a bigger
+	## number in the loop above. The blocks BETWEEN the roads are the
+	## districts, and a squeezed block cannot hold its place — that is the
+	## one-door map bug, and it is exactly why the original jitter was kept
+	## small. Rolling each road independently at +/-7 could bring two of them
+	## 14 cells together and leave a 14-cell block, so after the roll every
+	## road is clamped to keep a minimum pitch from its neighbours.
+	_side_rng.seed = hash("%s:road-nudge" % DISTRICT_SEED)
+	_nudge_axis(_roads_v, MAP_W)
+	_nudge_axis(_roads_h, MAP_H)
+
+
+func _nudge_axis(roads: Array[Vector2i], extent: int) -> void:
+	const NUDGE := 5
+	# start-to-start. The block between two roads is pitch - (width + 4), so
+	# 28 leaves 20 cells — the same floor the +/-4 jitter could already hit.
+	const MIN_PITCH := 33
+	var lo := BARRIER_INSET + 6
+	var hi := extent - BARRIER_INSET - 6
+	for i in roads.size():
+		var r := roads[i]
+		r.x = clampi(r.x + _side_rng.randi_range(-NUDGE, NUDGE), lo, hi)
+		roads[i] = r
+	# forward: push each road off the one before it
+	for i in range(1, roads.size()):
+		var r := roads[i]
+		r.x = maxi(r.x, roads[i - 1].x + MIN_PITCH)
+		roads[i] = r
+	# backward: if that ran the last road past the edge, walk the overflow
+	# back down the line rather than letting it sit on the barricade
+	var last := roads[roads.size() - 1]
+	last.x = mini(last.x, hi)
+	roads[roads.size() - 1] = last
+	for i in range(roads.size() - 2, -1, -1):
+		var r := roads[i]
+		r.x = mini(r.x, roads[i + 1].x - MIN_PITCH)
+		roads[i] = r
 
 
 func _plan_road_spans() -> void:
@@ -962,6 +1019,13 @@ func _plan_town_block(b: Vector2i, with_court: bool) -> void:
 		# sized so houses still fit AROUND it
 		var cw := clampi(r.size.x - 14, 9, 12)
 		var ch := clampi(r.size.y - 14, 9, 12)
+		# THE COURTYARD STAYS DEAD CENTRE, and that is a measured decision, not
+		# an oversight. It was nudged off-centre with the other POIs in the
+		# 2026-08-05 revision and it COST TWO HOUSES: the ring of plots is
+		# laid around it, so shifting it three cells squeezes one side below a
+		# plot width and --probe-world went DOORS 15 -> 13. Even clamped to
+		# +/-2 there is no room in a 23-cell town block. A town square being
+		# central is also just correct — that is what a square is.
 		_court_rect = Rect2i(r.position + (r.size - Vector2i(cw, ch)) / 2,
 			Vector2i(cw, ch))
 		for y in range(_court_rect.position.y, _court_rect.end.y):
@@ -1193,8 +1257,11 @@ func _plan_school_block(b: Vector2i) -> void:
 		"door_out": Vector2i(-99, -99),
 	})
 	var py := _school_rect.end.y + 3
-	_playground = Rect2i(r.position.x + 2, py, r.size.x - 4,
-		maxi(6, r.end.y - py - 1))
+	# it ran the FULL width of the block, inset exactly 2 both sides, so it
+	# read as a bar rather than a yard. Inset each side independently.
+	var pad := _poi_nudge("playground:%d,%d" % [r.position.x, r.position.y], 2, 6)
+	_playground = Rect2i(r.position.x + pad.x, py,
+		maxi(8, r.size.x - pad.x - pad.y), maxi(6, r.end.y - py - 1))
 
 
 func _plan_depot_block(b: Vector2i) -> void:
@@ -1202,7 +1269,13 @@ func _plan_depot_block(b: Vector2i) -> void:
 	var r: Rect2i = _block_rects[b]
 	var aw := mini(18, maxi(12, r.size.x - 4))
 	var ah := mini(9, maxi(7, r.size.y / 2))
-	var pos := Vector2i(r.position.x + (r.size.x - aw) / 2, r.end.y - ah)
+	# it hugged the south road dead-centre on x. Slide it along that road a
+	# little (user: "you can move it a couple centimeters around") — it still
+	# hugs the road, which is the point of an apron.
+	var slide := _poi_nudge("depot:%d,%d" % [r.position.x, r.position.y], -4, 4).x
+	var px := clampi(r.position.x + (r.size.x - aw) / 2 + slide,
+		r.position.x + 1, r.end.x - aw - 1)
+	var pos := Vector2i(px, r.end.y - ah)
 	_depot_rect = Rect2i(pos, Vector2i(aw, ah))
 	for y in range(_depot_rect.position.y, _depot_rect.end.y):
 		for x in range(_depot_rect.position.x, _depot_rect.end.x):
@@ -1217,12 +1290,31 @@ func _plan_depot_block(b: Vector2i) -> void:
 
 
 func _corner_pos(r: Rect2i, corner: int, w: int, h: int) -> Vector2i:
-	# a w×h rect tucked into one of a block's four corners
+	# a w×h rect tucked into one of a block's four corners, then NUDGED off
+	# the corner by a cell or three (user, 2026-08-05: "currently its like
+	# perfect ... you can move it a couple centimeters around"). Every one of
+	# these used to sit at exactly +1, which is what made the comms relay and
+	# the gallery read as snapped to a grid rather than built somewhere.
+	var inset := _poi_nudge("corner:%d,%d:%d" % [r.position.x, r.position.y, corner],
+		1, 4)
 	match corner:
-		1: return Vector2i(r.end.x - w - 1, r.position.y + 1)
-		2: return Vector2i(r.position.x + 1, r.end.y - h - 1)
-		3: return Vector2i(r.end.x - w - 1, r.end.y - h - 1)
-	return r.position + Vector2i(1, 1)
+		1: return Vector2i(r.end.x - w - inset.x, r.position.y + inset.y)
+		2: return Vector2i(r.position.x + inset.x, r.end.y - h - inset.y)
+		3: return Vector2i(r.end.x - w - inset.x, r.end.y - h - inset.y)
+	return r.position + inset
+
+
+func _poi_nudge(key: String, lo: int, hi: int) -> Vector2i:
+	## A small, STABLE offset for a place, drawn from the side stream.
+	##
+	## NEVER _rng. Nudging a POI must not cost the layout stream a single
+	## draw, or every block assignment, plot and prop rolled after it moves
+	## too — and the user asked for a nudge, not a new district. Seeding off
+	## the district seed plus a per-place key keeps it deterministic and
+	## keeps two places from sharing an offset.
+	var side := RandomNumberGenerator.new()
+	side.seed = hash("%s:poi-nudge:%s" % [DISTRICT_SEED, key])
+	return Vector2i(side.randi_range(lo, hi), side.randi_range(lo, hi))
 
 
 func _plan_comms_corner(b: Vector2i) -> void:

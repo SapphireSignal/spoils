@@ -118,11 +118,47 @@ the safehouse. Written up as TASKS.md **A1b** with a cheaper middle ground
 (the road jitter is only ±4 cells on a ~124-cell span). Do not start it
 without asking.
 
+**Shipped: v0.6.53 — the district came off the grid. A DELIBERATE,
+USER-APPROVED MAP REVISION**, asked for in these words: *"yeah but just by a
+little bit, like you can move it a couple centimeters around. currently its
+like perfect, the raods, the pois"*. Road pitch 36-flat -> 40/33/33 and
+41/33/36; POIs off their exact centres and corners.
+
+**`DISTRICT_SEED` IS UNCHANGED — still `"transit-01"`. Any capture or
+coordinate from before 2026-08-05 shows a different district than that seed
+builds now.** Flagged at the top of CLAUDE.md's world state too.
+
+**The technique is the reusable part: it cost the layout rng ZERO draws.**
+Every nudge reads `_side_rng` or a local RNG seeded off `DISTRICT_SEED` plus a
+per-place key. One `_rng` draw would have re-rolled every block assignment,
+plot and prop after it — a new map, not a nudge. Block zoning, plot rolls and
+the safehouse ([174, 73]) all survived.
+
+**Three of four attempts broke something, and the detector is cheap:**
+- **`--probe-world`'s DOORS count catches the squeezed-block bug for free.**
+  Baseline 15, first attempt **10**. Blocks between roads are the districts;
+  a narrow one fits fewer house plots. Final: **16**.
+- **The courtyard nudge alone cost two houses** (15 -> 13), isolated by
+  neutralising it by itself. Reverted — it stays dead centre. Do not
+  re-attempt without re-probing DOORS.
+- **`MIN_PITCH` is what makes a wide nudge safe**: clamp every road to a
+  minimum pitch from its neighbours AFTER the roll, forward pass then a
+  backward pass so overflow does not pile onto the barricade.
+- **I nearly measured the wrong baseline.** The backup copy I diffed against
+  had the road-nudge call already stripped, so a run came back "unchanged"
+  and looked like the nudge did nothing. Check the call site is live before
+  concluding a change had no effect.
+
+**`--at=` TAKES CELL COORDINATES, NOT WORLD PIXELS.** I converted cells to
+world pixels by hand and the shot landed outside the barricade with the
+sniper warning up. The cells `--probe-world` prints are aimable as-is.
+
 **Picked up at: the polish pass, ART half — three of six done.** Shipped this
-session: the title (v0.6.51), the map screen redo (v0.6.52). **Still
-untouched: ui and icons, the player model, world objects and textures.**
-Engine half still open: wet-ground reflections, window light spill, heat
-shimmer. Nothing in progress, nothing blocked, all gates green.
+session: the title (v0.6.51), the map screen redo (v0.6.52), the layout
+revision (v0.6.53). **Still untouched: ui and icons, the player model, world
+objects and textures.** Engine half still open: wet-ground reflections,
+window light spill, heat shimmer. Nothing in progress, nothing blocked, all
+gates green.
 
 ---
 

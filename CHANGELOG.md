@@ -3,6 +3,57 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.53] — 2026-08-05 — the district is no longer on graph paper
+
+**A deliberate, user-approved map revision.** Their words, on v0.6.52's map
+making the regularity obvious: *"yeah but just by a little bit, like you can
+move it a couple centimeters around. currently its like perfect, the raods,
+the pois"*.
+
+**`DISTRICT_SEED` is unchanged (`"transit-01"`).** Any screenshot or
+coordinate from before this release shows a different district than the same
+seed builds now.
+
+### Changed — the roads
+`_plan_roads` lays `ROAD_COUNT` roads per axis on an even 36-cell pitch with
+±4 cells of jitter — 4% of the pitch, which reads as nothing. A second, wider
+nudge now runs on top: pitches are **40/33/33 and 41/33/36**.
+
+`MIN_PITCH` is what makes a wide nudge safe. Rolling each road independently
+at ±7 can bring two of them 14 cells together, and the blocks *between* the
+roads are the districts — a squeezed one cannot hold its place, which is the
+one-door map bug and exactly why the original jitter was kept small. Every
+road is clamped to a minimum pitch from its neighbours after the roll, with a
+backward pass so the overflow does not pile onto the barricade.
+
+### Changed — the POIs
+Every one was placed with exact arithmetic: the courtyard dead centre,
+`_corner_pos` at exactly +1 into a corner, the playground flush at +2 both
+sides, the depot centred on its road. The depot slides along its road, the
+playground insets each side independently, and corner places sit 1–4 cells in.
+
+### Not changed — the courtyard, and that is measured
+Nudging it cost **two houses** (`--probe-world` DOORS 15 → 13), isolated by
+neutralising it on its own. The ring of plots is laid around it, so shifting
+it three cells squeezes one side below a plot width, and a 23-cell town block
+has no room even at ±2. It stays dead centre — a town square being central is
+also simply correct.
+
+### How the district did not reroll
+Every nudge reads `_side_rng`, or a local RNG seeded off `DISTRICT_SEED` plus
+a per-place key. **The layout rng is not touched, so it costs zero draws** —
+a single `_rng` draw here would have re-rolled every block assignment, plot
+and prop after it, which is a new map, not a nudge. Block zoning, plot rolls
+and the safehouse (`[174, 73]`) all came through unchanged.
+
+### Verified
+`--probe-world` DOORS **16** (baseline 15 — one better, not worse; the first
+attempt scored 10 and that number is the cheapest detector of the
+squeezed-block bug). `SMOKE PASS`. 240 fps, worst frame 4.62 ms. UPPERS 6 with
+`floorless=0 propless=0`. **All three extractions re-checked because they
+moved** — the toll gate dialogue opens, the LZ counts down on its pad, the
+rail line is intact.
+
 ## [0.6.52] — 2026-08-05 — the map is a game map, not a paper one
 
 v0.6.46 rebuilt the map screen as a surveyor's chart — aged paper, sepia ink

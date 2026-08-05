@@ -206,6 +206,12 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.53", [
+		"the district isnt laid out on a perfect grid any more. the streets used to be evenly spaced to the cell - theyre uneven now, so some blocks are wide and some are narrow, and it looks like a place instead of graph paper",
+		"the landmarks arent snapped to the middle of their block either. the depot slid along its road, the playground isnt centred, the relay and the gallery sit off their corners",
+		"its the same district, not a new one - your safehouse is where it was, and every building, road and prop is the one that was already there, just nudged. theres actually one more building than before",
+		"the town square stayed dead centre on purpose. moving it squeezed the houses around it and cost two of them",
+	]],
 	["v0.6.52", [
 		"the map has colour on it now. it was all one shade of brown like a paper map youd unfold - the ground, the woods, the yards and the buildings are all their own colour, so you can tell what youre looking at without reading the labels",
 		"the woods are actual trees instead of little scratchy lines - clumps of canopy with light coming from one side, and the turned autumn patch stands out in orange",

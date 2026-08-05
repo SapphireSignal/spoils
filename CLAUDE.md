@@ -35,7 +35,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
 	 form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.52 shipped, 2026-08-05.** Milestone 1 (a walkable world) is DONE.
+**v0.6.53 shipped, 2026-08-05.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 
@@ -150,6 +150,17 @@ Deliver the intent with additive glow sprites, the way lamps already do.
 - **The district is FIXED** (`DISTRICT_SEED = "transit-01"`). Layout
   changes only as deliberate, user-approved map revisions. `--seed`
   swaps worlds for tests only.
+- **THE LAYOUT WAS REVISED ON 2026-08-05 (v0.6.53) AND THE SEED DID NOT
+  CHANGE.** `DISTRICT_SEED` is still `"transit-01"`, so **any screenshot or
+  coordinate from before that date shows a different district than the same
+  seed builds today** — do not treat an old capture as ground truth. The user
+  asked for it: *"yeah but just by a little bit, like you can move it a couple
+  centimeters around. currently its like perfect, the raods, the pois"*. Road
+  pitch went from a flat 36 cells to 40/33/33 and 41/33/36, and the POIs came
+  off their exact centres and corners. **It cost the layout rng ZERO draws** —
+  every nudge reads `_side_rng`/a local RNG seeded off the district seed, which
+  is why the block assignments, the plot rolls and the safehouse ([174, 73],
+  unmoved) all survived intact.
 - **The safehouse is in the NORTH-EAST corner** at cells [174, 73] (moved
   2026-08-02; it used to search out from the southmost road band and kept
   landing inside the playground).
@@ -483,9 +494,11 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   randomness through the seeded _rng — `Array.shuffle()` is banned, use
   `_shuffle()` (audited v0.3.5: zero unseeded calls in the layout path). Road grid with
   center dashes both axes, dirt roads, forests + interior groves + lone trees
-  on green pockets, 15 buildings (this line said ~34; `--probe-world` reports
-  DOORS total=15 and every building gets exactly one door, so doors ==
-  buildings) (thin-wall shells, modular roofs, ONE floor
+  on green pockets, 16 buildings (this line said ~34, then 15; `--probe-world`
+  reports DOORS total=16 since the v0.6.53 layout revision, and every building
+  gets exactly one door, so doors == buildings — **that is the number to
+  re-probe after any builder change, because it is the cheapest detector of
+  the squeezed-block bug**) (thin-wall shells, modular roofs, ONE floor
   look per building, interactive Door on a visible side, entrance pockets kept
   clear inside AND out), lane-correct road vehicles (some broken + litter),
   sparse mostly-dead street lamps, sticks, clustered scatter, puddle spots.
