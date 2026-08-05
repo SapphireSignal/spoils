@@ -35,7 +35,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
 	 form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.53 shipped, 2026-08-05.** Milestone 1 (a walkable world) is DONE.
+**v0.6.54 shipped, 2026-08-05.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 
@@ -140,10 +140,22 @@ Deliver the intent with additive glow sprites, the way lamps already do.
 - **Any gradual full-screen ramp needs dithering IN THE SHADER that
   creates it.** The dither film on the layer above cannot fix banding
   produced by a later pass — the vignette contoured into visible rings.
-- **Python heredocs on this box:** use `<<'PY'` (quoted) or backslashes
-  get eaten, and pass `newline="\n"` to `write_text` or every line gains a
-  CR. A stray CR broke a `git push --delete` refspec and made a workflow
+- **Python heredocs on this box: BACKSLASHES GET EATEN EVEN IN A QUOTED
+  `<<'PY'` HEREDOC.** This line used to say quoting was the fix. It is not —
+  a quoted heredoc writing a GDScript line-continuation still landed a
+  literal `\n` (backslash + the letter n) in the middle of the line, and the
+  result was a Parse Error that presents as a HANG (the world never builds).
+  **Do not put a literal backslash in heredoc'd source.** Restructure so none
+  is needed — nest an `if` instead of continuing a line — or build it with
+  `chr(92)`. Also pass `newline="\n"` to `write_text` or every line gains a
+  CR; a stray CR broke a `git push --delete` refspec and made a workflow
   script unapprovable.
+- **AFTER `gen_art.py`, THE REIMPORT STEP IS NOT OPTIONAL — and if the ATLAS
+  GREW, skipping it paints BLACK TILES.** The floors atlas is addressed by
+  (column, row); add tiles and it gains rows, but Godot keeps serving the old
+  cached import, so every new coordinate points past the texture and renders
+  as nothing. The user saw it as "black squares" before I did. The full
+  three-step workflow is further down this file — run all three, every time.
 
 ## Current state of the world (what a fresh session most needs)
 
@@ -502,6 +514,21 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   look per building, interactive Door on a visible side, entrance pockets kept
   clear inside AND out), lane-correct road vehicles (some broken + litter),
   sparse mostly-dead street lamps, sticks, clustered scatter, puddle spots.
+  **DIRECTIONAL TERRAIN FRINGES (v0.6.54)** — ground materials blend into each
+  other instead of meeting at a hard 64x32 diamond (user: *"can we make all of
+  the biomes blend more together with another"*, *"yes they are hard edges
+  blocks everywhere"*). `gen_art._fringe_entries` bakes 135 tiles: 3 pairs
+  (grass-into-stone, dirt-into-stone, stone-into-grass) x 15 edge masks x 3
+  variants, each composited from THE REAL TILES of both materials so a fringe
+  can never drift out of step with what it blends. The 4-bit mask is a
+  **CONTRACT** between `gen_art`'s `_fringe_depth` and world_builder's
+  `_fringe_mask`/`_open_ground_mask` — bit 0 = cell (x, y-1) = the NE screen
+  edge, then RIGHT/DOWN/LEFT clockwise. The predecessor picked one of three
+  `grass_blend` tiles at RANDOM with no idea which side the grass was on,
+  which is why it never softened anything. **The concrete-side branches still
+  take exactly ONE `_rng` draw each and the new forest-side branch takes NONE
+  (it hashes)** — the layout stream is untouched, verified by DOORS staying 16
+  on the same cells.
   sidewalks flanking EVERY road side (pale slab tiles, v/h orientations,
   10% broken and a further 16% cracked; this line said "~62% of road sides,
   13% broken" — there is NO coverage roll in `_plan_sidewalks`, and the 0.62

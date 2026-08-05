@@ -206,6 +206,12 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.54", [
+		"the ground blends now. grass, dirt and concrete used to meet at a hard diamond edge so you could see every single tile - they fray into each other, with grass creeping out over the pavement and the pavement breaking up into the woods",
+		"it works both ways round, so the edge of a wood isnt a cut-out shape any more",
+		"grey houses were painted in exactly the same two colours as the ground they stand on, so on the shady side they had no edge at all. theyre a shade lighter now and you can actually see the building",
+		"same district, same buildings, nothing moved - still 240fps",
+	]],
 	["v0.6.53", [
 		"the district isnt laid out on a perfect grid any more. the streets used to be evenly spaced to the cell - theyre uneven now, so some blocks are wide and some are narrow, and it looks like a place instead of graph paper",
 		"the landmarks arent snapped to the middle of their block either. the depot slid along its road, the playground isnt centred, the relay and the gallery sit off their corners",

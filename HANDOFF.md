@@ -153,9 +153,38 @@ the safehouse ([174, 73]) all survived.
 world pixels by hand and the shot landed outside the barricade with the
 sniper warning up. The cells `--probe-world` prints are aimable as-is.
 
+**Shipped: v0.6.54 — terrain fringes and a visible grey house.**
+- *"can we make all of the biomes blend more together with another"*, *"like
+  the grass, dirt, stone, try blending them"*, *"yes they are hard edges
+  blocks everywhere"*. There WAS a blend and it could not work: one cell deep
+  and **non-directional** — a tile with grass scattered generally over it,
+  picked at random, with no idea which side the grass was on. 135 baked
+  fringe tiles now (3 pairs x 15 edge masks x 3 variants), composited from
+  the real tiles of both materials. **Zero extra `_rng` draws** — DOORS stayed
+  16 on identical cells, so nothing rerolled.
+- *"the edge of this house is like barely seeable"* — measured, not judged:
+  `brick_b`'s shaded face was **`394a50`, byte-identical to `CONC_BASE`**, and
+  its mortar matched `CONC_D1`. The grey house was drawn in the pavement's own
+  two colours. Lifted one step. **An outline was the wrong tool** — wall
+  segments tile edge to edge and `outline_auto(sides=False)` exists precisely
+  because outlining the joins blacks every seam and shows the world through
+  the wall.
+
+**TWO PROCESS FAILURES, BOTH ALREADY IN THE DOCS, BOTH REPEATED ANYWAY:**
+- **I skipped the reimport after `gen_art.py` and it painted BLACK TILES.**
+  The atlas GREW by 135 tiles, so every new (col,row) pointed past the stale
+  cached texture. **The user saw it before I did** — *"i saw black squares, is
+  it not finished yet?"*. Run all three steps of the art workflow, always.
+- **A quoted `<<'PY'` heredoc STILL ate backslashes**, landing a literal `\n`
+  mid-line in `world_builder.gd`. CLAUDE.md said quoting was the fix; it is
+  not, and I have corrected that line. **The symptom was a HANG, not an
+  error** — `--probe-world` ran past 300 s because the script failed to parse.
+  `--check-only --script <file>` diagnoses it in seconds. Do not put a literal
+  backslash in heredoc'd source; restructure so none is needed.
+
 **Picked up at: the polish pass, ART half — three of six done.** Shipped this
 session: the title (v0.6.51), the map screen redo (v0.6.52), the layout
-revision (v0.6.53). **Still untouched: ui and icons, the player model, world
+revision (v0.6.53), terrain blending + house contrast (v0.6.54). **Still untouched: ui and icons, the player model, world
 objects and textures.** Engine half still open: wet-ground reflections,
 window light spill, heat shimmer. Nothing in progress, nothing blocked, all
 gates green.

@@ -606,14 +606,119 @@ FLOOR_TILES = [
     ("plaza_0", ("plaza", 0)), ("plaza_1", ("plaza", 1)), ("plaza_2", ("plaza", 2)),
 ]
 
+# --------------------------------------------------------- terrain fringes ---
+# DIRECTIONAL EDGE BLENDING between ground materials (2026-08-05). User:
+# "can we make all of the biomes blend more together with another ... like the
+# grass, dirt, stone, try blending them", then "yes they are hard edges blocks
+# everywhere".
+#
+# There WAS a blend already — a concrete cell touching forest picked one of
+# three `grass_blend` tiles — and it could not work, for two reasons. It was
+# ONE CELL DEEP, and more importantly it was NON-DIRECTIONAL: a tile with
+# grass scattered generally over it, chosen at random, with no idea which side
+# the grass was actually on. Softening a diamond edge requires knowing WHICH
+# EDGE, so the boundary stayed a razor-straight 64x32 diamond.
+#
+# These tiles are keyed by a 4-bit MASK of which iso edges face the other
+# material, and the overlay is composited from THE REAL TILE of that material,
+# so a fringe can never drift out of step with what it blends into.
+#
+# THE BOUNDARY IS A SMOOTH WAVE, NOT PER-PIXEL NOISE. A per-pixel threshold
+# would be exactly the single-pixel dot noise that is banned project-wide
+# ("remove those little dots everywhere"); low-frequency waves give a torn
+# edge, and a couple of detached solid blobs read as clumps taking hold.
+#
+# Bit order matches world_builder's neighbour test — see _fringe_mask there.
+# In this projection world = ((cx-cy)*32, (cx+cy)*16), so:
+#   bit 0 = cell (x, y-1)  -> up-right on screen   -> NE edge
+#   bit 1 = cell (x+1, y)  -> down-right           -> SE edge
+#   bit 2 = cell (x, y+1)  -> down-left            -> SW edge
+#   bit 3 = cell (x-1, y)  -> up-left              -> NW edge
+FRINGE_VARIANTS = 3
+
+def _fringe_depth(u: float, v: float, mask: int) -> float:
+    """How far inside the diamond this pixel is from the nearest MASKED edge.
+    0 at the edge itself, larger toward the middle. In diamond coordinates
+    |u| + |v| <= 1, the four edges are u-v=1 (NE), u+v=1 (SE), v-u=1 (SW)
+    and -u-v=1 (NW)."""
+    d = 9.0
+    if mask & 1:
+        d = min(d, 1.0 - (u - v))
+    if mask & 2:
+        d = min(d, 1.0 - (u + v))
+    if mask & 4:
+        d = min(d, 1.0 - (v - u))
+    if mask & 8:
+        d = min(d, 1.0 + u + v)
+    return d
+
+
+def make_fringe_tile(base: Image.Image, over: Image.Image, mask: int,
+                     variant: int) -> Image.Image:
+    out = base.copy()
+    bp, op = out.load(), over.load()
+    ph = 1.7 + variant * 2.3
+    for y in range(32):
+        span = diamond_span(y)
+        if span is None:
+            continue
+        for x in range(span[0], span[1] + 1):
+            if op[x, y][3] == 0:
+                continue
+            u, v = (x - 32) / 32.0, (y - 16) / 16.0
+            d = _fringe_depth(u, v, mask)
+            # a torn edge from two out-of-phase waves — never a per-pixel roll
+            t = (0.42
+                 + 0.20 * math.sin(x * 0.21 + y * 0.37 + ph)
+                 + 0.11 * math.sin(x * 0.09 - y * 0.53 + ph * 1.9))
+            take = d < t
+            if not take:
+                # a few clumps that have taken hold past the tear line
+                blob = (0.5 * math.sin(x * 0.34 + ph * 3.1)
+                        + 0.5 * math.sin(y * 0.61 - ph * 1.3))
+                take = d < t + 0.30 and blob > 0.86
+            if take:
+                bp[x, y] = op[x, y]
+    return out
+
+
+def _fringe_entries() -> list[tuple[str, Image.Image]]:
+    """(name, image) for every fringe tile. Built from the SAME makers the
+    plain tiles use, so the two can never diverge."""
+    out: list[tuple[str, Image.Image]] = []
+    pairs = [
+        # name,      base under,          material creeping in
+        ("grass", ("concrete", 0), ("forest", 0)),
+        ("dirt", ("concrete", 0), ("dirt", 0)),
+        # and the other way, so a wood's edge frays into the pavement too
+        # rather than only the pavement fraying into the wood
+        ("stone", ("forest", 0), ("concrete", 0)),
+    ]
+    for label, (bk, bv), (ok, ov) in pairs:
+        base = make_floor_tile(bk, bv).img
+        over = make_floor_tile(ok, ov).img
+        for mask in range(1, 16):
+            for variant in range(FRINGE_VARIANTS):
+                out.append(("%s_fringe_%d_%d" % (label, mask, variant),
+                            make_fringe_tile(base, over, mask, variant)))
+    return out
+
+
 def make_floors_atlas() -> tuple[Image.Image, dict[str, list[int]]]:
     cols = 4
-    rows = (len(FLOOR_TILES) + cols - 1) // cols
+    fringes = _fringe_entries()
+    total = len(FLOOR_TILES) + len(fringes)
+    rows = (total + cols - 1) // cols
     atlas = Image.new("RGBA", (cols * 64, rows * 32), (0, 0, 0, 0))
     coords: dict[str, list[int]] = {}
     for i, (name, (kind, variant)) in enumerate(FLOOR_TILES):
         cx, cy = i % cols, i // cols
         atlas.paste(make_floor_tile(kind, variant).img, (cx * 64, cy * 32))
+        coords[name] = [cx, cy]
+    for j, (name, img) in enumerate(fringes):
+        i = len(FLOOR_TILES) + j
+        cx, cy = i % cols, i // cols
+        atlas.paste(img, (cx * 64, cy * 32))
         coords[name] = [cx, cy]
     return atlas, coords
 
@@ -634,7 +739,24 @@ SEG_THICK = 2  # cap depth in screen px — slim and flush with the wall
 BRICK_STYLES = {
     # two clearly different materials (user: buildings must not match)
     "brick_a": {"x": ("884b2b", "602c2c"), "y": ("7a4841", "4d2b32")},   # red brick
-    "brick_b": {"x": ("577277", "394a50"), "y": ("394a50", "202e37")},   # gray masonry
+    # GRAY MASONRY, LIFTED ONE STEP (2026-08-05). User, on a grey house:
+    # "the edge of this house is like barely seeable". It was not a matter of
+    # taste — this style's shaded y face was `394a50`, which is CONC_BASE, the
+    # EXACT value of the ground it stands on, and its mortar `202e37` is
+    # CONC_D1. A grey house was drawn in the pavement's own two colours, so on
+    # the shaded side it had no silhouette at all.
+    #
+    # The fix is value, not an outline. Outlining a wall segment is a known
+    # trap here: segments tile edge to edge, so `outline_auto` has a
+    # `sides=False` mode precisely because outlining the joins draws a black
+    # line down every seam and the gap between two outlines shows the world
+    # through the wall (the user once saw their own arm through it).
+    #
+    # Every neutral grey in Apollo is used by the ground somewhere, so the
+    # separation has to come from being consistently LIGHTER than the ground
+    # mass rather than from an unused hue. The full-screen night grade scales
+    # everything together, so this contrast holds at every hour.
+    "brick_b": {"x": ("819796", "577277"), "y": ("577277", "394a50")},   # gray masonry
 }
 
 # window variants: (start i along edge, top row in face coords, w, h, boarded)

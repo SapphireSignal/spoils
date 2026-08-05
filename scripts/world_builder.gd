@@ -1481,10 +1481,36 @@ func _paint_terrain() -> void:
 				# biome blending: concrete touching grass grows grass; concrete
 				# touching a dirt path picks up dirt — no hard tile seams.
 				# NEVER against asphalt (user: no grass on intersections)
+				# DIRECTIONAL NOW. This picked one of three grass_blend tiles at
+				# random, which could not soften anything: the tile had grass
+				# scattered generally over it with NO IDEA WHICH SIDE the grass
+				# was on, so the boundary stayed a razor-straight 64x32 diamond
+				# (user: "yes they are hard edges blocks everywhere").
+				#
+				# STILL EXACTLY ONE _rng DRAW EACH, as before. The mask is read
+				# off neighbouring cells and costs the layout stream nothing;
+				# changing the draw count here re-rolls every prop after it.
 				if _touches(cell, _forest) and not _next_to_road(cell):
-					tile_name = "grass_blend_%d" % _rng.randi_range(0, 2)
+					tile_name = "grass_fringe_%d_%d" % [
+						_fringe_mask(cell, _forest), _rng.randi_range(0, 2)]
 				elif _touches(cell, _dirt_path):
-					tile_name = "dirt_blend_%d" % _rng.randi_range(0, 2)
+					tile_name = "dirt_fringe_%d_%d" % [
+						_fringe_mask(cell, _dirt_path), _rng.randi_range(0, 2)]
+			elif is_forest and _cell_inset(cell) >= BARRIER_INSET - 2:
+				if not _plaza.has(cell) and not _apron.has(cell):
+					# ...and the WOOD frays into the open ground too, not just the
+					# ground into the wood. A one-sided blend still leaves a hard
+					# edge - it only moves it one cell over.
+					#
+					# THE VARIANT IS HASHED, NOT ROLLED. This branch is NEW, and an
+					# _rng draw here would shift every draw after it and re-roll the
+					# district - the same trap the road nudge had to dodge. A hash is
+					# stable per cell, so it cannot crawl between rebuilds either.
+					var smask := _open_ground_mask(cell)
+					if smask != 0:
+						tile_name = "stone_fringe_%d_%d" % [smask,
+							posmod(hash(Vector3i(cell.x, cell.y,
+								_zone_salt ^ 0x3f1d)), 3)]
 			_set_tile(cell, tile_name)
 		await _tick()
 
@@ -1494,6 +1520,45 @@ func _dash_here(along: int, road_pos: int) -> bool:
 	# rolls left orphan halves reading as off-center dashes (user
 	# screenshot). Deterministic per (position, road); gaps stay rare.
 	return posmod(hash(Vector3i(along, road_pos, _zone_salt)), 100) < 96
+
+
+func _fringe_mask(cell: Vector2i, field: Dictionary) -> int:
+	## Which of this tile's four ISO EDGES face `field`. The bit order is a
+	## CONTRACT shared with gen_art.py's fringe tiles - see the block comment
+	## above FRINGE_VARIANTS there before changing it. World is
+	## ((x-y)*32, (x+y)*16), so UP is the up-right (NE) edge on screen, RIGHT
+	## is down-right (SE), DOWN is down-left, LEFT is up-left.
+	##
+	## Costs the layout rng NOTHING: it only reads neighbouring cells.
+	var m := 0
+	if field.has(cell + Vector2i.UP):
+		m |= 1
+	if field.has(cell + Vector2i.RIGHT):
+		m |= 2
+	if field.has(cell + Vector2i.DOWN):
+		m |= 4
+	if field.has(cell + Vector2i.LEFT):
+		m |= 8
+	return m
+
+
+func _open_ground_mask(cell: Vector2i) -> int:
+	## The mirror of _fringe_mask for a FOREST cell: which edges face ordinary
+	## open ground. "Open" means not more forest and nothing that owns its own
+	## surface - a road, sidewalk, rail, ballast, plaza or apron edge has to
+	## stay crisp, or the wood starts fraying out over the kerb.
+	var m := 0
+	var dirs := [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]
+	for i in dirs.size():
+		var n: Vector2i = cell + dirs[i]
+		if _forest.has(n) or _dirt_path.has(n) or _plaza.has(n) or _apron.has(n):
+			continue
+		if _rail_cells.has(n) or _ballast.has(n) or _rail_cross.has(n):
+			continue
+		if _sidewalk.has(n) or _road_v_at(n) >= 0 or _road_h_at(n) >= 0:
+			continue
+		m |= 1 << i
+	return m
 
 
 func _touches(cell: Vector2i, field: Dictionary) -> bool:

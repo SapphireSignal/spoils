@@ -3,6 +3,50 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.54] — 2026-08-05 — the ground blends, and grey houses have a silhouette
+
+### Changed — directional terrain fringes
+User: *"can we make all of the biomes blend more together with another … like
+the grass, dirt, stone, try blending them"*, then *"yes they are hard edges
+blocks everywhere"*.
+
+There **was** a blend — a concrete cell touching forest picked one of three
+`grass_blend` tiles — and it could not possibly work. It was one cell deep,
+and it was **non-directional**: a tile with grass scattered generally over it,
+chosen at random, with no idea which side the grass was actually on. Softening
+a diamond edge requires knowing *which edge*, so the boundary stayed a
+razor-straight 64×32 diamond.
+
+`gen_art._fringe_entries` now bakes **135 tiles** — 3 material pairs
+(grass-into-stone, dirt-into-stone, and stone-into-grass so the wood frays
+into the pavement too, not only the pavement into the wood) × 15 edge masks ×
+3 variants. Each is composited from **the real tiles of both materials**, so a
+fringe can never drift out of step with what it blends into. The tear line is
+two out-of-phase waves plus a few detached clumps — never a per-pixel roll,
+which would be exactly the single-pixel dot noise banned project-wide.
+
+**It costs the layout rng nothing.** The two concrete-side branches still take
+exactly one `_rng` draw each, and the new forest-side branch takes none (it
+hashes off the cell). Verified: `--probe-world` DOORS stays **16 on identical
+cells**, so nothing rerolled.
+
+### Fixed — a grey house had no silhouette
+User, on a screenshot: *"the edge of this house is like barely seeable"*. Not
+a matter of taste — `brick_b`'s shaded face was **`394a50`, byte-identical to
+`CONC_BASE`**, the ground it stands on, and its mortar `202e37` is `CONC_D1`.
+A grey house was drawn in the pavement's own two colours.
+
+Lifted one step to `819796`/`577277` over `577277`/`394a50`. **The fix is
+value, not an outline**: wall segments tile edge to edge, so `outline_auto`
+has a `sides=False` mode precisely because outlining the joins draws a black
+line down every seam and the gap between two outlines shows the world through
+the wall. Every neutral grey in Apollo is used by the ground somewhere, so
+separation has to come from being consistently lighter than the ground mass;
+the full-screen night grade scales both together, so it holds at every hour.
+
+### Verified
+`SMOKE PASS`, 240 fps, worst frame 4.50 ms, DOORS 16 on unchanged cells.
+
 ## [0.6.53] — 2026-08-05 — the district is no longer on graph paper
 
 **A deliberate, user-approved map revision.** Their words, on v0.6.52's map
