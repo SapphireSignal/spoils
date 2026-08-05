@@ -160,6 +160,24 @@ the naive version (a sprite per prop) costs thousands of nodes against a
 ~8.0k budget. Left undone deliberately and written up as such — that is a
 cost decision the user should make, not one to slip into a polish batch.
 
+**Also shipped: v0.6.49 — foliage sway.** Every tree and bush leans, trunk
+pinned, crown moving, each on its own clock. Whole-pixel UV shift in the
+FRAGMENT stage (a vertex shear samples off-axis and raggeds every column).
+**Zero new nodes and two materials district-wide**, because the per-instance
+phase is hashed from the instance's world position in the vertex stage rather
+than stored per tree — which also means **no rng draw**, and an extra draw
+would have re-rolled the FIXED district. Filmed to verify, not screenshotted.
+240 fps in the forest and on a storm night.
+
+**And a prop contact-shadow attempt that was BUILT, MEASURED AND BACKED OUT**
+(user: *"just leave the props how they are but is there not another way to
+make them look better?"*). Props genuinely cast nothing — confirmed three
+ways, the old TASKS.md line "everything shares one static blob" was false.
+The one-node custom `_draw()` architecture is free and should be reused; what
+killed it was OVERLAP — clustered props stack semi-transparent blobs and they
+compound into a grey smear. Full write-up with a starting point is in
+TASKS.md. **Do not re-attempt it by just lowering the alpha.**
+
 **Picked up at: THE POLISH PASS IS NOT FINISHED — see TASKS.md section A.**
 Engine side still open: directional cast shadows from props and the player
 (everything shares one static blob), wet-ground reflections, contact shadows,

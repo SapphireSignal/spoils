@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.48.** The release history was renumbered evenly on
+**Current version: v0.6.49.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -141,8 +141,27 @@ light); and OVERCAST weather so a dry day isn't automatically a sunny one.
   gets one merged silhouette rather than four stacked blobs. Note
   `shadow.png` is a 24x12 ellipse whose own peak alpha is only ~50%, so it is
   already faint: the fix is NOT simply turning the alpha down further.
-- **Sway shader** on bushes and trees — a WHOLE-PIXEL horizontal offset,
-  never a rotation.
+- **Sway shader on bushes and trees — DONE in v0.6.49.** A whole-pixel
+  horizontal offset, never a rotation, exactly as specced.
+  `scripts/sway.gdshader`, applied in `_add_prop` by PREFIX (`tree_`,
+  `bush_` — note `street_lamp` CONTAINS "tree", so a substring test would
+  have every lamp post waving).
+  - It works in the FRAGMENT stage. A vertex shear moves the quad's corners
+    and the texture is then sampled off-axis, which raggeds every column;
+    shifting the UV by an INTEGER number of texels moves whole rows instead,
+    so nothing is ever resampled.
+  - The base is pinned and only the crown moves (`base_hold`), or the whole
+    tree slides sideways and reads as a rendering fault rather than wind.
+  - **The phase comes from the instance's own world position**, hashed in the
+    vertex stage and passed down as a varying — so every tree is on its own
+    clock from ONE SHARED MATERIAL. That is why it adds **zero nodes** and
+    two materials rather than one per tree. It also takes **no rng draw**,
+    which matters more than it looks: the district is FIXED, and an extra
+    draw from the builder's rng would re-roll the whole map.
+  - Verified by FILM, not by a still — a still cannot show motion. Canopies
+    shift between consecutive frames, trunks do not, edges stay crisp.
+  - Perf: **240 fps** in the forest at midday (worst frame 4.63 ms) and on a
+    storm night (4.79 ms), nodes unchanged at ~8.0k.
 - NOT recommended: depth of field, chromatic aberration, motion blur.
   They fight pixel art and just smear it.
 

@@ -35,7 +35,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
 	 form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.48 shipped, 2026-08-05.** Milestone 1 (a walkable world) is DONE.
+**v0.6.49 shipped, 2026-08-05.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 
@@ -631,10 +631,21 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   card and the menu, with a "compiling shaders" bar that only appears if
   the work exceeds 120 ms. Fingerprints the engine build plus every
   `.gdshader` into `user://`, so it runs only after an update. There are
-  THREE shaders (`flash`, `grade`, `sunshafts` — all three are documented
-  individually just above); this line claimed one, so treat its old "40 ms"
-  as unmeasured. That figure decides whether the 120 ms bar ever shows, so
-  re-measure before relying on it.
+  **FOUR** shaders (`flash`, `grade`, `sunshafts`, `sway` — all documented
+  individually in this section); this line claimed one, then three, so treat
+  its old "40 ms" as unmeasured. That figure decides whether the 120 ms bar
+  ever shows, so re-measure before relying on it. **It DISCOVERS shaders by
+  scanning the folder**, so a new `.gdshader` is picked up with no change
+  here — which is why `sway` needed no wiring.
+- `scripts/sway.gdshader` — foliage sway (v0.6.49). A WHOLE-PIXEL horizontal
+  UV shift in the FRAGMENT stage, weighted by height so the trunk is pinned
+  and only the crown moves. **Per-instance phase is hashed from the
+  instance's own world position in the vertex stage** and passed down as a
+  varying, so every tree runs on its own clock from ONE SHARED MATERIAL:
+  zero extra nodes, two materials district-wide, and — load-bearing — **no
+  rng draw**, which would otherwise have re-rolled the FIXED district.
+  Applied in `_add_prop` by PREFIX (`tree_`, `bush_`): `street_lamp`
+  contains "tree", so a substring test waves every lamp post.
 - `Player.shake(strength, seconds)` — camera kick in WHOLE SCREEN PIXELS,
   applied inside `_camera_target` so it rides the same grid the camera
   already snaps to. Anything can find the player via group `player_shake`.

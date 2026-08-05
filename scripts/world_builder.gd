@@ -74,6 +74,8 @@ var _story_h := 32
 var _floor_layer: TileMapLayer
 var _flat: Node2D                    # flat decals (cables) over the tiles
 var _occ: Node2D                     # light occluders (wall lines) — never drawn
+var _sway_shader: Shader             # foliage sway, compiled once
+var _sway_mats: Dictionary = {}      # amplitude -> the ONE material using it
 var _ysort: Node2D
 var _roofs: Array[RoofReveal] = []
 var _occupied: Dictionary = {}
@@ -1458,9 +1460,33 @@ func _add_prop(prop_name: String, pos: Vector2) -> Node2D:
 	# whole-pixel positions ALWAYS: at native-res rendering a static prop on a
 	# half pixel would sit off the world's pixel grid
 	node.position = pos.round()
-	node.add_child(_prop_sprite(prop_name))
+	var sprite := _prop_sprite(prop_name)
+	# FOLIAGE SWAYS. Match the PREFIX, never a substring — "street_lamp"
+	# contains "tree", and a contains() check would have every lamp post in the
+	# district waving in the wind.
+	if prop_name.begins_with("tree_"):
+		sprite.material = _sway_material(2.0)
+	elif prop_name.begins_with("bush_"):
+		sprite.material = _sway_material(1.0)
+	node.add_child(sprite)
 	_ysort.add_child(node)
 	return node
+
+
+func _sway_material(amplitude: float) -> ShaderMaterial:
+	## ONE material per amplitude, shared by every instance using it — the
+	## shader takes its per-tree phase from the instance's own world position,
+	## so a shared material still gives every tree its own clock. Two materials
+	## for the whole district instead of one per tree.
+	if _sway_mats.has(amplitude):
+		return _sway_mats[amplitude]
+	if _sway_shader == null:
+		_sway_shader = load("res://scripts/sway.gdshader")
+	var mat := ShaderMaterial.new()
+	mat.shader = _sway_shader
+	mat.set_shader_parameter("amplitude", amplitude)
+	_sway_mats[amplitude] = mat
+	return mat
 
 
 func _add_prop_at_cell(prop_name: String, cell: Vector2i,

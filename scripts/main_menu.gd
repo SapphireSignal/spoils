@@ -212,6 +212,10 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.49", [
+		"the trees and bushes move now. every one of them leans in the wind on its own timing, with the trunk staying put and only the leaves shifting, so a wood doesnt look like a field of identical statues any more",
+		"it shifts by whole pixels only, so nothing goes blurry, and it costs nothing - still 240fps in the middle of the forest and on a storm night",
+	]],
 	["v0.6.48", [
 		"your shadow follows the sun now. it used to be one blob under your feet that never changed - it stretches out long in the early morning, shrinks to almost nothing at midday, and swings round to the other side by evening",
 		"it fades out under heavy cloud and at night, because there isnt a sun to cast it - you keep a soft dark patch underfoot so you dont look like youre floating",

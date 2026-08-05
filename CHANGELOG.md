@@ -3,6 +3,40 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.49] — 2026-08-05 — the trees move
+
+### Added — foliage sway
+Every tree and bush in the district now leans in the wind. **The trunk stays
+put and only the crown moves**, each one on its own clock, so a wood reads as
+alive rather than as a field of identical statues.
+
+**It is a whole-pixel shift, never a rotation**, which is the standing rule
+for this art. It runs in the FRAGMENT stage on purpose: a vertex-stage shear
+moves the quad's corners and the texture is then sampled off-axis, ragging
+every column. Shifting the UV by an INTEGER number of texels moves whole rows
+of pixels sideways instead, so the art lands exactly on its own grid and is
+never resampled. Rows pushed past the sprite edge are dropped rather than
+clamped, which would have smeared a column of leaf colour off the side.
+
+**Zero new nodes, two materials for the whole district.** The per-instance
+phase is hashed from the instance's own world position in the vertex stage
+and handed down as a varying, so one shared material still gives every tree
+its own timing. That also means it takes **no rng draw** — which matters more
+than it sounds, because the district layout is FIXED and an extra draw from
+the builder's rng would have re-rolled the entire map.
+
+Matched by PREFIX (`tree_`, `bush_`), not substring: `street_lamp` contains
+"tree", and a substring test would have had every lamp post in the district
+waving in the wind.
+
+### Verification
+**Filmed, not screenshotted** — a still cannot show motion, which this
+project has learned the hard way. Across consecutive frames the canopies
+shift, the trunks do not, and the edges stay crisp.
+
+**Perf: 240 fps** in the forest at midday (worst frame 4.63 ms) and on a
+storm night with every lamp casting (4.79 ms). Node count unchanged at ~8.0k.
+
 ## [0.6.48] — 2026-08-05 — your shadow follows the sun
 
 ### Added — a directional shadow on the player
