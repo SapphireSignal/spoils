@@ -3,6 +3,42 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.58] - 2026-08-05 - the ground pass
+
+User: *"lets make make the ground look visually better, lets give it the
+ground pass, make all of the dirt, grass, stone, roads, railroads, everything
+on the ground. also the dirt looks more red than brown"*.
+
+### Fixed - the dirt was built on the RED ramp
+It based on `341c27` over `241527` - the darkest values of Apollo's ORANGE
+and RED ramps - so however much of it you laid down it came out wine, not
+earth. **A colour only reads as brown when GREEN leads BLUE**, and both of
+those have blue above green. `7a4841` (122,72,65) and `ad7757` (173,119,87)
+do not. Darkening is then done by COVERAGE - more shadow and more grey mud -
+because every Apollo brown below `7a4841` goes blue-over-green and turns
+mauve again.
+
+Same "measure it, do not judge it" lesson as the grey house in v0.6.54 that
+was painted in its own ground's colours.
+
+### Added - tonal drift on every surface
+Every floor was one flat base colour plus fine per-pixel wear, so a large
+area read as a single value with dust on it - flat at any distance, and no
+amount of extra speckle fixes that because speckle averages back to the same
+tone. `_tonal` lays a few large low-contrast blotches per tile instead, so
+across a field of tiles the ground drifts. Applied to concrete, asphalt,
+forest floor, ballast and dirt.
+
+`_aggregate` adds small stones as 2x1 pairs, never single pixels, so they
+read as aggregate in the surface rather than noise on it.
+
+**Asphalt keeps NO speckle** - smooth road surface is a standing user call.
+Its blotches are patch-scale only, reading as old repairs and settled tar,
+which gives a long straight road tonal drift without granulating it.
+
+### Verified
+`SMOKE PASS`, 240 fps, worst frame 4.47 ms, `DOORS` 16 on unchanged cells.
+
 ## [0.6.57] - 2026-08-05 - the blending reaches everywhere, and roads rot
 
 ### Fixed - whole areas were never blended at all

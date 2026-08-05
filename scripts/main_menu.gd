@@ -206,6 +206,11 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.58", [
+		"the ground got a proper pass. dirt, stone, roads, the forest floor and the rail bed all have slow tonal variation across them now instead of being one flat colour with specks on it",
+		"the dirt is brown instead of red. it was mixed from the wrong end of the palette - the reds - so it came out like wine no matter how much of it there was",
+		"the roads stay smooth, just with old repair patches showing through",
+	]],
 	["v0.6.57", [
 		"whole patches of ground were never getting blended at all - a lone bit of grass in the dirt, or the pocket under a dead tree, stayed a hard diamond. the blending now runs at the very end of building the world, so it covers everything no matter what put it there",
 		"dirt spreads onto the roads properly now instead of just outlining them. it can wash right over the tarmac, which is what it should have looked like",

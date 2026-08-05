@@ -268,6 +268,30 @@ joined to roads, and broken cars reading as broken. **UI and icons remain
 PARKED mid-way** - `make_ui_frames`/`make_ui_icons` exist in gen_art and are
 not wired.
 
+**Shipped: v0.6.58 - the ground pass.** *"lets give it the ground pass ...
+also the dirt looks more red than brown"*.
+- **The dirt was built on the RED ramp.** `341c27` over `241527` are the
+  darkest values of Apollo's ORANGE and RED ramps. **A colour reads as brown
+  only when GREEN leads BLUE** - both of those have blue above green, so the
+  earth came out wine however much of it there was. `7a4841`/`ad7757` lead
+  green. Darkening is by COVERAGE, because every Apollo brown darker than
+  `7a4841` flips blue-over-green and goes mauve again.
+- **`_tonal`: large low-contrast blotches on every surface.** Each floor was
+  one flat base plus per-pixel wear, which is flat at any distance - speckle
+  averages back to the same tone, so more of it never helps. Patch-scale
+  drift is what makes a field of tiles stop reading as one colour.
+- Asphalt keeps NO speckle (smooth roads is a standing call); its blotches
+  read as old repairs.
+
+**ON GEMINI'S ADVICE, which the user pasted:** most of it matches rules this
+project already has. **TWO ITEMS WOULD BREAK THE GAME and were declined, with
+the reason given to the user:** runtime tilt ("rotate cars 5-15 degrees") and
+runtime scale jitter ("+/-15%") both resample pixel art off its grid and
+shimmer under a moving camera - this project bakes `bake_lean()` and per
+instance variants at GENERATION time for exactly that reason. Curved/spline
+roads were also declined for now: roads are axis-aligned tile bands that
+sidewalks, crosswalks and lane-correct vehicles all key off.
+
 **Picked up at: the polish pass, ART half — three of six done.** Shipped this
 session: the title (v0.6.51), the map screen redo (v0.6.52), the layout
 revision (v0.6.53), terrain blending + house contrast (v0.6.54), the blend

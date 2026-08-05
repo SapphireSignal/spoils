@@ -204,12 +204,51 @@ def _floor_base(c: Canvas, rng: random.Random, base, dark, lite,
     speckle(c, rng, region, [dark, lite], [p_dark, p_lite])
     return region
 
+
+def _tonal(c: Canvas, rng: random.Random, region: set, cols: list,
+           count: int = 2, lo: int = 14, hi: int = 30) -> None:
+    """LARGE, low-contrast blotches across a floor tile.
+
+    The ground pass's main move (user, 2026-08-05: "lets make make the ground
+    look visually better, lets give it the ground pass"). Every surface was
+    one flat base colour plus fine per-pixel wear, so a big area of concrete
+    or asphalt read as a single value with dust on it - flat at any distance,
+    and no amount of extra speckle fixes that, because speckle averages back
+    to the same tone.
+
+    These are patch-scale instead: a few blotches per tile, each a good
+    fraction of it, so ACROSS a field of tiles the ground has slow tonal
+    drift. Solid patches, which is what the no-dot-noise rule asks for.
+    """
+    if not region:
+        return
+    pts = sorted(region)
+    for _ in range(count):
+        col = cols[rng.randrange(len(cols))]
+        cx, cy = pts[rng.randrange(len(pts))]
+        for (x, y) in blob(rng, cx, cy, rng.randint(lo, hi), region):
+            c.set(x, y, col)
+
+
+def _aggregate(c: Canvas, rng: random.Random, region: set, col,
+               count: int = 5) -> None:
+    """Small stones in the mix - 2x1 pairs, never single pixels, so they read
+    as aggregate in the surface rather than as noise on it."""
+    pts = sorted(region)
+    for _ in range(count):
+        x, y = pts[rng.randrange(len(pts))]
+        if (x + 1, y) in region:
+            c.set(x, y, col)
+            c.set(x + 1, y, col)
+
 def make_floor_tile(kind: str, variant: int) -> Canvas:
     rng = random.Random(f"{SEED}:floor:{kind}:{variant}")
     c = Canvas(64, 32)
 
     if kind == "concrete":
-        _floor_base(c, rng, CONC_BASE, CONC_D1, CONC_L1, 0.032, 0.016)
+        region = _floor_base(c, rng, CONC_BASE, CONC_D1, CONC_L1, 0.032, 0.016)
+        _tonal(c, rng, region, [CONC_D1, CONC_L1], 2, 18, 40)
+        _aggregate(c, rng, region, CONC_L2, 6)
     elif kind == "crack":
         region = _floor_base(c, rng, CONC_BASE, CONC_D1, CONC_L1, 0.032, 0.016)
         x, y = 20 + rng.randrange(24), 8 + rng.randrange(16)
@@ -253,10 +292,26 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
         # packed soil with STRUCTURE, not dots: rut dashes worn along the
         # path, clod clusters, the odd stone (flat maroon read as a dead
         # red stripe once the old speckle went away)
-        region = _floor_base(c, rng, C("341c27"), C("241527"), C("4d2b32"),
-                             0.02, 0.02)
-        speckle(c, rng, region, [C("202e37")], [0.05])   # gray mud pulls the
-        # red out of the earth — long dirt strips read blood-red without it
+        # ON THE BROWN RAMP, not the red one (user, 2026-08-05: "the dirt
+        # looks more red than brown"). It was based on 341c27 over 241527 -
+        # those are the darkest values of Apollo's ORANGE and RED ramps, and
+        # mixing them gives wine, not earth. 4d2b32 / 7a4841 are the actual
+        # brown ramp. The grey mud stays: it desaturates the whole thing,
+        # without which long dirt strips still pull warm.
+        # PICK BY CHANNEL ORDER, not by eye. A colour only reads as brown when
+        # GREEN leads BLUE. Apollo's 4d2b32 is (77,43,50) and 341c27 is
+        # (52,28,39) - blue above green in both, which is why an earth built
+        # on them comes out mauve however much of it you lay down. 7a4841 is
+        # (122,72,65) and ad7757 is (173,119,87): green above blue, actual
+        # brown. This is the same "measure it, do not judge it" lesson as the
+        # grey house that matched its own ground.
+        # Darkened by COVERAGE, not by picking a darker base: every Apollo
+        # brown below 7a4841 goes blue-over-green and turns mauve again. More
+        # shadow and more grey mud drops the value while the hue stays earth.
+        region = _floor_base(c, rng, C("7a4841"), C("4d2b32"), C("ad7757"),
+                             0.20, 0.035)
+        speckle(c, rng, region, [C("202e37"), C("394a50")], [0.15, 0.06])
+        _tonal(c, rng, region, [C("4d2b32"), C("884b2b")], 3, 16, 34)
         for i in range(rng.randint(10, 14)):
             x = 6 + rng.randrange(52)
             y = 4 + rng.randrange(24)
@@ -302,6 +357,10 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
         # scattered red confetti across every wood (user: no red noise)
         region = _floor_base(c, rng, C("19332d"), C("10141f"), C("25562e"), 0.07, 0.05)
         speckle(c, rng, region, [C("341c27")], [0.018])
+        # shade under the canopy and the odd sunlit break, so a wood floor is
+        # not one flat green
+        _tonal(c, rng, region, [C("10141f"), C("25562e")], 3, 16, 34)
+        _aggregate(c, rng, region, C("468232"), 4)      # lit tufts
 
     elif kind == "grass_blend":
         # transition tile: concrete with grass CREEPING onto it in clumps —
@@ -413,8 +472,13 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
                 c.set(x, y, C("819796"))
 
     elif kind == "asphalt":
-        # SMOOTH road surface (user call) — damage lives in its own tiles
-        _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.0, 0.0)
+        # SMOOTH road surface (user call) - damage lives in its own tiles, so
+        # there is deliberately NO speckle here. The blotches are patch-scale
+        # and low contrast: they read as old repairs and settled tar, which is
+        # a real road feature, and they give a long straight road some tonal
+        # drift without granulating it.
+        region = _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.0, 0.0)
+        _tonal(c, rng, region, [CONC_D2, CONC_BASE], 2, 20, 44)
     elif kind == "asphalt_crack":
         region = _floor_base(c, rng, CONC_D1, CONC_D2, CONC_BASE, 0.0, 0.0)
         x, y = 16 + rng.randrange(30), 6 + rng.randrange(16)
@@ -480,6 +544,7 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
         # trainyard gravel bed: dark base with STONES — small 2-4px shapes
         # with their own shadow, clustered (structure, never dot noise)
         region = _floor_base(c, rng, C("202e37"), C("151d28"), C("394a50"), 0.0, 0.0)
+        _tonal(c, rng, region, [C("151d28"), C("394a50")], 2, 14, 30)
         for _ in range(rng.randint(6, 9)):
             cx_, cy_ = 6 + rng.randrange(52), 4 + rng.randrange(24)
             for s in range(rng.randint(3, 6)):
