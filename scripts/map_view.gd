@@ -42,7 +42,11 @@ const LAND := Color("394a50")                    # open ground: lots, verges
 const URBAN := Color("202e37")                   # city blocks, a shade denser
 const PAVED := Color("577277")                   # plazas, aprons, hardstanding
 const OUTSIDE := Color("151d28")                 # ground beyond the wire
-const DIRT := Color("4d2b32")                    # yards, unmade ground
+# MATCHES THE WORLD'S DIRT. v0.6.58 moved the ground off Apollo's red ramp
+# because it read as wine rather than earth; this was left behind on the old
+# value, so the map and the world disagreed about what dirt looks like. Brown
+# needs GREEN above BLUE - see make_floor_tile's dirt branch.
+const DIRT := Color("7a4841")                    # yards, unmade ground
 const WOOD_DEEP := Color("19332d")               # under the canopy
 const WOOD := Color("25562e")                    # canopy body
 const WOOD_HI := Color("468232")                 # the sunlit tops
@@ -589,7 +593,8 @@ func _draw_district() -> void:
 	for b in (_vec["blocks"] as Array):
 		var br := Rect2(_cell_to_screen(Vector2(float(b[0]), float(b[1]))),
 			Vector2(float(b[2]), float(b[3])) * z)
-		_canvas.draw_rect(br, URBAN)
+		_canvas.draw_colored_polygon(
+			_wobble(br, int(b[0]) * 31 + int(b[1]), z * 0.9), URBAN)
 	# GROUND MOTTLE. Without it the open ground and the blocks are two flat
 	# colour fields, which is most of what still read as "squares and lines"
 	# once the colour was in. These are broken concrete, weeds and rubble —
@@ -628,9 +633,10 @@ func _draw_district() -> void:
 		var pr: Array = paved
 		if float(pr[2]) <= 0.0:
 			continue
-		_canvas.draw_rect(Rect2(
-			_cell_to_screen(Vector2(float(pr[0]), float(pr[1]))),
-			Vector2(float(pr[2]), float(pr[3])) * z), PAVED)
+		var prect := Rect2(_cell_to_screen(Vector2(float(pr[0]), float(pr[1]))),
+			Vector2(float(pr[2]), float(pr[3])) * z)
+		_canvas.draw_colored_polygon(
+			_wobble(prect, int(pr[0]) * 11 + int(pr[1]) * 5, z * 0.7), PAVED)
 	# named areas get a SURFACE, keyed to what the ground there actually is.
 	# They used to get a thin hollow rectangle each, which is most of what the
 	# user meant by "the map just looks like squares and lines" — seven empty
@@ -653,9 +659,10 @@ func _draw_district() -> void:
 		# solid slabs — "squares", the exact thing being fixed. At 0.72 the
 		# ground underneath still reads through and they land as surfaces.
 		surface.a = 0.72
-		_canvas.draw_rect(Rect2(
-			_cell_to_screen(Vector2(float(ar[0]), float(ar[1]))),
-			Vector2(float(ar[2]), float(ar[3])) * z), surface)
+		var arect := Rect2(_cell_to_screen(Vector2(float(ar[0]), float(ar[1]))),
+			Vector2(float(ar[2]), float(ar[3])) * z)
+		_canvas.draw_colored_polygon(
+			_wobble(arect, int(ar[0]) * 17 + int(ar[1]) * 7, z * 1.1), surface)
 	# THE WOODS ARE CANOPY MASSES. They were diagonal hatch strokes — the way
 	# a surveyor draws tree cover, and the user's words were "the trees are
 	# just lines in there too".
@@ -749,10 +756,18 @@ func _draw_district() -> void:
 	# a set of perfectly ruled bands, which is exactly what the user objected to
 	# ("the straight roads just look really weird, especially on the map"). They
 	# are real: the same cells the world paints as bare earth.
+	# ROUND, NOT SQUARE. These were one draw_rect per cell, which is a grid of
+	# little squares - the exact thing being designed out (user: "all the dirt
+	# just looks like squares on the map too"). Overlapping discs merge into
+	# organic patches, and a cell's own hash sizes each one so a run of them
+	# does not read as a line of identical dots.
 	for rc in (_vec.get("road_rot", []) as Array):
 		var rcell: Array = rc
-		var rp := _cell_to_screen(Vector2(float(rcell[0]), float(rcell[1])))
-		_canvas.draw_rect(Rect2(rp, Vector2(z, z) * 1.15), DIRT, true)
+		var rp := _cell_to_screen(Vector2(float(rcell[0]) + 0.5,
+			float(rcell[1]) + 0.5))
+		var hh: int = absi(int(rcell[0]) * 73856093 ^ int(rcell[1]) * 19349663)
+		var rr := z * (0.75 + float(hh & 63) / 63.0 * 0.5)
+		_canvas.draw_circle(rp, rr, DIRT, true, -1.0, false)
 	# the rail line, with ties
 	var rail_row := float(_vec["rail_row"])
 	if rail_row > 0.0:
@@ -822,6 +837,32 @@ func _draw_dashed_rect(on: Control, rect: Rect2, col: Color, width: float,
 			var t2 := minf(t + dash, span)
 			on.draw_line(a + dir * t, a + dir * t2, col, width, true)
 			t = t2 + gap
+
+
+func _wobble(r: Rect2, key: int, amp: float) -> PackedVector2Array:
+	## A rect's outline with a HASHED wander on it, so a block or a yard is not
+	## a perfect rectangle on the map (user: "i dont want to see any square
+	## stuff", "i dont just want my whole game to look square").
+	##
+	## Hashed off the rect and the point index, never rolled: this redraws on
+	## every pan, so anything random would crawl while you dragged the map.
+	## Points are laid along each side rather than at the corners only, or the
+	## shape stays a quadrilateral and just leans.
+	var pts := PackedVector2Array()
+	var per := [Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1)]
+	var steps := 5
+	for side in 4:
+		var a: Vector2 = per[side]
+		var b: Vector2 = per[(side + 1) % 4]
+		for i in steps:
+			var f := float(i) / float(steps)
+			var u: Vector2 = a.lerp(b, f)
+			var h: int = absi(int(key) ^ (side * 73856093) ^ (i * 19349663))
+			var ox := (float(h & 255) / 255.0 - 0.5) * 2.0 * amp
+			var oy := (float((h >> 8) & 255) / 255.0 - 0.5) * 2.0 * amp
+			pts.append(Vector2(r.position.x + u.x * r.size.x + ox,
+				r.position.y + u.y * r.size.y + oy))
+	return pts
 
 
 func _poi_disc(name: String) -> Color:

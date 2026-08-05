@@ -74,6 +74,7 @@ var _story_h := 32
 var _floor_layer: TileMapLayer
 var _fringe_layer: TileMapLayer
 var _road_rot: Dictionary = {}   # road cells worn back to bare earth
+var _indoors: Dictionary = {}    # building interior cells - see _wash_dirt_over_hard
 var _flat: Node2D                    # flat decals (cables) over the tiles
 var _occ: Node2D                     # light occluders (wall lines) — never drawn
 var _sway_shader: Shader             # foliage sway, compiled once
@@ -1658,6 +1659,8 @@ func _wash_dirt_over_hard() -> void:
 				var n := Vector2i(d.x + dx, d.y + dy)
 				if _dirt_path.has(n) or add.has(n) or _forest.has(n):
 					continue
+				if _indoors.has(n):
+					continue                   # never wash through a wall
 				if _cell_inset(n) < BARRIER_INSET - 6:
 					continue
 				var mat := _cell_material(n)
@@ -1690,6 +1693,8 @@ func _paint_fringes() -> void:
 			var cell := Vector2i(x, y)
 			if _cell_inset(cell) < BARRIER_INSET - 6:
 				continue
+			if _indoors.has(cell):
+				continue                       # a floor is a floor, not terrain
 			var mine := _cell_material(cell)
 			if mine == "rail":
 				continue
@@ -2077,6 +2082,10 @@ func _build_shell(plot: Dictionary) -> void:
 		for x in range(interior.position.x, interior.end.x):
 			var cell := Vector2i(x, y)
 			_occupied[cell] = true
+			# INDOORS. A building gets ONE uniform floor (standing rule - per-cell
+			# variants read as patchwork and the user rejected them), so nothing
+			# that weathers the ground outside may touch these cells.
+			_indoors[cell] = true
 			_set_tile(cell, floor_tile)
 			var sides := _edge_sides(cell, interior)
 			await _tick()

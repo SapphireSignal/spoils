@@ -183,17 +183,33 @@ def speckle(c: Canvas, rng: random.Random, region, colors: list[tuple], probs: l
             patches += 1
 
 def blob(rng: random.Random, cx: int, cy: int, n: int, region: set) -> set:
-    out = set()
-    x, y = cx, cy
-    for _ in range(n * 3):
-        if (x, y) in region:
-            out.add((x, y))
-        if len(out) >= n:
-            break
-        x += rng.choice((-1, -1, 0, 1, 1))
-        y += rng.choice((-1, 0, 0, 1))
-        if (x, y) not in region:
-            x, y = cx + rng.randint(-3, 3), cy + rng.randint(-2, 2)
+    """A COMPACT patch of `n` cells grown outward from (cx, cy).
+
+    This used to be a RANDOM WALK - it stepped a cursor around and kept every
+    cell it visited. A random walk is a thin meandering trail, not a patch, so
+    every "wear blob" in the game was actually a 1 px squiggle, often hooked
+    or self-crossing. At tile scale they read as little glyphs scattered over
+    the ground; the user's words were "theres what looks like question marks
+    on the road, can you remove that".
+
+    It grows instead: repeatedly pick a cell already in the patch and claim a
+    neighbour. That gives a rounded, connected clump - which is what every
+    caller already believed it was getting, and what the no-dot-noise rule
+    means by "small SOLID wear patches".
+    """
+    if (cx, cy) not in region:
+        return set()
+    out = {(cx, cy)}
+    edge = [(cx, cy)]
+    guard = n * 12
+    while len(out) < n and edge and guard > 0:
+        guard -= 1
+        bx, by = edge[rng.randrange(len(edge))]
+        nx = bx + rng.choice((-1, 0, 1))
+        ny = by + rng.choice((-1, 0, 1))
+        if (nx, ny) in region and (nx, ny) not in out:
+            out.add((nx, ny))
+            edge.append((nx, ny))
     return out
 
 def _floor_base(c: Canvas, rng: random.Random, base, dark, lite,
@@ -248,7 +264,12 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
     if kind == "concrete":
         region = _floor_base(c, rng, CONC_BASE, CONC_D1, CONC_L1, 0.032, 0.016)
         _tonal(c, rng, region, [CONC_D1, CONC_L1], 2, 18, 40)
-        _aggregate(c, rng, region, CONC_L2, 6)
+        # QUIETER than the first cut of the ground pass (user: "theres too
+        # many white circles in some areas of the map, lets reduce it").
+        # CONC_L2 is the brightest concrete value and six of them per tile
+        # carpeted open ground in pale dots; three of the next value down
+        # reads as aggregate instead of as confetti.
+        _aggregate(c, rng, region, CONC_L1, 3)
     elif kind == "crack":
         region = _floor_base(c, rng, CONC_BASE, CONC_D1, CONC_L1, 0.032, 0.016)
         x, y = 20 + rng.randrange(24), 8 + rng.randrange(16)

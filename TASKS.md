@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.58.** The release history was renumbered evenly on
+**Current version: v0.6.59.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -417,6 +417,25 @@ square"*.
    too, like the puddle haas reflection"*. Wet-ground reflections were
    already on the polish list (section A); this is the same item with a size
    spread and animation attached.
+
+7. **Map redesign as "a painting"** *(user, 2026-08-05)* - *"can you make
+   it look better, like draw it or something make it a painting, redesign
+   the whole map because it doesnt look good"*. **NEEDS A SAMPLE AND A
+   SIGN-OFF BEFORE BUILDING**: this is the THIRD direction for the map
+   screen (flat rects -> paper chart, rejected -> game map), and the second
+   was rebuilt in full and thrown away. Do not rebuild it blind again.
+   Note the constraint the paper version violated: they also said *"i dont
+   want a real looking map i just want it to look like a good real map that
+   youd see in other video games"*.
+8. **Power pylons: only three, and unconnected** *(user)* - *"is there only 3
+   power pylons? add some more in the forest area and around comms, and make
+   them all connected like how it is in this picture like with the lines"*.
+   `_place_power_line` exists; it wants more pylons and a continuous run.
+9. **Green trees shedding autumn leaves** *(user)*. NOTE: `_maybe_shed_leaves`
+   already derives the leaf colour from the variant name and a comment says
+   this exact bug was fixed once before - so **the remaining cause is
+   elsewhere**, most likely `environment_system.gd`'s `_leaf_near`
+   encoding (`>=100000 = red`). Measure before changing anything.
 
 ## B0. Parking lots and aprons should JOIN the road network *(user, 2026-08-05)*
 

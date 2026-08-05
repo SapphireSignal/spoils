@@ -292,6 +292,29 @@ instance variants at GENERATION time for exactly that reason. Curved/spline
 roads were also declined for now: roads are axis-aligned tile bands that
 sidewalks, crosswalks and lane-correct vehicles all key off.
 
+**Shipped: v0.6.59 - two real bugs, both long-standing or self-inflicted.**
+- **`blob()` WAS A RANDOM WALK.** It claimed to return "soft blob-shaped
+  patches" and actually kept every cell a wandering cursor visited, which is
+  a thin hooked trail. **Every wear patch in the game was a 1 px squiggle**
+  - the user read them as *"question marks on the road"*. It grows a
+  connected clump now. This is the single highest-leverage art fix of the
+  session: `speckle`, every floor, every prop wear pass and the menu
+  paintings all route through it.
+- **The v0.6.57 dirt wash went THROUGH WALLS**, filling building interiors
+  with earth and breaking the standing "ONE uniform floor per building" rule.
+  `_indoors` is tracked now and excluded from the wash and the fringes.
+  **A ground-weathering pass must always ask what is a floor.**
+- Map: blocks/areas/slabs are wobbled polygons, not rects; the decay patches
+  were one rect PER CELL (literal squares) and are discs now; its dirt colour
+  was left behind on the red ramp when the world moved to brown.
+
+**A NOTE ON PACE.** The user sent ~15 separate requests during this stretch,
+faster than they could be shipped. Everything is recorded in TASKS.md B0-NEW
+rather than held in the chat. **If you inherit this, read that list before
+starting anything** - several items are still open and at least one (the map
+redesign as "a painting") is a direction change that needs their sign-off on
+a sample first.
+
 **Picked up at: the polish pass, ART half — three of six done.** Shipped this
 session: the title (v0.6.51), the map screen redo (v0.6.52), the layout
 revision (v0.6.53), terrain blending + house contrast (v0.6.54), the blend

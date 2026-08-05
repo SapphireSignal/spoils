@@ -206,6 +206,13 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.59", [
+		"those little squiggles that looked like question marks are gone from every surface. the routine that was meant to paint small wear patches was actually drawing a wandering one-pixel line, so the whole game had tiny glyphs scattered over the ground",
+		"buildings dont have dirt blowing through their walls any more - every building keeps its own clean floor",
+		"fewer pale specks on the concrete",
+		"the map isnt made of rectangles any more. blocks and yards have wandering edges, and the broken ground on it was literally drawn as little squares - thats round now",
+		"the dirt on the map is the same brown as the dirt in the world",
+	]],
 	["v0.6.58", [
 		"the ground got a proper pass. dirt, stone, roads, the forest floor and the rail bed all have slow tonal variation across them now instead of being one flat colour with specks on it",
 		"the dirt is brown instead of red. it was mixed from the wrong end of the palette - the reds - so it came out like wine no matter how much of it there was",

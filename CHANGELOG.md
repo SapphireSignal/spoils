@@ -3,6 +3,46 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.59] - 2026-08-05 - the question marks, and dirt indoors
+
+### Fixed - `blob()` was a random walk, not a blob
+*"theres what looks like question marks on the road, can you remove that"*.
+`blob()` claimed to return "soft blob-shaped patches" and was in fact a
+RANDOM WALK that kept every cell a cursor visited. A random walk is a thin
+meandering trail, so **every wear patch in the game was a 1 px squiggle**,
+often hooked or self-crossing - little glyphs scattered over every surface.
+
+It grows a connected clump now: repeatedly pick a cell already in the patch
+and claim a neighbour. That is what every caller already believed it was
+getting, and what the no-dot-noise rule means by "small SOLID wear patches".
+It touches every floor, every prop wear pass and the menu paintings.
+
+### Fixed - the dirt wash went through walls
+**A regression from v0.6.57.** The wash that spreads dirt onto hard surfaces
+had no idea what a building was, so interiors filled with earth - breaking
+the standing "ONE uniform floor per building" rule. Interior cells are
+tracked now and excluded from both the wash and the fringe overlays: a floor
+is a floor, not terrain.
+
+### Fixed - too many pale specks
+*"theres too many white circles in some areas of the map, lets reduce it"*.
+The ground pass put six of the brightest concrete value per tile; three of
+the next value down reads as aggregate instead of confetti.
+
+### Changed - the map is not made of rectangles
+Blocks, named areas and paved slabs are drawn as hashed wobbled polygons
+rather than `draw_rect`, so the map stops being a grid of boxes. The road
+decay patches were **one rect per cell** - literally squares (*"all the dirt
+just looks like squares on the map too"*); they are overlapping discs now,
+sized off each cell's hash so a run of them does not read as identical dots.
+
+### Fixed - the map's dirt disagreed with the world's
+v0.6.58 moved the ground off the red ramp; the map was left on the old wine
+value. Both are brown now.
+
+### Verified
+`SMOKE PASS`, 240 fps, worst frame 4.57 ms, `DOORS` 16 on unchanged cells.
+
 ## [0.6.58] - 2026-08-05 - the ground pass
 
 User: *"lets make make the ground look visually better, lets give it the
