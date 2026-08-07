@@ -33,8 +33,14 @@ var _car_engine_loop: AudioStreamOggVorbis
 ## how open the weather sounds. Outdoors is effectively unfiltered; indoors
 ## the wall eats the top end, which is what "muffled" actually is.
 const OUTDOOR_CUTOFF := 20000.0
-const INDOOR_CUTOFF := 1250.0
-const INDOOR_DUCK_DB := -7.0
+## RAISED 2026-08-06 (user: "the muffled rain i can barely hear, increase the
+## volume a bit for it"). Indoors was losing BOTH ends at once - a -7 dB duck
+## on top of a 1250 Hz cutoff that already removes most of rain's energy - so
+## it fell under the room tone. The cutoff is what makes it read as "through a
+## wall", so that keeps most of its work (1250 -> 1600) and the duck, which
+## was only stacking loss on loss, comes back to -3.
+const INDOOR_CUTOFF := 1600.0
+const INDOOR_DUCK_DB := -3.0
 const MUFFLE_SPEED := 3.5        # per second — a doorway is a fast fade, but
                                  # never an instant switch
 

@@ -99,17 +99,30 @@ func apply_volumes() -> void:
 	# reported music still audible at master 0, so the master now bites
 	# on every channel directly as well: anything that ever slips onto a
 	# channel bus is still silenced when the master is down.
-	_apply_bus("Master", volume_master)
+	_apply_bus("Master", volume_master, MASTER_TRIM_DB)
 	_apply_bus("music", volume_master * volume_music)
 	_apply_bus("sfx", volume_master * volume_sfx)
 	_apply_bus("ambient", volume_master * volume_ambient)
 
 
-func _apply_bus(bus_name: String, v: float) -> void:
+## A little more output across the whole game (user, 2026-08-06: "can you
+## make all of the sounds in my game like literally every one just a tiny bit
+## louder, like the master volume, increase it by a little bit").
+##
+## Applied as a TRIM ON THE MASTER BUS rather than by raising each sound,
+## because every individual cut is governed by the standing quiet rule
+## (one-shots <= -18 dB, beds <= -28 dB) and re-balancing them one at a time
+## would break the mix. There is plenty of headroom for it precisely because
+## everything is authored that quietly.
+const MASTER_TRIM_DB := 3.0
+
+func _apply_bus(bus_name: String, v: float, trim_db: float = 0.0) -> void:
 	var i := AudioServer.get_bus_index(bus_name)
 	if i == -1:
 		return
-	AudioServer.set_bus_volume_db(i, linear_to_db(maxf(v, 0.0001)))
+	# the trim rides ON TOP of the user's slider, and the mute still keys off
+	# the slider alone so master 0 is silent no matter what the trim is
+	AudioServer.set_bus_volume_db(i, linear_to_db(maxf(v, 0.0001)) + trim_db)
 	AudioServer.set_bus_mute(i, v <= 0.001)
 
 

@@ -2585,8 +2585,21 @@ func _place_yards() -> void:
 		for i in mini(_rng.randi_range(1, 3), stall_cells.size()):
 			# parked facing the building they were left at
 			var fam := "vehicle_nw" if _rng.randf() < 0.5 else "vehicle_ne"
-			var stall_variant := _pick_variant(fam)
-			var stall_cell: Vector2i = stall_cells[i - 1]
+			# NEVER THE SAME MODEL TWICE. User, on the warehouse dock: "why are
+			# these 3 trucks just side by side all perfectly lined up? looks odd",
+			# then "i still see these three same trucks outside the warehouse, i
+			# thought you fixed that" - the first pass fixed the ROAD vehicles and
+			# missed this call site entirely.
+			var stall_variant := _pick_variant_norepeat(fam)
+			# `stall_cells[i - 1]` indexed -1 on the first pass, which wraps to the
+			# LAST element in GDScript - so the first car took the end of the list
+			# and one stall could never be used. Costs no rng draw to correct.
+			var stall_cell: Vector2i = stall_cells[i]
+			# ...and break the rank. The stalls sit every 3 cells, so filling them
+			# in a row lines the vehicles up like a showroom. A HASHED nudge along
+			# the row staggers them without costing the layout stream a draw.
+			stall_cell.x += posmod(hash(Vector3i(stall_cell.x, stall_cell.y,
+				_zone_salt ^ 0x4b1f)), 3) - 1
 			var stall_pos := _floor_layer.map_to_local(stall_cell) + Vector2(
 				_rng.randf_range(-6.0, 6.0), _rng.randf_range(-3.0, 3.0))
 			if stall_variant.ends_with("_5") or stall_variant.ends_with("_6"):

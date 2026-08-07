@@ -7049,11 +7049,11 @@
     "door_wood_x": {
       "size": [
         432,
-        68
+        78
       ],
       "origin": [
         32,
-        55
+        65
       ],
       "collider": [
         "poly",
@@ -7126,11 +7126,11 @@
     "door_wood_y": {
       "size": [
         432,
-        68
+        78
       ],
       "origin": [
         32,
-        45
+        55
       ],
       "collider": [
         "poly",
@@ -7203,11 +7203,11 @@
     "door_metal_x": {
       "size": [
         432,
-        68
+        78
       ],
       "origin": [
         32,
-        55
+        65
       ],
       "collider": [
         "poly",
@@ -7280,11 +7280,11 @@
     "door_metal_y": {
       "size": [
         432,
-        68
+        78
       ],
       "origin": [
         32,
-        45
+        55
       ],
       "collider": [
         "poly",

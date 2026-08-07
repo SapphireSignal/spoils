@@ -3,6 +3,49 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.66] - 2026-08-06 - doors that seal, trucks that differ, a louder mix
+
+### Fixed - every door had a hole above it
+*"theres still a hole at the top of all the doors that lets the user see
+inside the house before he even goes inside"*. **Measured rather than
+eyeballed:** the closed leaf topped out at -45 world px above its anchor while
+the wall segments either side reach -50. **A door cell gets no wall segment**
+- the door prop replaces it - so those 5 px were a hole straight into the
+building, visible through a shut door.
+
+The door now draws a LINTEL across the full opening, both jambs included, on
+every frame (an open door still has a header over it). The frame grew 68 -> 78
+and the hinge dropped 50 -> 60 **together**, which is a no-op for placement:
+`origin` is computed from the hinge and the sprite draws at `-origin`, so
+shifting both cancels exactly - it only buys blank rows to draw into.
+Re-measured: door top -51, wall top -50. Sealed.
+
+### Fixed - the three identical trucks, for real this time
+v0.6.65 fixed the ROAD vehicles and **missed the call site that actually made
+them** (*"i still see these three same trucks outside the warehouse, i thought
+you fixed that"*). The warehouse stalls had three separate faults:
+- `_pick_variant` could hand out the same model repeatedly -> now
+  `_pick_variant_norepeat`
+- **`stall_cells[i - 1]` indexed -1 on the first pass**, which wraps to the
+  last element in GDScript, so the first car took the end of the list and one
+  stall could never be used
+- stalls sit every 3 cells, so filling them in order lines vehicles up like a
+  showroom - a hashed +/-1 cell nudge staggers them, at no rng cost
+
+### Changed - audio
+- **Indoor rain was inaudible.** It was losing both ends at once: a -7 dB duck
+  on top of a 1250 Hz cutoff that already removes most of rain's energy. The
+  cutoff is what makes it read as "through a wall" so it keeps most of its
+  work (1250 -> 1600 Hz); the duck, which was stacking loss on loss, comes
+  back to -3 dB. **Both changes make it LOUDER.**
+- **A +3 dB master trim**, applied on the master bus rather than by raising
+  each sound - every cut is governed by the standing quiet rule (one-shots
+  <= -18 dB, beds <= -28 dB), which is exactly why the headroom exists. The
+  mute still keys off the slider alone, so master 0 is still silent.
+
+### Verified
+`SMOKE PASS`, `DOORS` 16 on unchanged cells.
+
 ## [0.6.65] - 2026-08-06 - doors you can see, and no two trucks alike
 
 ### Fixed - a door was painted in its own wall's colours

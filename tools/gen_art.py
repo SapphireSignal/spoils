@@ -3506,8 +3506,14 @@ def make_impact_frames() -> list:
 DOOR_FRAMES = 4     # frames per swing; the strip holds TWO swings
 DOOR_LEAF = 20      # leaf length along the edge, px
 DOOR_H = 34         # leaf height
-DOOR_HINGE = (22, 50)       # hinge inside a frame; sized so no swing clips
-DOOR_FRAME_SIZE = (54, 68)
+# HEADROOM FOR THE LINTEL. The frame grew 68 -> 78 and the hinge dropped
+# 50 -> 60 together, which is a NO-OP for placement: `origin` is computed from
+# the hinge and the sprite is drawn at -origin, so shifting both by the same
+# amount cancels exactly. It only buys blank rows at the top of the frame to
+# draw a header into.
+DOOR_HINGE = (22, 60)       # hinge inside a frame; sized so no swing clips
+DOOR_FRAME_SIZE = (54, 78)
+DOOR_LINTEL = 6     # header above the opening - see draw_lintel
 
 # the open-state colliders, keyed by prop name. The GENERATOR knows where the
 # swung leaf ends up, so it says so — the game must never re-derive it (a
@@ -3602,6 +3608,26 @@ def make_door_strip(kind: str, axis: str) -> tuple[Canvas, tuple, list]:
             c.set(hx + round(ex * 0.85), hy + round(ey * 0.85) - DOOR_H // 2,
                   C("10141f"))
 
+        def draw_lintel() -> None:
+            # THE HEADER ABOVE THE OPENING, and it is structural rather than
+            # decorative. A door cell gets NO wall segment - the door prop
+            # replaces it - so whatever the door does not cover is a hole
+            # straight into the building. The leaf is DOOR_H (34) plus a 2 px
+            # jamb cap = 36, while the walls either side are WALL_H (40), so
+            # the opening was ~5 px short of its own wall and you could see
+            # inside over the top of a SHUT door (user, twice: "the top shows
+            # a bit of the inside of the house, it should be sealed", "theres
+            # still a hole at the top of all the doors that lets the user see
+            # inside the house before he even goes inside").
+            #
+            # Drawn across the FULL opening including both jambs, and on every
+            # frame - an open door still has a header over it.
+            for j in range(-6, DOOR_LEAF + 6):
+                x = hx + j
+                by = hy + round(j * edge_dy)
+                for y in range(by - DOOR_H - 2 - DOOR_LINTEL, by - DOOR_H - 1):
+                    c.set(x, y, dark if (y - by) % 4 else C("341c27"))
+
         def draw_jambs() -> None:
             # the fixed 6 px of edge either side of the leaf
             for j in list(range(-6, 0)) + list(range(DOOR_LEAF, DOOR_LEAF + 6)):
@@ -3615,6 +3641,9 @@ def make_door_strip(kind: str, axis: str) -> tuple[Canvas, tuple, list]:
         # Outward, it swings toward the camera and must cover the jamb —
         # drawn the wrong way round the open door looks cut in half by the
         # board beside it (user report on the first cut of the two-way swing).
+        # the lintel is part of the wall, so it goes down first and nothing
+        # ever draws over it
+        draw_lintel()
         if outward:
             draw_jambs()
             draw_leaf()

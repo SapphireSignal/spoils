@@ -480,6 +480,23 @@ alike.**
   so dropping it into an existing call site re-rolls the fixed district.
   Use the new one when retro-fitting anti-repetition anywhere.
 
+**Shipped: v0.6.66 - doors that seal, trucks that differ, a louder mix.**
+- **Every door had a 5 px hole above it.** A door cell gets NO wall segment -
+  the prop replaces it - and the leaf topped out at -45 world px against the
+  wall's -50. Fixed with a LINTEL across the full opening on every frame. The
+  frame grew and the hinge dropped BY THE SAME AMOUNT, which is a no-op for
+  placement (origin is computed from the hinge, the sprite draws at -origin)
+  and only buys rows to draw into. **That trick is reusable for any prop that
+  needs more canvas without moving.**
+- **The three trucks: I fixed the wrong call site first.** v0.6.65 did the
+  ROAD vehicles; the ones the user could see were the WAREHOUSE STALLS. That
+  site also had `stall_cells[i - 1]` indexing **-1 on the first pass**, which
+  wraps to the last element in GDScript. **When a user says "I still see it",
+  believe them and go find the other call site** - do not assume the first fix
+  covered it.
+- Audio: indoor rain was losing both ends at once (a -7 dB duck ON TOP of a
+  1250 Hz cutoff); +3 dB master trim on the bus rather than per-sound.
+
 **A CONFLICT WORTH CATCHING: the stairwell hole was BUILT ONCE AND REMOVED
 AT THE USER'S REQUEST.** `_build_upper`'s comment records it - *"the
 stairwell hole showed the ground and broke it"* - and they have now asked for
