@@ -35,7 +35,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
 	 form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.81 shipped, 2026-08-07.** Milestone 1 (a walkable world) is DONE.
+**v0.6.82 shipped, 2026-08-07.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 
@@ -206,10 +206,13 @@ Deliver the intent with additive glow sprites, the way lamps already do.
   `spoils_tiny` (3 in 6) for map dot labels. Both are BITMAP fonts — asking
   either for a different size resamples and blurs it. If text must be
   smaller, draw a new cut in `tools/gen_font.py`.
-- **Perf baseline:** 240 fps, ~4.6 ms worst frame, **~8.0k nodes** in a raid,
-  day and storm-night alike. (Was ~7.9k / ~4.5 ms; v0.6.45's wall occluders
-  added **+113 nodes** and ~0.14 ms, measured at midnight with every working
-  lamp casting a shadow. Not a leak.) **Leaks: none.**
+- **Perf baseline:** 240 fps, ~4.7 ms worst frame, **~8.5k nodes** in a raid
+  (8527 measured at v0.6.81), day and storm-night alike. (Was ~8.0k; v0.6.80's
+  two-layer walls added **+145 nodes** — one low-band sprite under every
+  two-storey wall piece so the upper band can fade — and v0.6.45's wall
+  occluders +113 before that. Neither is a leak, and v0.6.80 shipped WITHOUT
+  re-measuring, which is how a rise ends up looking like one.) **Leaks:
+  none.**
   **THE INVARIANT IS THE TREND, NOT THE ABSOLUTE COUNT** — `--leakcheck`
   must print `nodes+0 objects+0 orphans=0` with memory flat to ~0.06 MB.
   That is the thing to assert. The absolute menu count is **~1717 nodes /

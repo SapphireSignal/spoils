@@ -206,6 +206,9 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.82", [
+		"the ground floor pillars of two storey buildings now crown their corners exactly like one storey pillars do. measured, all three cases sit two pixels proud of the wall - before this the ground floor ones were dead level, which meant the cap hid completely behind the walls",
+	]],
 	["v0.6.81", [
 		"the dark line across the top of doors on two storey buildings is gone. it was the upper wall bands bottom edge being outlined where it sits on the door frame - a join that shouldnt have an outline, same as walls dont outline where they meet each other",
 		"furniture doesnt stand inside staircases any more. the flight leans into the cell behind it and nothing was keeping cupboards out of that cell - five of the six two storey buildings had something in the stairs",

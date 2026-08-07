@@ -3,6 +3,40 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.82] - 2026-08-07 - the pillars match the one-storey look
+
+### Fixed - the ground-floor pillars sat too low
+*"the pillars need to be moved up more still"*, then the detail that turned a
+nudge into a derivation: *"it only shows up like that in two story buildings,
+in 1 story, the pillars look fine, i want them to look like how 1 story
+pillars look"*.
+
+Measured, every pair, as screen rows:
+
+| pair | post top | wall top | proud by |
+|---|---|---|---|
+| one-storey (the reference) | -60 | -58 | **2 px** |
+| two-storey upstairs | -92 | -90 | **2 px** |
+| ground floor, v0.6.81 | -57 | -57 | **0 - swallowed** |
+| ground floor, now | -59 | -57 | **2 px** |
+
+The one-storey look IS a +2 relationship — the post's cap crowns the corner
+by two pixels — and both full-height pairs already had it. v0.6.81's "level"
+was the odd one out: dead level means the cap hides entirely behind the two
+walls that meet in front of it. The low post is 2 px taller now and all three
+pairs in the game carry the identical relationship.
+
+### Housekeeping
+CLAUDE.md's perf baseline re-pinned at v0.6.81's measured numbers (~8.5k
+nodes, 8527) with v0.6.80's +145 two-layer wall sprites recorded against it —
+that release shipped without re-measuring, and an unexplained rise is
+indistinguishable from a leak until someone writes down the cause.
+
+### Verified
+The +2 is measured off the shipped PNGs and their manifest origins, not
+eyeballed from a screenshot. DOORS 16 on identical cells. `SEC PASS`,
+`DOCS PASS`, `CLAIMS PASS`, `SMOKE PASS`.
+
 ## [0.6.81] - 2026-08-07 - the door line, the caged flight, and capped pillars
 
 ### Fixed - a line on top of every two-storey door *(B0m item 1)*

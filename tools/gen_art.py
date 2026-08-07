@@ -1201,11 +1201,15 @@ def make_wall_post(style: str, stories: int = 1,
         # diamond top the full post has - the identical recipe, shifted down -
         # so the corner reads as a capped pillar, just shorter.
         #
-        # The HEIGHT stays where the three-release hunt landed it (49 stood
-        # proud, 33 and 36 vanished behind the walls, 41 sat level - anchors:
-        # a post hangs off the cell VERTEX, walls off edge MIDPOINTS, 8 px
-        # apart, so level = the wall's 49 minus 8).
-        lift = STORY_H + 3
+        # The HEIGHT mirrors the SECOND FLOOR'S own relationship, because that
+        # is the look being copied (user: "the pillars need to be moved up
+        # more still", after "level" hid the cap behind the walls). Upstairs,
+        # the full post's top sits 2 px ABOVE the wall tops: post = vertex
+        # anchor -16 - 76 = -92 vs wall = midpoint -8 - 82 = -90. The low pair
+        # lands on the same +2: -16 - 43 = -59 vs -8 - 49 = -57. (The hunt
+        # before this: 49 stood 8 proud, 33/36 vanished, 41 sat dead level
+        # with the cap swallowed.)
+        lift = STORY_H + 1
         for x in range(12):
             # erase this column above where its shifted cap begins
             for y in range(0, lift + bottoms[x] - 1):

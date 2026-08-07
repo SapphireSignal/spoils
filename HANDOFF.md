@@ -103,7 +103,7 @@ collider exists up there. Both items need a repro from the user rather than a
 guess; rebuilding a system that measures clean is how the map screen got built
 twice.
 
-**Then v0.6.78 through v0.6.81 — the stairwell shaft (sampled, kept, fleet-wide),
+**Then v0.6.78 through v0.6.82 — the stairwell shaft (sampled, kept, fleet-wide),
 the two-storey wall split, the engine loop seam, stair collision, and the
 floor cross-fade.**
 
@@ -179,6 +179,15 @@ carried a shape nobody read — the door-collider lesson in a third place.
   the v0.6.80 crossfade stays clean by construction.
 - **Nodes are 8527, not ~8380.** +145 is v0.6.80's two-layer wall sprites;
   that release did not re-run --perf and this one did. Not a leak.
+
+**And v0.6.82 — the pillar height, FIFTH round, ended by the user handing over
+the reference.** *"in 1 story, the pillars look fine, i want them to look like
+how 1 story pillars look."* Measured: the one-storey post stands +2 px proud
+of its wall, the upstairs pair is +2, and "level" (v0.6.81) was the odd one
+out — dead level SWALLOWS the cap behind the two walls meeting in front of
+it. **The whole five-round hunt would have been one round if the first
+question had been "which existing pillar looks right?" — when the user says
+X should look like Y, measure Y first, not X.**
 
 **Picked up at: B0c items 1 and 3, which BOTH NEED A REPRO from the user**
 (the "clipping" pair — one was my own misread of a HUD label, the other
