@@ -1623,6 +1623,19 @@ func _shot(shot_name: String) -> void:
 									mid_cell + Vector2i(int(pr[0]), int(pr[1])))
 								for i2 in 3:
 									await get_tree().process_frame
+						elif a4.begins_with("--upstairs-px="):
+							# PIXEL offset on top of the cell placement. The
+							# leg-sink depends on the position WITHIN a cell -
+							# which is why cell-centre shots kept saying "not
+							# reproduced" while the user stood one step south
+							# and sank to the waist.
+							var pp: PackedStringArray = a4.trim_prefix(
+								"--upstairs-px=").split(",")
+							if pp.size() == 2:
+								pl.global_position += Vector2(
+									float(pp[0]), float(pp[1]))
+								for i3 in 3:
+									await get_tree().process_frame
 					var tiles: Array = reg["floor_tiles"] as Array
 					var shown := 0
 					for t in tiles:

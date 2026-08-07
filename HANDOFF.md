@@ -103,7 +103,7 @@ collider exists up there. Both items need a repro from the user rather than a
 guess; rebuilding a system that measures clean is how the map screen got built
 twice.
 
-**Then v0.6.78 through v0.6.84 — the stairwell shaft (sampled, kept, fleet-wide),
+**Then v0.6.78 through v0.6.85 — the stairwell shaft (sampled, kept, fleet-wide),
 the two-storey wall split, the engine loop seam, stair collision, and the
 floor cross-fade.**
 
@@ -199,7 +199,17 @@ printed `Hull(StaticBody2D) drawing=false` before anyone had to theorise.
 A spawn-state bug of the same family as Juice/Ui autoload leftovers: a thing
 created solid must decide, at creation, whether it is actually THERE.
 
-**B0c ITEM 1 NOW HAS A REPRO AND MY "NOT REPRODUCED" WAS WRONG.** The user
+**v0.6.85 CLOSED B0c ITEM 1 — read the shape of the failure, it will
+recur:** the sink depended on the position WITHIN a cell and on the
+building's own phase, so "reproduce at the room centre of building 0" was
+sampling ONE point of a 2D phase space and finding it clean. Two wrong
+verdicts came out of that before the user's photo pinned it. The fix: slab
+tiles/lips sort a storey north, art pushed back level (the second-floor
+pattern, applied to the floor itself). If a sort bug is position-dependent,
+SWEEP the phase, never spot-check it.
+
+*(superseded, kept for the record)* **B0c ITEM 1 NOW HAS A REPRO AND MY "NOT
+REPRODUCED" WAS WRONG.** The user
 photographed themselves upstairs with their legs sunk into the slab, and
 furniture sinking too ("you cant see my legs in that picture because its
 clipping in the floor"). My probe shots happened to stand at sub-cell

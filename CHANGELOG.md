@@ -3,6 +3,38 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.85] - 2026-08-07 - the second floor stops swallowing legs
+
+### Fixed - sinking into the upper floor *(B0c item 1, at last)*
+*"im clipping into the ground, same with the furniture ... you cant see my
+legs in that picture because its clipping in the floor"* - with the photo
+that finally made it reproducible.
+
+The slab is individually y-sorted tiles, each sorted at its TRUE cell with
+its art drawn a storey up. So the tile one row SOUTH of a standing thing
+sorted in front of it, and its art - 32 px up - covered legs and furniture
+bottoms **depending on the exact position within a cell and the building's
+own cell phase**. That double dependence is why two earlier probe attempts
+said "not reproduced": the same pose that sinks to the waist in the school
+draws whole in the grey house. Reproduced deterministically at the school
+with a new sub-pixel pose flag (`--upstairs-px=`), then fixed.
+
+**The fix is the project's own second-floor pattern, applied to the second
+floor itself:** every slab tile and lip sorts a STOREY NORTH of its true cell
+with the art pushed back level - the sort key moves, the art does not. A tile
+can then only ever draw over things whose art sits entirely below its own,
+which is what a floor is. The near walls still occlude the slab (their sort y
+is far greater); the far walls now draw over the slab's back edge, which is
+the wall/floor junction line and reads as the wall standing on the floor -
+checked by eye in both room shots, no artifact.
+
+### Verified
+The exact sinking pose in the school: legs and feet whole. Same pose in the
+house: unchanged. Both rooms shot wall-to-wall: furniture whole, shaft under
+the player, junctions clean. DOORS 16 on identical cells, UPPERS 6 with
+lean_blocked=0, `FLOORDOOR PASS`, FLAT 124, 240.0 fps / 4.49 ms / 8523 nodes.
+`SEC PASS`, `DOCS PASS`, `CLAIMS PASS`, `SMOKE PASS`.
+
 ## [0.6.84] - 2026-08-07 - the ghost train stops haunting the crossing
 
 ### Fixed - an invisible barrier across the rails above the bus depot

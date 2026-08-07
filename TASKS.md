@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.84.** The release history was renumbered evenly on
+**Current version: v0.6.85.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -504,14 +504,17 @@ bug found on the way: the prompt still said *"go upstairs"* from upstairs,
 because the text cache keys on (target, door-open) and **the floor was not in
 that key** while climbing does not change the target.
 
-**Item 1 (clipping into the floor) NOT REPRODUCED — and the earlier
-"confirmed" here was WRONG.** A screenshot appeared to show the character cut
-in half at the stairs; what cuts them is the **HUD prompt label** lying across
-their legs, in that shot and every other. An aligned frame diff settled it:
-removing the stairs changed the stairs region and **nothing where the legs
-are**. At the room centre the player draws complete, feet on the boards.
-**Needs a repro from the user** — possibly the transition frame itself, which a
-still cannot show.
+**Item 1 (clipping into the floor) FIXED in v0.6.85 — the user's photo was the
+repro, and BOTH of my earlier verdicts were wrong in different ways.** The
+first "confirmed" was a HUD label misread; the "not reproduced" after it was a
+sampling miss: the sink depends on the position within a cell AND the
+building's own phase, so the same pose that draws whole in the grey house
+sinks to the waist in the school. The slab tiles sorted at their true cells,
+so the tile one row SOUTH of a stander drew its lifted art over their legs.
+Every slab tile and lip now sorts a STOREY NORTH with the art pushed back
+level — the second-floor pattern applied to the floor itself. Reproduced
+deterministically first (`--upstairs-px=` sub-pixel pose), verified at the
+same pose after, plus wall-to-wall shots of both rooms.
 
 **Item 3 (clipping on props) NOT REPRODUCED.** `--probe-upper` lists every body
 still on a collision layer inside an upper room: **19 solid, 0 invisible** — 14

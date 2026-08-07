@@ -2603,10 +2603,23 @@ func _build_upper(interior: Rect2i, stairs_cell: Vector2i, kind: String,
 			tile.region_enabled = true
 			tile.region_rect = Rect2(float(int(tc[0]) * 64), float(int(tc[1]) * 32),
 				64.0, 32.0)
-			# position = where it SORTS (the true cell), offset = where it
-			# DRAWS (a storey up). Splitting the two is the whole trick.
-			tile.position = _floor_layer.map_to_local(cell)
-			tile.offset = Vector2(0.0, -float(_story_h))
+			# position = where it SORTS, offset = where it DRAWS. Splitting
+			# the two is the whole trick — and the sort position is pulled a
+			# STOREY NORTH of the true cell, art pushed back level. The slab
+			# used to sort at the true cell, so the tile one row SOUTH of a
+			# standing thing sorted in front of it, and its art — drawn 32 px
+			# up — covered legs and furniture bottoms depending on the exact
+			# position within a cell (user, with a photo: "im clipping into
+			# the ground, same with the furniture ... you cant see my legs").
+			# Sorted a storey north, a tile can only ever draw over things
+			# whose art sits entirely below its own — the floor behaves like
+			# a floor. The near walls still occlude it (their y is far
+			# greater); the far walls now draw over the slab's back edge,
+			# which is the wall/floor junction line and reads as the wall
+			# standing ON the floor.
+			tile.position = _floor_layer.map_to_local(cell) \
+				+ Vector2(0.0, -float(_story_h))
+			tile.offset = Vector2.ZERO
 			tile.visible = false
 			_ysort.add_child(tile)
 			floor_tiles.append(tile)
@@ -2617,12 +2630,12 @@ func _build_upper(interior: Rect2i, stairs_cell: Vector2i, kind: String,
 				#
 				# A CHILD of the tile on purpose: children draw after their
 				# parent, so the well is guaranteed over the floorboards
-				# without a second sort position that could tie with them. Its
-				# own position carries the storey lift because a child sits at
-				# the parent's POSITION, not its offset.
+				# without a second sort position that could tie with them.
+				# The parent's POSITION already carries the storey lift (it
+				# doubles as the sort pull), so the child sits at zero.
 				var well := Sprite2D.new()
 				well.texture = load("res://art/gen/floor_stairwell.png")
-				well.position = Vector2(0.0, -float(_story_h))
+				well.position = Vector2.ZERO
 				tile.add_child(well)
 
 	# the slab lip: a dark edge along the south and east borders — the
@@ -2630,13 +2643,16 @@ func _build_upper(interior: Rect2i, stairs_cell: Vector2i, kind: String,
 	# "the floor is not showing up when im on the second floor")
 	var edge_x_tex: Texture2D = load("res://art/gen/floor_edge_x.png")
 	var edge_y_tex: Texture2D = load("res://art/gen/floor_edge_y.png")
+	# the lips take the same sort-north-draw-level split as the tiles, or a
+	# player on the border row sinks into the very edge band that exists to
+	# give the slab its silhouette
 	for x in range(interior.position.x, interior.end.x):
 		var lip := Sprite2D.new()
 		lip.texture = edge_x_tex
 		lip.centered = false
-		lip.offset = Vector2(-32.0, -16.0 - float(_story_h))
+		lip.offset = Vector2(-32.0, -16.0)
 		lip.position = _floor_layer.map_to_local(
-			Vector2i(x, interior.end.y - 1))
+			Vector2i(x, interior.end.y - 1)) + Vector2(0.0, -float(_story_h))
 		lip.visible = false
 		_ysort.add_child(lip)
 		floor_tiles.append(lip)
@@ -2644,9 +2660,9 @@ func _build_upper(interior: Rect2i, stairs_cell: Vector2i, kind: String,
 		var lip2 := Sprite2D.new()
 		lip2.texture = edge_y_tex
 		lip2.centered = false
-		lip2.offset = Vector2(-32.0, -16.0 - float(_story_h))
+		lip2.offset = Vector2(-32.0, -16.0)
 		lip2.position = _floor_layer.map_to_local(
-			Vector2i(interior.end.x - 1, y))
+			Vector2i(interior.end.x - 1, y)) + Vector2(0.0, -float(_story_h))
 		lip2.visible = false
 		_ysort.add_child(lip2)
 		floor_tiles.append(lip2)

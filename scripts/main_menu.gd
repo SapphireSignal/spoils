@@ -206,6 +206,9 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.85", [
+		"you dont sink into the second floor any more, and neither does the furniture. the floorboards were sorted like objects standing in the room, so the board one step south of you could draw over your legs - they sort like a floor now, always underneath whatever stands on them",
+	]],
 	["v0.6.84", [
 		"the invisible wall on the rail crossing above the bus depot is gone. it was the night freight - her solid hull was never switched off while she was away, and her parking spot down the line happens to sit right above the depot. she still blocks like a train when shes actually there",
 	]],
