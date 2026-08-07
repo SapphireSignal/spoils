@@ -3739,6 +3739,19 @@ def make_door_strip(kind: str, axis: str, style: str,
                     if leaf_c.px[x, y][3] > 0}
         jamb_set = {(x, y) for y in range(frame_h) for x in range(frame_w)
                     if jamb_c.px[x, y][3] > 0}
+        # ONLY THE SHUT FRAME IS FLUSH WITH THE WALL. In every other frame the
+        # leaf stands clear of the wall plane, so it gets its OWN full
+        # silhouette. Suppressing the outline where leaf meets jamb is right
+        # only when the leaf IS part of the wall; carrying it into the swung
+        # frames left an open leaf butting brick with no edge at all, and it
+        # read as sunk into the wall - user: "the door clips in the wall when
+        # its opened outside".
+        flush = (f % DOOR_FRAMES) == 0
+        if not with_jambs and not flush:
+            _paste_canvas(c, leaf_c, 0, 0)
+            c.outline_auto()
+            _paste_canvas(strip, c, f * frame_w, 0)
+            continue
         if outward:
             _paste_canvas(c, jamb_c, 0, 0)
             _paste_canvas(c, leaf_c, 0, 0)

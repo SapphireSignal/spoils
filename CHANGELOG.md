@@ -40,9 +40,23 @@ between the wall and every shut door, measured at 140 px**; with `sides=False`
 the closed door is **byte-identical in that band** to what v0.6.72 shipped,
 and the pre-existing dark line on the far side of the opening is gone too.
 
+### Fixed - an open leaf read as sunk INTO the wall
+*"the door clips in the wall when its opened outside"*, on both a wood door in
+masonry and a metal one in brick. Suppressing the outline where the leaf meets
+the jamb is right **only for the SHUT frame**, where the leaf genuinely is part
+of the wall plane - and the first cut carried it into the swung frames too, so
+an open leaf butted against brick with no edge at all.
+
+Only `f % DOOR_FRAMES == 0` is flush now; every other frame outlines the leaf
+on its own, because in those it stands clear of the wall. The remaining
+brick-to-outline pixels when a door opens are exactly that silhouette drawn
+over the wall it stands in front of - **the swap list is the check: 140
+brick-to-outline and ZERO brick-to-brick**, where v0.6.72 was 272
+brick-to-brick.
+
 ### Verified
 Closed door vs v0.6.72: **0 changed pixels** in the wall band. Shut vs open:
-**0**. The player standing behind an open leaf is still fully hidden, so
+**no brick-for-brick swaps at all**. The player standing behind an open leaf is still fully hidden, so
 v0.6.72's fix is intact. `--probe-world` DOORS **16** on identical cells - the
 new piece takes no rng draw, so the fixed district did not reroll. 240.0 fps,
 worst frame 4.71 ms, 8374 nodes (+16, one board pair per door).

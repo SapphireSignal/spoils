@@ -209,6 +209,7 @@ const CHANGELOG_ENTRIES := [
 	["v0.6.73", [
 		"the wall right beside a door stops changing when you open it. the boards down the sides of a doorway are wall, but they were painted into the door picture - so giving the door its own depth last version dragged the wall along with it. theyre their own piece now",
 		"the black line between a doorway and the wall beside it is gone. that join was being outlined like an edge when it isnt one - its wall meeting wall, the same as every other seam in a building",
+		"an open door has a clean edge against the wall again instead of looking sunk into it. a shut door is flush with the wall so it shouldnt have one there, but i was carrying that into the swung frames too, where the door is standing out in front",
 	]],
 	["v0.6.72", [
 		"standing behind an open door hides you now. the door was being sorted from where its frame sits in the wall, but an open leaf swings out toward the camera - so it could never cover anyone stood behind it, however far it swung",

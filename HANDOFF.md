@@ -63,6 +63,19 @@ things worse: outlining the jamb piece all round put a 2 px black bar between
 the wall and every shut door. `outline_auto(sides=False)` — the flag whose
 docstring says exactly this, and which the wall segments already use.
 
+**Then a THIRD defect from the same edit, which the user caught by running the
+build before I pushed:** *"the door clips in the wall when its opened
+outside"*. Suppressing the leaf's outline where it meets the jamb is right
+only for the SHUT frame — the leaf IS the wall plane there — and I carried it
+into the swung frames, so an open leaf butted brick with no edge and read as
+sunk into it. Only `f % DOOR_FRAMES == 0` is flush now.
+
+**THE GENERAL SHAPE, THREE TIMES IN ONE RELEASE: a rule that is true for one
+STATE of a thing got applied to all of them.** Jambs are wall (true always).
+Jamb joins should not be outlined (true always). The leaf's join should not be
+outlined (true ONLY when shut). Ask which states a rule holds in before
+applying it to a sprite sheet.
+
 **Three A/Bs settled it, all on the same frame with only one variable:**
 opening the door changed 272 wall pixels before, 0 after; the closed door is
 byte-identical in that band to what v0.6.72 shipped; the player is still
