@@ -10,7 +10,8 @@ var upper_index := -1
 var _sprite: Sprite2D
 
 
-func setup(texture: Texture2D, origin: Vector2, index: int) -> void:
+func setup(texture: Texture2D, origin: Vector2, index: int,
+		collider: Variant = null) -> void:
 	upper_index = index
 	var sprite := Sprite2D.new()
 	sprite.texture = texture
@@ -18,11 +19,27 @@ func setup(texture: Texture2D, origin: Vector2, index: int) -> void:
 	sprite.offset = -origin
 	add_child(sprite)
 	_sprite = sprite
-	var shape := CollisionShape2D.new()
-	var circle := CircleShape2D.new()
-	circle.radius = 6.0
-	shape.shape = circle
-	add_child(shape)
+	# THE SHAPE COMES FROM THE MANIFEST, like every other prop. It used to be a
+	# hardcoded 6 px circle at the foot of a flight that climbs most of a cell,
+	# so you could walk through the staircase (user: "make the stairs have
+	# collision, like make it a solid object so i cant walk through it"). This
+	# is the door-collider lesson again: a shape derived in GDScript drifts
+	# away from the art the generator drew.
+	if collider is Array and (collider as Array).size() == 2 \
+			and str((collider as Array)[0]) == "poly":
+		var flat: Array = (collider as Array)[1]
+		var pts := PackedVector2Array()
+		for i in range(0, flat.size(), 2):
+			pts.append(Vector2(float(flat[i]), float(flat[i + 1])))
+		var poly := CollisionPolygon2D.new()
+		poly.polygon = pts
+		add_child(poly)
+	else:
+		var shape := CollisionShape2D.new()
+		var circle := CircleShape2D.new()
+		circle.radius = 6.0
+		shape.shape = circle
+		add_child(shape)
 	add_to_group("stairs")
 
 

@@ -44,7 +44,13 @@ ping, rain bed, car alarm) is synthesized at runtime and needs no license.
   `car/car_engine_off.ogg` — from **"car sound effects pack (low quality)"
   by ggbotnet** https://opengameart.org/content/car-sound-effects-pack-low-quality
   license: **cc0** (public domain, no credit required — credited anyway).
-  files renamed from the pack's TitleCase; no other edits.
+  files renamed from the pack's TitleCase. **`car_engine_loop.ogg` was edited
+  in v0.6.78** to make it a seamless loop: its tail is crossfaded onto its head
+  over 300 ms and dropped, taking it from 2.966 s to 2.666 s. The original
+  looped with a step 5.6x larger than anything in the body of the waveform, so
+  it clicked once per loop — audible at idle every 2-3 seconds. cc0 permits
+  modification; recorded here because a licence file should say when a shipped
+  file is no longer the source file.
 
 ## credit line (readme + any published build)
 

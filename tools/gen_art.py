@@ -1159,13 +1159,26 @@ def make_wall_post(style: str, stories: int = 1,
         # upper band is lifted off and a cap re-laid at the cut. The low post
         # is exactly the full post's lower band, so the two swap without the
         # courses shifting.
-        cut = 1 + STORY_H
+        #
+        # THE CUT IS ALIGNED TO THE WALL'S LOW BAND, and that is measured, not
+        # derived: the low wall stands 49 px above its origin while the post
+        # stood 44, so every corner sat 5 px under the wall's top line and read
+        # as a separate pillar notched into it (user: "the posts looks really
+        # long and square ... make them look more connected to the building").
+        # Flush is right for a CUT band - the full post's cap is deliberately
+        # 6 px lower because it beds into the roof plane, and there is no roof
+        # on a floor you are standing under.
+        cut = 1 + STORY_H - 5
         for y in range(0, cut):
             for x in range(18):
                 c.px[x, y] = (0, 0, 0, 0)
+        # ...and it wears the WALL'S string course, same two rows and the same
+        # alternation, so the top line runs continuously from wall to corner
+        # instead of changing material at every post
         for x in range(12):
-            c.set(2 + x, cut, CONC_L1 if x % 2 else CONC_L2)
-            c.set(2 + x, cut + 1, CONC_L1)
+            for row in (0, 1):
+                c.set(2 + x, cut + row,
+                      CONC_L1 if (x + row) % 2 else CONC_BASE)
     c.outline_auto(sides=False)   # tiles edge to edge: no seam lines
     return c, (8, 1 + post_h + 3), ["circle", 4.0]
 
@@ -3967,7 +3980,18 @@ def make_stairs() -> tuple[Canvas, tuple, list]:
         for x in range(2, 6):                 # pale tread nose on the front lip
             c.set(ox + x, oy + 4, C("ad7757"))
     c.outline_auto()
-    return c, (10, 50), ["diamond", 12.0, 6.0]
+    # A QUAD ALONG THE RUN, not a token diamond at the foot. The flight climbs
+    # up-right across most of a cell, and the collider was a 12x6 diamond that
+    # the game then ignored anyway in favour of a 6 px circle - so you walked
+    # straight through a staircase (user: "make the stairs have collision, like
+    # make it a solid object so i cant walk through it").
+    run = (34.0, -17.0)          # foot -> top, in screen px from the origin
+    nrm = (3.1, 6.3)             # ~7 px of tread width, square to the run
+    return c, (10, 50), ["poly", [
+        -nrm[0], -nrm[1],
+        run[0] - nrm[0], run[1] - nrm[1],
+        run[0] + nrm[0], run[1] + nrm[1],
+        nrm[0], nrm[1]]]
 
 def make_bed() -> tuple[Canvas, tuple, list]:
     """Upstairs bed: iso mattress, oxblood blanket over the near half,

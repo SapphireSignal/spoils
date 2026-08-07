@@ -67,18 +67,54 @@ changed, which is a real optimisation — but climbing does not change your cell
 so the walls kept whatever state they had downstairs until you happened to
 move. The floor is part of that gate now.
 
-### Fixed - subtle static while driving
+### Fixed - the click while sitting in a vehicle
 *"i can hear some sort of static like very subtle static sometimes when im
-driving"*. An earlier pass named this same symptom, slowed the pitch slew and
-added a guard so `pitch_scale` was only written when it drifted more than
-0.004. **That guard was the remaining cause.** It HELD the pitch and then
-jumped it a whole 0.004, about 120 times a second at 240 Hz — trading many tiny
-rate changes for fewer, bigger discontinuities, which is exactly what zippers.
-The pitch is a continuous ramp now, ~0.002 per frame, applied every frame.
+driving"*, then the detail that settled it: *"every 2-3 secs while inside the
+vehicle, i dontn eed to be driving to hear it either"*.
 
-**Not verified by ear** — this is a reasoned fix to an identifiable staircase
-in the code. If a click remains it is the loop point of `car_engine_loop.ogg`,
-which is a different problem in a different place.
+**MY FIRST DIAGNOSIS WAS WRONG AND THE SECOND REPORT IS WHY.** I blamed the
+engine pitch ramp — a real staircase in the code, and not this. A click at a
+fixed period, at idle, with the pitch constant, cannot come from pitch. It is
+the LOOP POINT, and `car_engine_loop.ogg` is **2.966 s** long, which is the
+"every 2-3 secs" exactly.
+
+The sample is a seamless loop now: the tail is crossfaded onto the head over
+300 ms and dropped, so the last frame of the loop and its first frame were
+already consecutive in the original. **Measured, before and after:**
+
+| | seam step | median step | 99th | seam vs 99th |
+|---|---|---|---|---|
+| before | **6943** | 305 | 1241 | **5.6x** |
+| after | **589** | 288 | 1167 | **0.5x** |
+
+A discontinuity 5.6x larger than anything in the body of the waveform is a
+click; half the 99th percentile is indistinguishable from ordinary motion.
+Length 2.966 -> 2.666 s. The file is CC0 (ggbotnet) so modification is
+permitted; noted in `assets/audio/LICENSES.md`.
+
+### Changed - the engine pitch ramp is continuous
+Kept from the wrong diagnosis, because it is still an improvement on its own
+terms: `pitch_scale` was written only when it drifted past 0.004, which HELD
+the pitch and then jumped it, about 120 times a second at 240 Hz. Many tiny
+rate changes are smoother than fewer big ones, so the guard is gone.
+
+### Fixed - the corner posts read as separate pillars
+*"the posts looks really long and square ... can you make them look more
+connected to the building"*. **Measured:** the low wall stands 49 px above its
+origin and the low post stood 44, so every corner sat 5 px under the wall's top
+line. The cut is aligned to the wall now and wears the wall's own string
+course — same two rows, same alternation — so the top line runs unbroken from
+wall to corner. (Flush is right for a CUT band; the full post's cap is
+deliberately 6 px lower because it beds into the roof plane, and there is no
+roof on a floor you are standing under.)
+
+### Fixed - you could walk through a staircase
+*"make the stairs have collision, like make it a solid object so i cant walk
+through it"*. The flight climbs most of a cell and its collider was a hardcoded
+**6 px circle** at the foot — and the manifest's own shape was being ignored
+entirely. The shape comes from the manifest now, as a quad along the run. Same
+door-collider lesson: a shape derived in GDScript drifts from the art the
+generator drew.
 
 ### Changed - everything is 3 dB louder again
 *"increase db across everwhere by another 3 please"*. `MASTER_TRIM_DB` 3 -> 6,

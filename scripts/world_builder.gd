@@ -2596,7 +2596,8 @@ func _build_upper(interior: Rect2i, stairs_cell: Vector2i, kind: String,
 	_ysort.add_child(stairs)
 	var stairs_origin: Array = stairs_info["origin"]
 	stairs.setup(load("res://art/gen/stairs.png"),
-		Vector2(float(stairs_origin[0]), float(stairs_origin[1])), _uppers.size())
+		Vector2(float(stairs_origin[0]), float(stairs_origin[1])), _uppers.size(),
+		stairs_info.get("collider"))
 	_occupied[stairs_cell] = true
 
 	# upstairs furniture: true positions, lifted sprites, colliders off
