@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.78.** The release history was renumbered evenly on
+**Current version: v0.6.79.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -769,6 +769,30 @@ door. Frame 0 of the door strip is meant to be flush IN the wall plane;
 whatever it is, it does not cover the full opening height. `make_door_strip`
 in `tools/gen_art.py`, and the opening is cut in `_build_shell`. Compare the
 leaf's drawn height against the hole the wall leaves.
+
+## B0m. Two open items from the second-floor pass *(user, 2026-08-07)*
+
+Both reported against v0.6.78 and **not started**.
+
+1. **A line above the door that disappears when you go inside.** *"theres a
+   line on top of the door, and it goes away when i go inside, can you remove
+   that line completely, there should also be nohting changed ontop of the door
+   when going inside"*. **This is mine.** The transom above a door is
+   `seg2_*_upper`, which is second-storey wall, so it is registered with a null
+   low texture and HIDES with the rest of the upper band. The user wants
+   nothing above a door changing at all, and the line itself gone — so the
+   transom needs to either not exist for the low state or be replaced by
+   something that is identical inside and out. Check `door_lintel_*` too: that
+   is a separate always-visible piece and may be the line itself.
+
+2. **The stairs clip into ground-floor furniture.** *"i can see it clipping
+   into the tv"*. Confirmed in a capture of my own — the flight overlaps a dark
+   cabinet. `_occupied[stairs_cell] = true` is set in `_build_upper` AFTER the
+   ground furnishing has already run, so nothing stopped a piece taking that
+   cell. **This matters more now that the stairs are solid (v0.6.78)** — a
+   player could be wedged between a staircase and a cabinet. Reserve the
+   flight's cells before furnishing, and remember the flight's ART spans about
+   two cells up-right of its anchor, not one.
 
 ## B0. Parking lots and aprons should JOIN the road network *(user, 2026-08-05)*
 

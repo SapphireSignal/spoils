@@ -3,6 +3,36 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.79] - 2026-08-07 - flush corners, and the floors cross-fade
+
+### Fixed - the corner pillars still stood proud
+*"pillars are a bit too high now, just by a little bit ... it should be flat
+with the rest of the walls"*, with the excess circled.
+
+v0.6.78 matched the post's height ABOVE ITS ORIGIN to the wall's, and that is
+the wrong target: **a corner post is anchored on the cell's VERTEX while the
+wall segments are anchored on the edge MIDPOINTS**, so the post's anchor sits
+up-screen of theirs and equal height leaves it standing proud. Measured off a
+corner at 12x — cap top at y 332 against wall tops of 348-352 — so it comes
+down 16 px. Height above origin 49 -> 33, and the top line now runs unbroken
+from wall to corner.
+
+### Changed - the two floors cross-fade
+*"the second floor just dissapears instantly, it should fade out and back in
+like the roof, as well as when you go up the stairs"*. A whole storey appearing
+in one frame reads as a glitch, which is exactly why the roof fades rather than
+popping.
+
+Same **0.28 s quad EASE_IN_OUT** as `RoofReveal`, deliberately: a climb fades
+the roof and the floors together, and two different curves on one action would
+read as two separate events. **Collision and the stairs still switch in the
+same frame** — what you can walk into must never wait on an animation.
+
+### Verified
+DOORS 16 on identical cells, UPPERS 6 with floorless=0 propless=0,
+`FLOORDOOR PASS`, slab 41 tiles all visible after a climb.
+`SEC PASS`, `DOCS PASS`, `CLAIMS PASS`, `SMOKE PASS`.
+
 ## [0.6.78] - 2026-08-07 - a stairwell, and one storey at a time
 
 ### Added - the stairwell opening *(sampled and kept)*

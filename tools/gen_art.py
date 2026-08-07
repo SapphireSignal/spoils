@@ -1168,7 +1168,15 @@ def make_wall_post(style: str, stories: int = 1,
         # Flush is right for a CUT band - the full post's cap is deliberately
         # 6 px lower because it beds into the roof plane, and there is no roof
         # on a floor you are standing under.
-        cut = 1 + STORY_H - 5
+        # ...and the target is NOT "same height above origin as the wall".
+        # A corner post is anchored on the cell's VERTEX while the wall
+        # segments are anchored on the edge MIDPOINTS, so the post's anchor
+        # sits up-screen of theirs and equal height leaves it standing proud.
+        # Measured off a corner at 12x: the cap was ~16 px above the wall's top
+        # line (post top y 332, wall tops 348-352). User, with the excess
+        # circled in red: "everywhere inside of the red circle needs to go ...
+        # it should be flat with the rest of the walls".
+        cut = 1 + STORY_H + 11
         for y in range(0, cut):
             for x in range(18):
                 c.px[x, y] = (0, 0, 0, 0)

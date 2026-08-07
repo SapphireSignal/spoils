@@ -449,14 +449,12 @@ func _set_upper_state(index: int, up: bool) -> void:
 	## why. No z_index anywhere: a z band puts the floor in front of ALL
 	## walls, which made it clip over the top of the house.
 	var upper: Dictionary = _uppers[index]
-	for tile in (upper["floor_tiles"] as Array):
-		(tile as Node2D).visible = up
+	# COLLISION AND THE STAIRS SWITCH AT ONCE; only the ART crossfades. What
+	# you can walk into must never wait on an animation.
 	for node in (upper["upper_props"] as Array):
-		(node as Node2D).visible = up
 		if node is StaticBody2D:
 			(node as StaticBody2D).collision_layer = 1 if up else 0
 	for node in (upper["ground_props"] as Array):
-		(node as Node2D).visible = not up
 		if node is StaticBody2D:
 			(node as StaticBody2D).collision_layer = 0 if up else 1
 	# the slab is a complete floor, so the flight below it is out of sight
@@ -465,6 +463,50 @@ func _set_upper_state(index: int, up: bool) -> void:
 		var flight := node as Stairs
 		if flight.upper_index == index:
 			flight.set_covered(up)
+	_fade_floor(upper, up)
+
+
+func _fade_floor(upper: Dictionary, up: bool) -> void:
+	## Cross-fade the two floors instead of cutting between them. A whole
+	## storey appearing in one frame reads as a glitch — the same reason the
+	## roof fades rather than popping (user: "the second floor just dissapears
+	## instantly, it should fade out and back in like the roof, as well as when
+	## you go up the stairs").
+	##
+	## Same 0.28 s EASE_IN_OUT quad as RoofReveal, deliberately: a climb fades
+	## the roof and the floors together, and two different curves on the same
+	## action would read as two separate events.
+	var old: Variant = upper.get("fade_tween")
+	if old is Tween and (old as Tween).is_valid():
+		(old as Tween).kill()
+	var rising: Array = []
+	rising.append_array(upper["floor_tiles"] as Array)
+	rising.append_array(upper["upper_props"] as Array)
+	var falling: Array = upper["ground_props"] as Array
+	# everything on screen for the duration; visibility settles at the end
+	for n in rising:
+		(n as Node2D).visible = true
+		(n as Node2D).modulate.a = 0.0 if up else 1.0
+	for n in falling:
+		(n as Node2D).visible = true
+		(n as Node2D).modulate.a = 1.0 if up else 0.0
+	var tw := create_tween()
+	tw.tween_method(
+		func(a: float) -> void:
+			for n in rising:
+				(n as Node2D).modulate.a = a
+			for n in falling:
+				(n as Node2D).modulate.a = 1.0 - a,
+		0.0 if up else 1.0, 1.0 if up else 0.0, 0.28) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+	tw.tween_callback(func() -> void:
+		for n in rising:
+			(n as Node2D).visible = up
+			(n as Node2D).modulate.a = 1.0
+		for n in falling:
+			(n as Node2D).visible = not up
+			(n as Node2D).modulate.a = 1.0)
+	upper["fade_tween"] = tw
 
 
 func set_hud_hidden(hidden: bool) -> void:

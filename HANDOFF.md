@@ -103,8 +103,28 @@ collider exists up there. Both items need a repro from the user rather than a
 guess; rebuilding a system that measures clean is how the map screen got built
 twice.
 
-**Then v0.6.78 — the stairwell shaft (sampled, kept, fleet-wide) and the
-two-storey wall split.**
+**Then v0.6.78 and v0.6.79 — the stairwell shaft (sampled, kept, fleet-wide),
+the two-storey wall split, the engine loop seam, stair collision, and the
+floor cross-fade.**
+
+**THE LESSON OF v0.6.79, and it cost two releases: "same height above origin"
+is NOT "same height on screen".** A corner post is anchored on the cell's
+VERTEX; the wall segments are anchored on the edge MIDPOINTS. Matching the
+numbers left every corner standing 16 px proud, measured off a 12x crop.
+Anchors before dimensions, every time.
+
+**AND THE ONE I GOT WRONG TWICE OVER — the vehicle click.** I blamed the engine
+pitch ramp, shipped a fix for it, and it was the wrong cause. What settled it
+was the user's SECOND report: *"every 2-3 secs ... i dont need to be driving to
+hear it either"*. A click at a fixed period, at idle, with constant pitch,
+cannot come from pitch. `car_engine_loop.ogg` is **2.966 s** long — the period
+itself was the diagnosis, sitting in plain sight. The loop is crossfaded
+seamless now (seam step 6943 -> 589, against a 99th-percentile interior step of
+~1200). **A periodic artifact means measure the PERIOD first and go looking for
+something that length.**
+
+Also: the stairs had a hardcoded 6 px circle collider while the manifest
+carried a shape nobody read — the door-collider lesson in a third place.
 
 - **The shaft is PAINTED, not cut, and that is the whole item.** The first
   attempt was a real hole in the tile grid and the user had it removed because

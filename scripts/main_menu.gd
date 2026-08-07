@@ -206,6 +206,10 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.79", [
+		"the corner pillars are properly flat with the wall now. i had matched their height to the walls, but a corner sits on a different anchor point than the wall pieces do, so equal height still left them sticking up",
+		"the two floors fade into each other instead of switching in one frame, same fade as the roof. what you can bump into still switches instantly",
+	]],
 	["v0.6.78", [
 		"theres a stairwell opening in the second floor now, so you can see where the stairs are. its painted as a shaft rather than cut as a hole - the last version of this showed the room below through it and stopped the floor reading as a floor",
 		"standing on the ground floor of a two storey house, the upper floors wall doesnt tower over the room any more - including the six corner and door pillars, which needed their own shortened version. from outside its still two storeys, and upstairs its still there",
