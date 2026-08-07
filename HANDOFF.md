@@ -41,6 +41,76 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-07 — MIGRATION POINT: the storey system, and what it still owes
+
+**Shipped: v0.6.72 → v0.6.86, all pushed, tree clean, every gate green**
+(`SEC` `DOCS` `CLAIMS` `SMOKE`, plus `FLOORDOOR PASS`). Read THIS entry to
+resume; the long entry below it is the blow-by-blow of the same run.
+
+### THE STOREY SYSTEM — the model you need before touching walls
+
+A two-storey wall is **two band sprites per piece**, not one sprite:
+
+- Pieces: `seg2_<style>_<axis>[_v1|_v2|_win_N]` each have a **`_low`** and an
+  **`_upper`**; corner posts have `post2_<style>_low` / `_upper`. The door
+  transom is upper-only and is registered with an empty low name.
+- The builder (`_register_low_wall`) makes the LOW sprite as a child under the
+  original, retextures the original to the UPPER band, and records
+  `[upper_sprite, low_sprite]` on that building's `RoofReveal.low_walls`.
+- `main.gd`'s interior-reveal loop calls
+  `reveal.set_wall_storey(show_low, show_upper)`:
+  **outside → both**, **ground floor → low only**, **upstairs → upper only.**
+  That gate keys on cell AND `_player_upper` — climbing does not change your
+  cell, and leaving the floor out of the key froze the walls until you moved.
+- **EVERY piece needs BOTH bands.** Posts were missed and fell back to their
+  full texture — full-height pillars with a thin strip of wall between them,
+  which is what the user saw. A missing band now `push_error`s by name,
+  because the fallback still *drew* and so failed silently.
+
+Floors: ground = `wood` (houses) / `lino` (halls, school), upstairs = `board`.
+Different materials by construction. Slab tiles and lips sort a **storey
+north** with art pushed back level, or they draw over your legs.
+
+### The user's words (still unanswered)
+
+- *"you are still on the ground, it just looks different colours now ... if you
+  would be on the second floor, you wouldnt see all those windows"* — answered
+  by the band split, **but they have not confirmed the result yet.** They may
+  still want the room to sit visibly higher in frame; the camera does not lift,
+  only the art does. **Ask before redesigning that.**
+- *"same with the furniture"* — NOT done. See B0n.
+- *"if there is any furniture that the user cant see ... just remove that"* —
+  done (freed after placement, costs no draws).
+
+### Learned (things I got wrong, so nobody repeats them)
+
+- **A fallback that still renders hides its own failure.** The missing post
+  band printed `Resource file not found` in the smoke log and I did not read
+  it, because something still drew. When a system gains a variant dimension,
+  enumerate every piece that needs it.
+- **Position-dependent sort bugs must be SWEPT, not spot-checked.** The leg
+  sink depended on sub-cell position AND the building's phase; two "not
+  reproduced" verdicts came from sampling one clean point.
+- **Draw counts are the district.** `_pick_variant_varied` takes one draw
+  *usually* and two on a repeat, so swapping a family in place rerolls
+  everything. Erase/free AFTER placement instead. Verify with **DOORS 16 +
+  LAMPS 53/15 + VEHICLES 30 on identical cells** — that trio is the proof.
+- **A verification crop must contain enough context to be checkable.** I sent a
+  tight crop as proof of a floor and the user could not tell which storey it
+  was — correctly.
+
+### Picked up at
+
+1. **User judgement pending** on whether upstairs now reads as up a level.
+2. **B0n** — upper/ground furniture still share cabinet, bookshelf, crate.
+   TASKS.md has three draw-neutral routes; do not edit the lists naively.
+3. **B0c item 3** (clipping on props upstairs) — measures clean, needs a repro;
+   may well have BEEN the leg-sink bug, now fixed.
+4. Then the standing backlog: B0-NEW geometry batch, B0 parking spurs, B0b
+   broken cars, B1 sprint, B2 warden, B3 scrapyard, B4 smoker.
+
+---
+
 ## 2026-08-07 — the front door stays open when you climb
 
 **Shipped: v0.6.76.** `SEC`, `DOCS`, `CLAIMS`, `SMOKE` all pass, plus a new
