@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.76.** The release history was renumbered evenly on
+**Current version: v0.6.77.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -496,7 +496,32 @@ square"*.
     value derived from `snapped_pos` while movement keeps using the
     continuous one.
 
-## B0c. THE SECOND FLOOR IS ROUGH *(user, 2026-08-06)* — NEXT UP
+## B0c. THE SECOND FLOOR IS ROUGH *(user)* — **2 of 4 DONE in v0.6.77**
+
+**Item 2 (stair top visible) FIXED.** The slab covers the flight while you are
+on it — art AND collider, so nothing invisible is left standing there. Plus a
+bug found on the way: the prompt still said *"go upstairs"* from upstairs,
+because the text cache keys on (target, door-open) and **the floor was not in
+that key** while climbing does not change the target.
+
+**Item 1 (clipping into the floor) NOT REPRODUCED — and the earlier
+"confirmed" here was WRONG.** A screenshot appeared to show the character cut
+in half at the stairs; what cuts them is the **HUD prompt label** lying across
+their legs, in that shot and every other. An aligned frame diff settled it:
+removing the stairs changed the stairs region and **nothing where the legs
+are**. At the room centre the player draws complete, feet on the boards.
+**Needs a repro from the user** — possibly the transition frame itself, which a
+still cannot show.
+
+**Item 3 (clipping on props) NOT REPRODUCED.** `--probe-upper` lists every body
+still on a collision layer inside an upper room: **19 solid, 0 invisible** — 14
+wall segments and posts, the door, the stairs, 4 pieces of furniture, all
+drawing. There is no ghost collider up there. **Needs a repro.**
+
+**Item 4 (the stairwell hole) STILL NEEDS SIGN-OFF** — see below, it was built
+once and removed.
+
+### the original report
 
 Their words: *"when i go up the stairs in the two floor buildings, i clip
 inside of the floor, and i can see the top of the stairs, it should all be

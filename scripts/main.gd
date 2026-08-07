@@ -19,6 +19,7 @@ var _debrief_open := false     # one debrief per raid, whichever path gets there
 var _prompt: Label
 var _prompt_target: Node2D
 var _prompt_open := false
+var _prompt_upper := -1     # which floor the cached prompt text was built for
 var _uppers: Array = []
 var _environment: EnvironmentSystem
 var _grade_layer: CanvasLayer
@@ -457,6 +458,12 @@ func _set_upper_state(index: int, up: bool) -> void:
 		(node as Node2D).visible = not up
 		if node is StaticBody2D:
 			(node as StaticBody2D).collision_layer = 0 if up else 1
+	# the slab is a complete floor, so the flight below it is out of sight
+	# while you are standing on it — art AND collider, see Stairs.set_covered
+	for node in get_tree().get_nodes_in_group("stairs"):
+		var flight := node as Stairs
+		if flight.upper_index == index:
+			flight.set_covered(up)
 
 
 func set_hud_hidden(hidden: bool) -> void:
@@ -565,10 +572,19 @@ func _update_prompt() -> void:
 	_player.prompt_target = best
 	# rebuild the text only when the target or its state changes — bind_label
 	# asks the display server and must not run per frame
+	# THE FLOOR IS PART OF THAT STATE. The stairs prompt reads "go upstairs" or
+	# "back down" off _player_upper, and climbing does NOT change the target —
+	# it is the same Stairs node — so without this the text was never rebuilt
+	# and still read "press f to go upstairs" while you stood on the second
+	# floor.
 	var open_now := best is Door and (best as Door).is_open()
-	if best != _prompt_target or open_now != _prompt_open:
+	var restale := best != _prompt_target or open_now != _prompt_open
+	if _player_upper != _prompt_upper:
+		restale = true
+	if restale:
 		_prompt_target = best
 		_prompt_open = open_now
+		_prompt_upper = _player_upper
 		var key := Settings.bind_label("interact").to_lower()
 		if best is Door:
 			_prompt.text = "press %s to %s" % [key, "close" if open_now else "open"]

@@ -206,6 +206,10 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.77", [
+		"the second floor is a proper floor now - the staircase used to be drawn straight through it and sit on the floorboards. its covered while youre up there, and the solid part goes with it so theres nothing invisible to walk into",
+		"the stairs prompt said go upstairs while you were already upstairs. the text is only rebuilt when what youre looking at changes, and climbing doesnt change it - its the same staircase",
+	]],
 	["v0.6.76", [
 		"going up to a second floor leaves the front door exactly as you left it. it was shutting the door on purpose - upstairs has no walls of its own, so an open doorway is a hole you can walk out of at roof height - but the doorway is just held solid now instead, and the door itself is left alone",
 	]],

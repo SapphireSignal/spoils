@@ -1,4 +1,4 @@
-# SPOILS — the handoff chain
+﻿# SPOILS — the handoff chain
 
 **What this file is:** one short entry per chat session, newest first. A chat
 does not survive. This file is how the next one inherits what the last one
@@ -41,7 +41,7 @@ chat that dies mid-session still leaves a record.
 
 ---
 
-## 2026-08-08 — the front door stays open when you climb
+## 2026-08-07 — the front door stays open when you climb
 
 **Shipped: v0.6.76.** `SEC`, `DOCS`, `CLAIMS`, `SMOKE` all pass, plus a new
 `FLOORDOOR PASS`.
@@ -80,11 +80,34 @@ run through v0.6.72-75 is signed off in play.
   which is the one place a parse error shows. Write to a file and read both
   ends.
 
-**Picked up at: B0c, the second floor** — four separate things in one report
-(clipping into the slab, the stair top showing, clipping on props, and the
-stairwell hole). **The stairwell hole needs the user's sign-off before
-building**: it was built once and they had it removed because the gap showed
-the ground room through it, so it has to read as a SHAFT, not a hole.
+**Then v0.6.77 — B0c items 2 and 4-adjacent.** The slab covers the flight while
+you stand on it (art AND collider; hiding art alone leaves an invisible
+obstacle, which is the complaint one line below in the same report). Plus the
+stairs prompt still said *"go upstairs"* from upstairs: the text cache keys on
+(target, door-open) and **the floor was not in that key**, while climbing does
+not change the target.
+
+**I RECORDED A DEFECT AS CONFIRMED AND IT WAS MY OWN MISREAD.** B0c item 1,
+*"i clip inside of the floor"*: a screenshot appeared to show the character cut
+in half at the stairs, and I wrote it down as confirmed. What cuts them is the
+**HUD prompt label** lying across their legs — in that shot and in every other,
+before and after any change. An aligned frame diff settled it: removing the
+stairs changed the stairs region and **nothing where the legs are**.
+**Third time on this project a confident screenshot reading went into a doc as
+fact.** A HUD element sits on top of the world; check what layer the thing
+covering your subject is on before naming a cause.
+
+**Item 3 NOT REPRODUCED either:** `--probe-upper` lists every body still on a
+collision layer inside an upper room — **19 solid, 0 invisible**. No ghost
+collider exists up there. Both items need a repro from the user rather than a
+guess; rebuilding a system that measures clean is how the map screen got built
+twice.
+
+**Picked up at: B0c items 1 and 3 (need a repro) and item 4, the stairwell
+hole, which STILL NEEDS SIGN-OFF** — it was built once and the user had it
+removed because the gap showed the ground room through it, so it has to read as
+a SHAFT, not a hole. Note item 2's fix means the flight is now hidden upstairs,
+so the hole is what would give it back — they are the same conversation.
 
 ---
 

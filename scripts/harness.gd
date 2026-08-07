@@ -123,6 +123,8 @@ func _ready() -> void:
 			_probe_sort.call_deferred()
 		elif arg == "--probe-floordoor":
 			_probe_floordoor.call_deferred()
+		elif arg == "--probe-upper":
+			_probe_upper.call_deferred()
 		elif arg.begins_with("--film-walk="):
 			_film_walk.call_deferred(arg.trim_prefix("--film-walk="))
 		elif arg.begins_with("--film="):
@@ -1597,6 +1599,23 @@ func _shot(shot_name: String) -> void:
 					main_node.call("_on_stairs_used", idx)
 					for i in 6:
 						await get_tree().process_frame
+					# --upstairs-at=dx,dy stands the player at the room's CENTRE
+					# plus that offset, so the stairs prop cannot be mistaken
+					# for the floor slab when working out what covers them.
+					# Anchored to the centre, not the stairs cell: offsetting
+					# from the stairs walked straight out of the room and the
+					# roof came back over the shot.
+					var rc: Rect2i = reg["cells"]
+					for a4 in OS.get_cmdline_user_args():
+						if a4.begins_with("--upstairs-at="):
+							var pr: PackedStringArray = a4.trim_prefix(
+								"--upstairs-at=").split(",")
+							if pr.size() == 2:
+								var mid_cell := rc.position + rc.size / 2
+								pl.global_position = fl.map_to_local(
+									mid_cell + Vector2i(int(pr[0]), int(pr[1])))
+								for i2 in 3:
+									await get_tree().process_frame
 					var tiles: Array = reg["floor_tiles"] as Array
 					var shown := 0
 					for t in tiles:
@@ -1867,6 +1886,72 @@ func _probe_drive() -> void:
 	print("DRIVE driving=%s cam_to_car_before=%.1f after=%.1f %s" % [
 		str(player.get("driving") != null), before, after,
 		"FOLLOWS" if after < before + 8.0 else "LEFT BEHIND"])
+	get_tree().quit(0)
+
+
+func _probe_upper() -> void:
+	## WHAT IS SOLID ON THE SECOND FLOOR THAT YOU CANNOT SEE?
+	##
+	## The report is *"i clip on stuff when walking around on the second
+	## floor"*. Rather than guess at which system leaks, enumerate: stand the
+	## player upstairs, then list every body still on a collision layer whose
+	## cell is inside the upper room, and ask each one whether it is DRAWING
+	## anything. A body that is solid and invisible is the bug, by definition.
+	await _ensure_game_scene()
+	var main_node := get_tree().current_scene
+	var uppers: Array = (main_node.get("world_info") as Dictionary).get(
+		"uppers", []) as Array
+	var fl := main_node.get("_floor_layer") as TileMapLayer
+	var pl := _find_player()
+	if uppers.is_empty() or fl == null or pl == null:
+		print("UPPER FAIL: no uppers/player")
+		get_tree().quit(1)
+		return
+	var idx := 0
+	var reg: Dictionary = uppers[idx]
+	var cells: Rect2i = reg["cells"]
+	pl.global_position = fl.map_to_local(reg["stairs_cell"] as Vector2i)
+	await get_tree().process_frame
+	main_node.call("_on_stairs_used", idx)
+	for i in 8:
+		await get_tree().process_frame
+	print("UPPER room cells=%s upstairs=%s" % [str(cells), str(pl.upstairs)])
+	var world := main_node.get_node_or_null("World")
+	if world == null:
+		print("UPPER FAIL: no World")
+		get_tree().quit(1)
+		return
+	var solid := 0
+	var ghosts: Array[String] = []
+	for node in world.find_children("*", "CollisionObject2D", true, false):
+		var body := node as CollisionObject2D
+		if body == pl or body.collision_layer == 0:
+			continue
+		var n2 := body as Node2D
+		if n2 == null:
+			continue
+		var cell := fl.local_to_map(n2.global_position)
+		if not cells.has_point(cell):
+			continue
+		solid += 1
+		var drawing := false
+		for ch in body.find_children("*", "Sprite2D", true, false):
+			if (ch as CanvasItem).is_visible_in_tree():
+				drawing = true
+				break
+		var tex := ""
+		for ch in body.find_children("*", "Sprite2D", true, false):
+			var sp := ch as Sprite2D
+			if sp.texture != null:
+				tex = sp.texture.resource_path.get_file()
+				break
+		print("UPPER BODY %-16s cell=%s drawing=%s %s"
+			% [body.name, str(cell), str(drawing), tex])
+		if not drawing:
+			ghosts.append("%s@%s" % [body.get_class() + ":" + body.name, str(cell)])
+	print("UPPER solid_bodies_in_room=%d invisible=%d" % [solid, ghosts.size()])
+	for g in ghosts.slice(0, 12):
+		print("UPPER GHOST %s" % g)
 	get_tree().quit(0)
 
 

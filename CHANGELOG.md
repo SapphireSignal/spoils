@@ -1,9 +1,56 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
-## [0.6.76] - 2026-08-08 - the front door stays open when you go up
+## [0.6.77] - 2026-08-07 - the second floor is a floor
+
+### Fixed - the stairs were drawn straight through the upper floor
+*"i can see the top of the stairs, it should all be clean like the bottom
+floor"*. The flight rose through the slab and sat on the floorboards, so a
+complete floor had a staircase growing out of it.
+
+The slab covers the flight while you are standing on it now — **art AND
+collider together**. Hiding the art alone would have left a solid thing you
+cannot see in the middle of the room, which is the complaint one line further
+down the same report. Going back down is a proximity prompt, not a collision,
+so nothing is lost.
+
+### Fixed - the stairs prompt still said "go upstairs" from upstairs
+The prompt text is cached and only rebuilt when the target or a door's
+open-state changes, because `bind_label` asks the display server and must not
+run per frame. **The floor was not part of that cache key** — and climbing
+does not change the target, it is the same `Stairs` node — so the prompt kept
+reading *"press f to go upstairs"* while you stood on the second floor. It
+reads "back down" now.
+
+### NOT REPRODUCED - and I had one of them wrong
+- **"i clip inside of the floor"** — I recorded this as confirmed off a
+  screenshot and it was **my mistake**: what cut the character in half was the
+  HUD prompt label sitting across their legs, in that shot and in every other.
+  An aligned frame diff settled it — removing the stairs changed the stairs
+  region and **nothing where the legs are**. At the room centre the player
+  draws complete, feet on the boards.
+- **"i clip on stuff when walking around"** — no invisible collider exists up
+  there. `--probe-upper` lists every body still on a collision layer inside
+  the upper room: **19 solid, 0 invisible** — 14 wall segments and posts, the
+  door, the stairs and 4 pieces of furniture, every one of them drawing.
+
+Both need a repro before anything is changed. Guessing at them would mean
+rebuilding a system that measures clean.
+
+### Added - `--probe-upper` and `--upstairs-at=dx,dy`
+The probe enumerates solid-but-invisible bodies in an upper room, which is the
+only honest way to answer "am I clipping on something up here". `--upstairs-at`
+stands the player at the room's CENTRE plus an offset — anchored to the centre
+rather than the stairs cell, because offsetting from the stairs walked straight
+out of the room and put the roof back over the shot.
+
+### Verified
+`FLOORDOOR PASS` still, DOORS 16 on identical cells, UPPERS 6 with floorless=0
+propless=0. `SEC PASS`, `DOCS PASS`, `CLAIMS PASS`, `SMOKE PASS`.
+
+## [0.6.76] - 2026-08-07 - the front door stays open when you go up
 
 ### Fixed - climbing the stairs slammed the front door
 *"when going up the stiars to a second floor, the main door entrance closes
