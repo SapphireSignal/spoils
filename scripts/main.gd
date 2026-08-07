@@ -420,7 +420,7 @@ func _on_stairs_used(index: int) -> void:
 		var cells: Rect2i = (_uppers[index] as Dictionary)["cells"]
 		for node in get_tree().get_nodes_in_group("doors"):
 			var door := node as Door
-			var door_cell := _floor_layer.local_to_map(door.global_position)
+			var door_cell := _floor_layer.local_to_map(door.wall_position())
 			if cells.grow(2).has_point(door_cell) and door.is_open():
 				# force, not toggle: a leaf still mid-swing ignores toggle()
 				# and the doorway would leak you outside mid-air
@@ -501,7 +501,10 @@ func _update_prompt() -> void:
 	var best_d := 30.0 * 30.0
 	if not _player.upstairs:   # no door prompts on the second floor
 		for node in get_tree().get_nodes_in_group("doors"):
-			var d := (node as Node2D).global_position.distance_squared_to(
+			# wall_position(), not global_position: an OPEN door's node is
+			# pushed off the wall line so its leaf sorts right, and this is
+			# what decides whether "press f to close" shows at all
+			var d := (node as Door).wall_position().distance_squared_to(
 				_player.global_position)
 			if d < best_d:
 				best_d = d

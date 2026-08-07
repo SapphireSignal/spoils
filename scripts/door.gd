@@ -24,6 +24,7 @@ var _swing_out := false            # which way this opening is going
 var _animating := false
 var _frame := 0
 var _frame_timer := 0.0
+var _sort_shift := 0.0             # node pushed off the wall line, Y-SORT ONLY
 
 
 func setup(texture: Texture2D, origin: Vector2, poly_points: PackedVector2Array,
@@ -78,10 +79,13 @@ func is_open() -> bool:
 
 
 func _panel_center(poly: CollisionPolygon2D) -> Vector2:
+	# poly.position carries the y-sort compensation (see _apply_sort_shift), so
+	# it HAS to be in the sum. Without it every helper on this class drifts by
+	# the shift the moment the door opens — and the smoke test aims at these.
 	var sum := Vector2.ZERO
 	for p in poly.polygon:
 		sum += p
-	return to_global(sum / float(poly.polygon.size()))
+	return to_global(poly.position + sum / float(poly.polygon.size()))
 
 
 func _panel_normal(poly: CollisionPolygon2D) -> Vector2:
@@ -89,6 +93,15 @@ func _panel_normal(poly: CollisionPolygon2D) -> Vector2:
 	## crosses it, which is what you drive along to prove it is solid.
 	var along: Vector2 = poly.polygon[1] - poly.polygon[0]
 	return Vector2(-along.y, along.x).normalized()
+
+
+func wall_position() -> Vector2:
+	## Where this door sits IN THE WALL LINE, with the y-sort shift taken back
+	## out. `global_position` is not that while the door is open — it is pushed
+	## to wherever the leaf stands so the leaf sorts correctly. Anything asking
+	## "which cell is this door in" or "how far is the player from it" wants
+	## THIS; the node's own position answers a different question now.
+	return global_position - Vector2(0.0, _sort_shift)
 
 
 func doorway_center() -> Vector2:
@@ -135,6 +148,69 @@ func leaf_normal() -> Vector2:
 
 func swings_out() -> bool:
 	return _swing_out
+
+
+func sort_shift() -> float:
+	## How far the node is currently pushed off the wall line for y-sort. Zero
+	## when shut. Exposed so a probe can report a liveness figure beside its
+	## verdict — a "no disagreements" result read off a door that never moved
+	## has fooled this project three times.
+	return _sort_shift
+
+
+func _leaf_sort_depth() -> float:
+	## How far toward the camera the OPEN leaf actually stands, taken from the
+	## manifest polygon rather than derived here — the door-collider lesson: a
+	## hand-derived offset is how the open leaf's collider ended up a cell from
+	## its own art for a whole release.
+	##
+	## Two of the four kind/axis combinations come out ZERO and want no shift
+	## at all: measured off the manifest, an 'x' door swings out along -x and a
+	## 'y' door swings in along -x, neither of which moves in y. The other two
+	## move a full 10 px — 'y' swinging out toward the camera (+10), 'x'
+	## swinging in away from it (-10). Reading the centroid covers all four
+	## without a special case anywhere.
+	return _poly_depth(_active_leaf())
+
+
+func _poly_depth(poly: CollisionPolygon2D) -> float:
+	var sum := 0.0
+	for p in poly.polygon:
+		sum += p.y
+	return sum / float(poly.polygon.size())
+
+
+func leaf_depth(out_swing: bool) -> float:
+	## What the shift WOULD be if this door swung that way, without opening it.
+	## A probe needs this to pick a door where the bug can actually happen: two
+	## of the four kind/axis combinations swing sideways on screen and shift by
+	## zero, and a screenshot of one of those looks perfect while proving
+	## nothing at all.
+	return _poly_depth(_leaf_out if out_swing else _leaf)
+
+
+func _apply_sort_shift(shift: float) -> void:
+	## THE OPEN LEAF COULD NEVER HIDE ANYTHING (user: "i can still see my
+	## character when he should be behind the door"). Y-sort orders by the
+	## NODE, and the node sits on the wall line while an open leaf stands up to
+	## 10 px off it — so a player standing behind the leaf out-sorted it every
+	## time. Nothing about the art was wrong; the sort ANCHOR was.
+	##
+	## The fix is CLAUDE.md's second-floor pattern verbatim: give the piece its
+	## own sort position and offset the art, never the node. Push the node to
+	## where the leaf really is, then pull every child back by the same amount.
+	## The sort key moves; not one pixel of art or collision does.
+	##
+	## Compensating EVERY child rather than a named list is deliberate — a
+	## child added here later is then correct by construction instead of
+	## silently sliding off the wall whenever a door opens.
+	var delta := shift - _sort_shift
+	if is_zero_approx(delta):
+		return
+	position.y += delta
+	for child in get_children():
+		(child as Node2D).position.y -= delta
+	_sort_shift = shift
 
 
 func leaf_is_solid() -> bool:
@@ -196,7 +272,12 @@ func _process(delta: float) -> void:
 			_occ.occluder = _occ_poly
 			_leaf.set_deferred("disabled", true)
 			_leaf_out.set_deferred("disabled", true)
+			_apply_sort_shift(0.0)   # back on the wall line; the ramp below
+			                         # already lands here, this is the guarantee
 		return
 	_frame += 1 if target > _frame else -1
 	# the outward swing lives in the second half of the sheet
 	_sprite.frame = (FRAMES if _swing_out else 0) + _frame
+	# ...and the sort key rides the same frame, so the leaf starts occluding as
+	# it comes round instead of snapping at one end of the swing
+	_apply_sort_shift(_leaf_sort_depth() * float(_frame) / float(FRAMES - 1))

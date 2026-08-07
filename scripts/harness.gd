@@ -1478,18 +1478,58 @@ func _shot(shot_name: String) -> void:
 		if arg.begins_with("--door="):
 			# --door=inside|outside: stand on that side of a door and open
 			# it. The leaf must swing AWAY from wherever you are standing.
+			#
+			# --door=behind opens from INSIDE, so the leaf swings out toward
+			# the camera, and THEN stands the player in the opening. That is
+			# the only pose in which an open leaf should hide them, and it is
+			# the one the user photographed. The other two park the player
+			# 22 px off, where player and leaf do not overlap on screen at
+			# all — so neither of them can show whether occlusion works, and
+			# --smoke cannot see occlusion either.
 			var side := arg.trim_prefix("--door=")
-			var d := get_tree().get_first_node_in_group("doors") as Door
+			# NOT the first door in the group: pick one whose outward leaf
+			# actually stands toward the camera. Two of the four kind/axis
+			# combinations swing sideways on screen and cannot show this bug
+			# at all, and the first door in the district is one of them —
+			# shooting it reported a perfect-looking frame and measured
+			# nothing.
+			var d: Door = null
+			var best_depth := 0.0
+			for node in get_tree().get_nodes_in_group("doors"):
+				var cand := node as Door
+				var depth := cand.leaf_depth(true)
+				if d == null or depth > best_depth:
+					d = cand
+					best_depth = depth
 			var pl2 := _find_player()
 			if d != null and pl2 != null:
 				var thru := d.doorway_through()
-				var sign_in := 1.0 if side == "inside" else -1.0
+				var sign_in := -1.0 if side == "outside" else 1.0
 				pl2.global_position = d.doorway_center() + thru * 22.0 * sign_in
 				await get_tree().process_frame
 				d.toggle(pl2.global_position)
 				await get_tree().create_timer(0.45).timeout
-				print("DOOR side=%s swings_out=%s open=%s"
-					% [side, str(d.swings_out()), str(d.is_open())])
+				if side == "behind":
+					pl2.global_position = d.doorway_center()
+					await get_tree().create_timer(0.1).timeout
+				elif side == "front":
+					# THE GUARD ON THE FIX: stood out in the street, clearly
+					# NEARER the camera than the swung leaf. The player must
+					# still be fully visible — if pushing the door's sort key
+					# toward the camera ever overshoots, this is where it
+					# shows. Straight +y, not along the wall: the wall runs
+					# diagonally, so an along-the-wall offset moves y as well
+					# and quietly puts the player back BEHIND the leaf, which
+					# is what the first cut of this pose did.
+					pl2.global_position = d.doorway_center() + Vector2(0.0, 18.0)
+					await get_tree().create_timer(0.1).timeout
+				# the shift and the player-vs-leaf gap are the LIVENESS
+				# figures: a shot that looks right is worth nothing if the
+				# door never opened or the two never overlapped
+				print("DOOR side=%s swings_out=%s open=%s shift=%.1f player_y-leaf_y=%.1f"
+					% [side, str(d.swings_out()), str(d.is_open()),
+						d.sort_shift(),
+						pl2.global_position.y - d.leaf_center().y])
 		if arg.begins_with("--upstairs="):
 			# put the player on a second story and look at it. The reported
 			# bug is "furniture floats, no floor" and the slab is MEASURABLY

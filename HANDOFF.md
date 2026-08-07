@@ -41,6 +41,66 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-07 — migration, and the open door finally hides you
+
+**Shipped: v0.6.72 — an open door leaf now hides the player behind it**, plus
+the housekeeping below. All four gates green (`SEC`, `DOCS`, `CLAIMS`,
+`SMOKE PASS`). Migration itself was clean: HEAD was level with `origin/main`
+at v0.6.71, tree clean bar untracked debug shots.
+
+**B0h FIXED — an open door leaf now hides the player behind it.** The node
+sits on the wall line while an open leaf stands up to 10 px toward the camera,
+and y-sort orders by the NODE, so the leaf could never occlude anyone behind
+it. `door.gd` pushes the node to where the leaf really is and pulls EVERY
+child back by the same amount — sort key moves, art and colliders do not.
+`_panel_center` had to start counting the child's own position or every helper
+on the class (and the smoke test, which aims at them) would drift by the shift.
+`main.gd` gained `wall_position()` at two call sites that ask "which cell is
+this door in" and "how far is the player" — `global_position` no longer
+answers those while a door is open.
+
+**The user's words:**
+- *"sure and yes renumber the stale ones if you tihnk its good idea"*
+- *"yes do the workflow"* — cut the release.
+- *"also the door colours are fine now, and the door gap at the top is fixed
+  now too, both those are already fixed, why are they in open?"*
+- *"how come you keep failing stuff"* — fair. Two Edit calls failed because I
+  guessed tab depth instead of reading the raw bytes first. **On this repo,
+  dump the exact indentation before editing GDScript.** The `--check-only
+  --script` "errors" were not failures: that mode cannot resolve autoloads, so
+  `Sfx`/`Ui` always error there. It is not a usable parse gate for this project.
+
+**Learned:**
+- **`get_first_node_in_group("doors")` lands on a door this bug CANNOT happen
+  on.** Only two of four kind/axis combinations move in y when they swing; the
+  other two shift by exactly 0. The first shot came back `shift=0.0` — a
+  frame that looked perfect while measuring nothing. **Fourth vacuous-green
+  near-miss on this project.** The liveness figure caught it, nothing else would
+  have.
+- **A probe pose can lie too.** The first `--door=front` offset the player
+  ALONG the wall, and because the wall runs diagonally that moved y as well and
+  put them back BEHIND the leaf — it printed a pass while testing the same
+  thing twice. Fixed to a straight +y.
+- **B0g and B0i were closed by the USER, not by code.** Nothing shipped between
+  the complaint and the verdict — verified by reading `make_door_strip`, whose
+  comment carries the same 37-luminance figure B0i quotes. B0g's own option 1
+  was *"check whether those 3 px are even visible in play"*; the user played and
+  they are not. **The measurement said thin; the player said fine. The player
+  is the ground truth on a visual call.**
+- **Known cost of the B0h fix, not a bug to rediscover:** jamb boards are
+  structurally wall but ride the leaf's sprite, so they take the shift too.
+  Bounded, stated in TASKS.md B0h, deliberately not chased.
+- `TASKS.md` had **two B0b sections and two B0c sections**, one open and one
+  done in each pair — and this file points at "B0c, the second floor". The
+  completed ones are now B0j/B0k; the open ones keep their letters.
+
+**Picked up at: B0c, the second floor** — unchanged, still four separate things
+in one report, and the stairwell hole in it still needs the user's sign-off
+before building (it was built once and they had it removed). B0d, B0f and the
+B0-NEW backlog all still open.
+
+---
+
 ## 2026-08-05 — the title got a material; the map got sent back
 
 **Shipped: v0.6.51 — the title is cast metal.** Both halves of the user's

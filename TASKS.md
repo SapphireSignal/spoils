@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.71.** The release history was renumbered evenly on
+**Current version: v0.6.72.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -569,11 +569,21 @@ the v0.6.63 guarantee holds. **Work out the correct SIGN first** - in this
 projection the piece that should occlude the player at equal y is the one
 nearer the camera, so check against a real wall rather than assuming.
 
-## B0g. 3 px still visible above a door *(user, 2026-08-06)* — MEASURED
+## B0g. 3 px still visible above a door — **CLOSED 2026-08-07 by the user in
+## play** *("the door gap at the top is fine now too")*
+
+**This item's own option 1 was the thing that closed it:** *"check whether
+those columns are actually above the roofline — if so the remaining 3 px may
+be invisible in play and this is already done."* The user playtested and
+reports no gap. No code changed after v0.6.70; the 3 px of geometry are still
+there and are simply not visible from a playing camera.
+
+**Kept because it is the measurement, not the verdict** — if a gap is ever
+reported here again, start from this rather than re-deriving it:
 
 *"its still cut off at the top a bit ... i shouldnt see anything from
-outside"*. v0.6.70 took the worst gap from **8 px to 3 px** and it is NOT
-closed. Do not eyeball this one - measure it:
+outside"*. v0.6.70 took the worst gap from **8 px to 3 px**. Do not eyeball
+this one - measure it:
 
 ```
 for each world column across the opening:
@@ -595,7 +605,39 @@ give there. Options, in order of preference:
 3. Draw the header procedurally along the edge slope rather than cutting it
    from the segment, accepting that it then has to match the brick by hand.
 
-## B0h. An OPEN door leaf does not hide the player behind it *(user)*
+## B0h. An OPEN door leaf does not hide the player behind it — **FIXED**
+## *(kept: the probe trap in it is the reusable part)*
+
+**Fixed exactly as the mechanism below predicted**, and PROVEN with an A/B on
+one frame: same door, same pose (`player_y-leaf_y=-10.0` in both runs), the
+only variable the shift. Before, the character is drawn fully over the open
+leaf — the user's screenshot reproduced. After, they are completely hidden by
+it. The opposite pose is guarded too: stood in the street at `+10` in front of
+the leaf, the player is still fully drawn, so the shift does not overshoot.
+
+**`--door=behind` and `--door=front` are the new probes** (`harness.gd`), and
+B0h's own note — *"there is no probe for occlusion, and `--smoke` will not
+catch it"* — is why they exist. Both print `shift=` and `player_y-leaf_y=` as
+LIVENESS FIGURES beside the pose.
+
+**THE TRAP, and it nearly took me: `get_first_node_in_group("doors")` returns
+a door this bug CANNOT happen on.** Measured off the manifest, only two of the
+four kind/axis combinations move in y when they swing — a `y` door opening out
+(+10, toward the camera) and an `x` door opening in (-10). The other two swing
+sideways on screen and shift by exactly 0. The first door in the district is
+one of those, so the first shot came back `shift=0.0`: a frame that looked
+perfectly correct while measuring nothing. **The probe now picks the door with
+the deepest outward leaf, not the first one.** Same vacuous-green failure this
+project has now hit four times.
+
+**The known cost, stated rather than discovered later:** the jamb boards are
+structurally WALL but they ride the same sprite as the leaf, so they take the
+shift with it. While a door is open, its frame edges sort up to 10 px nearer
+the camera than they really are. Splitting them needs the generator to emit
+the jambs as their own piece (8 strips: kind x axis x style). Not done — the
+sliver where it could show is a player stood within 10 px of an open doorway
+and overlapping a 6 px board, and being clipped by a door frame you are
+standing in reads as correct.
 
 *"i can still see my character when he should be behind the door"*, with the
 door OPEN and the player standing in the opening. **This is NOT the v0.6.71
@@ -617,7 +659,18 @@ and has `leaf_center()` / `leaf_normal()` to size the shift from.
 **Verify with a screenshot of a player standing behind an open leaf** - there
 is no probe for occlusion, and `--smoke` will not catch it.
 
-## B0i. Door vs wall contrast is thin on SHADED faces *(user, 2026-08-07)*
+## B0i. Door vs wall contrast on SHADED faces — **CLOSED 2026-08-07 by the
+## user in play** *("the door colours are fine now")*
+
+**Nothing shipped between the complaint and the verdict** — verified by
+reading `make_door_strip` in `tools/gen_art.py`, whose comment carries the
+same **37** luminance figure this item quotes. So v0.6.65's colours were
+already enough in play, and the 37 gap the analysis called thin reads fine on
+screen. The user is the ground truth on a visual judgement; the number was
+not.
+
+**Kept because the numbers are worth having** if a door ever disappears into
+a wall again — and because the standing lesson under the table is still live:
 
 *"that door is also the same color as the warehouse, make sure all doors on
 all buildings are different colours than the building"*. v0.6.65 set the door
@@ -685,7 +738,10 @@ soft-alpha carve-out already lets that scale - see the LZ beacon).
 
 
 
-## B0c. The underpass door and posters — **DONE in v0.6.42**
+## B0j. The underpass door and posters — **DONE in v0.6.42**
+*(was filed as B0c, renumbered 2026-08-07: there were two B0c sections and
+`HANDOFF.md` points at the OTHER one, "the second floor", as where to pick up.
+The open item keeps the letter; this completed one moved.)*
 
 *"in the underpass backdrop is that a door on the right? if so make it look
 more like a door and add a handle on it, and add a poster or two on the walls
@@ -742,7 +798,10 @@ the window and wire anchors were.
 Applies to the **trainyard** and the **warden**. Do it before adding rain to
 any other backdrop.
 
-## B0b. Mara's arms and pencil — **DONE in v0.6.41**
+## B0k. Mara's arms and pencil — **DONE in v0.6.41**
+*(was filed as B0b, renumbered 2026-08-07: there were two B0b sections and
+`HANDOFF.md` points at the OTHER one, "broken cars reading as broken", as open
+work. The open item keeps the letter; this completed one moved.)*
 
 *"in maras counter, shes not holding the pencil right, like its not in her
 hands. also make her arms not square and a bit smaller"*.

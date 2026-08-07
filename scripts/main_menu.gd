@@ -206,6 +206,9 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.72", [
+		"standing behind an open door hides you now. the door was being sorted from where its frame sits in the wall, but an open leaf swings out toward the camera - so it could never cover anyone stood behind it, however far it swung",
+	]],
 	["v0.6.71", [
 		"when youre exactly level with a wall you now go behind it instead of the game picking at random. that was a side effect of the flicker fix - it put you on the same grid as the walls, so dead ties became common and a tie had no defined winner",
 	]],

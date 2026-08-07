@@ -3,6 +3,57 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.72] - 2026-08-07 - the open leaf finally hides you
+
+### Fixed - an open door drew behind the player standing behind it
+*"i can still see my character when he should be behind the door"*.
+**Not the v0.6.71 tie-break** - that closed B0e and is verified clean. A door
+node sits on the WALL LINE while an open leaf stands up to **10 px toward the
+camera**, and y-sort orders by the NODE - so the leaf could never occlude
+anyone behind it, however far it swung. The sprite's screen extent and its
+sort anchor disagreed.
+
+The node is now pushed to where the leaf really stands and **every child is
+pulled back by the same amount**: the sort key moves, the art and the
+colliders do not. The depth comes off the manifest polygon rather than being
+derived here (the door-collider lesson), and compensating every child rather
+than a named list means a child added later cannot silently slide off the wall
+whenever a door opens.
+
+`_panel_center` had to start counting the child's own position, or every
+helper on the class - and `--smoke`, which aims at them - would drift by the
+shift the moment a door opened. `main.gd` uses a new `wall_position()` at the
+two places that ask which cell a door is in and how far the player is from it.
+
+**Proven with an A/B on one frame**: same door, same pose
+(`player_y-leaf_y=-10.0` in both runs), the only variable the shift. Before,
+the character draws over the open leaf; after, they are completely hidden by
+it. Stood in front of the leaf instead, they are still fully drawn - the shift
+does not overshoot.
+
+**A known cost, stated rather than left to be rediscovered:** the jamb boards
+are structurally wall but ride the leaf's sprite, so they take the shift with
+it. Bounded, and written up in TASKS.md B0h.
+
+### Added - `--door=behind` and `--door=front`
+There was no probe for occlusion and `--smoke` cannot see it. Both print
+`shift=` and `player_y-leaf_y=` as liveness figures beside the pose, because
+**the first shot came back `shift=0.0`**: `get_first_node_in_group("doors")`
+returns a door this bug cannot happen on - only two of the four kind/axis
+combinations move in y when they swing - so the frame looked perfect while
+measuring nothing.
+
+### Housekeeping
+`TASKS.md` carried two `B0b` sections and two `B0c` sections, one open and one
+done in each pair, while `HANDOFF.md` points at "B0c, the second floor". The
+completed ones are now `B0j`/`B0k`. B0g (3 px above a door) and B0i (door vs
+wall contrast) are closed by the user in play - nothing shipped between the
+complaint and the verdict, so their measurements are kept and the verdict is
+theirs.
+
+### Verified
+`SEC PASS`, `DOCS PASS`, `CLAIMS PASS`, `SMOKE PASS`.
+
 ## [0.6.71] - 2026-08-06 - the player loses ties to the scenery
 
 ### Fixed - drawing over a wall at exactly equal depth
