@@ -117,6 +117,8 @@ func _ready() -> void:
 			_smoke.call_deferred()
 		elif arg.begins_with("--shot="):
 			_shot.call_deferred(arg.trim_prefix("--shot="))
+		elif arg.begins_with("--film-walk="):
+			_film_walk.call_deferred(arg.trim_prefix("--film-walk="))
 		elif arg.begins_with("--film="):
 			_film.call_deferred(arg.trim_prefix("--film="))
 		elif arg == "--perf-walk":
@@ -1729,6 +1731,78 @@ func _film(film_name: String) -> void:
 		frame.save_png(dir.path_join("f%03d.png" % i))
 	print("FILM SAVED: %d frames at %.0f fps -> %s" % [total, fps, dir])
 	get_tree().quit()
+
+
+func _film_walk(film_name: String) -> void:
+	## EVERY RENDERED FRAME while the player creeps forward, for hunting a
+	## ONE-FRAME visual pop (user: "random stuff glitch for like a milisecond",
+	## "on a wall on a house", "things next to my character").
+	##
+	## Why not --film: it samples on a timer, so at 12 fps a one-frame artefact
+	## is invisible about 95% of the time. This captures consecutively.
+	##
+	## Why a FIXED STEP and not a speed: saving a PNG per frame makes delta
+	## enormous, so a delta-scaled walk would teleport metres per frame and
+	## every pair of frames would differ wildly - the diff would be all signal
+	## and no baseline. A fixed 0.25 px keeps consecutive frames nearly
+	## identical, which is what makes a pop stand out, AND it sweeps the
+	## sub-pixel phase finely, which is where the suspected sort flip lives.
+	##
+	## Direction is +x+y: in this projection screen y = (x + y) * 16, so this
+	## walks straight DOWN the screen and crosses the y-sort line of anything
+	## it passes - which is the event under test.
+	await _ensure_game_scene()
+	_apply_env_flags()
+	var player := _find_player()
+	if player == null:
+		print("FILMWALK ERROR: no player")
+		get_tree().quit(1)
+		return
+	# COLLISION STAYS ON BY DEFAULT, and that is a correction. The first cut
+	# disabled it (copying --perf-walk, where it is right) and the player
+	# walked straight THROUGH a house - so the roof-reveal fired, the roof
+	# faded, and the frame diff dutifully flagged it as the biggest artefact in
+	# the run. It was correct behaviour caused by the probe itself. A test that
+	# creates the thing it is looking for is worse than no test.
+	#
+	# Pass --film-noclip only when sweeping open ground, and use --at= to start
+	# somewhere the player can actually walk.
+	if "--film-noclip" in OS.get_cmdline_user_args():
+		for shape in player.find_children("*", "CollisionShape2D", true, false):
+			(shape as CollisionShape2D).set_deferred("disabled", true)
+		player.collision_mask = 0
+	var frames := 240
+	var step := 0.25
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--film-frames="):
+			frames = clampi(int(arg.trim_prefix("--film-frames=")), 8, 2000)
+		elif arg.begins_with("--film-step="):
+			step = clampf(float(arg.trim_prefix("--film-step=")), 0.02, 8.0)
+	for i in 30:
+		await get_tree().process_frame
+	var dir_path := ProjectSettings.globalize_path("res://shots").path_join(
+		"film_" + film_name)
+	DirAccess.make_dir_recursive_absolute(dir_path)
+	var old_dir := DirAccess.open(dir_path)
+	if old_dir != null:
+		for stale in old_dir.get_files():
+			if stale.ends_with(".png"):
+				DirAccess.remove_absolute(dir_path.path_join(stale))
+	var heading := Vector2(1.0, 1.0).normalized()
+	var solid := not ("--film-noclip" in OS.get_cmdline_user_args())
+	for i in frames:
+		if solid:
+			# move_and_collide respects walls and is frame-rate independent, so
+			# the sweep walks the world the way the player really does
+			player.move_and_collide(heading * step)
+		else:
+			player.global_position += heading * step
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		var img := get_viewport().get_texture().get_image()
+		img.save_png(dir_path.path_join("f%04d.png" % i))
+	print("FILMWALK SAVED: %d frames step=%.2f -> %s" % [frames, step, dir_path])
+	get_tree().quit(0)
 
 
 func _shot_splash(shot_name: String) -> void:

@@ -3,6 +3,50 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.62] - 2026-08-05 - the roof reveal stops announcing itself
+
+### Added - `--film-walk`, consecutive-frame capture
+`--film` samples on a timer, so at 12 fps a one-frame artefact is invisible
+about 95% of the time. `--film-walk` captures EVERY rendered frame while the
+player creeps forward in fixed 0.25 px steps - small enough that consecutive
+frames are nearly identical, so a pop stands out, and fine enough to sweep
+the sub-pixel phase.
+
+**Two mistakes in building it, both worth keeping:**
+- The first cut disabled collision (copying `--perf-walk`, where it is
+  correct) and the player walked straight THROUGH a house. The roof-reveal
+  fired, and the frame diff dutifully flagged it as the biggest artefact in
+  the run - **correct behaviour, created by the probe itself.** Collision is
+  on by default now; `--film-noclip` opts out.
+- The first diff flagged every other frame as a 137,000 px full-screen
+  change. That was **the camera advancing one pixel** - ordinary scrolling.
+  A frame diff on a scrolling game is meaningless without motion
+  compensation; align on the integer camera shift first, then diff.
+
+### Fixed - the roof reveal started with a visible step
+The interior reveal tweened `modulate:a` with `TRANS_QUAD` + **`EASE_OUT`**,
+which is fastest at the START: 19% of the fade is done by t=0.1 and 51% by
+t=0.3. On a whole roof that is a visible jump the instant it begins.
+
+Measured walking past a house: the roof dropped **28 brightness levels
+between two consecutive frames** - about 56% of the entire fade - then
+crawled the rest of the way. That is what "a glitch on a house for a
+millisecond" looks like.
+
+`EASE_IN_OUT` moves 2% by t=0.1 and 18% by t=0.3, so the reveal starts from
+nothing and lands softly. Re-measured on the identical route: **28.0 levels
+-> 1.0 level**.
+
+### Honest limit
+A clean walk past a house with collision on showed **median residual 0** -
+consecutive frames pixel-identical once camera motion is compensated, with
+no outlier at all. So this fixes a real, measured one-frame flash, but it is
+**not proven to be the same one the user saw**; their report was rare and
+this sample was ~90 px of travel.
+
+### Verified
+`SMOKE PASS`, 240 fps, worst frame 4.49 ms.
+
 ## [0.6.61] - 2026-08-05 - a walking perf probe, and what it ruled out
 
 ### Added - `--perf-walk`

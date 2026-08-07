@@ -375,6 +375,34 @@ item 10, and that entry now leads with the measured conclusion and the exact
 next step (film while walking -> diff consecutive frames -> crop the flagged
 pair). **Start there, not at the top of the backlog.**
 
+**Shipped: v0.6.62 - the roof reveal stops announcing itself.**
+
+**FOUND AND FIXED A REAL ONE-FRAME FLASH.** The interior reveal tweened the
+roof with `TRANS_QUAD` + **`EASE_OUT`**, which is fastest at the START - 19%
+of the fade done by t=0.1, 51% by t=0.3. Measured walking past a house: the
+roof dropped **28 brightness levels between two consecutive frames**, ~56% of
+the whole fade, then crawled. `EASE_IN_OUT` moves 2% by t=0.1. Re-measured on
+the identical route: **28.0 -> 1.0 levels**.
+
+**BE HONEST ABOUT WHAT THIS DOES NOT PROVE.** A clean walk past a house with
+collision ON showed **median residual 0** - consecutive frames pixel-identical
+after motion compensation, no outlier at all. So this is a genuine artefact
+that is now gone, but it is **NOT proven to be the one the user saw**; their
+report was rare and the sample was ~90 px of travel. TASKS.md B0-NEW item 10
+stays open with that stated.
+
+**TWO METHOD MISTAKES, both worth not repeating:**
+- **A frame diff on a scrolling game is meaningless without motion
+  compensation.** The first pass flagged every other frame as a 137,000 px
+  full-screen change; that was the camera advancing ONE PIXEL. Align on the
+  integer camera shift first, then diff. Median residual goes 137k -> 0.
+- **The probe created the artefact it found.** `--film-walk` copied
+  `--perf-walk`'s collision-off sweep, so the player walked THROUGH a house,
+  the roof reveal fired, and the diff flagged it as the biggest event in the
+  run. Correct behaviour, manufactured by the test. Collision is on by
+  default now; `--film-noclip` opts out. **A test that creates what it looks
+  for is worse than no test.**
+
 **Picked up at: the polish pass, ART half — three of six done.** Shipped this
 session: the title (v0.6.51), the map screen redo (v0.6.52), the layout
 revision (v0.6.53), terrain blending + house contrast (v0.6.54), the blend

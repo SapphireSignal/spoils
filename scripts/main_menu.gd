@@ -206,6 +206,10 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.62", [
+		"found and fixed a real one-frame flash: when a roof fades away as you step inside, it was doing over half of the fade in the very first frame, so it read as the roof snapping rather than fading. it eases in from nothing now - measured at 28 brightness levels of jump before, 1 after",
+		"this might not be the exact flicker you spotted, a clean walk past a house came out frame-perfect, but it was a genuine one and its gone",
+	]],
 	["v0.6.61", [
 		"nothing you can see - this one is measuring the thing you noticed while walking around. the games frame timer only ever watched a still camera, so it could never have caught it",
 		"there is a moving one now, and it says the frame rate is genuinely solid while walking - 240fps with nothing dropped over nine thousand pixels of ground. so what you were seeing isnt the framerate, its something drawing in the wrong order for a single frame, which is a different problem and is written up",
