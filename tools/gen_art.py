@@ -3551,8 +3551,23 @@ def make_door_strip(kind: str, axis: str) -> tuple[Canvas, tuple, list]:
     beside the leaf on every frame. axis 'x' fits south (yp) walls, 'y' fits
     east (xp). Colliders: the shut leaf across the whole edge, the swung leaf
     where it actually stands, and the two jamb stubs (always solid)."""
-    base, dark = (C("7a4841"), C("4d2b32")) if kind == "wood" \
-        else (C("577277"), C("394a50"))
+    # A DOOR MUST NOT BE ITS WALL'S COLOUR, and both kinds were exactly that
+    # (user: "the door on this building i can barely see it because its the
+    # same colour as the building"). Measured, not judged:
+    #
+    #   metal door 577277/394a50  ==  brick_b's y face 577277/394a50
+    #   wood  door 7a4841/4d2b32  ==  brick_a's y face 7a4841/4d2b32
+    #
+    # Byte-identical to the wall they sit in, so on the shaded face a door had
+    # no silhouette at all. The metal collision is SELF-INFLICTED: v0.6.54
+    # lifted brick_b a step to fix the grey house vanishing into the ground,
+    # and landed it exactly on the door. **Changing a wall palette means
+    # re-checking everything mounted on that wall.**
+    #
+    # Metal goes DARKER than its wall (a recessed steel door reads as a hole),
+    # wood goes LIGHTER than its brick. Luminance gaps: 37 and 45.
+    base, dark = (C("ad7757"), C("7a4841")) if kind == "wood" \
+        else (C("394a50"), C("202e37"))
     frame_w, frame_h = DOOR_FRAME_SIZE
     hx, hy = DOOR_HINGE
     # TWO swings in one strip: 0..3 open inward, 4..7 open outward. The game

@@ -206,6 +206,11 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.65", [
+		"doors were painted in the exact same two colours as the wall around them, so on the shady side you could barely find them. theyre a different shade now - and one of those was my own fault from the grey house fix a few versions back",
+		"standing in a doorway now counts as being inside, so the roof lifts instead of leaving you visible through your own door",
+		"no two vehicles parked in a row are the same model any more",
+	]],
 	["v0.6.64", [
 		"the loading screen was supposed to get every texture ready before you play. it was only half doing it - it loaded them but never drew them, and the real cost lands the first time a thing is actually drawn. so every object still paid it the first time it came on screen, once, and never again. that is the thing you described",
 		"it draws them all behind the deploy screen now. loading takes a tenth of a second longer and nothing changed about the frame pacing",

@@ -1907,6 +1907,30 @@ func _pick_variant_varied(family: String) -> String:
 	return pick
 
 
+func _pick_variant_norepeat(family: String) -> String:
+	## Never the same variant twice running, in EXACTLY ONE rng draw.
+	##
+	## `_pick_variant_varied` takes a SECOND draw whenever it happens to repeat,
+	## so its draw count varies with the roll - swapping it into an existing
+	## call site shifts the layout stream and re-rolls the whole fixed district.
+	## This draws once over the names EXCLUDING the last one, so a repeat is
+	## impossible by construction and the stream is untouched. (randi_range
+	## consumes one value whatever its bounds, so only THIS result changes.)
+	var names: Array = _families[family]
+	if names.size() < 2:
+		return names[0]
+	var last: String = _last_variant.get(family, "")
+	var li := names.find(last)
+	var pick: String
+	if li < 0:
+		pick = names[_rng.randi_range(0, names.size() - 1)]
+	else:
+		var k := _rng.randi_range(0, names.size() - 2)
+		pick = names[k if k < li else k + 1]
+	_last_variant[family] = pick
+	return pick
+
+
 func _clutter_offset(spread: float = 10.0) -> Vector2:
 	## A whole-pixel offset inside a cell. Whole pixels because static props
 	## must sit on the world grid (rule 1); the iso floor is twice as wide
@@ -3928,7 +3952,10 @@ func _place_road_vehicles() -> void:
 			road_w = r.y
 		if _occupied.has(cell) or _near_a_door(cell) or _rail_cross.has(cell):
 			continue
-		var variant := _pick_variant(fam)
+		# user: "why are these 3 trucks just side by side all perfectly lined up?
+		# looks odd". Same lane means same facing, which is correct - but three
+		# of the SAME MODEL is the standing no-visual-repetition rule broken.
+		var variant := _pick_variant_norepeat(fam)
 		var pos := _floor_layer.map_to_local(cell) \
 			+ Vector2(_rng.randf_range(-5.0, 5.0), _rng.randf_range(-3.0, 3.0))
 		_occupied[cell] = true

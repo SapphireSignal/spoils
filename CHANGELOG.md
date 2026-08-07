@@ -3,6 +3,47 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.65] - 2026-08-06 - doors you can see, and no two trucks alike
+
+### Fixed - a door was painted in its own wall's colours
+*"the door on this building i can barely see it because its the same colour
+as the building"*. Measured, not judged - both door kinds were **byte
+identical** to the wall they sit in:
+
+- metal door `577277`/`394a50` == `brick_b`'s shaded face `577277`/`394a50`
+- wood door `7a4841`/`4d2b32` == `brick_a`'s shaded face `7a4841`/`4d2b32`
+
+**The metal collision was self-inflicted.** v0.6.54 lifted `brick_b` a step to
+stop grey houses vanishing into the ground, and landed it exactly on the door.
+*Changing a wall palette means re-checking everything mounted on that wall.*
+
+Metal now goes darker than its wall (a recessed steel door reads as a hole),
+wood goes lighter than its brick. Luminance gaps 37 and 45.
+
+### Fixed - standing in a doorway did not reveal the interior
+*"im still inside the house but the door is opened towards outside but i can
+still see my character, i shouldnt be able to see him here"*. The door sits ON
+the wall line, which is outside the interior rect, so a player in the
+threshold got no reveal: the roof stayed solid while they were plainly in the
+building and visible through their own open door. The reveal now accepts a
+one-cell grow **gated on actually standing on a door**, so it cannot fire by
+walking along the outside of a wall.
+
+### Fixed - three identical trucks in a row
+*"why are these 3 trucks just side by side all perfectly lined up? looks
+odd"*. Same lane means same facing, which is correct - three of the same
+MODEL is the standing no-visual-repetition rule broken.
+
+`_pick_variant_norepeat` picks over the names **excluding the last one**, so a
+repeat is impossible by construction. It exists because
+`_pick_variant_varied` takes a SECOND draw whenever it happens to repeat -
+swapping that into an existing call site varies the draw count and re-rolls
+the whole fixed district. One draw, always. `DOORS` stayed 16 on identical
+cells, proving nothing moved.
+
+### Verified
+`SMOKE PASS`, `DOORS` 16 unchanged.
+
 ## [0.6.64] - 2026-08-06 - the prewarm never actually warmed anything
 
 ### Fixed - textures uploaded to the GPU during play, not on the loading screen

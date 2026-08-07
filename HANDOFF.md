@@ -467,6 +467,25 @@ its phase off `MODEL_MATRIX` in the vertex stage. 419 frames walking into the
 forest, camera-motion compensated: median residual 41 px, max 239, no
 outlier. The sway steps smoothly.
 
+**Shipped: v0.6.66 candidates -> v0.6.65 - doors you can see, no two trucks
+alike.**
+- **A door was painted in its own wall's two colours**, byte-identical, both
+  kinds. **The metal one was self-inflicted**: v0.6.54 lifted `brick_b` to fix
+  the grey house and landed it exactly on the door. **Changing a wall palette
+  means re-checking everything mounted on that wall.**
+- **A doorway now counts as inside** for the roof reveal, gated on actually
+  standing on a door so it cannot fire from outside a wall.
+- **`_pick_variant_norepeat`** - one draw, always, picking over the names
+  EXCLUDING the last. `_pick_variant_varied` takes a second draw on a repeat,
+  so dropping it into an existing call site re-rolls the fixed district.
+  Use the new one when retro-fitting anti-repetition anywhere.
+
+**PICKED UP AT: TASKS.md B0c, the second floor** - the user reported four
+distinct things in one message (clipping into the slab, the stair top
+visible, clipping on props up there, and wanting a stairwell hole). B0d is a
+closed door not sealing at its top edge. Both are written up with the
+relevant standing lesson quoted.
+
 **Picked up at: the polish pass, ART half — three of six done.** Shipped this
 session: the title (v0.6.51), the map screen redo (v0.6.52), the layout
 revision (v0.6.53), terrain blending + house contrast (v0.6.54), the blend

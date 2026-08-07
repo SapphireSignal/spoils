@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.64.** The release history was renumbered evenly on
+**Current version: v0.6.65.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -495,6 +495,46 @@ square"*.
     with the drawn position without quantising movement - e.g. sorting on a
     value derived from `snapped_pos` while movement keeps using the
     continuous one.
+
+## B0c. THE SECOND FLOOR IS ROUGH *(user, 2026-08-06)* — NEXT UP
+
+Their words: *"when i go up the stairs in the two floor buildings, i clip
+inside of the floor, and i can see the top of the stairs, it should all be
+clean like the bottom floor when i walk around, i clip on stuff when walking
+around on the second floor, also can you make a hole in the second floor to
+show where the stairs are"*.
+
+**Four separate things in one report — do not treat it as one bug:**
+1. **Clipping into the floor slab** on the way up the stairs.
+2. **The top of the stairs is visible** through/above the upper floor when it
+   should be covered.
+3. **Clipping on props** while walking the second floor - colliders there do
+   not match what is drawn.
+4. **NEW FEATURE: a stairwell opening in the upper slab**, so the floor shows
+   where the stairs come up instead of being a solid sheet.
+
+**Read this before starting** - CLAUDE.md's standing lesson, which is about
+this exact system: *"Sort position and draw position are different things.
+The second-floor slab is the reference fix: give each piece its own sort
+position and offset the ART, never the node. A z-band puts a thing in front
+of EVERYTHING - that is how the upper floor ended up clipping over the
+roofline."* Items 1-3 are all sort/collision mismatches of that family.
+
+Note also that v0.6.63 changed `player.gd` so `global_position` is now
+SNAPPED each frame and `_true_pos` carries the exact position. Anything on
+the second floor that compares the player's position against slab geometry
+should be re-read with that in mind - `floor_lift` already offsets the sprite
+and camera together.
+
+## B0d. A closed door does not seal *(user, 2026-08-06)*
+
+*"i can see a bit of the inside of the house because the door isnt fully
+closed, the top shows a bit of the inside of the house, it should be sealed"*
+- with a screenshot showing daylight/interior through the top edge of a shut
+door. Frame 0 of the door strip is meant to be flush IN the wall plane;
+whatever it is, it does not cover the full opening height. `make_door_strip`
+in `tools/gen_art.py`, and the opening is cut in `_build_shell`. Compare the
+leaf's drawn height against the hole the wall leaves.
 
 ## B0. Parking lots and aprons should JOIN the road network *(user, 2026-08-05)*
 
