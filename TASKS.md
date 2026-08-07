@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.69.** The release history was renumbered evenly on
+**Current version: v0.6.70.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -568,6 +568,32 @@ epsilon well under half a pixel cannot move where the sprite rasterises, so
 the v0.6.63 guarantee holds. **Work out the correct SIGN first** - in this
 projection the piece that should occlude the player at equal y is the one
 nearer the camera, so check against a real wall rather than assuming.
+
+## B0g. 3 px still visible above a door *(user, 2026-08-06)* — MEASURED
+
+*"its still cut off at the top a bit ... i shouldnt see anything from
+outside"*. v0.6.70 took the worst gap from **8 px to 3 px** and it is NOT
+closed. Do not eyeball this one - measure it:
+
+```
+for each world column across the opening:
+    lintel_bottom = lowest opaque row of door_lintel_<style>_<axis>
+    door_top      = highest opaque row of door_<kind>_<axis>_<style> frame 0
+    gap = door_top - lintel_bottom - 1        # > 0 means see-through
+```
+(both converted to world y by subtracting the manifest `origin` y.)
+
+**Why 3 px remain:** the header is cut FROM the wall segment, so it can only
+cover where the segment itself has pixels. The residue is columns where the
+segment is transparent above the door's top edge - the header has nothing to
+give there. Options, in order of preference:
+1. Check whether those columns are actually above the roofline (showing roof,
+   not interior) - if so the remaining 3 px may be invisible in play and this
+   is already done. **Shoot it before building anything.**
+2. Extend the DOOR art upward instead, so the leaf's own top reaches the wall
+   line - `DOOR_H` is 34 against `WALL_H` 40.
+3. Draw the header procedurally along the edge slope rather than cutting it
+   from the segment, accepting that it then has to match the brick by hand.
 
 ## B0f. Going upstairs shuts the front door *(user, 2026-08-06)*
 

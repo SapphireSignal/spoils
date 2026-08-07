@@ -266,13 +266,20 @@ func play_car_bump(intensity: float) -> void:
 
 
 func play_engine_start() -> void:
-	_car_player.volume_db = -18.0
+	# QUIETER (user, 2026-08-06: "decrease the engine sound, its too loud ...
+	# like the engine startup sound ... for the vehicles"). It sat at the -18 dB
+	# ceiling the standing quiet rule sets for one-shots, which was already the
+	# loudest a new sound may ship at - and then v0.6.66 put +3 dB on the master
+	# for everything, which pushed it over. Dropped 6 dB, so it lands below
+	# where it was even before that trim.
+	_car_player.volume_db = -24.0
 	_car_player.stream = _car_engine_start
 	_car_player.play()
 
 
 func play_engine_off() -> void:
-	_car_player.volume_db = -19.0
+	# matched to the start, keeping the 1 dB it always sat below it
+	_car_player.volume_db = -25.0
 	_car_player.stream = _car_engine_off
 	_car_player.play()
 

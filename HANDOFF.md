@@ -550,6 +550,23 @@ because neither drives a car. `--probe-drive` exists now and measures
 camera-to-car distance before and after the car moves. **When a fix touches a
 system no probe exercises, add the probe in the same release.**
 
+**Shipped: v0.6.70 - the door header follows the slope. 8 px -> 3 px, AND IT
+IS NOT FINISHED.** The header's bottom was a flat horizontal line while a
+doorway's head follows the (2,1) iso slope, so it sealed one end of the
+opening and left a hole widening to 8 px at the other. Now it keeps every wall
+pixel the shut door does not cover - exact by construction. **3 px remain**
+where the wall SEGMENT itself has no pixel above the door's top edge, which a
+header cut from that segment cannot fill. TASKS.md B0g has the measurement
+script and three ranked options - **the first is to check whether those 3 px
+are even visible in play (they may be above the roofline), so shoot it before
+building anything.**
+
+**FOUR DOOR RELEASES IN A ROW (v0.6.66-70) and the user reported the same
+area each time.** Each fix was correct and covered one piece: the header
+existing, the header being wall-coloured, the jambs being wall-coloured, the
+header following the slope. **When a user keeps re-reporting one spot, stop
+fixing the reported symptom and enumerate every piece of that assembly first.**
+
 **A CONFLICT WORTH CATCHING: the stairwell hole was BUILT ONCE AND REMOVED
 AT THE USER'S REQUEST.** `_build_upper`'s comment records it - *"the
 stairwell hole showed the ground and broke it"* - and they have now asked for

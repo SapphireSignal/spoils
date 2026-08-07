@@ -3,6 +3,39 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.70] - 2026-08-06 - the door header follows the slope (8 px -> 3 px)
+
+### Improved, NOT finished - the gap above a door
+*"its still cut off at the top a bit ... i shouldnt see anything from
+outside"*, with the spot circled. Measured column by column, and the header
+was wrong in a way a screenshot could not show:
+
+**the header's bottom was a flat horizontal line while a doorway's head
+follows the (2,1) iso slope**, so it sealed one end of the opening and left a
+hole that widened to **8 px** at the other.
+
+Two rules were tried and both measured:
+- *keep every row above the door's topmost pixel in this column* - down to
+  3 px, but it stops at the first covered row and drops any wall further down
+- *keep every wall pixel the shut door does not cover* (shipped) - exact by
+  construction, since the union of the two is the whole segment
+
+**It measures 3 px at worst, not 0.** The remaining gap is columns where the
+wall SEGMENT itself has no pixel above the door's top edge, which a header cut
+from that segment cannot fill. `TASKS.md` carries the measurement script and
+the next step.
+
+### Changed - the vehicle engine start is 6 dB quieter
+*"decrease the engine sound, its too loud ... like the engine startup sound
+... for the vehicles"*. It sat at **-18 dB, exactly the ceiling the standing
+quiet rule sets for one-shots** - already the loudest a new sound may ship at -
+and then v0.6.66 added +3 dB on the master for everything, which pushed it
+over. Now -24 dB (and the shutdown -25, keeping the 1 dB it always sat below
+the start), so it lands below where it was even before that trim.
+
+### Verified
+`SMOKE PASS`, `DOORS` 16 on unchanged cells. Worst gap 8 px -> 3 px.
+
 ## [0.6.69] - 2026-08-06 - two of my own regressions
 
 ### Fixed - the camera stopped following vehicles

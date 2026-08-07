@@ -989,22 +989,41 @@ def _draw_seg_window(c: Canvas, ox: int, oy: int, axis: str,
             for fy in range(top - 1, top + h + 1):
                 c.set(x, face_top + fy, C("341c27"))
 
-def _wall_top_band(made: tuple, rows: int = 16) -> tuple:
-    """The top `rows` of a wall segment, keeping its ORIGIN so it hangs in
-    exactly the place the segment would. The origin lands below the crop,
-    which is fine - a sprite offset may point outside its own texture."""
-    seg, origin, _collider = made
-    # SAME CANVAS SIZE as the segment, with only the top rows copied and the
-    # rest left transparent - NOT a crop. A crop makes the cut edge opaque,
-    # and the generator's CLIP AUDIT correctly fails on content touching a
-    # canvas edge (that audit exists to catch genuinely clipped art, and is
-    # worth more than the few bytes a tight canvas would save). This way the
-    # piece touches exactly the edges the wall segment already touches.
-    band = Canvas(seg.w, seg.h)
-    for y in range(min(rows, seg.h)):
-        for x in range(seg.w):
-            band.px[x, y] = seg.px[x, y]
-    return band, origin, None
+def _wall_door_header(seg_made: tuple, door_made: tuple) -> tuple:
+    """The wall segment with everything the SHUT DOOR already covers removed -
+    so what is left is exactly the header over the opening, and it follows the
+    iso slope because it is masked by the door's own silhouette.
+
+    Two earlier rules were not enough, both measured:
+      * a flat crop of the segment's top N rows - the bottom of a row-crop is
+        a HORIZONTAL line while a doorway's head follows the (2,1) slope, so
+        it covered one end of the opening and left a hole widening to 8 px at
+        the other;
+      * "keep every row above the door's topmost pixel in this column" - still
+        left 3 px, because it stops at the first covered row and drops any
+        wall the segment happens to have further down.
+    Keeping every wall pixel the shut door does not cover is exact by
+    construction: the union of the two is the whole segment, so there is
+    nothing left to see through.
+
+    Masking by the real door art means the two can never disagree, the same
+    reasoning as the terrain fringes being composited from the real tiles.
+    """
+    seg, so, _seg_col = seg_made
+    dor, do, _door_col = door_made
+    out = Canvas(seg.w, seg.h)
+    for x in range(seg.w):
+        for y in range(seg.h):
+            if seg.px[x, y][3] == 0:
+                continue
+            # the SAME WORLD PIXEL in the door's frame
+            dx = (x - so[0]) + do[0]
+            dy = (y - so[1]) + do[1]
+            covered = (0 <= dx < dor.w and 0 <= dy < dor.h
+                       and dor.px[dx, dy][3] > 0)
+            if not covered:
+                out.px[x, y] = seg.px[x, y]
+    return out, so, None
 
 
 def make_wall_segment(style: str, axis: str, window_variant: int = -1,
@@ -1128,8 +1147,16 @@ def wall_piece_inventory() -> dict[str, tuple[Canvas, tuple, list]]:
             # never drift out of step with the wall it sits in - the same
             # reasoning as the terrain fringes being composited from the real
             # tiles.
-            pieces[f"door_lintel_{style}_{axis}"] = _wall_top_band(
-                make_wall_segment(style, axis))
+            # masked by frame 0 (the SHUT leaf) of a door on this axis. Both
+            # door kinds share the same silhouette - DOOR_H, DOOR_LEAF and the
+            # hinge are constants - so either may stand in as the mask.
+            _dstrip, _dorig, _dcol = make_door_strip("wood", axis, style)
+            _shut = Canvas(DOOR_FRAME_SIZE[0], DOOR_FRAME_SIZE[1])
+            for _y in range(DOOR_FRAME_SIZE[1]):
+                for _x in range(DOOR_FRAME_SIZE[0]):
+                    _shut.px[_x, _y] = _dstrip.px[_x, _y]
+            pieces[f"door_lintel_{style}_{axis}"] = _wall_door_header(
+                make_wall_segment(style, axis), (_shut, _dorig, None))
             for sv in (1, 2):
                 pieces[f"seg_{style}_{axis}_v{sv}"] = make_wall_segment(
                     style, axis, -1, -1, sv)

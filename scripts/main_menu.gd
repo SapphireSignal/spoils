@@ -206,6 +206,10 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.70", [
+		"the wall above a doorway follows the slope now instead of stopping in a straight line, so most of the gap you could see through is gone - measured 8 pixels down to 3. not fully closed yet, and its written up rather than called done",
+		"the car starting up is a lot quieter. it was already at the loudest a one-shot is allowed to be, and then last versions overall volume lift pushed it past that",
+	]],
 	["v0.6.69", [
 		"the camera follows cars again. that was mine - a change a few versions back moved where the players position is stored, and the driving code was still writing the old one, so the car drove off without the camera",
 		"the roof only lifts once youre actually inside now. i had made standing on the doorstep count as inside, and a doorway looks the same from both sides",
