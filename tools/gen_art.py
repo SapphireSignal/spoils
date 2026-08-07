@@ -371,6 +371,40 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
                 col = C("241527")  # board seam (grain dots removed — no dot
             c.set(x, y, col)       # noise anywhere, user call)
 
+    elif kind == "lino":
+        # INTERIOR SHEET FLOOR for the halls and the school. They used to get
+        # `screed`, which is drawn from CONC_BASE/CONC_D1 - the EXACT values
+        # of the pavement outside - so a ground-floor room was floored in the
+        # street (user: "the first floor needs to look like flooring, it
+        # shouldnt look like the actual ground from outside").
+        #
+        # Pale grey-green, well above the concrete's value, with a 16 px sheet
+        # grid so it reads as laid flooring rather than poured ground.
+        region = {(x, y) for y in range(32) for x in range(64) if in_diamond(x, y)}
+        base, seam = C("819796"), C("577277")
+        for (x, y) in region:
+            col = base
+            if (x + 2 * y) % 32 == 0 or (x - 2 * y) % 32 == 0:
+                col = seam                      # sheet joins, both axes
+            elif ((x + 2 * y) // 32 + (x - 2 * y) // 32 + variant) % 2 == 0:
+                col = C("a8b5b2")               # alternating panels
+            c.set(x, y, col)
+        _tonal(c, rng, region, [C("577277"), C("a8b5b2")], 2, 14, 26)
+
+    elif kind == "board":
+        # UPPER-STOREY boards. Deliberately a different timber from the ground
+        # floor's `wood`: paler and warmer, so the two storeys never read as
+        # the same room recoloured (user: "dont make the first floor flooring
+        # the same colour as the second floors flooring").
+        region = {(x, y) for y in range(32) for x in range(64) if in_diamond(x, y)}
+        tones = [C("ad7757"), C("884b2b"), C("7a4841")]
+        for (x, y) in region:
+            board = (x - 2 * y) // 8            # boards run the OTHER way too
+            col = tones[(board * 5 + variant * 3) % 3]
+            if (x - 2 * y) % 8 == 0:
+                col = C("602c2c")               # board seam
+            c.set(x, y, col)
+
     elif kind == "screed":
         # warehouse floor: smooth finished concrete, one uniform surface.
         # A building uses ONE screed variant for every cell, so the tile must
@@ -675,6 +709,12 @@ FLOOR_TILES = [
     ("asphalt_stall", ("asphalt_stall", 0)),
     ("screed_0", ("screed", 0)), ("screed_1", ("screed", 1)),
     ("screed_2", ("screed", 2)), ("screed_3", ("screed", 3)),
+    # interior flooring: lino for the halls' ground floors, boards upstairs
+    ("lino_0", ("lino", 0)), ("lino_1", ("lino", 1)),
+    ("lino_2", ("lino", 2)), ("lino_3", ("lino", 3)),
+    ("board_0", ("board", 0)), ("board_1", ("board", 1)),
+    ("board_2", ("board", 2)), ("board_3", ("board", 3)),
+    ("board_4", ("board", 4)),
     ("forest_0", ("forest", 0)), ("forest_1", ("forest", 1)),
     ("forest_2", ("forest", 2)), ("forest_3", ("forest", 3)),
     ("grass_blend_0", ("grass_blend", 0)), ("grass_blend_1", ("grass_blend", 1)),
@@ -1109,13 +1149,27 @@ def make_wall_segment(style: str, axis: str, window_variant: int = -1,
 
     if window_variant >= 0:
         wi, top, w, h, boarded = SEG_WINDOWS[window_variant]
-        # ground-floor window (below the string course on two-story walls)
-        _draw_seg_window(c, ox, oy, axis, face_h, wi, top + extra, w, h, boarded)
+        # ground-floor window (below the string course on two-story walls).
+        # upper_only skips it: that piece IS the upper storey, and drawing the
+        # ground window on it put a second row of windows in the room you are
+        # standing in - the exact tell the user used to prove the floor switch
+        # was cosmetic ("if you would be on the second floor, you wouldnt see
+        # all those windows").
+        if not upper_only:
+            _draw_seg_window(c, ox, oy, axis, face_h, wi, top + extra, w, h,
+                             boarded)
         if stories == 2 and not lower_only:
-            # the upper room's window, stacked over the ground one — the whole
-            # point of the low piece is that this one is not there
-            up_h = min(h, STORY_H - 12)
-            _draw_seg_window(c, ox, oy, axis, face_h, wi, 7, w, up_h, False)
+            # the upper room's window — a DIFFERENT pane from the one below
+            # it, not the same window stacked twice (user: "the second floors
+            # windows shouldnt match the first floors windows, they should be
+            # different"). Taking the next entry in SEG_WINDOWS gives it its
+            # own width and proportions while staying in the same set, so any
+            # wall reads as two storeys of a real building rather than one
+            # elevation copied upward.
+            uw_i, _ut, uw, uh, _ub = SEG_WINDOWS[
+                (window_variant + 1) % len(SEG_WINDOWS)]
+            up_h = min(uh, STORY_H - 12)
+            _draw_seg_window(c, ox, oy, axis, face_h, uw_i, 7, uw, up_h, False)
 
     painted = c.outline_auto(sides=False)   # tiles edge to edge: no seam lines
     if upper_only:
@@ -1273,8 +1327,18 @@ def wall_piece_inventory() -> dict[str, tuple[Canvas, tuple, list]]:
             for v in range(len(SEG_WINDOWS)):
                 pieces[f"seg2_{style}_{axis}_win_{v}"] = make_wall_segment(
                     style, axis, v, -1, 0, 2)
+            # THE UPPER BAND, one per variant. Standing upstairs you should
+            # see YOUR storey's wall, not the whole facade with both window
+            # rows - the wall is drawn as two stacked pieces now (low + upper)
+            # and the game shows the band you are actually on.
             pieces[f"seg2_{style}_{axis}_upper"] = make_wall_segment(
                 style, axis, -1, -1, 0, 2, True)
+            for sv in (1, 2):
+                pieces[f"seg2_{style}_{axis}_v{sv}_upper"] = make_wall_segment(
+                    style, axis, -1, -1, sv, 2, True)
+            for v in range(len(SEG_WINDOWS)):
+                pieces[f"seg2_{style}_{axis}_win_{v}_upper"] = make_wall_segment(
+                    style, axis, v, -1, 0, 2, True)
             # ...and the GROUND band alone, swapped in while the player is
             # inside on the ground floor
             pieces[f"seg2_{style}_{axis}_low"] = make_wall_segment(

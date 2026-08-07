@@ -750,10 +750,12 @@ func _process(delta: float) -> void:
 		var reveal := roof as RoofReveal
 		var here := reveal.cells.has_point(cell)
 		reveal.set_inside(here)
-		# the upper storey's wall only shows when you are OUTSIDE (where the
-		# building has to read as two storeys) or actually UP there. On the
-		# ground floor it is just a wall towering over the room you are in.
-		reveal.set_walls_low(here and not _player.upstairs)
+		# WHICH STOREY'S WALL YOU SEE. Outside, both bands - the building has
+		# to read as two storeys from the street. Inside, only the band you
+		# are standing on: the ground band downstairs, the upper band (and its
+		# windows) once you climb.
+		var up_here := here and _player.upstairs
+		reveal.set_wall_storey(not up_here, (not here) or up_here)
 		indoors = indoors or here
 	_indoors_now = indoors
 	# a roof over your head muffles the weather (user). Same test that

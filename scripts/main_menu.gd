@@ -206,6 +206,12 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.86", [
+		"the second floor is actually a second floor now. a two storey wall was one picture, so going upstairs never hid the lower half - you stood up there looking at the whole front of the building, both rows of windows. its two separate bands now, and you see the storey youre standing on",
+		"the ground floor of the halls and the school was floored in the street - the same two colours as the pavement outside. its proper lino now, and upstairs is its own timber, so the two floors can never look like the same room recoloured",
+		"the upstairs windows are different windows from the ones below them, instead of the same one stacked twice",
+		"furniture that sat behind a wall where you could never see it is gone. it only ever got in your way",
+	]],
 	["v0.6.85", [
 		"you dont sink into the second floor any more, and neither does the furniture. the floorboards were sorted like objects standing in the room, so the board one step south of you could draw over your legs - they sort like a floor now, always underneath whatever stands on them",
 	]],

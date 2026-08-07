@@ -3,6 +3,63 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.86] - 2026-08-07 - a second floor that is actually a second floor
+
+### Fixed - going upstairs only ever recoloured the floor
+*"you are still on the ground, it just looks different colours now, you can
+tell because look at the walls in the pictures, they are the same, if you
+would be on the second floor, you wouldnt see all those windows"*. Correct,
+and the walls were the proof.
+
+A two-storey wall was ONE sprite. Its upper band already sat at the right
+height, so the geometry was fine — but nothing ever hid the LOWER band, so
+upstairs you still saw the whole facade, both window rows included. The wall
+is drawn as its two BANDS now, and the game shows the storey you are on:
+
+| where you are | wall |
+|---|---|
+| outside | both bands — still reads as two storeys from the street |
+| ground floor | the ground band alone |
+| upstairs | the upper band and ITS windows alone |
+
+### Fixed - the ground floor was floored in the street
+*"the first floor needs to look like flooring, it shouldnt look like the
+actual ground from outside"*. Literally true: halls and the school used
+`screed`, drawn from `CONC_BASE`/`CONC_D1` — **the exact two values as the
+outdoor pavement**. They get **lino** now: pale grey-green sheet flooring with
+a 16 px panel grid, well clear of the concrete's value.
+
+### Changed - the two storeys no longer share a floor or a window
+- **Floors:** upstairs is its own timber (`board`) — paler and warmer than the
+  ground floor's `wood`, and nothing like lino. Different by construction, so
+  *"dont make the first floor flooring the same colour as the second floors"*
+  cannot regress.
+- **Windows:** the upper pane is a different one from the ground pane below
+  it, not the same window stacked twice. A wall now reads as two storeys of a
+  real building rather than one elevation copied upward.
+
+### Removed - furniture nobody can see
+*"if there is any furniture that the user cant see because the wall is there,
+just remove that furniture ... it just blocks the user too"*. The south and
+east wall runs are drawn in front of the room, so props on those two border
+rows sit behind their own wall. They are freed **after placement** — every
+furnisher's cell list feeds `_shuffle`, and changing a list's length changes
+the draw count and rerolls the whole fixed district. Freeing a node afterwards
+costs no draws.
+
+### Verified
+**DOORS 16, LAMPS 53/15 and VEHICLES 30 all on identical cells** — the proof
+that none of this moved an rng draw. UPPERS 6, floorless=0, propless=0,
+lean_blocked=0. Three states shot: outside, ground floor, upstairs.
+`SEC PASS`, `DOCS PASS`, `CLAIMS PASS`, `SMOKE PASS`.
+
+### Still open from the same report
+**Upper and ground furniture still overlap** (cabinet, bookshelf, crate appear
+on both). Not done here on purpose: the picks go through
+`_pick_variant_varied`, which takes a VARIABLE number of rng draws, so
+swapping a family in place can reroll the district. It needs the draw-neutral
+treatment the rest of this release used, and its own verification pass.
+
 ## [0.6.85] - 2026-08-07 - the second floor stops swallowing legs
 
 ### Fixed - sinking into the upper floor *(B0c item 1, at last)*

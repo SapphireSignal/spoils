@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.85.** The release history was renumbered evenly on
+**Current version: v0.6.86.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -808,6 +808,30 @@ The original diagnosis below is kept for the record.
    player could be wedged between a staircase and a cabinet. Reserve the
    flight's cells before furnishing, and remember the flight's ART spans about
    two cells up-right of its anchor, not one.
+
+## B0n. Upper and ground furniture still overlap *(user, 2026-08-07)*
+
+*"same with the furniture"* — the second floor should not be furnished from
+the same families as the ground floor. Today both use **cabinet, bookshelf and
+crate**. Wanted: disjoint sets, e.g. ground = couch/tv_stand/table/chair/crate,
+upper = bed/cabinet/bookshelf.
+
+**NOT a simple list edit, and this is the whole difficulty.** The picks go
+through `_pick_variant_varied`, which takes **one draw usually and TWO when it
+happens to repeat** — so swapping a family in place changes the draw count and
+rerolls the entire fixed district. `_pick_variant_norepeat` exists for exactly
+this and costs one draw always, but switching an existing call site to it also
+shifts the stream.
+
+Draw-neutral routes, in order of preference:
+1. Swap only `_pick_variant(...)` call sites — those are a single
+   `randi_range` and are genuinely neutral (v0.6.86 used this reasoning).
+2. Change families and ACCEPT a furniture reroll, then verify with
+   `--probe-world` that DOORS/LAMPS/VEHICLES are unchanged — if only furniture
+   moved, the fixed *district* is intact and that is what the rule protects.
+3. Re-pick after placement, swapping the sprite on the node — no draws at all.
+
+Verify with DOORS 16 on identical cells, plus LAMPS and VEHICLES.
 
 ## B0. Parking lots and aprons should JOIN the road network *(user, 2026-08-05)*
 

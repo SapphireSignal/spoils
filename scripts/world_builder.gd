@@ -2122,8 +2122,12 @@ func _build_shell(plot: Dictionary) -> void:
 
 	# ONE floor for the whole building — per-cell variants made interiors a
 	# patchwork of mismatched tiles (user call: uniform flooring per house)
+	# houses get plank, everything else INTERIOR LINO — not `screed`, which is
+	# the pavement's own two values and made a hall's floor read as the street
+	# (user: "it shouldnt look like the actual ground from outside"). Same
+	# variant counts as before, so the layout stream is untouched.
 	var floor_tile := ("wood_%d" % _rng.randi_range(0, 4)) if kind == "house" \
-		else ("screed_%d" % _rng.randi_range(0, 3))
+		else ("lino_%d" % _rng.randi_range(0, 3))
 	var seg_prefix := "seg2" if stories == 2 else "seg"
 	var post_prefix := "post2" if stories == 2 else "post"
 	# [sprite, full_texture, low_texture_or_null] for every piece of this
@@ -2309,6 +2313,36 @@ func _build_shell(plot: Dictionary) -> void:
 
 	if stories == 2:
 		_build_upper(interior, stairs_cell, kind, floor_tile, ground_props)
+	_drop_hidden_furniture(interior, ground_props)
+
+
+func _drop_hidden_furniture(interior: Rect2i, props: Array[Node2D]) -> void:
+	## Furniture you can never see, because a near wall stands in front of it,
+	## is furniture that only ever blocks you (user: "if there is any furniture
+	## that the user cant see because the wall is there, just remove that
+	## furniture, we dont need it if we cant see it, it just blocks the user
+	## too").
+	##
+	## The camera looks down the +y screen axis, so the SOUTH and EAST wall
+	## runs are the ones drawn in front of the room. A prop standing on those
+	## two border rows sits behind its own wall.
+	##
+	## REMOVED AFTER PLACEMENT, never filtered before it: every furnisher's
+	## cell lists feed _shuffle and _take_random_cell, and changing a list's
+	## length changes the draw count and rerolls the whole fixed district.
+	## Freeing a node afterwards costs no draws at all.
+	var south := interior.end.y - 1
+	var east := interior.end.x - 1
+	var kept: Array[Node2D] = []
+	for node in props:
+		if node == null or not is_instance_valid(node):
+			continue
+		var cell := _floor_layer.local_to_map(node.position)
+		if cell.y == south or cell.x == east:
+			node.queue_free()
+			continue
+		kept.append(node)
+	props.assign(kept)
 
 
 func _yard_fits(yard: Rect2i) -> bool:
@@ -2336,15 +2370,23 @@ func _register_low_wall(into: Array, node: Node2D, low_name: String) -> void:
 			break
 	if sprite == null:
 		return
-	# TWO LAYERS, not a texture swap. The low piece is drawn UNDERNEATH as its
-	# own sprite and the full piece fades over it, so the upper band can
-	# dissolve while the ground band stays solid the whole way (user: the
-	# second floor WALL should fade, "not the actual second floor"). Swapping
-	# one sprite's texture can only ever cut.
+	# TWO BANDS, not a texture swap. A two-storey wall is drawn as its GROUND
+	# band and its UPPER band, stacked as separate sprites, so the game can
+	# show whichever storey the player is actually standing on:
+	#   outside        both bands - the building reads as two storeys
+	#   ground floor   the ground band alone
+	#   upstairs       the upper band alone
 	#
-	# No artifact while both are up: the low piece is the full piece with the
-	# upper band absent, so every pixel they share is identical and blending
-	# one over the other changes nothing.
+	# The last one is why this exists. Going upstairs used to leave the whole
+	# facade drawn, both window rows and all, so the floor switch was
+	# cosmetic - user: "you are still on the ground, it just looks different
+	# colours now ... if you would be on the second floor, you wouldnt see all
+	# those windows".
+	#
+	# The two overlap by the string course, drawn identically in both from the
+	# same rng stream, so together they are exactly the old full wall. Separate
+	# sprites also mean each band can FADE on its own; a texture swap could
+	# only ever cut.
 	var low_sprite: Sprite2D = null
 	if low_name != "":
 		var low_tex := load("res://art/gen/%s.png" % low_name) as Texture2D
@@ -2355,7 +2397,14 @@ func _register_low_wall(into: Array, node: Node2D, low_name: String) -> void:
 			low_sprite.offset = sprite.offset
 			low_sprite.position = sprite.position
 			node.add_child(low_sprite)
-			node.move_child(low_sprite, 0)   # under the full piece
+			node.move_child(low_sprite, 0)   # under the upper band
+	# the ORIGINAL sprite becomes the upper band; the full-wall texture is
+	# never shown, because low+upper already is the full wall
+	if low_name != "":
+		var up_name := low_name.trim_suffix("_low") + "_upper"
+		var up_tex := load("res://art/gen/%s.png" % up_name) as Texture2D
+		if up_tex != null:
+			sprite.texture = up_tex
 	into.append([sprite, low_sprite])
 
 
@@ -2585,12 +2634,16 @@ func _build_upper(interior: Rect2i, stairs_cell: Vector2i, kind: String,
 	var floor_tiles: Array[Node2D] = []
 
 	var atlas: Texture2D = load("res://art/gen/floors.png")
-	# WOOD upstairs in EVERY building — the school's screed-over-screed
-	# melted into the ground room at night ("theres no second floor");
-	# classroom parquet reads instantly at any hour
-	var upper_tile := "wood_%d" % _rng.randi_range(0, 4)
+	# BOARDS upstairs in every building — its own timber, paler and warmer
+	# than the ground floor's `wood` and nothing like the halls' lino, so the
+	# two storeys can never read as one room recoloured (user: "dont make the
+	# first floor flooring the same colour as the second floors flooring").
+	# The material differs by construction now, so the old same-tile guard has
+	# nothing left to catch; the draw stays, unused, because removing it would
+	# shift the layout stream.
+	var upper_tile := "board_%d" % _rng.randi_range(0, 4)
 	if upper_tile == ground_floor_tile:
-		upper_tile = "wood_%d" % ((int(upper_tile.substr(5)) + 1) % 5)
+		upper_tile = "board_%d" % ((int(upper_tile.substr(6)) + 1) % 5)
 	var tc: Array = _floor_coords[upper_tile]
 	for y in range(interior.position.y, interior.end.y):
 		for x in range(interior.position.x, interior.end.x):

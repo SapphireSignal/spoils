@@ -5,49 +5,51 @@ extends Node2D
 ## Walls are never faded — user call: walls always stay visible.
 
 var cells: Rect2i
-## [full_sprite, low_sprite_or_null] for every wall piece of this building that
-## carries a second storey. The low sprite sits UNDER the full one and stays
-## put; the full one fades, so the upper band dissolves while the ground band
-## holds. A null low sprite means the piece is second storey ONLY (the door
-## transom) and simply fades away.
+## [upper_sprite, low_sprite_or_null] for every wall piece of this building
+## that carries a second storey — the wall's two BANDS as separate sprites.
+## A null low sprite means the piece is second storey ONLY (the door transom).
 var low_walls: Array = []
 
 var _inside := false
-var _low := false
 var _tween: Tween
 var _wall_tween: Tween
+var _low_on := true          # which bands are currently drawn...
+var _upper_on := true
+var _low_from := 1.0         # ...and where the running fade started from
+var _upper_from := 1.0
 
 
-func set_walls_low(low: bool) -> void:
-	## Stood inside on the GROUND floor, the second storey's wall towered over
-	## the room with its own row of windows (user: "the second floors walls
-	## shouldnt show if im on the first floor, make it so only if im on second
-	## floor, the walls will show up").
+func set_wall_storey(show_low: bool, show_upper: bool) -> void:
+	## Which BANDS of a two-storey wall are drawn. Outside both, on the ground
+	## floor the ground band alone, upstairs the upper band alone — so standing
+	## on the second floor you see your own storey's wall and windows instead
+	## of the whole facade (user: "if you would be on the second floor, you
+	## wouldnt see all those windows").
 	##
-	## IT FADES, on the same 0.28 s quad EASE_IN_OUT as the roof above it —
-	## a climb changes the roof and the upper wall band together, and two
-	## different curves on one action would read as two separate events (user:
-	## "it should fade out and back in like the roof ... i meant the second
-	## floor wall for the fade, not the actual second floor").
-	##
-	## The low piece is a SEPARATE SPRITE underneath that never moves. Only the
-	## full piece's alpha runs, so the upper band dissolves while the ground
-	## band stays solid throughout — which a texture swap could not do at all,
-	## and cross-fading a whole wall against nothing would have ghosted.
-	if low == _low:
+	## Fades on the same 0.28 s curve as the roof, because a climb changes the
+	## roof and the walls together and two curves on one action read as two
+	## events.
+	if show_low == _low_on and show_upper == _upper_on:
 		return
-	_low = low
+	_low_on = show_low
+	_upper_on = show_upper
 	if _wall_tween != null and _wall_tween.is_valid():
 		_wall_tween.kill()
 	_wall_tween = create_tween()
 	_wall_tween.tween_method(
-		func(a: float) -> void:
+		func(t: float) -> void:
 			for entry in low_walls:
-				var sprite := entry[0] as Sprite2D
-				if sprite != null:
-					sprite.modulate.a = a,
-		1.0 if low else 0.0, 0.0 if low else 1.0, 0.28) \
+				var up := entry[0] as Sprite2D
+				var lo := entry[1] as Sprite2D
+				if up != null:
+					up.modulate.a = lerpf(_upper_from, 1.0 if show_upper else 0.0, t)
+				if lo != null:
+					lo.modulate.a = lerpf(_low_from, 1.0 if show_low else 0.0, t),
+		0.0, 1.0, 0.28) \
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+	_wall_tween.tween_callback(func() -> void:
+		_upper_from = 1.0 if show_upper else 0.0
+		_low_from = 1.0 if show_low else 0.0)
 
 
 func set_inside(inside: bool) -> void:
