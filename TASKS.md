@@ -510,8 +510,22 @@ show where the stairs are"*.
    should be covered.
 3. **Clipping on props** while walking the second floor - colliders there do
    not match what is drawn.
-4. **NEW FEATURE: a stairwell opening in the upper slab**, so the floor shows
-   where the stairs come up instead of being a solid sheet.
+4. **A stairwell opening in the upper slab** — **THIS WAS BUILT ONCE AND THE
+   USER HAD IT REMOVED. DO NOT JUST REBUILD IT.** `_build_upper` carries the
+   note: *"EVERY cell gets floor - the upper room is the ground room's
+   ceiling, complete (user: the stairwell hole showed the ground and broke
+   it). The flight's art still rises through the slab."*
+
+   So the CONCEPT is wanted again (*"can you make a hole in the second floor
+   to show where the stairs are"*) but the previous EXECUTION failed for a
+   specific reason: the hole was a gap, so you saw the ground room through
+   it, which broke the illusion that you are standing on a floor.
+
+   **The version that satisfies both:** the opening must read as a SHAFT, not
+   a gap. Dark well below the lip, the stair top drawn inside it, and a lip or
+   railing on the near edges so the slab still has a silhouette. What must NOT
+   happen is the ground-floor room showing through. Confirm with the user
+   before building, and show them one screenshot before doing every building.
 
 **Read this before starting** - CLAUDE.md's standing lesson, which is about
 this exact system: *"Sort position and draw position are different things.

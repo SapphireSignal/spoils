@@ -480,6 +480,14 @@ alike.**
   so dropping it into an existing call site re-rolls the fixed district.
   Use the new one when retro-fitting anti-repetition anywhere.
 
+**A CONFLICT WORTH CATCHING: the stairwell hole was BUILT ONCE AND REMOVED
+AT THE USER'S REQUEST.** `_build_upper`'s comment records it - *"the
+stairwell hole showed the ground and broke it"* - and they have now asked for
+it again. The concept is wanted; the old execution failed because the gap
+showed the ground room through it. Build it as a dark SHAFT with the stair
+top inside and a lip on the near edges, and check one screenshot with them
+first. **Reading the comment before coding is what caught this.**
+
 **PICKED UP AT: TASKS.md B0c, the second floor** - the user reported four
 distinct things in one message (clipping into the slab, the stair top
 visible, clipping on props up there, and wanting a stairwell hole). B0d is a
