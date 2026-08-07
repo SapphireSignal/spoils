@@ -1028,9 +1028,24 @@ def _wall_door_header(seg_made: tuple, door_made: tuple) -> tuple:
 
 def make_wall_segment(style: str, axis: str, window_variant: int = -1,
                       broken_seed: int = -1, variant: int = 0,
-                      stories: int = 1, upper_only: bool = False) -> tuple[Canvas, tuple, list]:
+                      stories: int = 1, upper_only: bool = False,
+                      lower_only: bool = False) -> tuple[Canvas, tuple, list]:
     """upper_only: just the second-story band + coping — the transom piece
-    that closes the hole above a ground-floor door on two-story walls."""
+    that closes the hole above a ground-floor door on two-story walls.
+
+    lower_only: just the GROUND band, stopping at the string course, which is
+    already a pale concrete band and so reads as a finished top edge with no
+    coping needed. Stood inside on the ground floor the upper storey's wall
+    towered over the room with its own row of windows (user: "the second
+    floors walls shouldnt show if im on the first floor"), so the game swaps
+    to this piece while you are down there.
+
+    SAME CANVAS AND SAME ORIGIN as the full piece, deliberately: the swap is
+    then a texture assignment with no repositioning. And the brick rolls are
+    taken for the skipped rows and thrown away rather than skipped — the low
+    band's bricks are then IDENTICAL to the full piece's lower band, so
+    stepping through a door does not shuffle the wall you are looking at.
+    """
     rng = random.Random(
         f"{SEED}:seg:{style}:{axis}:{window_variant}:{broken_seed}:{variant}:{stories}:{upper_only}")
     base_col, mortar_col = (C(n) for n in BRICK_STYLES[style][axis])
@@ -1065,6 +1080,11 @@ def make_wall_segment(style: str, axis: str, window_variant: int = -1,
             if stories == 2 and face_row in (STORY_H - 1, STORY_H):
                 # string course: a pale concrete band marking the floor line
                 col = CONC_L1 if (i + face_row) % 2 else CONC_BASE
+            # AFTER the roll, never before: the low band has to consume the
+            # same rng stream as the full piece or its bricks come out
+            # different and the swap flickers the wall
+            if lower_only and face_row < STORY_H - 1:
+                continue
             c.set(x, y, col)
         if broken_seed >= 0:  # broken lip
             cap_y = fy_base - h
@@ -1080,16 +1100,20 @@ def make_wall_segment(style: str, axis: str, window_variant: int = -1,
                     col = CONC_BASE
                 elif r < 0.09:
                     col = CONC_L2
-                c.set(jx, jy, col)
-            if i % 2 == 0:  # light crease where coping meets the face
+                # the roll is taken either way; the low piece has no coping
+                # because it stops at the string course
+                if not lower_only:
+                    c.set(jx, jy, col)
+            if i % 2 == 0 and not lower_only:  # crease where coping meets face
                 c.set(x, fy_base - face_h, CONC_L2)
 
     if window_variant >= 0:
         wi, top, w, h, boarded = SEG_WINDOWS[window_variant]
         # ground-floor window (below the string course on two-story walls)
         _draw_seg_window(c, ox, oy, axis, face_h, wi, top + extra, w, h, boarded)
-        if stories == 2:
-            # the upper room's window, stacked over the ground one
+        if stories == 2 and not lower_only:
+            # the upper room's window, stacked over the ground one — the whole
+            # point of the low piece is that this one is not there
             up_h = min(h, STORY_H - 12)
             _draw_seg_window(c, ox, oy, axis, face_h, wi, 7, w, up_h, False)
 
@@ -1177,6 +1201,16 @@ def wall_piece_inventory() -> dict[str, tuple[Canvas, tuple, list]]:
                     style, axis, v, -1, 0, 2)
             pieces[f"seg2_{style}_{axis}_upper"] = make_wall_segment(
                 style, axis, -1, -1, 0, 2, True)
+            # ...and the GROUND band alone, swapped in while the player is
+            # inside on the ground floor
+            pieces[f"seg2_{style}_{axis}_low"] = make_wall_segment(
+                style, axis, -1, -1, 0, 2, False, True)
+            for sv in (1, 2):
+                pieces[f"seg2_{style}_{axis}_v{sv}_low"] = make_wall_segment(
+                    style, axis, -1, -1, sv, 2, False, True)
+            for v in range(len(SEG_WINDOWS)):
+                pieces[f"seg2_{style}_{axis}_win_{v}_low"] = make_wall_segment(
+                    style, axis, v, -1, 0, 2, False, True)
         pieces[f"post_{style}"] = make_wall_post(style)
         pieces[f"post2_{style}"] = make_wall_post(style, 2)
     return pieces
@@ -5144,6 +5178,79 @@ def make_floor_edge(axis: str) -> tuple[Canvas, tuple, list | None]:
     return c, (32, 16), None
 
 
+def make_floor_stairwell() -> tuple[Canvas, tuple, list | None]:
+    """The stairwell opening in the second-story slab.
+
+    A SHAFT, NOT A GAP. This was built once before as an actual hole in the
+    tile grid and the user had it removed: you saw the ground-floor room
+    through it and it stopped reading as a floor you were standing on. So
+    nothing here is transparent — the well is PAINTED: a cut rim on the near
+    edges, the far inner wall catching a little light, three treads going down
+    into it, and black underneath. It cannot show the room below because there
+    is no hole.
+
+    Drawn OVER the building's own floor tile rather than replacing it, so it
+    never has to match whichever wood that building rolled.
+    """
+    # MEASURED against what it lands on: the upper floorboards run L 33-45, so
+    # the well goes near-black (L 10) and the cut rim near-white, or the whole
+    # thing reads as a smudge on the boards instead of a hole through them.
+    c = Canvas(64, 32)
+    rim_lit, rim_shade = C("c7cfcc"), C("577277")
+    wall_far, wall_side = C("394a50"), C("202e37")
+    void = C("090a14")
+    nose, riser = C("ad7757"), C("4d2b32")
+    inner: dict[int, tuple[int, int]] = {}
+    for y in range(4, 28):
+        span = diamond_span(y)
+        if span is None:
+            continue
+        x0, x1 = span[0] + 10, span[1] - 10
+        if x1 - x0 < 3:
+            continue
+        inner[y] = (x0, x1)
+    if not inner:
+        return c, (32, 16), None
+    top_row, bot_row = min(inner), max(inner)
+    mid_row = (top_row + bot_row) // 2
+    # 1. the well itself — far inner wall at the top so the opening has a
+    #    SURFACE in it, falling away to black
+    for y, (x0, x1) in inner.items():
+        d = y - top_row
+        for x in range(x0, x1 + 1):
+            c.set(x, y, wall_far if d < 3 else (wall_side if d < 5 else void))
+    # 2. the flight going down: each tread a lit nose over a dark riser, which
+    #    is what makes it read as STEPS rather than three stripes in the dark
+    for s in range(4):
+        ty = top_row + 4 + s * 5
+        if ty not in inner:
+            continue
+        x0, x1 = inner[ty]
+        w = max((x1 - x0) * 2 // 3, 4)
+        sx = x0 + (x1 - x0 - w) // 2
+        for x in range(sx, sx + w):
+            if x0 <= x <= x1:
+                c.set(x, ty, nose)
+        for k in (1, 2):
+            if ty + k in inner:
+                a0, a1 = inner[ty + k]
+                for x in range(sx, sx + w):
+                    if a0 <= x <= a1:
+                        c.set(x, ty + k, riser)
+    # 3. the cut rim. The NEAR edges (the lower two borders) are the sawn edge
+    #    of the slab catching room light — that is the whole silhouette, and
+    #    the first cut drew it on the bottom VERTEX only, because a diamond
+    #    has exactly one row with nothing below it.
+    #    TWO pixels wide, not one: an iso edge steps 2 px across per row, so a
+    #    single pixel per row leaves a dotted line rather than a cut edge.
+    for y, (x0, x1) in inner.items():
+        col = rim_lit if y >= mid_row else rim_shade
+        for k in (0, 1):
+            c.set(x0 + k, y, col)
+            c.set(x1 - k, y, col)
+    return c, (32, 16), None
+
+
 def make_power_box(axis: str, broken: bool) -> tuple[Canvas, tuple, list | None]:
     """House power box on the wall face. Working: shut lid, meter, conduit.
     Broken: lid ajar, dangling wires, scorch — sparks come at runtime
@@ -5414,6 +5521,7 @@ def prop_inventory() -> tuple[dict, dict]:
     props["lz_marker"] = make_lz_marker()
     props["floor_edge_x"] = make_floor_edge("x")
     props["floor_edge_y"] = make_floor_edge("y")
+    props["floor_stairwell"] = make_floor_stairwell()
     # house power
     for axis in ("x", "y"):
         props[f"power_box_{axis}"] = make_power_box(axis, False)

@@ -701,6 +701,10 @@ func _process(delta: float) -> void:
 		var reveal := roof as RoofReveal
 		var here := reveal.cells.has_point(cell)
 		reveal.set_inside(here)
+		# the upper storey's wall only shows when you are OUTSIDE (where the
+		# building has to read as two storeys) or actually UP there. On the
+		# ground floor it is just a wall towering over the room you are in.
+		reveal.set_walls_low(here and not _player.upstairs)
 		indoors = indoors or here
 	_indoors_now = indoors
 	# a roof over your head muffles the weather (user). Same test that

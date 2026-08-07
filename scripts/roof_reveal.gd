@@ -5,9 +5,44 @@ extends Node2D
 ## Walls are never faded — user call: walls always stay visible.
 
 var cells: Rect2i
+## [sprite, full_texture, low_texture_or_null] for every wall piece of this
+## building that carries a second storey. A null low texture means the piece is
+## second storey ONLY (the door transom) and is hidden rather than swapped.
+var low_walls: Array = []
 
 var _inside := false
+var _low := false
 var _tween: Tween
+
+
+func set_walls_low(low: bool) -> void:
+	## Stood inside on the GROUND floor, the second storey's wall towered over
+	## the room with its own row of windows (user: "the second floors walls
+	## shouldnt show if im on the first floor, make it so only if im on second
+	## floor, the walls will show up").
+	##
+	## A texture SWAP, not a fade: the low piece is the same canvas at the same
+	## origin, drawn from the same rng stream, so it is the full wall with the
+	## upper band absent and nothing moves or reshuffles. It stops at the string
+	## course, which is already a pale concrete band and reads as a finished
+	## top edge.
+	##
+	## No tween here on purpose. The roof fades because it is one big shape
+	## whose sudden change reads as a glitch; a wall losing its top band is a
+	## silhouette change that cross-fading would only turn into a ghost.
+	if low == _low:
+		return
+	_low = low
+	for entry in low_walls:
+		var sprite := entry[0] as Sprite2D
+		if sprite == null:
+			continue
+		var tex := entry[2] as Texture2D if low else entry[1] as Texture2D
+		if tex == null:
+			sprite.visible = not low
+		else:
+			sprite.visible = true
+			sprite.texture = tex
 
 
 func set_inside(inside: bool) -> void:

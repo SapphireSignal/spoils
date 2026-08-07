@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.77.** The release history was renumbered evenly on
+**Current version: v0.6.78.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -518,8 +518,19 @@ still on a collision layer inside an upper room: **19 solid, 0 invisible** — 1
 wall segments and posts, the door, the stairs, 4 pieces of furniture, all
 drawing. There is no ghost collider up there. **Needs a repro.**
 
-**Item 4 (the stairwell hole) STILL NEEDS SIGN-OFF** — see below, it was built
-once and removed.
+**Item 4 (the stairwell hole) DONE in v0.6.78** — sampled on one building,
+user kept it (*"yea i like the shaft keep it"*), now on all of them. **It is
+PAINTED, not cut**: no transparency anywhere, so the ground room can never show
+through, which is why the first attempt was removed. Drawn over the building's
+own floor tile as a CHILD of it, so it needs no wood match and cannot tie in
+the sort.
+
+**Also DONE in v0.6.78, a separate report:** *"the second floors walls shouldnt
+show if im on the first floor"*. A two-storey wall was one tall sprite, so each
+piece now also generates a ground-band-only version swapped in while inside
+downstairs. Full height outside and upstairs. The low band takes the SAME rng
+draws and throws them away, so the bricks are identical and the swap does not
+reshuffle the wall.
 
 ### the original report
 

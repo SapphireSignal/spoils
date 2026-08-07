@@ -3,6 +3,60 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.78] - 2026-08-07 - a stairwell, and one storey at a time
+
+### Added - the stairwell opening *(sampled and kept)*
+*"can you make a hole in the second floor to show where the stairs are"*, then
+*"yea i like the shaft keep it"*. Sampled on one building first, per the
+standing sample → sign-off → fleet rule, and now on every two-storey building.
+
+**A SHAFT, NOT A GAP, and that distinction is the whole item.** It was built
+once before as a real hole in the tile grid and the user had it removed,
+because you saw the ground-floor room through it and it stopped reading as a
+floor you were standing on. So nothing here is transparent: the well is
+PAINTED — a cut rim on the near edges, the far inner wall catching a little
+light, treads with lit noses going down, black underneath. It cannot show the
+room below because there is no hole. Drawn OVER the building's own floorboards
+as a child of that tile, so it never has to match whichever wood the building
+rolled and cannot tie with it in the sort.
+
+Two faults fixed before it was shown: the rim came out **dotted**, because a
+single pixel per row leaves gaps on an edge that steps 2 px across; and the
+well was too close in value to the boards, **measured at L 33-45**, so it went
+near-black.
+
+### Fixed - the upper storey's wall towered over the ground-floor room
+*"the second floors walls shouldnt show if im on the first floor, make it so
+only if im on second floor, the walls will show up"*.
+
+A two-storey wall was a SINGLE tall sprite, so there was nothing to hide. Each
+piece now also generates a **ground-band-only** version, swapped in while the
+player is inside on the ground floor. Outside it stays full height — a
+two-storey building has to read as two storeys from the street — and upstairs
+it stays full too.
+
+Three things that make the swap invisible:
+- **Same canvas, same origin**, so it is a texture assignment with nothing
+  repositioned.
+- **The brick rolls are taken for the skipped rows and thrown away**, not
+  skipped, so the low band's bricks are IDENTICAL to the full piece's lower
+  band. Skipping the draws would have reshuffled the wall every time you
+  stepped through a door — the standing "never skip an rng draw" rule, in a
+  new place.
+- It stops at the **string course**, which is already a pale concrete band and
+  so reads as a finished top edge with no coping needed.
+
+Corner posts need no new art: the one-storey post is exactly the ground band's
+height already. The door transom is upper storey only, so it hides rather than
+swaps. **+24 textures, ZERO extra nodes.**
+
+### Verified
+Three states shot and checked: ground floor inside (upper storey gone), outside
+(still two storeys, both window rows, roof on), upstairs (full walls, shaft in
+the floor, player drawn complete). DOORS 16 on identical cells, UPPERS 6 with
+floorless=0 propless=0, `FLOORDOOR PASS`, 240.0 fps / 4.62 ms / 8382 nodes
+(+8, the shaft sprites). `SEC PASS`, `DOCS PASS`, `CLAIMS PASS`, `SMOKE PASS`.
+
 ## [0.6.77] - 2026-08-07 - the second floor is a floor
 
 ### Fixed - the stairs were drawn straight through the upper floor

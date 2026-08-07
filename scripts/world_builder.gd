@@ -2117,6 +2117,12 @@ func _build_shell(plot: Dictionary) -> void:
 		else ("screed_%d" % _rng.randi_range(0, 3))
 	var seg_prefix := "seg2" if stories == 2 else "seg"
 	var post_prefix := "post2" if stories == 2 else "post"
+	# [sprite, full_texture, low_texture_or_null] for every piece of this
+	# building's wall that carries a second storey. The RoofReveal swaps them
+	# while the player is inside on the GROUND floor, so the upper storey stops
+	# towering over the room they are standing in. A null low texture means the
+	# piece is second storey ONLY (the door transom) and simply goes away.
+	var low_walls: Array = []
 
 	for y in range(interior.position.y, interior.end.y):
 		for x in range(interior.position.x, interior.end.x):
@@ -2162,8 +2168,10 @@ func _build_shell(plot: Dictionary) -> void:
 					if stories == 2:
 						# the transom: the upper band still needs its wall
 						# (a bare door segment left a hole into the stairwell)
-						_add_prop("seg2_%s_%s_upper" % [style, axis],
-							center + (_EDGE_OFFSET[side] as Vector2))
+						# second storey ONLY, so downstairs it goes entirely
+						_register_low_wall(low_walls,
+							_add_prop("seg2_%s_%s_upper" % [style, axis],
+								center + (_EDGE_OFFSET[side] as Vector2)), "")
 					continue
 				var axis2: String = _EDGE_AXIS[side]
 				# plain segments roll among three variants, weighted to the
@@ -2185,7 +2193,10 @@ func _build_shell(plot: Dictionary) -> void:
 					# hang under a window (user call)
 					_window_cells[Vector3i(cell.x, cell.y,
 						(_EDGE_SIDE_IDS[side] as int))] = true
-				_add_prop(piece, center + (_EDGE_OFFSET[side] as Vector2))
+				var wall_node := _add_prop(piece,
+					center + (_EDGE_OFFSET[side] as Vector2))
+				if stories == 2:
+					_register_low_wall(low_walls, wall_node, piece + "_low")
 				# this wall blocks light. The occluder line is the cell EDGE
 				# itself — the same two verts the corner posts hang off — so
 				# the shadow boundary lands exactly on the wall plane the art
@@ -2207,14 +2218,19 @@ func _build_shell(plot: Dictionary) -> void:
 		var pos := _floor_layer.map_to_local(entry[0] as Vector2i) + (entry[1] as Vector2)
 		posts[pos.round()] = true
 	for pos in posts:
-		_add_prop("%s_%s" % [post_prefix, style], pos as Vector2)
+		var post_node := _add_prop("%s_%s" % [post_prefix, style], pos as Vector2)
+		if stories == 2:
+			# the single-storey post is exactly the ground band's height
+			# (post_h = WALL_H, + STORY_H only when stories == 2), so it is the
+			# low piece already and no new art is needed for corners
+			_register_low_wall(low_walls, post_node, "post_%s" % style)
 
 	for y in range(rect.position.y, rect.end.y):
 		for x in range(rect.position.x, rect.end.x):
 			_occupied[Vector2i(x, y)] = true
 
 	await _build_roof(interior, plot["tone"], posts.keys(), ruined,
-		_wall_h + (_story_h if stories == 2 else 0))
+		_wall_h + (_story_h if stories == 2 else 0), low_walls)
 
 	# the entrance pocket: the door cell and everything around it stays empty
 	var pocket: Array[Vector2i] = [door_cell]
@@ -2282,11 +2298,32 @@ func _yard_fits(yard: Rect2i) -> bool:
 	return true
 
 
+func _register_low_wall(into: Array, node: Node2D, low_name: String) -> void:
+	## Record a two-storey wall piece with the texture it wears while the
+	## player is inside on the ground floor. Textures are resolved ONCE here,
+	## not on every toggle. An empty low_name means the piece is upper storey
+	## only and gets hidden instead of swapped.
+	if node == null:
+		return
+	var sprite: Sprite2D = null
+	for child in node.get_children():
+		if child is Sprite2D:
+			sprite = child as Sprite2D
+			break
+	if sprite == null:
+		return
+	var low_tex: Texture2D = null
+	if low_name != "":
+		low_tex = load("res://art/gen/%s.png" % low_name) as Texture2D
+	into.append([sprite, sprite.texture, low_tex])
+
+
 func _build_roof(interior: Rect2i, tone: String, post_positions: Array,
-		ruined: bool, roof_h: int = -1) -> void:
+		ruined: bool, roof_h: int = -1, low_walls: Array = []) -> void:
 	var south_corner := interior.end - Vector2i(1, 1)  # position anchor AND ruin bite corner
 	var roof := RoofReveal.new()
 	roof.cells = interior
+	roof.low_walls = low_walls
 	roof.position = _floor_layer.map_to_local(south_corner) + Vector2(0, 24)
 	var lift := Vector2(0, -float(roof_h if roof_h > 0 else _wall_h))
 	for y in range(interior.position.y, interior.end.y):
@@ -2510,6 +2547,20 @@ func _build_upper(interior: Rect2i, stairs_cell: Vector2i, kind: String,
 			tile.visible = false
 			_ysort.add_child(tile)
 			floor_tiles.append(tile)
+			if cell == stairs_cell:
+				# THE STAIRWELL SHAFT. Sampled on one building and kept
+				# (user: "yea i like the shaft keep it"), so it is every
+				# two-storey building now.
+				#
+				# A CHILD of the tile on purpose: children draw after their
+				# parent, so the well is guaranteed over the floorboards
+				# without a second sort position that could tie with them. Its
+				# own position carries the storey lift because a child sits at
+				# the parent's POSITION, not its offset.
+				var well := Sprite2D.new()
+				well.texture = load("res://art/gen/floor_stairwell.png")
+				well.position = Vector2(0.0, -float(_story_h))
+				tile.add_child(well)
 
 	# the slab lip: a dark edge along the south and east borders — the
 	# plane needs a silhouette or it melts into the room below (user:

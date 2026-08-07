@@ -103,8 +103,36 @@ collider exists up there. Both items need a repro from the user rather than a
 guess; rebuilding a system that measures clean is how the map screen got built
 twice.
 
-**Picked up at: B0c items 1 and 3 (need a repro) and item 4, the stairwell
-hole, which STILL NEEDS SIGN-OFF** — it was built once and the user had it
+**Then v0.6.78 — the stairwell shaft (sampled, kept, fleet-wide) and the
+two-storey wall split.**
+
+- **The shaft is PAINTED, not cut, and that is the whole item.** The first
+  attempt was a real hole in the tile grid and the user had it removed because
+  the ground room showed through. Nothing in it is transparent. It is a CHILD
+  of the floor tile, so it needs no wood match and cannot tie with it in the
+  sort. Two faults caught before showing it: the rim came out dotted (one pixel
+  per row on an edge that steps 2 px across), and it was too close in value to
+  the boards, measured at L 33-45.
+- **The wall split: `make_wall_segment(lower_only=True)`.** A two-storey wall
+  was one tall sprite, so there was nothing to hide. **The load-bearing detail
+  is that the low band TAKES the brick rolls for the skipped rows and throws
+  them away** — skip the draws and the lower band's bricks come out different,
+  and the wall reshuffles every time you walk through a door. Same canvas and
+  origin, so the swap repositions nothing. +24 textures, ZERO extra nodes.
+  Corner posts needed no new art: the one-storey post is already exactly the
+  ground band's height.
+- **Check all THREE states after touching this**: outside (must still read as
+  two storeys), inside downstairs (upper band gone), upstairs (full walls
+  back). Only the middle one is what was asked for; the other two are the
+  regressions it can cause.
+
+**Picked up at: B0c items 1 and 3, which BOTH NEED A REPRO from the user**
+(the "clipping" pair — one was my own misread of a HUD label, the other
+measures clean at 19 solid / 0 invisible). Item 4 is done; the note below is
+kept because the reason the first attempt failed is still the design
+constraint.
+
+*(superseded)* Item 4, the stairwell hole, **NEEDED SIGN-OFF** — it was built once and the user had it
 removed because the gap showed the ground room through it, so it has to read as
 a SHAFT, not a hole. Note item 2's fix means the flight is now hidden upstairs,
 so the hole is what would give it back — they are the same conversation.
