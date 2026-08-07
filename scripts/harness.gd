@@ -117,6 +117,8 @@ func _ready() -> void:
 			_smoke.call_deferred()
 		elif arg.begins_with("--shot="):
 			_shot.call_deferred(arg.trim_prefix("--shot="))
+		elif arg == "--probe-drive":
+			_probe_drive.call_deferred()
 		elif arg == "--probe-sort":
 			_probe_sort.call_deferred()
 		elif arg.begins_with("--film-walk="):
@@ -1733,6 +1735,52 @@ func _film(film_name: String) -> void:
 		frame.save_png(dir.path_join("f%03d.png" % i))
 	print("FILM SAVED: %d frames at %.0f fps -> %s" % [total, fps, dir])
 	get_tree().quit()
+
+
+func _probe_drive() -> void:
+	## DOES THE CAMERA ACTUALLY FOLLOW A MOVING CAR?
+	##
+	## v0.6.63 made `_true_pos` the authority for the player's node position,
+	## and the driving branch writes `global_position` directly - so it silently
+	## stopped tracking and the camera stayed where the player got in. A parse
+	## check and --smoke both passed while that was broken, because neither
+	## drives anything. This measures the one thing that matters: the distance
+	## between the car and the camera, before and after the car moves.
+	await _ensure_game_scene()
+	_apply_env_flags()
+	var player := _find_player()
+	var car: Node2D = null
+	for n in get_tree().current_scene.find_children("*", "DriveableCar", true, false):
+		car = n as Node2D
+		break
+	if player == null or car == null:
+		print("DRIVE ERROR: player or car missing")
+		get_tree().quit(1)
+		return
+	player.global_position = car.global_position
+	player.set("_true_pos", car.global_position)
+	for i in 10:
+		await get_tree().process_frame
+	# put them in it the way the game does
+	if player.has_method("_interact"):
+		player.call("_interact")
+	for i in 10:
+		await get_tree().process_frame
+	var cam := player.get_node_or_null("Camera2D") as Camera2D
+	var before := 0.0
+	if cam != null:
+		before = cam.global_position.distance_to(car.global_position)
+	# drive it a long way by hand
+	for i in 120:
+		car.global_position += Vector2(3.0, 1.5)
+		await get_tree().process_frame
+	var after := 0.0
+	if cam != null:
+		after = cam.global_position.distance_to(car.global_position)
+	print("DRIVE driving=%s cam_to_car_before=%.1f after=%.1f %s" % [
+		str(player.get("driving") != null), before, after,
+		"FOLLOWS" if after < before + 8.0 else "LEFT BEHIND"])
+	get_tree().quit(0)
 
 
 func _probe_sort() -> void:

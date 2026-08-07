@@ -655,27 +655,18 @@ func _process(delta: float) -> void:
 	if cell == _last_roof_cell:
 		return
 	_last_roof_cell = cell
-	# STANDING IN A DOORWAY COUNTS AS INSIDE. The door sits ON the wall line,
-	# which is outside the interior rect, so a player in the threshold got no
-	# reveal at all: the roof stayed solid while they were plainly in the
-	# building and visible through their own open door (user: "im still inside
-	# the house but the door is opened towards outside but i can still see my
-	# character, i shouldnt be able to see him here").
-	#
-	# The grow(1) is gated on ACTUALLY BEING ON A DOOR, so it cannot reveal a
-	# roof by walking along the outside of a wall.
-	var on_door := false
-	for d in get_tree().get_nodes_in_group("doors"):
-		var dn := d as Node2D
-		if dn == null:
-			continue
-		if _floor_layer.local_to_map(dn.global_position) == cell:
-			on_door = true
-			break
+	# INSIDE MEANS INSIDE. v0.6.65 also counted "standing on a door cell" as
+	# inside, to fix the player being visible through their own open doorway -
+	# but a door sits ON the wall line, so that cell reads the same whether you
+	# are in front of it or behind it, and the roof lifted while you were still
+	# out on the street (user: "i can see the inside of the building when im
+	# outside ... the roof should only disappear when the user goes inside,
+	# like they go past the doorway"). Their rule, stated plainly, so the
+	# interior rect is the whole test again.
 	var indoors := false
 	for roof in _roofs:
 		var reveal := roof as RoofReveal
-		var here := reveal.cells.has_point(cell) 			or (on_door and reveal.cells.grow(1).has_point(cell))
+		var here := reveal.cells.has_point(cell)
 		reveal.set_inside(here)
 		indoors = indoors or here
 	_indoors_now = indoors

@@ -3,6 +3,36 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.69] - 2026-08-06 - two of my own regressions
+
+### Fixed - the camera stopped following vehicles
+*"when im in vehicles the camera doesnt follow the vehicle"*. **A v0.6.63
+regression.** That release made `_true_pos` the authority for the player's
+node position, and the camera derives the snapped node position from it - but
+the driving branch moves the player by writing `global_position` directly and
+never handed `_true_pos` over. So the car drove off and the camera stayed at
+the spot you got in. The `riding` branch (the night freight) had the identical
+hole.
+
+**A parse check and `--smoke` both passed while this was broken**, because
+neither drives anything. `--probe-drive` now measures the one thing that
+matters - the distance from camera to car, before and after the car moves:
+**before 0.0, after 0.0, FOLLOWS.**
+
+### Fixed - the roof lifted while you were still outside
+*"i can see the inside of the building when im outside ... the roof should
+only disappear when the user goes inside, like they go past the doorway"*.
+**A v0.6.65 regression, and an over-correction of mine.** That release counted
+"standing on a door cell" as being inside, to fix the player showing through
+their own open doorway - but a door sits ON the wall line, so that cell reads
+the same whether you are in front of it or behind it.
+
+The interior rect is the whole test again, which is the rule as the user
+stated it.
+
+### Verified
+`SMOKE PASS`, `--probe-drive` FOLLOWS.
+
 ## [0.6.68] - 2026-08-06 - the doorway reveal is wall, not door
 
 ### Fixed - the boards either side of a door were the door's colour

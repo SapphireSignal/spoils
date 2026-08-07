@@ -533,6 +533,23 @@ covered one of the three pieces.
 (not addressed - look at the leaf's top edge against the lintel band), and
 going upstairs shutting the front door (TASKS.md B0f).
 
+**Shipped: v0.6.69 - TWO OF MY OWN REGRESSIONS, both from fixes earlier this
+same session.**
+- **The camera stopped following vehicles** (v0.6.63). Making `_true_pos` the
+  authority meant every branch that moves the player by writing
+  `global_position` directly must hand it over - the `driving` and `riding`
+  branches did not, and they `return` before the 2 px adopt-an-outside-move
+  gate that would have caught it. **If you introduce an authoritative shadow
+  variable, audit EVERY writer of the thing it shadows.**
+- **The roof lifted while standing outside** (v0.6.65). I had counted
+  "standing on a door cell" as inside; a door sits ON the wall line so that
+  cell reads identically from both sides. Reverted to the interior rect.
+
+**`--smoke` AND A PARSE CHECK BOTH PASSED WHILE THE CAMERA WAS BROKEN**,
+because neither drives a car. `--probe-drive` exists now and measures
+camera-to-car distance before and after the car moves. **When a fix touches a
+system no probe exercises, add the probe in the same release.**
+
 **A CONFLICT WORTH CATCHING: the stairwell hole was BUILT ONCE AND REMOVED
 AT THE USER'S REQUEST.** `_build_upper`'s comment records it - *"the
 stairwell hole showed the ground and broke it"* - and they have now asked for

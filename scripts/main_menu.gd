@@ -206,6 +206,10 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.69", [
+		"the camera follows cars again. that was mine - a change a few versions back moved where the players position is stored, and the driving code was still writing the old one, so the car drove off without the camera",
+		"the roof only lifts once youre actually inside now. i had made standing on the doorstep count as inside, and a doorway looks the same from both sides",
+	]],
 	["v0.6.68", [
 		"the boards down the sides of a doorway are the buildings own brick now instead of the doors colour - they are the edge of the hole in the wall, so they belong to the wall",
 	]],

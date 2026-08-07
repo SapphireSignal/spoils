@@ -288,6 +288,10 @@ func _process(delta: float) -> void:
 	if riding != null:
 		# aboard the freight: the camera rides with it, nothing else runs
 		global_position = riding.global_position + ride_offset
+		# ...and `_true_pos` MUST follow, because _update_camera snaps the node
+		# from it. Without this the camera pins to wherever you were standing
+		# when you boarded. See the note in the driving branch below.
+		_true_pos = global_position
 		_update_camera(delta)
 		return
 
@@ -295,6 +299,14 @@ func _process(delta: float) -> void:
 		# riding: the body is welded to the car (so the camera weld, zoom
 		# and snap all keep working off the same position they always use)
 		global_position = driving.global_position
+		# `_true_pos` IS THE AUTHORITY SINCE v0.6.63 - _update_camera derives
+		# the snapped node position from it, so a branch that moves the player
+		# by writing global_position directly must hand it over too. Missing it
+		# here meant the car drove away and the camera stayed behind at the spot
+		# you got in (user: "when im in vehicles the camera doesnt follow the
+		# vehicle"). The 2 px adopt-an-outside-move gate further down cannot
+		# save this branch, because it returns before reaching it.
+		_true_pos = global_position
 		if not dead and not Ui.blocks_gameplay():
 			if Input.is_action_just_pressed("zoom_in"):
 				_step_zoom(1)
