@@ -3,6 +3,64 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.81] - 2026-08-07 - the door line, the caged flight, and capped pillars
+
+### Fixed - a line on top of every two-storey door *(B0m item 1)*
+*"theres a line on top of the door, and it goes away when i go inside, can you
+remove that line completely, there should also be nohting changed ontop of the
+door when going inside"*.
+
+The line was the TRANSOM's bottom outline. The transom — the upper wall band
+over a doorway — butts DOWN onto the door lintel exactly the way wall segments
+butt sideways onto each other, and sideways joins are already never outlined
+(`sides=False` exists for precisely that). The bottom join was still outlined:
+a dark line drawn across the top of every door on a two-storey building, and
+because the transom fades with the upper band, the line VANISHED when you
+stepped inside — the change the user saw. The bottom edge keeps no outline
+now; the join is seamless brick, identical inside and out. The top edge — the
+roofline — keeps its outline like every other wall piece.
+
+### Fixed - furniture stood inside the staircase *(B0m item 2)*
+*"make sure the stairs on the first floor arent clipping into any furniture or
+walls ... i can see it clipping into the tv"*.
+
+The flight's art leans one cell up-right of its anchor — the back-wall row,
+exactly where the house furnisher hangs cabinets. The stairs corner itself was
+reserved before furnishing; the lean cell was not. **Probed across all six
+two-storey buildings, not one screenshot: `lean_blocked` went 5 -> 0.**
+
+**The reservation is NOT one more pocket entry, and the shape of the fix is
+the lesson.** The pocket feeds the free-cell list; one more entry shrinks that
+list, which changes `_shuffle`'s draw count, which rerolls the entire fixed
+district. The furnishers now ERASE the lean cell from each candidate list
+AFTER it is built and shuffled — zero draws moved, verified by DOORS staying
+16 on identical cells. Warehouse racks cannot be skipped either (a skipped
+rack drops its variant and jitter draws), so a rack landing on the lean cell
+is placed one column over instead.
+
+### Changed - the ground-floor pillar tops are the real pillar top
+*"i want the first floors pillars at the top to look like the second floors
+please"*. The shortened post ended in a flat string-course band, which read as
+the post melting into the wall. It now carries the SAME capped diamond top as
+the full post — the identical drawing recipe, shifted down — at the height the
+three-release hunt settled (level with the walls). The pixels below the cap
+are unchanged from the full post, so the v0.6.80 crossfade stays artifact-free
+below the cap by construction.
+
+### Added - probe upgrades
+`--probe-world` counts `lean_blocked` across every upper building (a
+screenshot only ever checks one), and the `--door=` table prints each door's
+CELL — hunting a specific building's door by trial framing wasted five shots
+this session.
+
+### Verified
+DOORS 16 on identical cells (the furnisher changes moved zero rng draws),
+UPPERS 6 floorless=0 propless=0 **lean_blocked=0** (was 5), `FLOORDOOR PASS`,
+240.0 fps / 4.72 ms. Nodes 8527: +145 over v0.6.79 is v0.6.80's two-layer
+wall sprites, which that release failed to re-measure — recorded here rather
+than left to look like a leak. `SEC PASS`, `DOCS PASS`, `CLAIMS PASS`,
+`SMOKE PASS`.
+
 ## [0.6.80] - 2026-08-07 - the upper wall fades, and the pillars land level
 
 ### Fixed - the pillars, third attempt, DERIVED this time

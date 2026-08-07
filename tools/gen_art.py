@@ -1117,7 +1117,25 @@ def make_wall_segment(style: str, axis: str, window_variant: int = -1,
             up_h = min(h, STORY_H - 12)
             _draw_seg_window(c, ox, oy, axis, face_h, wi, 7, w, up_h, False)
 
-    c.outline_auto(sides=False)   # tiles edge to edge: no seam lines
+    painted = c.outline_auto(sides=False)   # tiles edge to edge: no seam lines
+    if upper_only:
+        # The transom butts DOWN onto the door lintel exactly the way segments
+        # butt sideways onto each other - and sides=False already exists so
+        # those sideways joins are not outlined. The bottom join was still
+        # outlined, which drew a dark line across the top of every door on a
+        # two-storey building; it faded with the upper band, so it also
+        # CHANGED when you stepped inside (user: "theres a line on top of the
+        # door, and it goes away when i go inside, can you remove that line
+        # completely"). Strip outline pixels whose support is ABOVE them (the
+        # bottom edge); the top edge - the roofline - keeps its outline like
+        # every other wall piece.
+        for (qx, qy) in painted:
+            above_opaque = qy > 0 and c.px[qx, qy - 1][3] > 0 \
+                and (qx, qy - 1) not in painted
+            below_opaque = qy + 1 < c.h and c.px[qx, qy + 1][3] > 0 \
+                and (qx, qy + 1) not in painted
+            if above_opaque and not below_opaque:
+                c.px[qx, qy] = (0, 0, 0, 0)
     origin = (ox + 16, oy)
     # thin collision parallelogram along the base line
     if axis == "x":
@@ -1176,31 +1194,29 @@ def make_wall_post(style: str, stories: int = 1,
         # line (post top y 332, wall tops 348-352). User, with the excess
         # circled in red: "everywhere inside of the red circle needs to go ...
         # it should be flat with the rest of the walls".
-        # MEASURED TWICE, because both extremes were wrong. At 49 above origin
-        # the cap stood ~15 px proud ("a bit too high"); at 33 it vanished
-        # entirely ("you cant even see the pillar ... its too far down behind
-        # the wall") - a corner post is BEHIND both walls that meet there, so
-        # dead flush is invisible. The wall's top peaks at screen row 347 at
-        # the corner and the cap sits at 381 - height, so flush is 34 and this
-        # leaves the cap crowning the corner by 2 px.
-        # DERIVED FROM THE ANCHORS, after guessing twice and being wrong both
-        # ways. A corner post is placed on the cell's VERTEX (y offset -16)
-        # while its two walls are placed on the edge MIDPOINTS (y offset -8),
-        # so the post's anchor sits 8 px up-screen of theirs and it must be
-        # 8 px SHORTER than the wall to finish level: 49 - 8 = 41.
-        # 49 stood proud ("a bit too high"); 33 and 36 disappeared behind the
-        # walls entirely ("you cant even see the pillar").
-        cut = 1 + STORY_H + 3
-        for y in range(0, cut):
-            for x in range(18):
-                c.px[x, y] = (0, 0, 0, 0)
-        # ...and it wears the WALL'S string course, same two rows and the same
-        # alternation, so the top line runs continuously from wall to corner
-        # instead of changing material at every post
+        # THE SHORT PILLAR CARRIES THE FULL PILLAR'S TOP (user: "i want the
+        # first floors pillars at the top to look like the second floors
+        # please"). The previous cut ended in a flat string-course band, which
+        # read as the post melting into the wall; this redraws the SAME capped
+        # diamond top the full post has - the identical recipe, shifted down -
+        # so the corner reads as a capped pillar, just shorter.
+        #
+        # The HEIGHT stays where the three-release hunt landed it (49 stood
+        # proud, 33 and 36 vanished behind the walls, 41 sat level - anchors:
+        # a post hangs off the cell VERTEX, walls off edge MIDPOINTS, 8 px
+        # apart, so level = the wall's 49 minus 8).
+        lift = STORY_H + 3
         for x in range(12):
-            for row in (0, 1):
-                c.set(2 + x, cut + row,
-                      CONC_L1 if (x + row) % 2 else CONC_BASE)
+            # erase this column above where its shifted cap begins
+            for y in range(0, lift + bottoms[x] - 1):
+                c.px[2 + x, y] = (0, 0, 0, 0)
+        rows_d = small_diamond_rows(12, 6)
+        for i, (x0, x1) in enumerate(rows_d):
+            for x in range(x0, x1 + 1):
+                c.set(2 + x, 1 + lift + i, lit)
+        for x in range(12):
+            c.set(2 + x, lift + bottoms[x], CONC_L1)
+            c.set(2 + x, lift + bottoms[x] - 1, CONC_L1 if x % 2 else CONC_L2)
     c.outline_auto(sides=False)   # tiles edge to edge: no seam lines
     return c, (8, 1 + post_h + 3), ["circle", 4.0]
 

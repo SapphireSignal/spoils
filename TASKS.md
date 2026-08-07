@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.80.** The release history was renumbered evenly on
+**Current version: v0.6.81.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -770,9 +770,21 @@ whatever it is, it does not cover the full opening height. `make_door_strip`
 in `tools/gen_art.py`, and the opening is cut in `_build_shell`. Compare the
 leaf's drawn height against the hole the wall leaves.
 
-## B0m. Two open items from the second-floor pass *(user, 2026-08-07)*
+## B0m. Two open items from the second-floor pass — **BOTH FIXED in v0.6.81**
 
-Both reported against v0.6.78 and **not started**.
+**Item 1 (the door line) FIXED**: it was the transom's bottom outline, drawn
+where the upper wall band sits on the door lintel — a butt join, which never
+gets an outline anywhere else. It faded with the band, which is why it
+"went away inside". Stripped; the join is seamless brick in both states.
+
+**Item 2 (stairs clipping furniture) FIXED**: the flight's art leans into
+`stairs_cell + (0,-1)` and nothing reserved that cell. `lean_blocked` probed
+**5 -> 0** across all six buildings. The fix erases the cell from furnisher
+candidate lists AFTER shuffling — pocket entries change the shuffle's draw
+count and reroll the district, which is why it could not just be added to
+pocket. DOORS stayed 16 on identical cells.
+
+The original diagnosis below is kept for the record.
 
 1. **A line above the door that disappears when you go inside.** *"theres a
    line on top of the door, and it goes away when i go inside, can you remove

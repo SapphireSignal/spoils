@@ -2245,6 +2245,7 @@ func _build_shell(plot: Dictionary) -> void:
 	# two-story buildings claim a stairs corner BEFORE furnishing, so no
 	# couch ever blocks the flight
 	var stairs_cell := Vector2i(-99, -99)
+	var stair_lean: Array[Vector2i] = []
 	if stories == 2:
 		# a full cell in from every wall: the flight's art is wider than one
 		# cell and poked through the west facade when it hugged the corner
@@ -2262,6 +2263,16 @@ func _build_shell(plot: Dictionary) -> void:
 		pocket.append(stairs_cell)
 		pocket.append(stairs_cell + Vector2i(0, 1))   # the approach stays clear
 		pocket.append(stairs_cell + Vector2i(1, 0))
+		# The flight's ART leans one cell up-right (cell -y) of its anchor -
+		# the back-wall row, exactly where the house furnisher hangs cabinets
+		# (user: "i can see it clipping into the tv").
+		#
+		# DELIBERATELY NOT IN pocket: pocket feeds _interior_free_cells, and
+		# one more entry shrinks the free-cell list, which changes _shuffle's
+		# draw count, which rerolls the whole fixed district (the v0.6.53
+		# lesson). The furnishers erase this cell AFTER their shuffles instead
+		# - identical draws, different landing spots.
+		stair_lean.append(stairs_cell + Vector2i(0, -1))
 
 	var ground_props: Array[Node2D] = []
 	if plot.get("safehouse", false):
@@ -2275,11 +2286,14 @@ func _build_shell(plot: Dictionary) -> void:
 			ground_props.append(_add_prop_at_cell(
 				"crate_%d" % _rng.randi_range(0, 5), crate_cell, Vector2(4, 2)))
 	elif kind == "house":
-		_furnish_house(interior, pocket, ground_props)
+		_furnish_house(interior, pocket, ground_props, stair_lean)
 	elif kind == "school":
+		# no stair_lean needed: the school's lean cell is on the board row and
+		# nothing the school furnisher places can reach it (board at centre,
+		# desks start three rows in, shelves on the south wall)
 		_furnish_school(interior, pocket, ground_props)
 	else:
-		_furnish_warehouse(interior, pocket, ground_props)
+		_furnish_warehouse(interior, pocket, ground_props, stair_lean)
 		var yard := Rect2i(rect.position.x + 1, rect.end.y + 1, rect.size.x - 1, 4)
 		if _yard_fits(yard):
 			_yards.append(yard)
@@ -2391,7 +2405,12 @@ func _interior_free_cells(interior: Rect2i, keep_clear: Array[Vector2i]) -> Arra
 
 
 func _furnish_house(interior: Rect2i, pocket: Array[Vector2i],
-		collect: Array[Node2D] = []) -> void:
+		collect: Array[Node2D] = [], avoid_late: Array[Vector2i] = []) -> void:
+	## avoid_late: cells no furniture may take, applied by ERASING them from
+	## each candidate list AFTER it is built and shuffled — never by filtering
+	## while building. A filter changes the list length, the length changes
+	## _shuffle's draw count, and that rerolls the fixed district. Erasing
+	## costs no draws; _take_random_cell costs one draw whatever the size.
 	var p := interior.position
 	var couch_side := _rng.randi_range(0, 1)
 	var couch_cell := p + Vector2i(1, 1 + couch_side)
@@ -2406,6 +2425,8 @@ func _furnish_house(interior: Rect2i, pocket: Array[Vector2i],
 			or not interior.has_point(couch_cell) or not interior.has_point(tv_cell):
 		var fallback := _interior_free_cells(interior, pocket)
 		_shuffle(fallback)
+		for a in avoid_late:
+			fallback.erase(a)
 		couch_cell = fallback.pop_front()
 		tv_cell = fallback.pop_front()
 	collect.append(_add_prop_at_cell(_pick_variant_varied("couch"), couch_cell, Vector2(6, 3)))
@@ -2417,6 +2438,8 @@ func _furnish_house(interior: Rect2i, pocket: Array[Vector2i],
 		if cell != couch_cell and cell != tv_cell and cell not in pocket:
 			wall_cells.append(cell)
 	_shuffle(wall_cells)
+	for a in avoid_late:
+		wall_cells.erase(a)   # this is the row the flight leans into
 	for piece in [_pick_variant_varied("cabinet"), _pick_variant_varied("bookshelf")]:
 		if wall_cells.is_empty():
 			break
@@ -2426,6 +2449,8 @@ func _furnish_house(interior: Rect2i, pocket: Array[Vector2i],
 	keep.append(couch_cell)
 	keep.append(tv_cell)
 	var cells := _interior_free_cells(interior, keep)
+	for a in avoid_late:
+		cells.erase(a)
 	var extras := [_pick_variant_varied("table"), _pick_variant_varied("chair"),
 		_pick_variant_varied("chair"), _pick_variant("crate")]
 	_shuffle(extras)
@@ -2437,7 +2462,9 @@ func _furnish_house(interior: Rect2i, pocket: Array[Vector2i],
 
 
 func _furnish_warehouse(interior: Rect2i, pocket: Array[Vector2i],
-		collect: Array[Node2D] = []) -> void:
+		collect: Array[Node2D] = [], avoid_late: Array[Vector2i] = []) -> void:
+	## avoid_late works as in _furnish_house: erased from lists after they are
+	## built, never filtered while building, so no draw count moves.
 	var p := interior.position
 	var rack_slots: Array[int] = []
 	for x_offset in range(1, interior.size.x - 1, 2):
@@ -2448,9 +2475,18 @@ func _furnish_warehouse(interior: Rect2i, pocket: Array[Vector2i],
 		var cell := Vector2i(p.x + rack_slots[i - 1], p.y)
 		if cell in pocket:
 			continue
+		if cell in avoid_late:
+			# SKIPPING would drop this rack's variant and jitter draws and
+			# reroll every building after this one — place it one column
+			# over instead, same draws
+			cell.x += 1
+			if cell in pocket or not interior.has_point(cell):
+				cell.x -= 2
 		collect.append(_add_prop_at_cell(_pick_variant_varied("rack"), cell, Vector2(8, 2)))
 		used.append(cell)
 	var cells := _interior_free_cells(interior, used)
+	for a in avoid_late:
+		cells.erase(a)
 	# PACKED (user call): a warehouse full of freight, weighted hard toward
 	# boxes — the barrels and cylinders are what's left over between them
 	var stock_mix := [

@@ -103,7 +103,7 @@ collider exists up there. Both items need a repro from the user rather than a
 guess; rebuilding a system that measures clean is how the map screen got built
 twice.
 
-**Then v0.6.78 through v0.6.80 — the stairwell shaft (sampled, kept, fleet-wide),
+**Then v0.6.78 through v0.6.81 — the stairwell shaft (sampled, kept, fleet-wide),
 the two-storey wall split, the engine loop seam, stair collision, and the
 floor cross-fade.**
 
@@ -157,6 +157,28 @@ carried a shape nobody read — the door-collider lesson in a third place.
   two storeys), inside downstairs (upper band gone), upstairs (full walls
   back). Only the middle one is what was asked for; the other two are the
   regressions it can cause.
+
+**Then v0.6.81 — B0m closed: the door line, the caged flight, capped pillars.**
+
+- **The door line was the transom's BOTTOM OUTLINE.** A butt join — the upper
+  band sitting on the door lintel — and butt joins are never outlined anywhere
+  else (`sides=False` exists for the sideways ones). It faded with the band,
+  which is why the user saw it "go away inside". If a stray dark line ever
+  appears where two wall pieces meet, check which join outline_auto is
+  outlining before anything else.
+- **`lean_blocked` 5 -> 0.** The flight's art leans into `stairs_cell +
+  (0,-1)`; five of six buildings had furniture standing in the staircase and a
+  screenshot had only ever shown one. The fix pattern matters: the cell is
+  ERASED from furnisher lists AFTER shuffling, never added to pocket — pocket
+  size changes the shuffle's draw count and rerolls the district. Warehouse
+  racks RELOCATE one column instead of skipping, because a skipped rack drops
+  its draws. Verified: DOORS 16 on identical cells.
+- **The low post now carries the full post's capped top** (same recipe,
+  shifted) — user: "i want the first floors pillars at the top to look like
+  the second floors". Below the cap it is pixel-identical to the full post, so
+  the v0.6.80 crossfade stays clean by construction.
+- **Nodes are 8527, not ~8380.** +145 is v0.6.80's two-layer wall sprites;
+  that release did not re-run --perf and this one did. Not a leak.
 
 **Picked up at: B0c items 1 and 3, which BOTH NEED A REPRO from the user**
 (the "clipping" pair — one was my own misread of a HUD label, the other

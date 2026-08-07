@@ -1516,8 +1516,13 @@ func _shot(shot_name: String) -> void:
 				var spr := dd.get_node_or_null("Sprite2D") as Sprite2D
 				if spr != null and spr.texture != null:
 					tex = spr.texture.resource_path.get_file()
-				print("DOORLIST %d depth_out=%.1f span_out=%.1f..%.1f straddles=%s %s"
-					% [i, dd.leaf_depth(true), sp.x, sp.y,
+				var fl_map := (get_tree().current_scene.get("_floor_layer")
+					as TileMapLayer)
+				var dcell := Vector2i(-99, -99)
+				if fl_map != null:
+					dcell = fl_map.local_to_map(dd.wall_position())
+				print("DOORLIST %d cell=%s depth_out=%.1f span_out=%.1f..%.1f straddles=%s %s"
+					% [i, str(dcell), dd.leaf_depth(true), sp.x, sp.y,
 						str(sp.x < 0.0 and sp.y > 0.0), tex])
 			var d: Door = null
 			var best_depth := 0.0
@@ -2362,14 +2367,23 @@ func _probe_world() -> void:
 	var uppers: Array = info.get("uppers", []) as Array
 	var floorless := 0
 	var propless := 0
+	var lean_blocked := 0
 	for u in uppers:
 		var reg := u as Dictionary
 		if (reg["floor_tiles"] as Array).is_empty():
 			floorless += 1
 		if (reg["upper_props"] as Array).is_empty():
 			propless += 1
-	print("UPPERS total=%d floorless=%d propless=%d stairs=%d" % [
-		uppers.size(), floorless, propless, stairs_cells.size()])
+		# the flight's art leans into stairs_cell + (0,-1); a ground prop
+		# there overlaps the staircase (user: "i can see it clipping into
+		# the tv"). This counts offenders across ALL six buildings, because
+		# a screenshot only ever checks one.
+		var lean: Vector2i = (reg["stairs_cell"] as Vector2i) + Vector2i(0, -1)
+		for gp in (reg["ground_props"] as Array):
+			if floor_layer.local_to_map((gp as Node2D).global_position) == lean:
+				lean_blocked += 1
+	print("UPPERS total=%d floorless=%d propless=%d stairs=%d lean_blocked=%d" % [
+		uppers.size(), floorless, propless, stairs_cells.size(), lean_blocked])
 	var car_cells: Array[Vector2i] = []
 	for car in get_tree().get_nodes_in_group("cars"):
 		car_cells.append(floor_layer.local_to_map((car as Node2D).global_position))
