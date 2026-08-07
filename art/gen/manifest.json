@@ -6350,7 +6350,8 @@
         16,
         14
       ],
-      "collider": null
+      "collider": null,
+      "flat": true
     },
     "spray_cans_1": {
       "size": [
@@ -6361,7 +6362,8 @@
         16,
         14
       ],
-      "collider": null
+      "collider": null,
+      "flat": true
     },
     "spray_cans_2": {
       "size": [
@@ -6372,7 +6374,8 @@
         16,
         14
       ],
-      "collider": null
+      "collider": null,
+      "flat": true
     },
     "spray_cans_3": {
       "size": [
@@ -6383,7 +6386,8 @@
         16,
         14
       ],
-      "collider": null
+      "collider": null,
+      "flat": true
     },
     "smoker": {
       "size": [
@@ -7734,7 +7738,8 @@
         9,
         6
       ],
-      "collider": null
+      "collider": null,
+      "flat": true
     },
     "stick_1": {
       "size": [
@@ -7745,7 +7750,8 @@
         7,
         6
       ],
-      "collider": null
+      "collider": null,
+      "flat": true
     },
     "stick_2": {
       "size": [
@@ -7756,7 +7762,8 @@
         7,
         6
       ],
-      "collider": null
+      "collider": null,
+      "flat": true
     },
     "stick_3": {
       "size": [
@@ -7767,7 +7774,8 @@
         7,
         6
       ],
-      "collider": null
+      "collider": null,
+      "flat": true
     },
     "bush_0": {
       "size": [
@@ -7967,7 +7975,8 @@
         4,
         6
       ],
-      "collider": null
+      "collider": null,
+      "flat": true
     },
     "trash_1": {
       "size": [
@@ -7978,7 +7987,8 @@
         4,
         6
       ],
-      "collider": null
+      "collider": null,
+      "flat": true
     },
     "trash_2": {
       "size": [
@@ -7989,7 +7999,8 @@
         4,
         6
       ],
-      "collider": null
+      "collider": null,
+      "flat": true
     },
     "trash_3": {
       "size": [
@@ -8000,7 +8011,8 @@
         5,
         4
       ],
-      "collider": null
+      "collider": null,
+      "flat": true
     },
     "trash_4": {
       "size": [
@@ -8011,7 +8023,8 @@
         4,
         4
       ],
-      "collider": null
+      "collider": null,
+      "flat": true
     },
     "puddle_0": {
       "size": [

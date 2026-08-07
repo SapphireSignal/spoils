@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.82.** The release history was renumbered evenly on
+**Current version: v0.6.83.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -1026,9 +1026,17 @@ both together. The booth art may need a mirrored facing so the window
 faces the asphalt. Re-verify `TollGate.setup`'s boom offset still spans
 the road, and that the extract zone beyond the wire still lines up.
 
-## B9. Flat ground props draw over the player
+## B9. Flat ground props draw over the player — **FIXED in v0.6.83**
 
-**Repro:** a small flat orange-brown object renders **on top of** the
+The generator writes `"flat": true` for its collider-less litter families
+(trash, sticks, spray cans) and `_add_prop` parents flagged props into the
+`Flat` layer — over the tiles, under everything that stands. 124 decals moved
+off the y-sort; verified by standing the player on one (the new `FLAT` probe
+prints cells to aim at). Deterministic layering, cannot recur. The original
+notes below stand for any future flat family: flag it in the GENERATOR, and
+anything with real height stays y-sorted.
+
+**Repro was:** a small flat orange-brown object renders **on top of** the
 raider standing on it. It does **not** block — purely draw order.
 
 **The fix already exists:** `_flat` in `world_builder.gd` is a `Node2D`
@@ -1083,10 +1091,11 @@ verification cannot be reproduced. If a future pass ever does touch this
 array, note the menu's version label derives from `CHANGELOG_ENTRIES[0][0]`
 — do not disturb ordering.
 
-## C2. v0.4.3 has no in-game changelog entry
+## C2. v0.4.3 has no in-game changelog entry — **DONE in v0.6.83**
 
-It has a git tag and a `CHANGELOG.md` entry but no `CHANGELOG_ENTRIES`
-row — the policy says every version gets one. Write it from the commit.
+Row written from the shipped CHANGELOG.md entry and inserted in
+chronological position, so `CHANGELOG_ENTRIES[0][0]` — the menu's version
+label source — was untouched.
 
 ## C3. Non-rectangular buildings *(user)*
 

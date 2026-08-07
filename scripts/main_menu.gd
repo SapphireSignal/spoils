@@ -206,6 +206,10 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.83", [
+		"litter lying on the ground cant draw over you any more. flat things have no height to sort by, so standing on a paper scrap was a coin toss whether you or the scrap drew on top - they live in their own layer under everything that stands now, 124 of them",
+		"the missing v0.4.3 entry in this list is filled in, back where it belongs",
+	]],
 	["v0.6.82", [
 		"the ground floor pillars of two storey buildings now crown their corners exactly like one storey pillars do. measured, all three cases sit two pixels proud of the wall - before this the ground floor ones were dead level, which meant the cap hid completely behind the walls",
 	]],
@@ -722,6 +726,9 @@ const CHANGELOG_ENTRIES := [
 		"the district is bigger - roughly a quarter wider edge to edge. every block has more room, and the scrapyard hall builds as a proper warehouse again instead of shrinking to squeeze past the rails.",
 		"one railway the whole way across: wooden ties under steel rail, the identical tile end to end, properly connected.",
 		"the worn and overgrown stretches of track are gone - they broke the line into what read as separate broken bits of railway. the poles, signals and lineside junk beside it stay, the track surface was the problem, not them.",
+	]],
+	["v0.4.3", [
+		"v0.4.2 went out with a failing smoke test - the check and the release were chained so the red result never stopped the push. two real bugs were under it: the driving test failed if one particular car happened to be parked without room, and clutter piles could drop their satellite pieces into roads, doorways and onto parked cars",
 	]],
 	["v0.4.2", [
 		"the scrapyard warehouse is back. stopping it being built on top of the railway had quietly deleted it instead, which put the racks and crates back out in the open with no building around them.",

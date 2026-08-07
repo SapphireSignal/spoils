@@ -1817,7 +1817,16 @@ func _add_prop(prop_name: String, pos: Vector2) -> Node2D:
 	elif sway_kind == "bush":
 		sprite.material = _sway_material(1.0)
 	node.add_child(sprite)
-	_ysort.add_child(node)
+	if bool((_manifest["props"][prop_name] as Dictionary).get("flat", false)):
+		# GROUND DECALS (manifest "flat"): litter lying ON the ground has no
+		# height to sort by, so y-sorting it against a person standing on it
+		# is a coin toss - B9's "small flat orange-brown object renders on
+		# top of the raider". The flat layer sits over the tiles and under
+		# everything that stands. The LAYER, not z_index: z sorts globally in
+		# the canvas layer, which put the cables behind the floor entirely.
+		_flat.add_child(node)
+	else:
+		_ysort.add_child(node)
 	return node
 
 

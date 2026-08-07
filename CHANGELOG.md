@@ -3,6 +3,38 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.83] - 2026-08-07 - litter stays under your feet
+
+### Fixed - flat ground litter drew over the player standing on it *(B9)*
+A paper scrap, a fallen stick or a spent spray can lying ON the ground has no
+height to sort by, so y-sorting it against a person standing on it is a coin
+toss - and the losing half rendered a raider BEHIND a piece of litter.
+
+The generator now writes `"flat": true` into the manifest for its
+collider-less litter families (trash, sticks, spray cans - the generator
+knows what it drew flat; matching names in GDScript is how "street_lamp" once
+contained "tree"), and the builder parents flagged props into the existing
+`Flat` layer: over the tiles, under everything that stands. **The LAYER, not
+z_index** - z sorts globally within the canvas layer, which is what once put
+the cables behind the floor tilemap entirely.
+
+**124 decals** moved off the y-sort. Verified by standing the player exactly
+on one (`FLAT` probe prints the cells now): drawn fully, litter underneath.
+Deterministic layering, so it cannot recur - anything in that layer can never
+cover a standing thing. Anything WITH height (bottles crates barrels) keeps
+its y-sort; the flag only ever lands on collider-less families.
+
+### Housekeeping - v0.4.3 has its in-game changelog row *(C2)*
+Every version gets a row (standing policy); v0.4.3 was the one gap - tag and
+CHANGELOG.md entry, no in-game row. Written from the shipped entry, inserted
+in chronological position so the menu's version label (driven by the newest
+row) is untouched.
+
+### Verified
+DOORS 16 on identical cells - the reparent takes no rng draw, so the fixed
+district is intact. FLAT decals=124. `SEC PASS`, `DOCS PASS`, `CLAIMS PASS`,
+`SMOKE PASS`.
+
 ## [0.6.82] - 2026-08-07 - the pillars match the one-storey look
 
 ### Fixed - the ground-floor pillars sat too low

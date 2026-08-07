@@ -19244,6 +19244,18 @@ def main() -> None:
             manifest["props"][name]["sway"] = "tree"
         elif name.startswith("bush_"):
             manifest["props"][name]["sway"] = "bush"
+    # GROUND DECALS: litter that lies ON the ground has no height to sort by,
+    # so the game draws it in the flat layer under everything that stands
+    # (B9: "a small flat orange-brown object renders on top of the raider
+    # standing on it" - a paper scrap y-sorted against a person is a coin
+    # toss). Flagged here because the GENERATOR knows what it drew flat;
+    # matching names in GDScript is how "street_lamp" once contained "tree".
+    # Only collider-less families qualify - anything solid has height by
+    # definition and stays y-sorted.
+    for name in manifest["props"]:
+        if name.startswith(("trash_", "stick_", "spray_cans")) \
+                and manifest["props"][name].get("collider") is None:
+            manifest["props"][name]["flat"] = True
     for name, extra in DOOR_COLLIDERS.items():
         manifest["props"][name]["collider_open"] = extra["open"]
         manifest["props"][name]["collider_open_out"] = extra["open_out"]

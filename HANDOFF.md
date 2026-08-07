@@ -103,7 +103,7 @@ collider exists up there. Both items need a repro from the user rather than a
 guess; rebuilding a system that measures clean is how the map screen got built
 twice.
 
-**Then v0.6.78 through v0.6.82 — the stairwell shaft (sampled, kept, fleet-wide),
+**Then v0.6.78 through v0.6.83 — the stairwell shaft (sampled, kept, fleet-wide),
 the two-storey wall split, the engine loop seam, stair collision, and the
 floor cross-fade.**
 

@@ -2361,6 +2361,18 @@ func _probe_world() -> void:
 	for s in get_tree().get_nodes_in_group("stairs"):
 		stairs_cells.append(floor_layer.local_to_map((s as Node2D).global_position))
 	print("STAIRS total=%d cells=%s" % [stairs_cells.size(), stairs_cells.slice(0, 8)])
+	# ground decals living in the flat layer (B9). The count proves the
+	# manifest flag reached the builder; the cells give a shot somewhere to
+	# aim. Found via the floor layer's parent, not a hardcoded scene path —
+	# the builder hangs both off the same root.
+	var flat_node := floor_layer.get_parent().get_node_or_null("Flat")
+	if flat_node == null:
+		print("FLAT decals=MISSING (no Flat node beside the floor layer)")
+	else:
+		var flat_cells: Array[Vector2i] = []
+		for fchild in flat_node.get_children():
+			flat_cells.append(floor_layer.local_to_map((fchild as Node2D).position))
+		print("FLAT decals=%d cells=%s" % [flat_cells.size(), flat_cells.slice(0, 5)])
 	# second floors: every flight of stairs must have an upper registry, and
 	# every registry must have actually painted a floor. A building whose
 	# furniture shows with no slab under it lands here.
