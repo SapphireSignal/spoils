@@ -425,7 +425,18 @@ func _update_camera(delta: float) -> void:
 	# on from it IS the v0.2.1 "low fps walk" bug - the quantisation
 	# accumulates and the walk speed wobbles. Restore, move, capture, snap.
 	var snapped_pos := (_true_pos * c).round() / c
-	global_position = snapped_pos
+	# A HAIR ABOVE THE GRID, and it is load-bearing. Snapping the node put the
+	# sort key on the SAME whole-pixel grid the walls and props already sit on,
+	# so EXACT y ties became common - and y-sort has no defined order for a
+	# tie, which let the player win against a wall they were standing behind
+	# (user: "he should be behind the door right now but i can still see him").
+	#
+	# The epsilon is far below a pixel, so it rasterises identically and the
+	# v0.6.63 guarantee - sort key agrees with drawn position - still holds. It
+	# only decides ties, and it decides them the safe way: at equal depth the
+	# player goes BEHIND the scenery, because being hidden by something you are
+	# standing behind is right, while clipping through it never is.
+	global_position = snapped_pos - Vector2(0.0, 0.002)
 	var lift := Vector2(0.0, -floor_lift)
 	_sprite.position = lift
 	# THROWN AND SHEARED BY THE SUN. The blob is a SOFT-ALPHA texture, which is

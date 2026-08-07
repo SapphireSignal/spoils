@@ -3,6 +3,28 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.71] - 2026-08-06 - the player loses ties to the scenery
+
+### Fixed - drawing over a wall at exactly equal depth
+*"he should be behind the door right now but i can still see him"*.
+**A v0.6.63 side-effect.** Snapping the player's node onto the pixel grid
+fixed a measured 46% wrong-order rate near the character - but it also put the
+sort key on the **same whole-pixel grid the walls and props already sit on**,
+so EXACT depth ties became common. Y-sort has no defined order for a tie, so
+the player could win against a wall they were standing behind.
+
+The node now sits **0.002 px above the grid**. That is far below a pixel, so
+it rasterises identically and the v0.6.63 guarantee still holds - it only
+decides ties, and it decides them the safe way: **at equal depth the player
+goes behind the scenery.** Being hidden by something you are standing behind
+is right; clipping through it never is.
+
+Measured with `--probe-sort`: 810 px walked, **0 disagreements**, max offset
+0.002 px.
+
+### Verified
+`SMOKE PASS`, `--probe-sort` clean.
+
 ## [0.6.70] - 2026-08-06 - the door header follows the slope (8 px -> 3 px)
 
 ### Improved, NOT finished - the gap above a door

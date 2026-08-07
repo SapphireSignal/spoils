@@ -567,6 +567,19 @@ existing, the header being wall-coloured, the jambs being wall-coloured, the
 header following the slope. **When a user keeps re-reporting one spot, stop
 fixing the reported symptom and enumerate every piece of that assembly first.**
 
+**Shipped: v0.6.71 - the player loses ties to the scenery.** Snapping the
+node in v0.6.63 put the sort key on the SAME whole-pixel grid the world sits
+on, so exact depth ties became common and y-sort has no defined winner for a
+tie. The node sits 0.002 px above the grid now: far below a pixel so it
+rasterises identically, and it only decides ties - **at equal depth the player
+goes BEHIND**, because being hidden by what you stand behind is right and
+clipping through it never is. `--probe-sort`: 810 px, 0 disagreements.
+
+**That closes TASKS.md B0e.** Note the shape of it: a correct fix (snapping)
+created a second-order problem (ties) that only showed up in one specific
+place. **When you move a value onto a shared grid, ask what else is on that
+grid.**
+
 **A CONFLICT WORTH CATCHING: the stairwell hole was BUILT ONCE AND REMOVED
 AT THE USER'S REQUEST.** `_build_upper`'s comment records it - *"the
 stairwell hole showed the ground and broke it"* - and they have now asked for

@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.70.** The release history was renumbered evenly on
+**Current version: v0.6.71.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -540,8 +540,8 @@ the second floor that compares the player's position against slab geometry
 should be re-read with that in mind - `floor_lift` already offsets the sprite
 and camera together.
 
-## B0e. The player draws THROUGH a wall in a doorway *(user, 2026-08-06)*
-## — LIKELY A v0.6.63 REGRESSION, AND THE MECHANISM IS KNOWN
+## B0e. The player draws THROUGH a wall — **FIXED in v0.6.71**
+## (kept: the mechanism is a reusable warning)
 
 *"right now im behind the door, my character shouldnt be seen, but i am seen
 still"*, with a screenshot: standing in an open doorway, the character is
