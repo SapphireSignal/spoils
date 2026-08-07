@@ -179,10 +179,25 @@ answers those while a door is open.
   done in each pair — and this file points at "B0c, the second floor". The
   completed ones are now B0j/B0k; the open ones keep their letters.
 
-**Picked up at: B0c, the second floor** — unchanged, still four separate things
-in one report, and the stairwell hole in it still needs the user's sign-off
-before building (it was built once and they had it removed). B0d, B0f and the
-B0-NEW backlog all still open.
+**THE USER SIGNED OFF ON THE WHOLE DOOR RUN:** *"everything with the doors is
+now fixed and it all looks clean, except when you go up the second floor and
+the door closes"*. So v0.6.72-75 are confirmed good in play — treat the door
+assembly as settled and do NOT reopen it chasing a fifth theory.
+
+**Picked up at: B0f — going upstairs shuts the front door.** The user named it
+as the one door thing still wrong, on their way to bed: *"we will fix that and
+the rest of the stuff when i wake up"*. It is already written up in TASKS.md
+with the mechanism sketched — `main.gd` `force_closed()`s any open door inside
+the upper room's cells when you climb, which is deliberate (an open ground
+doorway under a second story let someone walk out into the air) but it fires
+on the FRONT door too. Read that comment before changing it; the rule it
+protects is real.
+
+**Then B0c, the second floor** — four separate things in one report, and the
+stairwell hole in it still needs the user's sign-off before building (it was
+built once and they had it removed). B0-NEW backlog still open behind that.
+**B0d, B0g and B0i were all closed BY THE USER IN PLAY this session**, not by
+code — do not go looking for the commits that fixed them.
 
 ---
 
