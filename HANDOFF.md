@@ -223,7 +223,30 @@ the story lift and pulling the art the other way (the second-floor pattern,
 on the floor itself). Check walls at the room's north edge afterwards; they
 are the reason the tiles were not simply pushed behind everything.
 
-**Picked up at: B0c items 1 (repro above) and 3, plus the standing backlog**
+**Then v0.6.86 — the second floor became an actual second floor.** A
+two-storey wall was ONE sprite: the upper band already sat at the right
+height, but nothing hid the LOWER band, so upstairs you saw the whole facade
+and both window rows. The user proved it from the walls alone: *"you are still
+on the ground, it just looks different colours now ... look at the walls in
+the pictures, they are the same"*. Walls are two BANDS now — outside both,
+downstairs the ground band, upstairs the upper band and its own windows.
+
+**THE BUG THAT ALMOST SHIPPED, and its lesson:** every wall SEGMENT got an
+upper band; the POSTS did not, so they fell back to their full texture —
+full-height pillars with a thin strip of wall between them. The tell was in
+the smoke log (`Resource file not found: post2_brick_b_upper.png`) and I did
+not read it, because **the fallback still drew something**. A missing asset
+that renders is worse than one that crashes. It now `push_error`s by name.
+**When a system gets a new variant dimension, enumerate EVERY piece that
+needs it — segments, posts, transoms — not just the obvious family.**
+
+Also: halls and the school were floored in `screed`, which is literally
+`CONC_BASE`/`CONC_D1`, the pavement's own two values — hence *"it shouldnt
+look like the actual ground from outside"*. They get `lino`; upstairs gets
+`board`. Different by construction now, not by a same-tile guard.
+
+**Picked up at: B0n (upper/ground furniture still overlap — see TASKS for why
+it is not a simple list edit), B0c item 3, plus the standing backlog**
 (the "clipping" pair — one was my own misread of a HUD label, the other
 measures clean at 19 solid / 0 invisible). Item 4 is done; the note below is
 kept because the reason the first attempt failed is still the design

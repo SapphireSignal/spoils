@@ -47,6 +47,18 @@ furnisher's cell list feeds `_shuffle`, and changing a list's length changes
 the draw count and rerolls the whole fixed district. Freeing a node afterwards
 costs no draws.
 
+### Fixed before release - the corner posts had no upper band
+Caught by the user on the pre-release build: *"i only see the posts, not the
+wall which is wrong"*. Every wall SEGMENT got an upper band; the POSTS did
+not, so upstairs they fell back to their full texture — full-height pillars
+with one thin strip of wall between them.
+
+The tell was in the smoke log all along: `Resource file not found:
+post2_brick_b_upper.png`. It failed **silently** because a missing band left
+the full texture in place, which still draws. That fallback now raises a loud
+`push_error` naming the missing piece, so a half-applied storey switch can
+never again look like an art bug.
+
 ### Verified
 **DOORS 16, LAMPS 53/15 and VEHICLES 30 all on identical cells** — the proof
 that none of this moved an rng draw. UPPERS 6, floorless=0, propless=0,

@@ -2403,7 +2403,15 @@ func _register_low_wall(into: Array, node: Node2D, low_name: String) -> void:
 	if low_name != "":
 		var up_name := low_name.trim_suffix("_low") + "_upper"
 		var up_tex := load("res://art/gen/%s.png" % up_name) as Texture2D
-		if up_tex != null:
+		if up_tex == null:
+			# LOUD, not silent. A missing upper band used to leave the FULL
+			# texture in place, so that piece stayed full height while every
+			# other piece shrank to one storey - full-height pillars with a
+			# thin strip of wall between them, and no error anywhere except a
+			# resource-not-found line buried in the log.
+			push_error("wall band missing: %s.png - the piece will not " % up_name
+				+ "switch storey. Generate it in wall_piece_inventory.")
+		else:
 			sprite.texture = up_tex
 	into.append([sprite, low_sprite])
 

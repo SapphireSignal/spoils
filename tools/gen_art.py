@@ -1203,7 +1203,8 @@ def make_wall_segment(style: str, axis: str, window_variant: int = -1,
     return c, origin, None if upper_only else ["poly", poly]
 
 def make_wall_post(style: str, stories: int = 1,
-                   lower_only: bool = False) -> tuple[Canvas, tuple, list]:
+                   lower_only: bool = False,
+                   upper_only: bool = False) -> tuple[Canvas, tuple, list]:
     # exactly the face height: the cap sits flush in the roof plane, closing
     # the fascia line at each corner instead of poking through the roof
     #
@@ -1275,6 +1276,19 @@ def make_wall_post(style: str, stories: int = 1,
         for x in range(12):
             c.set(2 + x, lift + bottoms[x], CONC_L1)
             c.set(2 + x, lift + bottoms[x] - 1, CONC_L1 if x % 2 else CONC_L2)
+    if upper_only:
+        # THE POST'S UPPER BAND — the exact complement of lower_only, cut on
+        # the same line so the two stack back into the full post.
+        #
+        # Without this the corners had no upper piece at all and fell back to
+        # their FULL texture, so standing upstairs you saw full-height pillars
+        # with only a thin band of wall between them (user: "i only see the
+        # posts, not the wall which is wrong"). Every wall piece needs BOTH
+        # bands or the storey switch is half-applied.
+        lift = STORY_H + 1
+        for x in range(12):
+            for y in range(lift + bottoms[x] - 1, c.h):
+                c.px[2 + x, y] = (0, 0, 0, 0)
     c.outline_auto(sides=False)   # tiles edge to edge: no seam lines
     return c, (8, 1 + post_h + 3), ["circle", 4.0]
 
@@ -1352,6 +1366,7 @@ def wall_piece_inventory() -> dict[str, tuple[Canvas, tuple, list]]:
         pieces[f"post_{style}"] = make_wall_post(style)
         pieces[f"post2_{style}"] = make_wall_post(style, 2)
         pieces[f"post2_{style}_low"] = make_wall_post(style, 2, True)
+        pieces[f"post2_{style}_upper"] = make_wall_post(style, 2, False, True)
     return pieces
 
 # ----------------------------------------------------------------- roofs -----
