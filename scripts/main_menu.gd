@@ -208,7 +208,10 @@ const CHANGELOG_ENTRIES := [
 	# sentence across several entries put a dash on every line (user).
 	["v0.6.78", [
 		"theres a stairwell opening in the second floor now, so you can see where the stairs are. its painted as a shaft rather than cut as a hole - the last version of this showed the room below through it and stopped the floor reading as a floor",
-		"standing on the ground floor of a two storey house, the upper floors wall doesnt tower over the room any more. from outside its still two storeys, and upstairs its still there",
+		"standing on the ground floor of a two storey house, the upper floors wall doesnt tower over the room any more - including the six corner and door pillars, which needed their own shortened version. from outside its still two storeys, and upstairs its still there",
+		"going up the stairs shows the upper floor straight away instead of waiting for you to take a step",
+		"the faint static while driving should be gone. the engine pitch was being held and then jumped in small steps about 120 times a second, and a staircase like that is what makes the crackle",
+		"everything is another 3 decibels louder",
 	]],
 	["v0.6.77", [
 		"the second floor is a proper floor now - the staircase used to be drawn straight through it and sit on the floorboards. its covered while youre up there, and the solid part goes with it so theres nothing invisible to walk into",

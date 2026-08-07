@@ -9320,6 +9320,20 @@
         4.0
       ]
     },
+    "post2_brick_a_low": {
+      "size": [
+        18,
+        94
+      ],
+      "origin": [
+        8,
+        76
+      ],
+      "collider": [
+        "circle",
+        4.0
+      ]
+    },
     "seg_brick_b_x": {
       "size": [
         48,
@@ -10299,6 +10313,20 @@
       ]
     },
     "post2_brick_b": {
+      "size": [
+        18,
+        94
+      ],
+      "origin": [
+        8,
+        76
+      ],
+      "collider": [
+        "circle",
+        4.0
+      ]
+    },
+    "post2_brick_b_low": {
       "size": [
         18,
         94

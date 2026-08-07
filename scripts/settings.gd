@@ -114,7 +114,12 @@ func apply_volumes() -> void:
 ## (one-shots <= -18 dB, beds <= -28 dB) and re-balancing them one at a time
 ## would break the mix. There is plenty of headroom for it precisely because
 ## everything is authored that quietly.
-const MASTER_TRIM_DB := 3.0
+## Raised 3 -> 6 dB (user, again: "increase db across everwhere by another 3
+## please"). Still comfortably inside headroom: every individual cut is
+## authored under the standing quiet rule (one-shots <= -18 dB, beds <= -28),
+## which is exactly why there is room to lift the whole mix instead of
+## re-balancing sounds one at a time.
+const MASTER_TRIM_DB := 6.0
 
 func _apply_bus(bus_name: String, v: float, trim_db: float = 0.0) -> void:
 	var i := AudioServer.get_bus_index(bus_name)

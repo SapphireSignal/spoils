@@ -323,9 +323,18 @@ func _process(delta: float) -> void:
 	# pitch_scale micro-jumps zipper into crackle at 240 Hz (the "static"
 	# at full speed), and the higher the pitch the harsher the loop
 	var want_pitch := 0.9 + 0.26 * _engine_target
-	_engine_pitch = move_toward(_engine_pitch, want_pitch, delta * 0.6)
-	if absf(_engine_player.pitch_scale - _engine_pitch) > 0.004:
-		_engine_player.pitch_scale = _engine_pitch
+	_engine_pitch = move_toward(_engine_pitch, want_pitch, delta * 0.5)
+	# APPLIED EVERY FRAME, WITH NO THRESHOLD - and the threshold is what this
+	# fixes. Guarding the write with `> 0.004` HELD the pitch and then jumped
+	# it by a whole 0.004, roughly 120 times a second at 240 Hz. That is a
+	# staircase, and a staircase is precisely what zippers: it traded many
+	# tiny rate changes for fewer, BIGGER discontinuities. A continuous ramp of
+	# ~0.002 per frame resamples smoothly.
+	#
+	# User: "i can hear some sort of static like very subtle static sometimes
+	# when im driving". The earlier pass named the same symptom and slowed the
+	# slew; the residual was the guard it added.
+	_engine_player.pitch_scale = _engine_pitch
 
 
 func silence_world() -> void:

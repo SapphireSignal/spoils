@@ -1130,9 +1130,16 @@ def make_wall_segment(style: str, axis: str, window_variant: int = -1,
             b[0] + n[0], b[1] + n[1], a[0] + n[0], a[1] + n[1]]
     return c, origin, None if upper_only else ["poly", poly]
 
-def make_wall_post(style: str, stories: int = 1) -> tuple[Canvas, tuple, list]:
+def make_wall_post(style: str, stories: int = 1,
+                   lower_only: bool = False) -> tuple[Canvas, tuple, list]:
     # exactly the face height: the cap sits flush in the roof plane, closing
     # the fascia line at each corner instead of poking through the roof
+    #
+    # lower_only: the ground band alone, for the swap that happens while the
+    # player is inside downstairs. It CANNOT just reuse the one-storey post -
+    # that is the right height but a different canvas, and the origins are 32
+    # px apart (8,44) vs (8,76), so a texture swap alone would displace every
+    # corner. Same canvas, same origin, only shorter.
     rng = random.Random(f"{SEED}:post:{style}:{stories}")
     post_h = WALL_H + (STORY_H if stories == 2 else 0)
     c = Canvas(18, 62 + (STORY_H if stories == 2 else 0))
@@ -1147,6 +1154,18 @@ def make_wall_post(style: str, stories: int = 1) -> tuple[Canvas, tuple, list]:
         for y in range(bottoms[x] + 2, bottoms[x] + post_h, 4):
             if rng.random() < 0.6:
                 c.set(2 + x, y, dark if x < 6 else darker)
+    if lower_only:
+        # Drawn at FULL height first so the rng stream is identical, THEN the
+        # upper band is lifted off and a cap re-laid at the cut. The low post
+        # is exactly the full post's lower band, so the two swap without the
+        # courses shifting.
+        cut = 1 + STORY_H
+        for y in range(0, cut):
+            for x in range(18):
+                c.px[x, y] = (0, 0, 0, 0)
+        for x in range(12):
+            c.set(2 + x, cut, CONC_L1 if x % 2 else CONC_L2)
+            c.set(2 + x, cut + 1, CONC_L1)
     c.outline_auto(sides=False)   # tiles edge to edge: no seam lines
     return c, (8, 1 + post_h + 3), ["circle", 4.0]
 
@@ -1213,6 +1232,7 @@ def wall_piece_inventory() -> dict[str, tuple[Canvas, tuple, list]]:
                     style, axis, v, -1, 0, 2, False, True)
         pieces[f"post_{style}"] = make_wall_post(style)
         pieces[f"post2_{style}"] = make_wall_post(style, 2)
+        pieces[f"post2_{style}_low"] = make_wall_post(style, 2, True)
     return pieces
 
 # ----------------------------------------------------------------- roofs -----

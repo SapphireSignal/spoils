@@ -14,6 +14,7 @@ var _deploy_screen: Control
 var _deploy_label: Label
 var _deploy_time := 0.0
 var _last_roof_cell := Vector2i(-9999, -9999)
+var _last_roof_upper := -2   # the floor that cell test was last answered for
 var _respawning := false
 var _debrief_open := false     # one debrief per raid, whichever path gets there
 var _prompt: Label
@@ -685,9 +686,15 @@ func _process(delta: float) -> void:
 		_car_hint.visible = now_driving and not Ui.blocks_gameplay() \
 			and Time.get_ticks_msec() / 1000.0 < _car_hint_until
 	var cell := _floor_layer.local_to_map(_player.position)
-	if cell == _last_roof_cell:
+	# THE FLOOR IS PART OF THIS GATE. Climbing the stairs does not change your
+	# CELL, so gating on the cell alone left the walls in whatever state they
+	# had downstairs until you happened to take a step (user: "if you go up the
+	# stairs, then dont move your character, it only shows the first floor
+	# still, it should show both").
+	if cell == _last_roof_cell and _player_upper == _last_roof_upper:
 		return
 	_last_roof_cell = cell
+	_last_roof_upper = _player_upper
 	# INSIDE MEANS INSIDE. v0.6.65 also counted "standing on a door cell" as
 	# inside, to fix the player being visible through their own open doorway -
 	# but a door sits ON the wall line, so that cell reads the same whether you

@@ -2220,10 +2220,11 @@ func _build_shell(plot: Dictionary) -> void:
 	for pos in posts:
 		var post_node := _add_prop("%s_%s" % [post_prefix, style], pos as Vector2)
 		if stories == 2:
-			# the single-storey post is exactly the ground band's height
-			# (post_h = WALL_H, + STORY_H only when stories == 2), so it is the
-			# low piece already and no new art is needed for corners
-			_register_low_wall(low_walls, post_node, "post_%s" % style)
+			# post2_*_low, NOT the one-storey post. That is the right HEIGHT
+			# but a different canvas - the origins are 32 px apart, (8,44) vs
+			# (8,76) - so swapping to it displaces every corner. The low piece
+			# shares post2's canvas and origin.
+			_register_low_wall(low_walls, post_node, "post2_%s_low" % style)
 
 	for y in range(rect.position.y, rect.end.y):
 		for x in range(rect.position.x, rect.end.x):
