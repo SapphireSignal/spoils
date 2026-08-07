@@ -103,7 +103,7 @@ collider exists up there. Both items need a repro from the user rather than a
 guess; rebuilding a system that measures clean is how the map screen got built
 twice.
 
-**Then v0.6.78 through v0.6.83 — the stairwell shaft (sampled, kept, fleet-wide),
+**Then v0.6.78 through v0.6.84 — the stairwell shaft (sampled, kept, fleet-wide),
 the two-storey wall split, the engine loop seam, stair collision, and the
 floor cross-fade.**
 
@@ -189,7 +189,31 @@ it. **The whole five-round hunt would have been one round if the first
 question had been "which existing pillar looks right?" — when the user says
 X should look like Y, measure Y first, not X.**
 
-**Picked up at: B0c items 1 and 3, which BOTH NEED A REPRO from the user**
+**Then v0.6.83 (B9 flat litter + C2) and v0.6.84 (the ghost train).** The
+freight's hull was born solid and never switched off while she was AWAY — and
+her away-position (2600 px down the line) lands exactly above the bus depot,
+so an invisible train-length wall stood across the crossing all day. Found by
+`--probe-railwalk`, which walks every column and NAMES the blocker — it
+printed `Hull(StaticBody2D) drawing=false` before anyone had to theorise.
+**Verified BOTH halves**: away = 0 blocked, waiting = 8 columns solid.
+A spawn-state bug of the same family as Juice/Ui autoload leftovers: a thing
+created solid must decide, at creation, whether it is actually THERE.
+
+**B0c ITEM 1 NOW HAS A REPRO AND MY "NOT REPRODUCED" WAS WRONG.** The user
+photographed themselves upstairs with their legs sunk into the slab, and
+furniture sinking too ("you cant see my legs in that picture because its
+clipping in the floor"). My probe shots happened to stand at sub-cell
+positions where the south neighbour tile's lifted art does not cover the
+legs — the slab tiles are y-sorted per cell, so the tile one row SOUTH of a
+standing thing sorts in front of it and its art (drawn 32 px up) can cover
+the lower body, depending on the exact position within the cell. **The next
+session's job: reproduce at a sub-cell position, then fix the tile-vs-stander
+sort relationship** — likely by shifting each tile's sort position north by
+the story lift and pulling the art the other way (the second-floor pattern,
+on the floor itself). Check walls at the room's north edge afterwards; they
+are the reason the tiles were not simply pushed behind everything.
+
+**Picked up at: B0c items 1 (repro above) and 3, plus the standing backlog**
 (the "clipping" pair — one was my own misread of a HUD label, the other
 measures clean at 19 solid / 0 invisible). Item 4 is done; the note below is
 kept because the reason the first attempt failed is still the design

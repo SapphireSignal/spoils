@@ -3,6 +3,36 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.84] - 2026-08-07 - the ghost train stops haunting the crossing
+
+### Fixed - an invisible barrier across the rails above the bus depot
+*"on the rail road tracks, right above the bus depot, theres an invisible
+barrier on the tracks thats not letting me walk past the tracks"*.
+
+It was the NIGHT FREIGHT. Her hull — the one continuous nose-to-tail collider
+that stops you walking through the train — was **born solid and nothing ever
+turned it off while she was away**. Her away-position parks her 2600 px down
+the line from the trainyard stop, which lands exactly above the bus depot: an
+invisible, train-length wall standing across the main line all day, every
+day, except the one minute a night she is actually there and visible.
+
+Found by measurement, not theory: the new `--probe-railwalk` shoves the
+player across the line at every column of the depot's span and NAMES what
+blocks — it printed `Hull(StaticBody2D) tex= drawing=false` across 8 columns.
+The hull now tracks presence: intangible from birth (she starts away), solid
+on arrival and while waiting, off while you ride her (as before), intangible
+again once she is gone.
+
+### Verified - both halves, because a fix that only tested one could have
+### shipped a walk-through train
+- Away: **8 blocked columns -> 0** above the depot (one column ends a 12 px
+  slide short with nothing in the ray - not a barrier, the line is crossed).
+- Waiting (`--railwalk-freight` parks her first, walking HER span at the
+  trainyard): **8 of 15 columns blocked** - the train is still a wall when
+  she is actually standing there.
+
+`SEC PASS`, `DOCS PASS`, `CLAIMS PASS`, `SMOKE PASS`.
+
 ## [0.6.83] - 2026-08-07 - litter stays under your feet
 
 ### Fixed - flat ground litter drew over the player standing on it *(B9)*

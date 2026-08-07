@@ -125,6 +125,8 @@ func _ready() -> void:
 			_probe_floordoor.call_deferred()
 		elif arg == "--probe-upper":
 			_probe_upper.call_deferred()
+		elif arg == "--probe-railwalk":
+			_probe_railwalk.call_deferred()
 		elif arg.begins_with("--film-walk="):
 			_film_walk.call_deferred(arg.trim_prefix("--film-walk="))
 		elif arg.begins_with("--film="):
@@ -1957,6 +1959,92 @@ func _probe_upper() -> void:
 	print("UPPER solid_bodies_in_room=%d invisible=%d" % [solid, ghosts.size()])
 	for g in ghosts.slice(0, 12):
 		print("UPPER GHOST %s" % g)
+	get_tree().quit(0)
+
+
+func _probe_railwalk() -> void:
+	## WHAT BLOCKS CROSSING THE MAIN LINE? (user: "on the rail road tracks,
+	## right above the bus depot, theres an invisible barrier ... not letting
+	## me walk past") The rails are TILES and tiles have no collision, so a
+	## block there is some body - and rather than theorise which, this walks
+	## the depot's whole x-span, shoves the player north across the line at
+	## every column, and NAMES the collider it hits: node, class, texture,
+	## and whether it is drawing anything.
+	await _ensure_game_scene()
+	var main_node := get_tree().current_scene
+	var info: Dictionary = main_node.get("world_info")
+	var fl: TileMapLayer = info["floor"]
+	var poi: Dictionary = info.get("poi", {})
+	var rail_row := int(poi.get("rail_row", -1))
+	var depot: Array = poi.get("bus depot", [])
+	var pl := _find_player()
+	if rail_row < 0 or depot.is_empty() or pl == null:
+		print("RAILWALK FAIL rail_row=%d depot=%s" % [rail_row, str(depot)])
+		get_tree().quit(1)
+		return
+	# --railwalk-freight: park the train first, so the SAME walk proves the
+	# other half — intangible when away, solid when standing there. A fix
+	# that only tested the away half could have shipped a walk-through train.
+	for a5 in OS.get_cmdline_user_args():
+		if a5 == "--railwalk-freight":
+			var found := 0
+			for fr in get_tree().get_nodes_in_group("trains"):
+				fr.call("force_waiting")
+				found += 1
+				print("RAILWALK freight forced: state=%s hull_layer=%d cell=%s"
+					% [str(fr.get("state")),
+						(fr.get("_hull") as StaticBody2D).collision_layer,
+						str(fl.local_to_map((fr as Node2D).position))])
+			if found == 0:
+				print("RAILWALK freight: NONE FOUND in group 'trains'")
+			await get_tree().process_frame
+	var x0 := int(depot[0]) - 2
+	var x1 := int(depot[0]) + int(depot[2]) + 2
+	# with the freight parked, walk HER span instead: the stop is at the
+	# trainyard, ~70 cells east of the depot, and the rake reaches ~7 cells
+	# back from the engine. Walking the depot there proves nothing.
+	for a6 in OS.get_cmdline_user_args():
+		if a6 == "--railwalk-freight":
+			for fr2 in get_tree().get_nodes_in_group("trains"):
+				var fx := fl.local_to_map((fr2 as Node2D).position).x
+				x0 = fx - 11
+				x1 = fx + 3
+	print("RAILWALK rail_row=%d depot_x=%d..%d" % [rail_row, x0, x1])
+	var blocked := 0
+	for x in range(x0, x1 + 1):
+		# start two rows south of the line, push to two rows north
+		var start_cell := Vector2i(x, rail_row + 2)
+		var goal_cell := Vector2i(x, rail_row - 2)
+		pl.global_position = fl.map_to_local(start_cell)
+		await get_tree().process_frame
+		var goal := fl.map_to_local(goal_cell)
+		var dir := (goal - pl.global_position).normalized()
+		_shove(pl, dir, fl.map_to_local(start_cell).distance_to(goal) + 4.0)
+		var short := pl.global_position.distance_to(goal)
+		if short > 12.0:
+			blocked += 1
+			# name what stands in the way: cast from where the shove died
+			var space := pl.get_world_2d().direct_space_state
+			var q := PhysicsRayQueryParameters2D.create(
+				pl.global_position, goal)
+			q.exclude = [pl.get_rid()]
+			var hit := space.intersect_ray(q)
+			var who := "nothing?"
+			if not hit.is_empty():
+				var body := hit["collider"] as Node
+				var tex := ""
+				var drawing := false
+				for ch in body.find_children("*", "Sprite2D", true, false):
+					var sp := ch as Sprite2D
+					if sp.texture != null and tex == "":
+						tex = sp.texture.resource_path.get_file()
+					if sp.is_visible_in_tree():
+						drawing = true
+				who = "%s(%s) tex=%s drawing=%s at=%s" % [body.name,
+					body.get_class(), tex, str(drawing),
+					str(fl.local_to_map((body as Node2D).global_position))]
+			print("RAILWALK x=%d BLOCKED short=%.0fpx by %s" % [x, short, who])
+	print("RAILWALK blocked=%d of %d columns" % [blocked, x1 - x0 + 1])
 	get_tree().quit(0)
 
 

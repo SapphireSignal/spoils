@@ -122,6 +122,13 @@ func setup(stop_pos: Vector2, player: Player, radio: Radio,
 	poly.polygon = PackedVector2Array([head - across, tail - across,
 		tail + across, head + across])
 	_hull.add_child(poly)
+	# SOLID ONLY WHILE SHE IS ACTUALLY THERE. The hull was born solid and
+	# nothing turned it off while the train was AWAY - an invisible,
+	# train-length wall standing across the main line all day (user: "theres
+	# an invisible barrier on the tracks thats not letting me walk past").
+	# The probe named it: Hull(StaticBody2D) tex= drawing=false, blocking 8
+	# columns above the depot. She starts away, so she starts intangible.
+	_hull.collision_layer = 0
 
 	# it runs at night, so it has to carry its own light: a headlamp
 	# throwing down the rails, and a warm spill out of the cab windows
@@ -203,6 +210,7 @@ func force_waiting() -> void:
 	state = WAITING
 	_clock = 0.0
 	_half_called = false
+	_hull.collision_layer = 1   # present = solid, same as a real arrival
 
 
 func can_board() -> bool:
@@ -260,6 +268,7 @@ func _process(delta: float) -> void:
 				_clock = 0.0
 				state = ARRIVING
 				visible = true
+				_hull.collision_layer = 1   # she is on the line now
 				Sfx.play_horn()
 		ARRIVING:
 			var t := clampf(_clock / ARRIVE_TIME, 0.0, 1.0)
@@ -294,6 +303,7 @@ func _process(delta: float) -> void:
 			if position.distance_to(_stop_pos) > 2400.0:
 				state = GONE
 				visible = false
+				_hull.collision_layer = 0   # gone = intangible, like away
 				_notice.visible = false
 				if boarded:
 					extracted.emit("the night freight")
