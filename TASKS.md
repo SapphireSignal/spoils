@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.72.** The release history was renumbered evenly on
+**Current version: v0.6.73.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -698,7 +698,14 @@ furniture exists - check whether it rebuilds or re-adds the ground-floor
 props (the door among them) rather than just hiding them, which would reset
 the swing to frame 0. `scripts/door.gd` holds the open/closed state.
 
-## B0d. A closed door does not seal *(user, 2026-08-06)*
+## B0d. A closed door does not seal — **CLOSED 2026-08-07 by the user in
+## play** *("b0d already fixed, dont need to do that")*
+
+Closed by the same v0.6.66-v0.6.70 door work that closed B0g; nothing further
+shipped for it. Third item this session closed by playing rather than by code
+(with B0g and B0i) — **when a fix lands, the items it silently closed do not
+close themselves, and TASKS.md is what a fresh session trusts.** The original
+report is kept below for the measurement.
 
 *"i can see a bit of the inside of the house because the door isnt fully
 closed, the top shows a bit of the inside of the house, it should be sealed"*

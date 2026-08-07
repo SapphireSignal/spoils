@@ -3610,7 +3610,52 @@ def _door_leaf_vec(axis: str, t: float, outward: bool = False) -> tuple[float, f
             DOOR_LEAF * (cs * closed[1] + sn * opened[1]))
 
 
-def make_door_strip(kind: str, axis: str, style: str) -> tuple[Canvas, tuple, list]:
+def _paint_door_jambs(c: Canvas, axis: str, style: str) -> None:
+    """THE REVEAL EITHER SIDE OF THE LEAF IS WALL, NOT DOOR. These 6 px boards
+    are the edge of the hole in the wall, so they take the BUILDING'S brick -
+    the door KIND follows the building's purpose while the wall STYLE is rolled
+    independently, and neither derives from the other."""
+    hx, hy = DOOR_HINGE
+    edge_dy = 0.5 if axis == "x" else -0.5
+    jb, jm = (C(n) for n in BRICK_STYLES[style]["x" if axis == "x" else "y"])
+    for j in list(range(-6, 0)) + list(range(DOOR_LEAF, DOOR_LEAF + 6)):
+        x = hx + j
+        by = hy + round(j * edge_dy)
+        for y in range(by - DOOR_H - 2, by + 1):
+            c.set(x, y, jm if (y - by) % 5 == 0 else jb)
+
+
+def make_door_jambs(axis: str, style: str) -> tuple[Canvas, tuple, None]:
+    """The jamb boards as their OWN wall piece, placed by the builder.
+
+    They used to be composited into every swing frame, which made the leaf and
+    the wall beside it ONE NODE - so giving the leaf its own sort position (so
+    an open leaf could hide the player behind it) dragged the wall's draw order
+    along with it, and the join beside the door flipped every time it opened.
+    The user saw it immediately: *"the side of the door like changes when
+    opening it, not the door, the wall right beside it"*.
+
+    This is the same move v0.6.67 made for the header: anything structurally
+    WALL leaves the door art and becomes a piece the builder places in the
+    building's own style. Only the leaf follows the door kind.
+
+    Origin matches the door strip's exactly, so both land on the same cell.
+    """
+    c = Canvas(*DOOR_FRAME_SIZE)
+    _paint_door_jambs(c, axis, style)
+    # sides=False, for the same reason the wall segments use it: this board
+    # butts flush against the wall on one side and the door leaf on the other,
+    # and outlining those joins draws a black line down both. Outlining all
+    # round put a 2 px black bar between the wall and every SHUT door - the
+    # first cut of this split shipped it, measured at 140 px.
+    c.outline_auto(sides=False)
+    sx, sy = _door_leaf_vec(axis, 0.0)
+    hx, hy = DOOR_HINGE
+    return c, (hx + round(sx * 0.5), hy + round(sy * 0.5)), None
+
+
+def make_door_strip(kind: str, axis: str, style: str,
+                    with_jambs: bool = True) -> tuple[Canvas, tuple, list]:
     """Interactive door: a DOOR_FRAMES-frame swing strip. Frame 0 = closed,
     flush IN the wall plane (nothing pokes through the wall any more); last
     frame = swung fully inward, a full quarter turn clear of the opening so
@@ -3647,9 +3692,10 @@ def make_door_strip(kind: str, axis: str, style: str) -> tuple[Canvas, tuple, li
         ex, ey = _door_leaf_vec(axis,
             float(f % DOOR_FRAMES) / float(DOOR_FRAMES - 1), outward)
 
-        def draw_leaf() -> None:
+        def draw_leaf(target: Canvas | None = None) -> None:
             # sampled along its SCREEN run, not per leaf-px, so no frame
             # comes out gappy when the panel foreshortens
+            t = c if target is None else target
             steps = max(int(round(max(abs(ex), abs(ey)))), 1)
             for i in range(steps + 1):
                 u = i / float(steps)
@@ -3662,43 +3708,55 @@ def make_door_strip(kind: str, axis: str, style: str) -> tuple[Canvas, tuple, li
                         col = dark
                     if kind == "metal" and (y - (by - DOOR_H)) % 6 == 5:
                         col = dark
-                    c.set(x, y, col)
-                c.set(x, by - DOOR_H, dark)  # top edge
+                    t.set(x, y, col)
+                t.set(x, by - DOOR_H, dark)  # top edge
             # handle near the free end; the panel is never edge-on, so this
             # never lands on nothing
-            c.set(hx + round(ex * 0.85), hy + round(ey * 0.85) - DOOR_H // 2,
+            t.set(hx + round(ex * 0.85), hy + round(ey * 0.85) - DOOR_H // 2,
                   C("10141f"))
-
-        def draw_jambs() -> None:
-            # THE REVEAL EITHER SIDE OF THE LEAF IS WALL, NOT DOOR. These 6 px
-            # boards are the edge of the hole in the wall, so they take the
-            # BUILDING'S brick - user: "the side of the door is still not the
-            # same colour". They were painted in the door's own material, so a
-            # wood door put brown boards down both sides of grey masonry.
-            #
-            # This is why the strip is generated per STYLE as well as per kind
-            # and axis: the door KIND follows the building's purpose while the
-            # wall STYLE is rolled independently, so the two cannot be derived
-            # from each other.
-            jb, jm = (C(n) for n in BRICK_STYLES[style]["x" if axis == "x" else "y"])
-            for j in list(range(-6, 0)) + list(range(DOOR_LEAF, DOOR_LEAF + 6)):
-                x = hx + j
-                by = hy + round(j * edge_dy)
-                for y in range(by - DOOR_H - 2, by + 1):
-                    c.set(x, y, jm if (y - by) % 5 == 0 else jb)
 
         # WHO OCCLUDES WHO depends on which way it swings. Inward, the leaf
         # travels away from the camera and the wall stands in front of it.
         # Outward, it swings toward the camera and must cover the jamb —
         # drawn the wrong way round the open door looks cut in half by the
         # board beside it (user report on the first cut of the two-way swing).
+        #
+        # With the boards split out, that ordering is carried by the SORT KEY
+        # instead (door.gd gives the leaf a jamb-relative epsilon), and the
+        # two have to agree.
+        #
+        # THE JAMBS ARE DRAWN HERE EVEN WHEN THEY ARE NOT SHIPPED IN THIS
+        # SPRITE, then lifted back out after the outline. Outlining the leaf
+        # ALONE puts a black 1 px line down the hinge side of every shut door
+        # — measured at 140 px of leaf turned to outline — which is a new line
+        # beside the door, the very thing this change exists to remove. The
+        # silhouette the outline sees has to be the WHOLE assembly.
+        leaf_c = Canvas(frame_w, frame_h)
+        draw_leaf(leaf_c)
+        jamb_c = Canvas(frame_w, frame_h)
+        _paint_door_jambs(jamb_c, axis, style)
+        leaf_set = {(x, y) for y in range(frame_h) for x in range(frame_w)
+                    if leaf_c.px[x, y][3] > 0}
+        jamb_set = {(x, y) for y in range(frame_h) for x in range(frame_w)
+                    if jamb_c.px[x, y][3] > 0}
         if outward:
-            draw_jambs()
-            draw_leaf()
+            _paste_canvas(c, jamb_c, 0, 0)
+            _paste_canvas(c, leaf_c, 0, 0)
         else:
-            draw_leaf()
-            draw_jambs()
-        c.outline_auto()
+            _paste_canvas(c, leaf_c, 0, 0)
+            _paste_canvas(c, jamb_c, 0, 0)
+        painted = c.outline_auto()
+        if not with_jambs:
+            # take the boards away again, plus any outline pixel that exists
+            # only because a board was there — that outline belongs to the
+            # jamb piece, which does its own
+            drop = {p for p in jamb_set if p not in leaf_set}
+            for p in painted:
+                if not any((p[0] + dx, p[1] + dy) in leaf_set
+                           for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                    drop.add(p)
+            for (dx_, dy_) in drop:
+                c.px[dx_, dy_] = (0, 0, 0, 0)
         _paste_canvas(strip, c, f * frame_w, 0)
     # origin: edge midpoint at the leaf base (matches wall-segment anchoring)
     sx, sy = _door_leaf_vec(axis, 0.0)
@@ -5371,8 +5429,14 @@ def prop_inventory() -> tuple[dict, dict]:
     for kind in ("wood", "metal"):
         for axis in ("x", "y"):
             for style in BRICK_STYLES:
+                # with_jambs=False: the boards are their own wall piece now.
+                # The lintel derivation still asks for the jambed version,
+                # because its mask is "what the shut door assembly covers".
                 props[f"door_{kind}_{axis}_{style}"] = make_door_strip(
-                    kind, axis, style)
+                    kind, axis, style, with_jambs=False)
+    for axis in ("x", "y"):
+        for style in BRICK_STYLES:
+            props[f"door_jamb_{axis}_{style}"] = make_door_jambs(axis, style)
     for i in range(4):
         rng = random.Random(f"{SEED}:stick:{i}")
         fam("stick", i, draw_stick(rng, i))

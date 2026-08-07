@@ -1507,8 +1507,16 @@ func _shot(shot_name: String) -> void:
 				var sign_in := -1.0 if side == "outside" else 1.0
 				pl2.global_position = d.doorway_center() + thru * 22.0 * sign_in
 				await get_tree().process_frame
-				d.toggle(pl2.global_position)
-				await get_tree().create_timer(0.45).timeout
+				# --door=shut leaves it CLOSED, so the same door can be shot in
+				# both states from the same viewpoint. The wall BESIDE a door
+				# is what changes between them, and a single state cannot show
+				# that.
+				if side != "shut":
+					d.toggle(pl2.global_position)
+					await get_tree().create_timer(0.45).timeout
+				if side == "shut":
+					pl2.global_position = d.doorway_center() + Vector2(0.0, 18.0)
+					await get_tree().create_timer(0.1).timeout
 				if side == "behind":
 					pl2.global_position = d.doorway_center()
 					await get_tree().create_timer(0.1).timeout

@@ -43,8 +43,30 @@ chat that dies mid-session still leaves a record.
 
 ## 2026-08-07 — migration, and the open door finally hides you
 
-**Shipped: v0.6.72 — an open door leaf now hides the player behind it**, plus
-the housekeeping below. All four gates green (`SEC`, `DOCS`, `CLAIMS`,
+**Shipped: v0.6.72 — an open door leaf now hides the player behind it — and
+v0.6.73, which fixed the regression v0.6.72 caused.**
+
+**READ THIS BEFORE TOUCHING A DOOR: v0.6.72 SHIPPED A KNOWN COST AND THE USER
+FOUND IT IMMEDIATELY.** I wrote in that release that the jamb boards would
+take the leaf's sort shift with them, judged the visible sliver too small to
+matter, and shipped. It was the first thing they reported: *"the side of the
+door like changes when opening it, not the door, the wall right beside it"*.
+**A cost you can describe precisely is a cost you can measure — measure it
+instead of estimating whether it will be noticed.** The band was 272 changed
+pixels, brick swapped for brick; two minutes of measuring would have caught it
+before the push.
+
+v0.6.73 split the boards out into their own wall piece (the v0.6.67 header
+move, again — **third time this project has learned that anything
+structurally WALL must leave the door art**). Then the split briefly made
+things worse: outlining the jamb piece all round put a 2 px black bar between
+the wall and every shut door. `outline_auto(sides=False)` — the flag whose
+docstring says exactly this, and which the wall segments already use.
+
+**Three A/Bs settled it, all on the same frame with only one variable:**
+opening the door changed 272 wall pixels before, 0 after; the closed door is
+byte-identical in that band to what v0.6.72 shipped; the player is still
+hidden behind an open leaf. All four gates green (`SEC`, `DOCS`, `CLAIMS`,
 `SMOKE PASS`). Migration itself was clean: HEAD was level with `origin/main`
 at v0.6.71, tree clean bar untracked debug shots.
 
@@ -62,6 +84,11 @@ answers those while a door is open.
 **The user's words:**
 - *"sure and yes renumber the stale ones if you tihnk its good idea"*
 - *"yes do the workflow"* — cut the release.
+- *"closed and opened, you can see theres a line beside the door when its
+  closed, and not anymore while its open, the side of the door like changes
+  when opening it, not the door, the wall right beside it"* — with two crops.
+  **They were right and they were precise: it was the wall, not the door.**
+- *"b0d already fixed, dont need to do that"* — third item closed by play.
 - *"also the door colours are fine now, and the door gap at the top is fixed
   now too, both those are already fixed, why are they in open?"*
 - *"how come you keep failing stuff"* — fair. Two Edit calls failed because I
@@ -87,9 +114,17 @@ answers those while a door is open.
   was *"check whether those 3 px are even visible in play"*; the user played and
   they are not. **The measurement said thin; the player said fine. The player
   is the ground truth on a visual call.**
-- **Known cost of the B0h fix, not a bug to rediscover:** jamb boards are
-  structurally wall but ride the leaf's sprite, so they take the shift too.
-  Bounded, stated in TASKS.md B0h, deliberately not chased.
+- **A frame diff is worthless until the CAMERA is aligned, and the two runs
+  must be pinned.** The first shut-vs-open diff reported 1.16 M changed pixels
+  across the whole screen. Weather is rolled per raid and the clock advances,
+  so `--tod` and `--weather` have to be pinned — and even then the open run's
+  camera sat 2 px across and 4 px up, because the open leaf's collider nudges
+  the player. Align on a band away from the subject first: 448k -> 4.3k.
+- **Judge the SWAPS, not the pixel count.** Before and after the split the
+  band changed by ~280 px either way, which reads as "no progress". The swaps
+  say otherwise: brick-for-brick before (the wall changing), brick-to-leaf
+  after (the leaf sweeping past, which is correct). **The count was the same
+  and the meaning was opposite.**
 - `TASKS.md` had **two B0b sections and two B0c sections**, one open and one
   done in each pair — and this file points at "B0c, the second floor". The
   completed ones are now B0j/B0k; the open ones keep their letters.

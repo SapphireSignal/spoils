@@ -3,6 +3,55 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.73] - 2026-08-07 - the jamb boards leave the door
+
+### Fixed - the wall beside a door changed when the door opened
+*"you can see theres a line beside the door when its closed, and not anymore
+while its open, the side of the door like changes when opening it, not the
+door, the wall right beside it"*. **A v0.6.72 regression, and one that release
+predicted and shipped anyway** as an acceptable cost. It was not: the user
+found it immediately in ordinary play.
+
+The jamb boards down each side of a doorway are structurally WALL, but they
+were composited into the door sprite - so leaf and wall were ONE NODE, and
+giving the leaf its own sort position dragged the wall's draw order with it.
+
+Measured rather than judged. In the wall band beside the door, opening it
+swapped **272 pixels between two BRICK renderings** - `(82,109,119)` against
+`(50,66,75)`, wall for wall. With the shift neutralised: **0**. The boards are
+their own piece now, placed by the builder in the building's own style, the
+same move v0.6.67 made for the header. After: **0**, and what remains in the
+frame is the leaf's own edge sweeping across the wall, which is what an
+opening door does.
+
+`door.gd` carries a sub-pixel `JAMB_EPS` so the leaf cannot TIE with the
+boards: two of the four kind/axis combinations have zero leaf depth, and
+y-sort has no defined winner for a tie. Its sign matches the ordering
+`make_door_strip` used to guarantee by draw order - out, the leaf covers the
+jamb; in, the jamb covers the leaf.
+
+### Fixed - a black bar between every doorway and its wall
+Splitting the boards out exposed a second defect and then briefly made a
+third. The jamb piece outlined ALL round, including the joins against the wall
+and against the leaf - `outline_auto`'s own docstring says pieces that tile
+edge to edge must not do that, which is why wall segments pass `sides=False`.
+A jamb IS a wall segment. The first cut of the split put a **2 px black bar
+between the wall and every shut door, measured at 140 px**; with `sides=False`
+the closed door is **byte-identical in that band** to what v0.6.72 shipped,
+and the pre-existing dark line on the far side of the opening is gone too.
+
+### Verified
+Closed door vs v0.6.72: **0 changed pixels** in the wall band. Shut vs open:
+**0**. The player standing behind an open leaf is still fully hidden, so
+v0.6.72's fix is intact. `--probe-world` DOORS **16** on identical cells - the
+new piece takes no rng draw, so the fixed district did not reroll. 240.0 fps,
+worst frame 4.71 ms, 8374 nodes (+16, one board pair per door).
+`SEC PASS`, `DOCS PASS`, `CLAIMS PASS`, `SMOKE PASS`.
+
+### Housekeeping
+B0d closed by the user in play - *"b0d already fixed, dont need to do that"* -
+the third item this session closed by playing rather than by code.
+
 ## [0.6.72] - 2026-08-07 - the open leaf finally hides you
 
 ### Fixed - an open door drew behind the player standing behind it

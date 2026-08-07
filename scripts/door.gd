@@ -12,6 +12,7 @@ extends StaticBody2D
 
 const FRAMES := 4          # frames per swing; the sheet holds two swings
 const FRAME_TIME := 0.06
+const JAMB_EPS := 0.01     # sub-pixel; decides leaf-vs-jamb ties ONLY
 
 var _sprite: Sprite2D
 var _occ: LightOccluder2D          # blocks LIGHT exactly when _poly blocks bodies
@@ -170,7 +171,15 @@ func _leaf_sort_depth() -> float:
 	## move a full 10 px — 'y' swinging out toward the camera (+10), 'x'
 	## swinging in away from it (-10). Reading the centroid covers all four
 	## without a special case anywhere.
-	return _poly_depth(_active_leaf())
+	## The epsilon settles the two cases where that depth is exactly ZERO and
+	## the leaf would TIE with the jamb boards - which are their own piece at
+	## the wall line now, so a tie is reachable and y-sort has no defined
+	## winner for one. The SIGN must match what the generator used to
+	## guarantee by draw order, and still states in make_door_strip: swinging
+	## OUT the leaf covers the jamb, swinging IN the jamb covers the leaf.
+	## Far below a pixel, so it cannot move where anything rasterises.
+	var eps := JAMB_EPS if _swing_out else -JAMB_EPS
+	return _poly_depth(_active_leaf()) + eps
 
 
 func _poly_depth(poly: CollisionPolygon2D) -> float:

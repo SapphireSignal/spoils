@@ -2143,6 +2143,14 @@ func _build_shell(plot: Dictionary) -> void:
 					# have to be that building's brick
 					_add_door("door_%s_%s_%s" % [leaf, axis, style],
 						center + (_EDGE_OFFSET[side] as Vector2))
+					# the jamb boards are WALL, so they are a wall piece placed
+					# here rather than art baked into the door. Inside the door
+					# sprite they shared the leaf's node - and the leaf needs
+					# its own sort position to hide a player standing behind
+					# it, which dragged the wall's draw order along with it
+					# every time a door opened.
+					_add_prop("door_jamb_%s_%s" % [axis, style],
+						center + (_EDGE_OFFSET[side] as Vector2))
 					# the header over the opening, in THIS building's wall. A door
 					# cell gets no wall segment, so without it you can see inside
 					# over the top of a shut door. It is a separate piece because

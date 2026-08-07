@@ -7662,6 +7662,50 @@
         ]
       ]
     },
+    "door_jamb_x_brick_a": {
+      "size": [
+        54,
+        78
+      ],
+      "origin": [
+        32,
+        65
+      ],
+      "collider": null
+    },
+    "door_jamb_x_brick_b": {
+      "size": [
+        54,
+        78
+      ],
+      "origin": [
+        32,
+        65
+      ],
+      "collider": null
+    },
+    "door_jamb_y_brick_a": {
+      "size": [
+        54,
+        78
+      ],
+      "origin": [
+        32,
+        55
+      ],
+      "collider": null
+    },
+    "door_jamb_y_brick_b": {
+      "size": [
+        54,
+        78
+      ],
+      "origin": [
+        32,
+        55
+      ],
+      "collider": null
+    },
     "stick_0": {
       "size": [
         19,
