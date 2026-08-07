@@ -3,6 +3,47 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.75] - 2026-08-07 - opening a door stops shoving you
+
+### Fixed - a door pushed the player back when opened from close up
+*"how come when im close to the door, and i open it, it pushes me back a bit?
+i should stay in place"*.
+
+v0.6.72 gave the leaf its own sort position by moving the DOOR NODE and pulling
+every child back to compensate. That is correct on paper - the colliders end up
+in the same global place - but **the node is a `StaticBody2D`, and nudging a
+static body the player is resting against depenetrates them.**
+
+Measured, standing at several distances and opening:
+
+| distance | v0.6.74 | with the shift off | now |
+|---|---|---|---|
+| 22 px | 0.00 | 0.00 | 0.00 |
+| 14 px | 2.24 | 0.00 | 0.00 |
+| 10 px | 3.16 | 1.12 | 1.12 |
+| 6 px  | 3.35 | 1.12 | 1.12 |
+
+Only the SPRITE moves now, with `y_sort_enabled` on the door so it carries the
+depth on its own. **The body never moves at all**, and the shove is back to the
+pre-existing baseline at every distance.
+
+**The probe stood 22 px away by default - comfortably clear of the sweep -
+which is why it never saw this.** `--door-dist=N` sets the standing distance
+and every run prints `SHOVED=`.
+
+### Still open
+**~1.1 px of shove remains within about 10 px of a doorway, and it predates all
+of this** (the column above shows it unchanged with the shift removed
+entirely). It comes from the swung leaf's collider going solid the instant you
+press the key, which is deliberate - it stops you walking through a door that
+still looks shut. Not chased.
+
+### Verified
+All four earlier invariants re-checked: player behind an open leaf still
+hidden, the straddling facing still whole, closed door still **0 changed
+pixels** in the wall band against v0.6.72, and **no brick-for-brick swaps**.
+`SEC PASS`, `DOCS PASS`, `CLAIMS PASS`, `SMOKE PASS`.
+
 ## [0.6.74] - 2026-08-07 - the other half of the doors
 
 ### Fixed - an open door sliced into the wall on HALF the district's doors

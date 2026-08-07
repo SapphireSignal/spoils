@@ -1,11 +1,11 @@
-# SPOILS — open work
+﻿# SPOILS — open work
 
 Everything outstanding, with the diagnosis already done where there is
 one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.74.** The release history was renumbered evenly on
+**Current version: v0.6.75.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 

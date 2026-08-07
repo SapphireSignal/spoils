@@ -88,6 +88,21 @@ run prints a table with a `straddles=` flag.
 spot, not a convenience.** Enumerate the population first — the table would
 have shown 8 straddling doors on day one.
 
+**AND A FIFTH, v0.6.75, same root, different system:** *"when im close to the
+door, and i open it, it pushes me back a bit"*. Moving the door NODE and
+compensating its children is right for rendering and wrong for physics —
+**the node is a `StaticBody2D`, and nudging a static body the player rests
+against depenetrates them.** 6 px away: 3.35 px of shove with the shift, 1.12
+without. Only the SPRITE moves now (`y_sort_enabled` on the door), the body
+never moves, and the shove is back to baseline at every distance.
+**~1.1 px remains and predates all of this** — the swung leaf's collider goes
+solid immediately, deliberately. Left alone, recorded in CHANGELOG.
+
+**THE PROBE HAD THE SAME BLIND SPOT TWICE:** it picked the deepest leaf (so it
+only saw one facing) and stood 22 px back (so it never saw the shove).
+`--door-pick=`, `--door-dist=` and a printed `SHOVED=` close both. **When a
+probe has a default, ask what that default makes invisible.**
+
 **THE GENERAL SHAPE, THREE TIMES IN ONE RELEASE: a rule that is true for one
 STATE of a thing got applied to all of them.** Jambs are wall (true always).
 Jamb joins should not be outlined (true always). The leaf's join should not be

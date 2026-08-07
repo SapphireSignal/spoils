@@ -1,4 +1,4 @@
-# SPOILS — session handoff (read this first)
+﻿# SPOILS — session handoff (read this first)
 
 ## MIGRATING FROM ANOTHER CHAT? Read these two, in this order
 
@@ -35,7 +35,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
 	 form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.74 shipped, 2026-08-07.** Milestone 1 (a walkable world) is DONE.
+**v0.6.75 shipped, 2026-08-07.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 

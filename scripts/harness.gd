@@ -1530,8 +1530,17 @@ func _shot(shot_name: String) -> void:
 			if d != null and pl2 != null:
 				var thru := d.doorway_through()
 				var sign_in := -1.0 if side == "outside" else 1.0
-				pl2.global_position = d.doorway_center() + thru * 22.0 * sign_in
+				# --door-dist=N: how far from the doorway to stand. The default
+				# 22 is comfortably clear of the leaf's sweep, which is why
+				# this probe never noticed the door SHOVING the player when
+				# they open it from right up against it (user).
+				var stand := 22.0
+				for a3 in OS.get_cmdline_user_args():
+					if a3.begins_with("--door-dist="):
+						stand = float(a3.trim_prefix("--door-dist="))
+				pl2.global_position = d.doorway_center() + thru * stand * sign_in
 				await get_tree().process_frame
+				var before_toggle := pl2.global_position
 				# --door=shut leaves it CLOSED, so the same door can be shot in
 				# both states from the same viewpoint. The wall BESIDE a door
 				# is what changes between them, and a single state cannot show
@@ -1539,6 +1548,9 @@ func _shot(shot_name: String) -> void:
 				if side != "shut":
 					d.toggle(pl2.global_position)
 					await get_tree().create_timer(0.45).timeout
+				# captured BEFORE the pose-specific teleports below, or it
+				# would just measure the probe moving the player itself
+				var shoved := pl2.global_position.distance_to(before_toggle)
 				if side == "shut":
 					pl2.global_position = d.doorway_center() + Vector2(0.0, 18.0)
 					await get_tree().create_timer(0.1).timeout
@@ -1559,10 +1571,10 @@ func _shot(shot_name: String) -> void:
 				# the shift and the player-vs-leaf gap are the LIVENESS
 				# figures: a shot that looks right is worth nothing if the
 				# door never opened or the two never overlapped
-				print("DOOR side=%s swings_out=%s open=%s shift=%.1f player_y-leaf_y=%.1f"
+				print("DOOR side=%s swings_out=%s open=%s shift=%.1f player_y-leaf_y=%.1f stand=%.0f SHOVED=%.2f"
 					% [side, str(d.swings_out()), str(d.is_open()),
 						d.sort_shift(),
-						pl2.global_position.y - d.leaf_center().y])
+						pl2.global_position.y - d.leaf_center().y, stand, shoved])
 		if arg.begins_with("--upstairs="):
 			# put the player on a second story and look at it. The reported
 			# bug is "furniture floats, no floor" and the slab is MEASURABLY

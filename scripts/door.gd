@@ -36,6 +36,9 @@ func setup(texture: Texture2D, origin: Vector2, poly_points: PackedVector2Array,
 	## swung leaf in here and mirrored it for south doors — the collider sat
 	## a cell away from the visible panel, which is why open doors could be
 	## walked straight through.
+	# the sprite carries this door's depth on its own (see _apply_sort_shift),
+	# so the body itself never has to move to sort correctly
+	y_sort_enabled = true
 	_sprite = Sprite2D.new()
 	_sprite.texture = texture
 	_sprite.hframes = FRAMES * 2
@@ -80,9 +83,8 @@ func is_open() -> bool:
 
 
 func _panel_center(poly: CollisionPolygon2D) -> Vector2:
-	# poly.position carries the y-sort compensation (see _apply_sort_shift), so
-	# it HAS to be in the sum. Without it every helper on this class drifts by
-	# the shift the moment the door opens — and the smoke test aims at these.
+	# poly.position is included for completeness; the colliders no longer carry
+	# any y-sort compensation, because only the SPRITE moves now.
 	var sum := Vector2.ZERO
 	for p in poly.polygon:
 		sum += p
@@ -102,7 +104,7 @@ func wall_position() -> Vector2:
 	## to wherever the leaf stands so the leaf sorts correctly. Anything asking
 	## "which cell is this door in" or "how far is the player from it" wants
 	## THIS; the node's own position answers a different question now.
-	return global_position - Vector2(0.0, _sort_shift)
+	return global_position
 
 
 func doorway_center() -> Vector2:
@@ -245,9 +247,18 @@ func _apply_sort_shift(shift: float) -> void:
 	var delta := shift - _sort_shift
 	if is_zero_approx(delta):
 		return
-	position.y += delta
-	for child in get_children():
-		(child as Node2D).position.y -= delta
+	# ONLY THE SPRITE MOVES. The first cut moved this NODE and pulled every
+	# child back to compensate, which is correct on paper - the colliders end
+	# up in the same global place - but this node is a StaticBody2D, and
+	# nudging a static body the player is resting against depenetrates them.
+	# Measured standing 6 px from a door and opening it: 1.12 px of shove
+	# without the shift, 3.35 px with it (user: "when im close to the door,
+	# and i open it, it pushes me back a bit").
+	#
+	# y_sort_enabled makes this node sort its own children, so the sprite
+	# carries the depth on its own and the body never moves at all.
+	_sprite.position.y += delta
+	_sprite.offset.y -= delta
 	_sort_shift = shift
 
 
