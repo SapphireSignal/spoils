@@ -2313,10 +2313,27 @@ func _register_low_wall(into: Array, node: Node2D, low_name: String) -> void:
 			break
 	if sprite == null:
 		return
-	var low_tex: Texture2D = null
+	# TWO LAYERS, not a texture swap. The low piece is drawn UNDERNEATH as its
+	# own sprite and the full piece fades over it, so the upper band can
+	# dissolve while the ground band stays solid the whole way (user: the
+	# second floor WALL should fade, "not the actual second floor"). Swapping
+	# one sprite's texture can only ever cut.
+	#
+	# No artifact while both are up: the low piece is the full piece with the
+	# upper band absent, so every pixel they share is identical and blending
+	# one over the other changes nothing.
+	var low_sprite: Sprite2D = null
 	if low_name != "":
-		low_tex = load("res://art/gen/%s.png" % low_name) as Texture2D
-	into.append([sprite, sprite.texture, low_tex])
+		var low_tex := load("res://art/gen/%s.png" % low_name) as Texture2D
+		if low_tex != null:
+			low_sprite = Sprite2D.new()
+			low_sprite.texture = low_tex
+			low_sprite.centered = sprite.centered
+			low_sprite.offset = sprite.offset
+			low_sprite.position = sprite.position
+			node.add_child(low_sprite)
+			node.move_child(low_sprite, 0)   # under the full piece
+	into.append([sprite, low_sprite])
 
 
 func _build_roof(interior: Rect2i, tone: String, post_positions: Array,

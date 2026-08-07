@@ -1176,7 +1176,21 @@ def make_wall_post(style: str, stories: int = 1,
         # line (post top y 332, wall tops 348-352). User, with the excess
         # circled in red: "everywhere inside of the red circle needs to go ...
         # it should be flat with the rest of the walls".
-        cut = 1 + STORY_H + 11
+        # MEASURED TWICE, because both extremes were wrong. At 49 above origin
+        # the cap stood ~15 px proud ("a bit too high"); at 33 it vanished
+        # entirely ("you cant even see the pillar ... its too far down behind
+        # the wall") - a corner post is BEHIND both walls that meet there, so
+        # dead flush is invisible. The wall's top peaks at screen row 347 at
+        # the corner and the cap sits at 381 - height, so flush is 34 and this
+        # leaves the cap crowning the corner by 2 px.
+        # DERIVED FROM THE ANCHORS, after guessing twice and being wrong both
+        # ways. A corner post is placed on the cell's VERTEX (y offset -16)
+        # while its two walls are placed on the edge MIDPOINTS (y offset -8),
+        # so the post's anchor sits 8 px up-screen of theirs and it must be
+        # 8 px SHORTER than the wall to finish level: 49 - 8 = 41.
+        # 49 stood proud ("a bit too high"); 33 and 36 disappeared behind the
+        # walls entirely ("you cant even see the pillar").
+        cut = 1 + STORY_H + 3
         for y in range(0, cut):
             for x in range(18):
                 c.px[x, y] = (0, 0, 0, 0)

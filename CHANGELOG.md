@@ -3,6 +3,39 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.80] - 2026-08-07 - the upper wall fades, and the pillars land level
+
+### Fixed - the pillars, third attempt, DERIVED this time
+*"now the pillars go too far under where they should be"* — and then, on the
+correction after that, *"well you cant even see the pillar in that picture
+anymore, its too far down behind the wall"*. Both true. 49 above origin stood
+~15 px proud; 33 and 36 vanished entirely, because a corner post stands BEHIND
+both walls that meet there, so anything at-or-under their height is fully
+occluded.
+
+The final height is **derived from the anchors, not guessed**: a corner post is
+placed on the cell's VERTEX (screen y -16) while its walls are placed on edge
+MIDPOINTS (y -8), so the post must be exactly **8 px shorter** than the wall's
+band to finish level: 49 - 8 = **41**. Verified in a 14x crop: the cap sits
+flat at the corner with the wall tops stepping away either side.
+
+### Changed - the upper WALL fades, like the roof
+*"i meant the second floor wall for the fade, not the actual second floor"*.
+The swap was instant; now the upper band dissolves on the same 0.28 s curve as
+the roof above it.
+
+The mechanism had to change to allow it: a texture SWAP can only cut. The
+ground band is now its own sprite UNDERNEATH the full wall, and only the full
+wall's alpha runs — so the upper band fades out while the ground band stays
+solid the whole way. No artifact while both are up, because every pixel they
+share is identical by construction (same canvas, same origin, same rng
+stream). The floor cross-fade from v0.6.79 stays as it is.
+
+### Verified
+Inside: upper band gone, posts level. Outside: full two-storey building.
+DOORS 16 on identical cells, UPPERS 6 with floorless=0 propless=0,
+`FLOORDOOR PASS`. `SEC PASS`, `DOCS PASS`, `CLAIMS PASS`, `SMOKE PASS`.
+
 ## [0.6.79] - 2026-08-07 - flush corners, and the floors cross-fade
 
 ### Fixed - the corner pillars still stood proud

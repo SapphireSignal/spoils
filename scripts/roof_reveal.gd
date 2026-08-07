@@ -5,14 +5,17 @@ extends Node2D
 ## Walls are never faded — user call: walls always stay visible.
 
 var cells: Rect2i
-## [sprite, full_texture, low_texture_or_null] for every wall piece of this
-## building that carries a second storey. A null low texture means the piece is
-## second storey ONLY (the door transom) and is hidden rather than swapped.
+## [full_sprite, low_sprite_or_null] for every wall piece of this building that
+## carries a second storey. The low sprite sits UNDER the full one and stays
+## put; the full one fades, so the upper band dissolves while the ground band
+## holds. A null low sprite means the piece is second storey ONLY (the door
+## transom) and simply fades away.
 var low_walls: Array = []
 
 var _inside := false
 var _low := false
 var _tween: Tween
+var _wall_tween: Tween
 
 
 func set_walls_low(low: bool) -> void:
@@ -21,28 +24,30 @@ func set_walls_low(low: bool) -> void:
 	## shouldnt show if im on the first floor, make it so only if im on second
 	## floor, the walls will show up").
 	##
-	## A texture SWAP, not a fade: the low piece is the same canvas at the same
-	## origin, drawn from the same rng stream, so it is the full wall with the
-	## upper band absent and nothing moves or reshuffles. It stops at the string
-	## course, which is already a pale concrete band and reads as a finished
-	## top edge.
+	## IT FADES, on the same 0.28 s quad EASE_IN_OUT as the roof above it —
+	## a climb changes the roof and the upper wall band together, and two
+	## different curves on one action would read as two separate events (user:
+	## "it should fade out and back in like the roof ... i meant the second
+	## floor wall for the fade, not the actual second floor").
 	##
-	## No tween here on purpose. The roof fades because it is one big shape
-	## whose sudden change reads as a glitch; a wall losing its top band is a
-	## silhouette change that cross-fading would only turn into a ghost.
+	## The low piece is a SEPARATE SPRITE underneath that never moves. Only the
+	## full piece's alpha runs, so the upper band dissolves while the ground
+	## band stays solid throughout — which a texture swap could not do at all,
+	## and cross-fading a whole wall against nothing would have ghosted.
 	if low == _low:
 		return
 	_low = low
-	for entry in low_walls:
-		var sprite := entry[0] as Sprite2D
-		if sprite == null:
-			continue
-		var tex := entry[2] as Texture2D if low else entry[1] as Texture2D
-		if tex == null:
-			sprite.visible = not low
-		else:
-			sprite.visible = true
-			sprite.texture = tex
+	if _wall_tween != null and _wall_tween.is_valid():
+		_wall_tween.kill()
+	_wall_tween = create_tween()
+	_wall_tween.tween_method(
+		func(a: float) -> void:
+			for entry in low_walls:
+				var sprite := entry[0] as Sprite2D
+				if sprite != null:
+					sprite.modulate.a = a,
+		1.0 if low else 0.0, 0.0 if low else 1.0, 0.28) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
 
 
 func set_inside(inside: bool) -> void:

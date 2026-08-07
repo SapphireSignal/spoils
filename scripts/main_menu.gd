@@ -206,6 +206,10 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.80", [
+		"the corner pillars finally sit level with the walls - worked out from where each piece is anchored this time instead of nudged until it looked right. too high, invisible, and level is the full history in three attempts",
+		"the upper floors wall fades in and out like the roof does, instead of switching in one frame. the ground floors wall stays solid underneath the whole time",
+	]],
 	["v0.6.79", [
 		"the corner pillars are properly flat with the wall now. i had matched their height to the walls, but a corner sits on a different anchor point than the wall pieces do, so equal height still left them sticking up",
 		"the two floors fade into each other instead of switching in one frame, same fade as the roof. what you can bump into still switches instantly",

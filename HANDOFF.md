@@ -103,15 +103,27 @@ collider exists up there. Both items need a repro from the user rather than a
 guess; rebuilding a system that measures clean is how the map screen got built
 twice.
 
-**Then v0.6.78 and v0.6.79 — the stairwell shaft (sampled, kept, fleet-wide),
+**Then v0.6.78 through v0.6.80 — the stairwell shaft (sampled, kept, fleet-wide),
 the two-storey wall split, the engine loop seam, stair collision, and the
 floor cross-fade.**
 
-**THE LESSON OF v0.6.79, and it cost two releases: "same height above origin"
-is NOT "same height on screen".** A corner post is anchored on the cell's
-VERTEX; the wall segments are anchored on the edge MIDPOINTS. Matching the
-numbers left every corner standing 16 px proud, measured off a 12x crop.
-Anchors before dimensions, every time.
+**THE LESSON OF THE PILLARS, and it cost THREE releases: derive from the
+anchors, do not nudge until it looks right.** A corner post is anchored on the
+cell's VERTEX (screen y -16); the walls on edge MIDPOINTS (y -8). So the post
+must be exactly 8 px SHORTER than the wall band to finish level: 49 - 8 = 41.
+The guessing tour: 49 stood ~15 px proud, 33 and 36 disappeared completely
+(a corner post stands BEHIND both walls that meet there — at-or-under their
+height it is fully occluded, so "too low" looks like "not there", which reads
+as a different bug). One subtraction was available the whole time.
+
+**v0.6.80 also reworked the upper-wall hide into a FADE** (user: *"i meant the
+second floor wall for the fade, not the actual second floor"*). The low band
+is a SEPARATE SPRITE under the full wall now — a texture swap can only cut, and
+fading a whole wall against nothing would ghost. Only the full piece's alpha
+runs. Same 0.28 s curve as the roof, on purpose. If a wall artifact ever shows
+mid-fade, remember both layers are identical below the string course by
+construction (same canvas, origin and rng stream) — a mismatch there means the
+generator's low pieces drifted from the full ones.
 
 **AND THE ONE I GOT WRONG TWICE OVER — the vehicle click.** I blamed the engine
 pitch ramp, shipped a fix for it, and it was the wrong cause. What settled it
