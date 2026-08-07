@@ -488,6 +488,15 @@ showed the ground room through it. Build it as a dark SHAFT with the stair
 top inside and a lip on the near edges, and check one screenshot with them
 first. **Reading the comment before coding is what caught this.**
 
+**A REGRESSION I PROBABLY CAUSED, WRITTEN UP AS B0e.** v0.6.63 snapped the
+player's sort key onto the pixel grid - which fixed a measured 46% wrong-order
+rate and the user confirmed it. But the world already sits on whole pixels, so
+snapping the player onto the SAME grid makes exact sort TIES common, and a tie
+has no defined order. The user now reports drawing through a wall in a
+doorway, which is exactly where you stand level with one. **The fix is a
+sub-pixel tie-break epsilon, NOT un-snapping** - un-snapping brings the
+flicker back. Get the sign right against a real wall.
+
 **PICKED UP AT: TASKS.md B0c, the second floor** - the user reported four
 distinct things in one message (clipping into the slab, the stair top
 visible, clipping on props up there, and wanting a stairwell hole). B0d is a

@@ -540,6 +540,35 @@ the second floor that compares the player's position against slab geometry
 should be re-read with that in mind - `floor_lift` already offsets the sprite
 and camera together.
 
+## B0e. The player draws THROUGH a wall in a doorway *(user, 2026-08-06)*
+## — LIKELY A v0.6.63 REGRESSION, AND THE MECHANISM IS KNOWN
+
+*"right now im behind the door, my character shouldnt be seen, but i am seen
+still"*, with a screenshot: standing in an open doorway, the character is
+drawn over the wall instead of behind it.
+
+**THE SUSPECTED CAUSE IS MY OWN FIX.** v0.6.63 snapped the player's
+`global_position` onto the screen-pixel grid so the SORT KEY matches the DRAWN
+position (that fixed a measured 46% wrong-order rate near the character, and
+the user confirmed it worked). But the world's props and wall segments already
+sit on whole pixels - so snapping the player onto the same grid makes their
+sort y land **EXACTLY EQUAL** to a wall's far more often than before. Godot's
+y-sort has no defined order for a tie, so the player can win against a wall
+they should be behind. A doorway is exactly where you stand level with a wall.
+
+**Before/after evidence is cheap here:** `--probe-sort` already walks the
+player and compares sort keys; extend it to count EXACT TIES against
+neighbours (`node_y == other_y`) and compare against the tag v0.6.62 build.
+If ties jumped, this is confirmed.
+
+**Do not fix it by un-snapping** - that reintroduces the flicker that was
+measured and fixed. The fix is a deterministic TIE-BREAK: keep the snap and
+offset the sort key by a sub-pixel epsilon so an exact tie is impossible. An
+epsilon well under half a pixel cannot move where the sprite rasterises, so
+the v0.6.63 guarantee holds. **Work out the correct SIGN first** - in this
+projection the piece that should occlude the player at equal y is the one
+nearer the camera, so check against a real wall rather than assuming.
+
 ## B0d. A closed door does not seal *(user, 2026-08-06)*
 
 *"i can see a bit of the inside of the house because the door isnt fully
