@@ -437,6 +437,36 @@ NOTHING**, and each one nearly shipped:
 its verdict, or a zero is unreadable. `--probe-sort` prints `travelled=` for
 exactly this reason.
 
+**Shipped: v0.6.64 - the prewarm never actually warmed anything.**
+`_prewarm_textures` called `load()` on every PNG **and threw the result
+away**, under a comment claiming that did "decode + GPU upload". It does not:
+loading fills the resource cache, **the upload happens on first DRAW**. So
+the cost it exists to hide was still paid during play, once per texture, the
+first time an object carrying it appeared - and never again for that object.
+That is the user's remaining symptom verbatim: *"it just appears on my screen
+... like it loads on my screen weirdly, but once its loaded then its fine"*,
+*"only happens on one thing per time, then it wont happen again on that
+object"*. It draws a 1 px sliver of each texture now. Deploy worst frames
+measured against the same run without it: **34.3/24.7/21.7/11.1 ms before,
+33.6/23.8/21.0/10.6 after** - identical.
+
+**IT HUNG HEADLESS FIRST.** `await RenderingServer.frame_post_draw` never
+fires under `--headless`, so the deploy waited forever and `--smoke` said
+"world never became ready (30s)". Headless returns early now. **This is the
+third time this project has learned that a wait which never resolves reads as
+a hang, not an error - and the second time --smoke was the thing that caught
+it.** Do not add an `await` on a rendering signal without a headless guard.
+
+**The user confirmed v0.6.63 fixed the OTHER half:** *"it doesnt happen
+anymore near my character"*. The sort fix was correct; this was a second,
+unrelated cause with a similar description. **Two bugs wearing one report** -
+worth remembering before declaring a vague symptom fixed.
+
+**Ruled out by measurement, do not re-suspect it:** the sway shader hashing
+its phase off `MODEL_MATRIX` in the vertex stage. 419 frames walking into the
+forest, camera-motion compensated: median residual 41 px, max 239, no
+outlier. The sway steps smoothly.
+
 **Picked up at: the polish pass, ART half — three of six done.** Shipped this
 session: the title (v0.6.51), the map screen redo (v0.6.52), the layout
 revision (v0.6.53), terrain blending + house contrast (v0.6.54), the blend

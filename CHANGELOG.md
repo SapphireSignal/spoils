@@ -3,6 +3,48 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.64] - 2026-08-06 - the prewarm never actually warmed anything
+
+### Fixed - textures uploaded to the GPU during play, not on the loading screen
+`_prewarm_textures` existed to pay the cost of every generated texture behind
+the deploy screen. It called `load()` on each PNG **and threw the result
+away**, under a comment claiming that performed "decode + GPU upload".
+
+Loading populates the resource cache. **The upload happens the first time a
+texture is actually DRAWN.** So the cost it exists to prevent was still being
+paid during play - once per texture, the first time an object carrying it
+came on screen, and never again for that object.
+
+That is the user's report almost word for word: *"it happens on things in my
+world while im walking towards it, and it just appears on my screen"*, *"it
+only happens on one thing on my world per time, then it wont happen again on
+that object"*, *"like it loads on my screen weirdly, but once its loaded then
+its fine"*.
+
+It now draws a 1 px sliver of every texture behind the deploy screen, batched
+across frames on the builder's time budget. One pixel is enough - the upload
+is per resource, not per area.
+
+**Cost, measured against the same run without it:** deploy worst frames
+34.3 / 24.7 / 21.7 / 11.1 ms before, **33.6 / 23.8 / 21.0 / 10.6 ms after** -
+identical within noise. Build time +0.1 s, on a loading screen.
+
+### Fixed - and it hung headless first
+`await RenderingServer.frame_post_draw` never fires under `--headless`
+(nothing draws), so the deploy waited forever and `--smoke` reported *"world
+never became ready (30s)"*. Headless has no GPU and nothing to upload, so it
+returns early now, and the batching waits on `process_frame` instead.
+
+### Not the cause, and ruled out by measurement
+The sway shader hashes its phase from `MODEL_MATRIX` in the vertex stage,
+which looked like a strong suspect for a one-off wobble as items enter view
+under 2D batching. **419 frames walking into the forest, camera-motion
+compensated: median residual 41 px, max 239, no outlier at all.** The sway
+steps smoothly. Left alone.
+
+### Verified
+`SMOKE PASS`, 240 fps, deploy unchanged.
+
 ## [0.6.63] - 2026-08-06 - the character sorted where it was not drawn
 
 **The one-frame pop the user has been reporting is found, proven and fixed.**

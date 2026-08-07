@@ -206,6 +206,10 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.64", [
+		"the loading screen was supposed to get every texture ready before you play. it was only half doing it - it loaded them but never drew them, and the real cost lands the first time a thing is actually drawn. so every object still paid it the first time it came on screen, once, and never again. that is the thing you described",
+		"it draws them all behind the deploy screen now. loading takes a tenth of a second longer and nothing changed about the frame pacing",
+	]],
 	["v0.6.63", [
 		"found the flicker. the character was being SORTED at a slightly different spot from where it was DRAWN - up to half a pixel out - so anything you walked past could be put in front of you for a single frame even though it was behind you. thats the thing you kept seeing on walls and never being able to walk back to",
 		"measured it before and after: on frames where you were level with something, 46% of them were sorted wrong. its zero now",

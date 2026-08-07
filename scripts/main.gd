@@ -294,19 +294,63 @@ func _build_world() -> void:
 
 
 func _prewarm_textures() -> void:
-	# touch every generated texture while the deploy screen covers the game:
-	# decode + GPU upload happen here, not as tiny hitches during play.
-	# Time-budgeted like the builder — never blow the frame budget.
+	## Touch every generated texture while the deploy screen covers the game.
+	##
+	## THIS USED TO ONLY CALL `load()` AND THROW THE RESULT AWAY, with a comment
+	## claiming that did "decode + GPU upload". Loading populates the resource
+	## cache; **the upload to the GPU happens the first time a texture is
+	## actually DRAWN**. So the cost this function exists to pay was still being
+	## paid during play - once per texture, the first time an object carrying it
+	## came on screen, and never again. That is exactly what the user described:
+	## "it just appears on my screen ... like it loads on my screen weirdly, but
+	## once its loaded then its fine", "only happens on one thing per time, then
+	## it wont happen again on that object".
+	##
+	## So it draws them now, one pixel each, behind the deploy screen. Batched
+	## across frames on the same time budget as the builder, because the deploy
+	## has to hold the refresh rate.
 	var dir := DirAccess.open("res://art/gen")
 	if dir == null:
 		return
+	var texes: Array[Texture2D] = []
 	var deadline := Time.get_ticks_usec() + 2400
 	for file in dir.get_files():
 		if file.ends_with(".png"):
-			load("res://art/gen/" + file)
+			var tex := load("res://art/gen/" + file) as Texture2D
+			if tex != null:
+				texes.append(tex)
 			if Time.get_ticks_usec() >= deadline:
 				await get_tree().process_frame
 				deadline = Time.get_ticks_usec() + 2400
+	if texes.is_empty():
+		return
+	# HEADLESS HAS NO GPU AND NEVER DRAWS, so there is nothing to upload - and
+	# `RenderingServer.frame_post_draw` never fires there, which hung the whole
+	# deploy forever. --smoke caught it as "world never became ready (30s)".
+	if DisplayServer.get_name() == "headless":
+		return
+	# a throwaway canvas that draws a 1 px sliver of each texture. One pixel is
+	# enough: the upload is per RESOURCE, not per area drawn.
+	var warm := Control.new()
+	var first := 0
+	var last := 0
+	warm.name = "TexturePrewarm"
+	warm.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	warm.modulate = Color(1, 1, 1, 0.004)   # present, but invisible over the
+											# deploy screen
+	warm.draw.connect(func() -> void:
+		for i in range(first, last):
+			warm.draw_texture_rect(texes[i],
+				Rect2(Vector2(float(i % 64), float(i / 64)), Vector2.ONE), false))
+	add_child(warm)
+	const PER_FRAME := 48
+	while first < texes.size():
+		last = mini(first + PER_FRAME, texes.size())
+		warm.queue_redraw()
+		await get_tree().process_frame
+		await get_tree().process_frame
+		first = last
+	warm.queue_free()
 
 
 func _surface_kinds_from(floor_coords: Dictionary) -> Dictionary:
