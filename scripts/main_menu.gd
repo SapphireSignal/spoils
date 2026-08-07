@@ -206,6 +206,10 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.74", [
+		"open doors stop slicing into the wall on half the buildings. a door on one of the two wall directions sticks out past the wall when its open, and i was sorting it by its middle - which sits exactly on the wall line, so the wall drew over the bit that was sticking out. it goes by the leading edge now",
+		"my door test could only ever see the other half of the doors, so it never caught this. it can reach any door now and lists them all",
+	]],
 	["v0.6.73", [
 		"the wall right beside a door stops changing when you open it. the boards down the sides of a doorway are wall, but they were painted into the door picture - so giving the door its own depth last version dragged the wall along with it. theyre their own piece now",
 		"the black line between a doorway and the wall beside it is gone. that join was being outlined like an edge when it isnt one - its wall meeting wall, the same as every other seam in a building",

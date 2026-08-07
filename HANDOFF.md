@@ -70,6 +70,24 @@ only for the SHUT frame — the leaf IS the wall plane there — and I carried i
 into the swung frames, so an open leaf butted brick with no edge and read as
 sunk into it. Only `f % DOOR_FRAMES == 0` is flush now.
 
+**AND A FOURTH, v0.6.74, which is the most important one here: THE PROBE WAS
+BUILT AROUND THE BUG IT WAS WRITTEN TO CATCH.** `--door=` picked the door with
+the DEEPEST outward leaf — so it always landed on the same wall facing and
+**never once shot the other half of the district across three releases of door
+work.** The user: *"i dont think you tested it on a building like the
+safehouse, the door needs to be on a specific facing wall for it to show this
+glitch"*. Exactly right.
+
+On that facing the open leaf STRADDLES the wall line, so its CENTROID depth is
+0 while its far end genuinely stands in front of the wall — and the wall drew
+over the protruding corner. **8 of the 16 doors.** The sort key is the leaf's
+LEADING EDGE now, not its centroid. `--door-pick=N` reaches any door and the
+run prints a table with a `straddles=` flag.
+
+**A selection rule that maximises the symptom you are hunting is a blind
+spot, not a convenience.** Enumerate the population first — the table would
+have shown 8 straddling doors on day one.
+
 **THE GENERAL SHAPE, THREE TIMES IN ONE RELEASE: a rule that is true for one
 STATE of a thing got applied to all of them.** Jambs are wall (true always).
 Jamb joins should not be outlined (true always). The leaf's join should not be
@@ -102,6 +120,10 @@ answers those while a door is open.
   when opening it, not the door, the wall right beside it"* — with two crops.
   **They were right and they were precise: it was the wall, not the door.**
 - *"b0d already fixed, dont need to do that"* — third item closed by play.
+- *"the door clips in the wall when its opened outside"* and *"i dont think
+  you tested it on a building like the safehouse, the door needs to be on a
+  specific facing wall for it to show this glitch, its still happening"* —
+  **both right, and the second one named the exact hole in my testing.**
 - *"also the door colours are fine now, and the door gap at the top is fixed
   now too, both those are already fixed, why are they in open?"*
 - *"how come you keep failing stuff"* — fair. Two Edit calls failed because I

@@ -1493,14 +1493,39 @@ func _shot(shot_name: String) -> void:
 			# at all, and the first door in the district is one of them —
 			# shooting it reported a perfect-looking frame and measured
 			# nothing.
+			# --door-pick=N selects a specific door. WITHOUT IT THIS PROBE ONLY
+			# EVER SEES ONE FACING: picking the deepest outward leaf always
+			# lands on the same axis, so the other wall facing was never shot
+			# once across three releases of door work. The user found the bug
+			# there (*"the door needs to be on a specific facing wall for it to
+			# show this glitch"*). The table below prints every door so a
+			# facing cannot go untested by accident again.
+			var pick := -1
+			for a2 in OS.get_cmdline_user_args():
+				if a2.begins_with("--door-pick="):
+					pick = int(a2.trim_prefix("--door-pick="))
+			var doors_all := get_tree().get_nodes_in_group("doors")
+			for i in doors_all.size():
+				var dd := doors_all[i] as Door
+				var sp := dd.leaf_span(true)
+				var tex := "?"
+				var spr := dd.get_node_or_null("Sprite2D") as Sprite2D
+				if spr != null and spr.texture != null:
+					tex = spr.texture.resource_path.get_file()
+				print("DOORLIST %d depth_out=%.1f span_out=%.1f..%.1f straddles=%s %s"
+					% [i, dd.leaf_depth(true), sp.x, sp.y,
+						str(sp.x < 0.0 and sp.y > 0.0), tex])
 			var d: Door = null
 			var best_depth := 0.0
-			for node in get_tree().get_nodes_in_group("doors"):
-				var cand := node as Door
-				var depth := cand.leaf_depth(true)
-				if d == null or depth > best_depth:
-					d = cand
-					best_depth = depth
+			if pick >= 0 and pick < doors_all.size():
+				d = doors_all[pick] as Door
+			else:
+				for node in doors_all:
+					var cand := node as Door
+					var depth := cand.leaf_depth(true)
+					if d == null or depth > best_depth:
+						d = cand
+						best_depth = depth
 			var pl2 := _find_player()
 			if d != null and pl2 != null:
 				var thru := d.doorway_through()

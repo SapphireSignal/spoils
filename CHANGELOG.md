@@ -3,6 +3,42 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.74] - 2026-08-07 - the other half of the doors
+
+### Fixed - an open door sliced into the wall on HALF the district's doors
+*"i dont think you tested it on a building like the safehouse, the door needs
+to be on a specific facing wall for it to show this glitch, its still
+happening"*. Correct on every count.
+
+**The sort key was the leaf's CENTROID.** On one of the two wall facings the
+open leaf STRADDLES the wall line - hinge end at it, far end standing out in
+front - so the centroid depth is exactly **0** while part of the leaf really is
+in front of the wall. The whole sprite then sorted level with the wall it was
+standing in front of, and the wall drew over its protruding corner. **8 of the
+16 doors in the district are that facing** (`--probe-world` prints the table
+now: `span_out=-7.4..7.4 straddles=true`).
+
+The key is the leaf's **leading edge** now - the extreme in the direction of
+travel, `span.y` swinging out and `span.x` swinging in - so a leaf clears its
+own wall by construction on either facing. On the straddling doors the shift
+goes 0.0 -> 7.4; on the others 10.0 -> 17.4.
+
+### Fixed - the probe could not see half the doors
+`--door=` picked the door with the DEEPEST outward leaf, which always lands on
+the same facing. **The probe was built around the bug it was written to catch,
+so it never once shot the other half of the district across three releases of
+door work.** `--door-pick=N` selects any door, and the run now prints every
+door with its depth, span and a `straddles=` flag, so a facing cannot go
+untested by accident again.
+
+### Verified
+Reproduced first, with the shift neutralised: the wall visibly drawn over the
+leaf's top corner. After: whole leaf, standing clear. The three invariants from
+v0.6.72-73 all re-checked on the deep facing - player behind an open leaf still
+hidden, closed door still **0 changed pixels** in the wall band against v0.6.72,
+and **no brick-for-brick swaps** when a door opens.
+`SEC PASS`, `DOCS PASS`, `CLAIMS PASS`, `SMOKE PASS`.
+
 ## [0.6.73] - 2026-08-07 - the jamb boards leave the door
 
 ### Fixed - the wall beside a door changed when the door opened

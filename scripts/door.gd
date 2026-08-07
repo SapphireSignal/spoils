@@ -178,8 +178,29 @@ func _leaf_sort_depth() -> float:
 	## guarantee by draw order, and still states in make_door_strip: swinging
 	## OUT the leaf covers the jamb, swinging IN the jamb covers the leaf.
 	## Far below a pixel, so it cannot move where anything rasterises.
+	##
+	## THE LEADING EDGE, NOT THE CENTROID. On one of the two wall facings the
+	## open leaf STRADDLES the wall line - hinge end at it, far end standing
+	## out in front - so its centroid depth is exactly 0 and the whole sprite
+	## sorted level with the wall it was standing in front of. Half the leaf
+	## then drew behind its own building: *"the door clips in the wall when its
+	## opened outside"*, and it is 8 of the 16 doors in the district.
+	##
+	## Taking the extreme in the direction of travel makes the leaf clear its
+	## own wall by construction, whichever way it swings and whichever facing
+	## it is on.
+	var span := _leaf_span(_active_leaf())
 	var eps := JAMB_EPS if _swing_out else -JAMB_EPS
-	return _poly_depth(_active_leaf()) + eps
+	return (span.y if _swing_out else span.x) + eps
+
+
+func _leaf_span(poly: CollisionPolygon2D) -> Vector2:
+	var lo := INF
+	var hi := -INF
+	for p in poly.polygon:
+		lo = minf(lo, p.y)
+		hi = maxf(hi, p.y)
+	return Vector2(lo, hi)
 
 
 func _poly_depth(poly: CollisionPolygon2D) -> float:
@@ -196,6 +217,14 @@ func leaf_depth(out_swing: bool) -> float:
 	## zero, and a screenshot of one of those looks perfect while proving
 	## nothing at all.
 	return _poly_depth(_leaf_out if out_swing else _leaf)
+
+
+func leaf_span(out_swing: bool) -> Vector2:
+	## The lowest and highest y the leaf covers, for the probe's door table.
+	## THE CENTROID IS NOT ENOUGH: on one facing the open leaf STRADDLES the
+	## wall line, so its centroid depth is zero while part of it genuinely
+	## stands in front of the wall.
+	return _leaf_span(_leaf_out if out_swing else _leaf)
 
 
 func _apply_sort_shift(shift: float) -> void:
