@@ -83,6 +83,10 @@ var _tex_prone: Texture2D
 var _dir_index := 2  # sheet rows are E,SE,S,SW,W,NW,N,NE — start facing S
 var _anim_time := 0.0
 var _was_moving := false
+## The player's EXACT position. `global_position` is snapped to the screen
+## pixel grid every frame for rendering AND y-sorting, so it cannot be the
+## authority for movement - see the note in _process.
+var _true_pos := Vector2.ZERO
 var _light: PointLight2D
 var _hurt_rect: ColorRect
 var _hurt_left := 0.0
@@ -330,13 +334,26 @@ func _process(delta: float) -> void:
 	elif crouching:
 		speed *= CROUCH_SPEED_MULT
 	velocity = Vector2(input_vec.x, input_vec.y * Y_SQUASH) * speed
+	# ADOPT AN OUTSIDE MOVE. Anything that repositions the player without
+	# going through movement - the raid spawn, --at=, respawn, stepping out
+	# of a car - writes global_position directly, and `_true_pos` would
+	# otherwise yank them straight back (from Vector2.ZERO on the very
+	# first frame). The per-frame render snap is at most half a pixel, so
+	# a 2 px gate can only ever mean somebody else moved us.
+	if _true_pos.distance_squared_to(global_position) > 4.0:
+		_true_pos = global_position
+	# restore the EXACT position before moving: the render snap further
+	# down must never accumulate into the walk (see the note there)
+	global_position = _true_pos
 	move_and_slide()
+	_true_pos = global_position
 
 	var moving := input_vec.length_squared() > 0.01
 	if _was_moving and not moving:
 		# settle on the world pixel grid, so an idle raider never rests
 		# half a screen pixel off the scenery around him
 		position = position.round()
+		_true_pos = global_position
 	_was_moving = moving
 
 	# wheel zoom: whole-factor steps only (fractional zoom shimmers).
@@ -378,10 +395,27 @@ func _update_camera(delta: float) -> void:
 		_zoom_view = c
 	_zoom_view = move_toward(_zoom_view, c, delta * maxf(4.0, absf(c - _zoom_view) * 10.0))
 	camera.zoom = Vector2(_zoom_view / s, _zoom_view / s)
-	var snapped_pos := (global_position * c).round() / c
-	var visual_err := snapped_pos - global_position
+	# THE NODE ITSELF LANDS ON THE GRID, and this is a fix for a MEASURED bug.
+	#
+	# This used to keep `global_position` continuous and push the sprite onto
+	# the grid with `_sprite.position = visual_err`. The sprite was then drawn
+	# correctly - but Y-SORTING SORTS ON THE NODE, i.e. on the UNSNAPPED
+	# value. So for any neighbour within half a pixel the player could SORT in
+	# front while being DRAWN behind, and that frame renders in the wrong
+	# order: a prop or a wall flicks across the character for a single frame,
+	# only while moving, and unreproducible because it depends on the
+	# sub-pixel phase. `--probe-sort` measured 1062 disagreements across 2311
+	# near-pair frames - 46% - at a max offset of exactly 0.5 px.
+	#
+	# `_true_pos` is what keeps rule 1 intact: the exact position is restored
+	# before each move and captured again after, so this snap NEVER feeds back
+	# into movement. Snapping `global_position` and letting the physics carry
+	# on from it IS the v0.2.1 "low fps walk" bug - the quantisation
+	# accumulates and the walk speed wobbles. Restore, move, capture, snap.
+	var snapped_pos := (_true_pos * c).round() / c
+	global_position = snapped_pos
 	var lift := Vector2(0.0, -floor_lift)
-	_sprite.position = visual_err + lift
+	_sprite.position = lift
 	# THROWN AND SHEARED BY THE SUN. The blob is a SOFT-ALPHA texture, which is
 	# the one class this project lets off the pixel grid (the same exemption
 	# the LZ beacon's ground wash and the freight's steam already use) — so it
@@ -389,7 +423,7 @@ func _update_camera(delta: float) -> void:
 	# still rounded to WHOLE PIXELS, because that part slides under a sprite
 	# that is itself parked on the grid, and a subpixel offset there shimmers.
 	var throw := (_sun_dir * (1.5 + 10.0 * _sun_low) * _sun_strength).round()
-	_shadow.position = visual_err + lift + throw
+	_shadow.position = lift + throw
 	_shadow.skew = _sun_dir.x * _sun_low * _sun_strength * 0.55
 	# the flashlight rides the same lift — it lagged behind on the second
 	# floor and sat "inside" the character (user report)

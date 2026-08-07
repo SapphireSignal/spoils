@@ -403,6 +403,40 @@ stays open with that stated.
   default now; `--film-noclip` opts out. **A test that creates what it looks
   for is worse than no test.**
 
+**Shipped: v0.6.63 - THE ONE-FRAME POP IS FOUND, PROVEN AND FIXED.**
+
+**The bug:** `player.gd` kept `global_position` continuous and pushed the
+sprite onto the pixel grid with `_sprite.position = visual_err`, but
+**y-sorting sorts on the NODE** - the unsnapped value. So within half a pixel
+the player could SORT in front while being DRAWN behind, and that frame
+renders in the wrong order. Only while moving, unreproducible, because it
+depends on a sub-pixel phase that never repeats.
+
+**Proven, not guessed.** Filming was impractical (real walking speed covers
+~560 px in 1400 frames). The theory made an exact prediction, so
+`--probe-sort` tested it directly: **1062 disagreements in 2311 near-pair
+frames - 46% - max offset exactly 0.5 px. After: 0.**
+
+**The fix's trap:** `global_position` is snapped now, so the sort key IS the
+drawn position - but `_true_pos` holds the exact position and is restored
+before each move and captured after. Snapping the position and letting the
+physics continue from it is the v0.2.1 "low fps walk" bug.
+
+**THREE TIMES THIS SESSION A PROBE REPORTED A PERFECT SCORE WHILE MEASURING
+NOTHING**, and each one nearly shipped:
+- `--film-walk` copied `--perf-walk`'s collision-off sweep, so the player
+  walked THROUGH a house and the diff flagged the roof reveal - correct
+  behaviour, manufactured by the test.
+- The first frame diff flagged every other frame as a 137,000 px change:
+  that was the camera scrolling one pixel. Motion-compensate first.
+- `--probe-sort` reported `disagreements=0` TWICE while the player sat
+  perfectly still - once because the fix overwrote the probe's teleport, then
+  again because it accumulated onto the SNAPPED position, which rounds
+  straight back.
+**Every probe must report a liveness figure** (travel, count, delta) next to
+its verdict, or a zero is unreadable. `--probe-sort` prints `travelled=` for
+exactly this reason.
+
 **Picked up at: the polish pass, ART half — three of six done.** Shipped this
 session: the title (v0.6.51), the map screen redo (v0.6.52), the layout
 revision (v0.6.53), terrain blending + house contrast (v0.6.54), the blend

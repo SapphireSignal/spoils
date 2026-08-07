@@ -117,6 +117,8 @@ func _ready() -> void:
 			_smoke.call_deferred()
 		elif arg.begins_with("--shot="):
 			_shot.call_deferred(arg.trim_prefix("--shot="))
+		elif arg == "--probe-sort":
+			_probe_sort.call_deferred()
 		elif arg.begins_with("--film-walk="):
 			_film_walk.call_deferred(arg.trim_prefix("--film-walk="))
 		elif arg.begins_with("--film="):
@@ -1733,6 +1735,92 @@ func _film(film_name: String) -> void:
 	get_tree().quit()
 
 
+func _probe_sort() -> void:
+	## DOES THE PLAYER'S SORT KEY EVER DISAGREE WITH WHERE IT IS DRAWN?
+	##
+	## Filming for a rare pop is impractical: at real walking speed 1400 frames
+	## covers ~560 px, so catching something rare needs ~10k frames and hours.
+	## But the suspected cause makes an EXACT prediction, and predictions can be
+	## tested directly.
+	##
+	## player.gd keeps `global_position` continuous and draws the sprite at
+	## `snapped_pos` (rule 1 - the sprite parks on the screen-pixel grid), while
+	## y-sorting sorts on the NODE's y. So for any neighbour at height `oy`
+	## there can be frames where
+	##     sign(node_y - oy) != sign(drawn_y - oy)
+	## i.e. the player SORTS in front while being DRAWN behind, or the reverse.
+	## Every such frame is a frame rendered in the wrong order. Counting them
+	## settles the theory without a camera.
+	await _ensure_game_scene()
+	_apply_env_flags()
+	var player := _find_player()
+	if player == null:
+		print("SORT ERROR: no player")
+		get_tree().quit(1)
+		return
+	var ysort := get_tree().current_scene.get_node_or_null("World/YSort")
+	if ysort == null:
+		for n in get_tree().current_scene.find_children("*", "Node2D", true, false):
+			if n.y_sort_enabled and n.get_child_count() > 50:
+				ysort = n
+				break
+	if ysort == null:
+		print("SORT ERROR: no y-sorted parent found")
+		get_tree().quit(1)
+		return
+	for shape in player.find_children("*", "CollisionShape2D", true, false):
+		(shape as CollisionShape2D).set_deferred("disabled", true)
+	player.collision_mask = 0
+	for i in 30:
+		await get_tree().process_frame
+	var start_pos := player.global_position
+	var heading := Vector2(1.0, 1.0).normalized()
+	var step := 0.37
+	var disagreements := 0
+	var checked := 0
+	var worst := 0.0
+	var samples := 4000
+	for i in samples:
+		# DRIVE THE AUTHORITATIVE POSITION. player.gd restores `_true_pos` onto
+		# global_position every frame before moving, so a probe that only writes
+		# global_position is silently overwritten and the player never moves -
+		# which reads as a flawless zero here. It did, once.
+		# ACCUMULATE ON THE TRUE POSITION. Adding to global_position instead
+		# adds to the SNAPPED value, which the next frame rounds straight back -
+		# a 0.26 px step off a whole-pixel base never escapes the rounding, so
+		# the player sits still while every counter looks healthy. That is how
+		# this probe reported a flawless zero twice.
+		var tp: Vector2 = player.get("_true_pos")
+		player.set("_true_pos", tp + heading * step)
+		await get_tree().process_frame
+		var s := float(maxi(1, Settings.pixel_scale))
+		var c := s if player.zoom_combined == 0 else float(player.zoom_combined)
+		var node_y := player.global_position.y
+		var drawn_y := (player.global_position * c).round().y / c
+		worst = maxf(worst, absf(drawn_y - node_y))
+		# only neighbours close enough to overlap the player on screen matter
+		for child in ysort.get_children():
+			var o := child as Node2D
+			if o == null or o == player:
+				continue
+			if absf(o.global_position.x - player.global_position.x) > 48.0:
+				continue
+			var oy := o.global_position.y
+			if absf(oy - node_y) > 3.0:
+				continue
+			checked += 1
+			var a := node_y - oy
+			var b := drawn_y - oy
+			if (a > 0.0) != (b > 0.0):
+				disagreements += 1
+	# ALWAYS REPORT THE TRAVEL. A probe that silently stops moving reports a
+	# perfect score, and this one did exactly that once.
+	var travelled := player.global_position.distance_to(start_pos)
+	print("SORT frames=%d travelled=%.1f px near_pairs=%d disagreements=%d max_offset=%.4f px" % [
+		samples, travelled, checked, disagreements, worst])
+	get_tree().quit(0)
+
+
 func _film_walk(film_name: String) -> void:
 	## EVERY RENDERED FRAME while the player creeps forward, for hunting a
 	## ONE-FRAME visual pop (user: "random stuff glitch for like a milisecond",
@@ -1790,18 +1878,49 @@ func _film_walk(film_name: String) -> void:
 				DirAccess.remove_absolute(dir_path.path_join(stale))
 	var heading := Vector2(1.0, 1.0).normalized()
 	var solid := not ("--film-noclip" in OS.get_cmdline_user_args())
+	# CAPTURE AT NATIVE RESOLUTION. The game renders 560x360 and integer-scales
+	# it up, so dividing the grab back down by that factor with NEAREST is
+	# lossless - it recovers the exact pixels the game drew. It also cuts the
+	# file to a ninth, which is what makes a thousand-frame sweep possible at
+	# all, and makes the diff ~9x cheaper.
+	var shrink := maxi(1, Settings.pixel_scale)
+	# The camera's own position per frame, so the diff can align on the EXACT
+	# integer scroll instead of searching for it. Searching a +/-3 window cost
+	# 49 full-image compares per frame and was the reason the first analysis
+	# had to be killed at ten minutes.
+	var cam_log := PackedStringArray()
+	var cam := player.get_node_or_null("Camera2D") as Camera2D
+	var stuck := 0
 	for i in frames:
 		if solid:
 			# move_and_collide respects walls and is frame-rate independent, so
 			# the sweep walks the world the way the player really does
-			player.move_and_collide(heading * step)
+			var hit := player.move_and_collide(heading * step)
+			if hit != null:
+				# WANDER instead of grinding into the wall. A long sweep that
+				# stalls on the first building measures one static view for a
+				# thousand frames - the exact failure --perf-walk already had.
+				stuck += 1
+				heading = heading.rotated(deg_to_rad(90.0 if stuck % 2 == 0 else -90.0))
 		else:
 			player.global_position += heading * step
 		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 		var img := get_viewport().get_texture().get_image()
+		if shrink > 1:
+			img.resize(int(img.get_width() / shrink), int(img.get_height() / shrink),
+				Image.INTERPOLATE_NEAREST)
 		img.save_png(dir_path.path_join("f%04d.png" % i))
-	print("FILMWALK SAVED: %d frames step=%.2f -> %s" % [frames, step, dir_path])
+		var cp := cam.global_position if cam != null else player.global_position
+		cam_log.append("%d %.4f %.4f" % [i, cp.x, cp.y])
+	var log_file := FileAccess.open(dir_path.path_join("camera.txt"),
+		FileAccess.WRITE)
+	if log_file != null:
+		log_file.store_string("
+".join(cam_log))
+		log_file.close()
+	print("FILMWALK SAVED: %d frames step=%.2f turns=%d -> %s" % [
+		frames, step, stuck, dir_path])
 	get_tree().quit(0)
 
 

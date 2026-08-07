@@ -206,6 +206,11 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.63", [
+		"found the flicker. the character was being SORTED at a slightly different spot from where it was DRAWN - up to half a pixel out - so anything you walked past could be put in front of you for a single frame even though it was behind you. thats the thing you kept seeing on walls and never being able to walk back to",
+		"measured it before and after: on frames where you were level with something, 46% of them were sorted wrong. its zero now",
+		"walking speed is untouched - the exact position is still what moves you, only what gets drawn is snapped",
+	]],
 	["v0.6.62", [
 		"found and fixed a real one-frame flash: when a roof fades away as you step inside, it was doing over half of the fade in the very first frame, so it read as the roof snapping rather than fading. it eases in from nothing now - measured at 28 brightness levels of jump before, 1 after",
 		"this might not be the exact flicker you spotted, a clean walk past a house came out frame-perfect, but it was a genuine one and its gone",

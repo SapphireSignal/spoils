@@ -3,6 +3,42 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.63] - 2026-08-06 - the character sorted where it was not drawn
+
+**The one-frame pop the user has been reporting is found, proven and fixed.**
+
+### The bug
+`player.gd` kept `global_position` continuous and pushed the sprite onto the
+screen-pixel grid with `_sprite.position = visual_err` (rule 1 - the sprite
+must park on the grid or walking shimmers). The sprite was drawn in the right
+place, but **y-sorting sorts on the NODE, i.e. on the unsnapped value**.
+
+So for any neighbour within half a pixel, the player could SORT in front
+while being DRAWN behind. That frame renders in the wrong order: a prop or a
+wall flicks across the character for a single frame, only while moving, and
+unreproducible - it depends on the sub-pixel phase, which never repeats.
+
+### Proven, not guessed
+Filming for it was impractical (at real walking speed 1400 frames covers
+~560 px). But the theory makes an exact prediction, so `--probe-sort` tests
+it directly: for every neighbour within 3 px, does
+`sign(node_y - other_y)` differ from `sign(drawn_y - other_y)`?
+
+**Before: 1062 disagreements across 2311 near-pair frames - 46% - at a max
+offset of exactly 0.5 px, half the grid, as predicted. After: 0.**
+
+### The fix, and the trap in it
+`global_position` is now snapped every frame, so the sort key IS the drawn
+position. **`_true_pos` is what keeps rule 1 intact**: the exact position is
+restored before each move and captured again after, so the snap never feeds
+back into movement. Snapping the position and letting the physics carry on
+from it is the v0.2.1 "low fps walk" bug - the quantisation accumulates and
+the walk speed wobbles.
+
+### Verified
+`SMOKE PASS` (movement, crouch, border, roofs, doors, sniper, pause), 240 fps
+static and 240 fps walking with zero frames over 8.34 ms.
+
 ## [0.6.62] - 2026-08-05 - the roof reveal stops announcing itself
 
 ### Added - `--film-walk`, consecutive-frame capture
