@@ -3,6 +3,41 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.67] - 2026-08-06 - the door header is the building's own wall
+
+### Fixed - the header above a door was the door's colour, not the wall's
+*"can we make the door patch the same color as whatever building its on? and
+i dont think it worked for the warehouses"*.
+
+v0.6.66 sealed the hole above every door by drawing the header **into the door
+art**, which cannot be right: the door KIND follows the building's purpose
+(wood for houses, metal otherwise) while the wall STYLE is rolled
+**independently** per building. A tan wood door legitimately lands on grey
+`brick_b` masonry - so the header arrived the wrong colour on roughly half the
+buildings, reading as a patch stuck over the wall.
+
+The header is its own piece now, `door_lintel_<style>_<axis>`, placed by the
+builder in **that building's** style beside the door - the same pattern the
+two-storey transom already used. It is **cut from the real wall segment**
+rather than redrawn, so it can never drift out of step with the wall it sits
+in. (Same reasoning as the terrain fringes being composited from the real
+tiles.)
+
+**On the warehouses:** measured all four door/wall pairs and they were already
+sealed geometrically - the complaint there was the same colour mismatch, since
+warehouses are `brick_b` and can carry a wood door.
+
+### Fixed while doing it - the clip audit was right
+Cutting the band as a tight crop made the cut edge opaque and the generator's
+CLIP AUDIT failed the build on all four pieces. That audit exists to catch
+genuinely clipped art and is worth keeping, so the band keeps the segment's
+FULL canvas with only the top rows copied and the rest transparent - it then
+touches exactly the edges the wall segment already touches. **No exemption
+was added.**
+
+### Verified
+`SMOKE PASS`, `DOORS` 16 on unchanged cells, 240 fps.
+
 ## [0.6.66] - 2026-08-06 - doors that seal, trucks that differ, a louder mix
 
 ### Fixed - every door had a hole above it

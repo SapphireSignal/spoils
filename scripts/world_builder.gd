@@ -2140,6 +2140,14 @@ func _build_shell(plot: Dictionary) -> void:
 					var axis: String = _EDGE_AXIS[side]
 					_add_door("door_%s_%s" % [leaf, axis],
 						center + (_EDGE_OFFSET[side] as Vector2))
+					# the header over the opening, in THIS building's wall. A door
+					# cell gets no wall segment, so without it you can see inside
+					# over the top of a shut door. It is a separate piece because
+					# the door KIND follows the building's purpose while the wall
+					# STYLE is rolled independently - a header baked into the door
+					# art arrives the wrong colour on half the buildings.
+					_add_prop("door_lintel_%s_%s" % [style, axis],
+						center + (_EDGE_OFFSET[side] as Vector2))
 					if stories == 2:
 						# the transom: the upper band still needs its wall
 						# (a bare door segment left a hole into the stairwell)

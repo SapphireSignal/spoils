@@ -7988,6 +7988,17 @@
         ]
       ]
     },
+    "door_lintel_brick_a_x": {
+      "size": [
+        48,
+        66
+      ],
+      "origin": [
+        24,
+        56
+      ],
+      "collider": null
+    },
     "seg_brick_a_x_v1": {
       "size": [
         48,
@@ -8320,6 +8331,17 @@
           12.8
         ]
       ]
+    },
+    "door_lintel_brick_a_y": {
+      "size": [
+        48,
+        66
+      ],
+      "origin": [
+        24,
+        56
+      ],
+      "collider": null
     },
     "seg_brick_a_y_v1": {
       "size": [
@@ -8682,6 +8704,17 @@
         ]
       ]
     },
+    "door_lintel_brick_b_x": {
+      "size": [
+        48,
+        66
+      ],
+      "origin": [
+        24,
+        56
+      ],
+      "collider": null
+    },
     "seg_brick_b_x_v1": {
       "size": [
         48,
@@ -9014,6 +9047,17 @@
           12.8
         ]
       ]
+    },
+    "door_lintel_brick_b_y": {
+      "size": [
+        48,
+        66
+      ],
+      "origin": [
+        24,
+        56
+      ],
+      "collider": null
     },
     "seg_brick_b_y_v1": {
       "size": [

@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.66.** The release history was renumbered evenly on
+**Current version: v0.6.67.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -568,6 +568,15 @@ epsilon well under half a pixel cannot move where the sprite rasterises, so
 the v0.6.63 guarantee holds. **Work out the correct SIGN first** - in this
 projection the piece that should occlude the player at equal y is the one
 nearer the camera, so check against a real wall rather than assuming.
+
+## B0f. Going upstairs shuts the front door *(user, 2026-08-06)*
+
+*"when going up the stiars to a second floor, the main door entrance closes
+automatically, it should stay open"*. Changing floor should not touch a
+door's state at all. `main.gd` owns the floor switch and swaps which room's
+furniture exists - check whether it rebuilds or re-adds the ground-floor
+props (the door among them) rather than just hiding them, which would reset
+the swing to frame 0. `scripts/door.gd` holds the open/closed state.
 
 ## B0d. A closed door does not seal *(user, 2026-08-06)*
 

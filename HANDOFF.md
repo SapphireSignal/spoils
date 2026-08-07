@@ -497,6 +497,25 @@ alike.**
 - Audio: indoor rain was losing both ends at once (a -7 dB duck ON TOP of a
   1250 Hz cutoff); +3 dB master trim on the bus rather than per-sound.
 
+**Shipped: v0.6.67 - the door header is the building's own wall.** v0.6.66
+sealed the hole above doors by baking the header INTO THE DOOR ART, which
+cannot be right: the door KIND follows the building's purpose (wood for
+houses, metal otherwise) while the wall STYLE is rolled INDEPENDENTLY, so a
+tan door legitimately lands on grey masonry and the header arrived the wrong
+colour on half the buildings. It is now `door_lintel_<style>_<axis>`, placed
+by the builder in that building's style - and **cut from the real wall
+segment** rather than redrawn, so it cannot drift.
+
+**THE WAREHOUSES WERE NEVER A GEOMETRY PROBLEM.** All four door/wall pairs
+measured sealed; the complaint there was the same colour mismatch, because
+warehouses are `brick_b` and can carry a wood door. **Measure before assuming
+a second report is a second bug.**
+
+**The CLIP AUDIT earned its keep.** Cutting the band as a tight crop made the
+cut edge opaque and the audit failed the build on all four pieces. Fixed by
+keeping the segment's FULL canvas with the lower rows transparent, so it
+touches only the edges the segment already touches - **no exemption added**.
+
 **A CONFLICT WORTH CATCHING: the stairwell hole was BUILT ONCE AND REMOVED
 AT THE USER'S REQUEST.** `_build_upper`'s comment records it - *"the
 stairwell hole showed the ground and broke it"* - and they have now asked for

@@ -989,6 +989,24 @@ def _draw_seg_window(c: Canvas, ox: int, oy: int, axis: str,
             for fy in range(top - 1, top + h + 1):
                 c.set(x, face_top + fy, C("341c27"))
 
+def _wall_top_band(made: tuple, rows: int = 16) -> tuple:
+    """The top `rows` of a wall segment, keeping its ORIGIN so it hangs in
+    exactly the place the segment would. The origin lands below the crop,
+    which is fine - a sprite offset may point outside its own texture."""
+    seg, origin, _collider = made
+    # SAME CANVAS SIZE as the segment, with only the top rows copied and the
+    # rest left transparent - NOT a crop. A crop makes the cut edge opaque,
+    # and the generator's CLIP AUDIT correctly fails on content touching a
+    # canvas edge (that audit exists to catch genuinely clipped art, and is
+    # worth more than the few bytes a tight canvas would save). This way the
+    # piece touches exactly the edges the wall segment already touches.
+    band = Canvas(seg.w, seg.h)
+    for y in range(min(rows, seg.h)):
+        for x in range(seg.w):
+            band.px[x, y] = seg.px[x, y]
+    return band, origin, None
+
+
 def make_wall_segment(style: str, axis: str, window_variant: int = -1,
                       broken_seed: int = -1, variant: int = 0,
                       stories: int = 1, upper_only: bool = False) -> tuple[Canvas, tuple, list]:
@@ -1096,6 +1114,22 @@ def wall_piece_inventory() -> dict[str, tuple[Canvas, tuple, list]]:
             # THREE plain variants per style/axis: long walls reused one
             # image and the repetition showed (user: no obvious patterns)
             pieces[f"seg_{style}_{axis}"] = make_wall_segment(style, axis)
+            # THE HEADER OVER A DOORWAY, IN THE BUILDING'S OWN WALL. A door
+            # cell gets no wall segment, so the band above the leaf has to
+            # come from somewhere - and it must match the wall, not the door.
+            # It cannot live in the door art: the door KIND follows the
+            # building's purpose (wood for houses, metal otherwise) while the
+            # wall STYLE is rolled independently, so a tan door legitimately
+            # lands on grey brick and any header baked into it arrives the
+            # wrong colour (user: "can we make the door patch the same color
+            # as whatever building its on").
+            #
+            # Cut from the segment itself rather than redrawn, so it can
+            # never drift out of step with the wall it sits in - the same
+            # reasoning as the terrain fringes being composited from the real
+            # tiles.
+            pieces[f"door_lintel_{style}_{axis}"] = _wall_top_band(
+                make_wall_segment(style, axis))
             for sv in (1, 2):
                 pieces[f"seg_{style}_{axis}_v{sv}"] = make_wall_segment(
                     style, axis, -1, -1, sv)
@@ -3608,26 +3642,6 @@ def make_door_strip(kind: str, axis: str) -> tuple[Canvas, tuple, list]:
             c.set(hx + round(ex * 0.85), hy + round(ey * 0.85) - DOOR_H // 2,
                   C("10141f"))
 
-        def draw_lintel() -> None:
-            # THE HEADER ABOVE THE OPENING, and it is structural rather than
-            # decorative. A door cell gets NO wall segment - the door prop
-            # replaces it - so whatever the door does not cover is a hole
-            # straight into the building. The leaf is DOOR_H (34) plus a 2 px
-            # jamb cap = 36, while the walls either side are WALL_H (40), so
-            # the opening was ~5 px short of its own wall and you could see
-            # inside over the top of a SHUT door (user, twice: "the top shows
-            # a bit of the inside of the house, it should be sealed", "theres
-            # still a hole at the top of all the doors that lets the user see
-            # inside the house before he even goes inside").
-            #
-            # Drawn across the FULL opening including both jambs, and on every
-            # frame - an open door still has a header over it.
-            for j in range(-6, DOOR_LEAF + 6):
-                x = hx + j
-                by = hy + round(j * edge_dy)
-                for y in range(by - DOOR_H - 2 - DOOR_LINTEL, by - DOOR_H - 1):
-                    c.set(x, y, dark if (y - by) % 4 else C("341c27"))
-
         def draw_jambs() -> None:
             # the fixed 6 px of edge either side of the leaf
             for j in list(range(-6, 0)) + list(range(DOOR_LEAF, DOOR_LEAF + 6)):
@@ -3641,9 +3655,6 @@ def make_door_strip(kind: str, axis: str) -> tuple[Canvas, tuple, list]:
         # Outward, it swings toward the camera and must cover the jamb —
         # drawn the wrong way round the open door looks cut in half by the
         # board beside it (user report on the first cut of the two-way swing).
-        # the lintel is part of the wall, so it goes down first and nothing
-        # ever draws over it
-        draw_lintel()
         if outward:
             draw_jambs()
             draw_leaf()
