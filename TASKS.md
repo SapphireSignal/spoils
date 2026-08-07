@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.75.** The release history was renumbered evenly on
+**Current version: v0.6.76.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -689,7 +689,26 @@ v0.6.54's grey house, which was measured against the wrong thing. A door
 should clear BOTH faces by a wide margin; consider giving doors a hue that no
 wall uses rather than chasing luminance.
 
-## B0f. Going upstairs shuts the front door *(user, 2026-08-06)*
+## B0f. Going upstairs shuts the front door — **FIXED in v0.6.76**
+## *(kept: the guard it removed was RIGHT, and must not come back)*
+
+**Do not "simplify" this by deleting the seal.** The door was being slammed
+shut ON PURPOSE. `_build_upper` lays floor tiles and nothing else, so the upper
+room reuses the GROUND SHELL for collision — an open ground-floor doorway is a
+real hole at storey height and someone walked out of one. The fix separates the
+two concerns: `Door.set_floor_blocked()` seals the doorway for COLLISION while
+the door keeps its state, frame and silence. The occluder deliberately stays
+with the visual state, so a door that looks open still passes light.
+
+Covered by `--probe-floordoor`, which asserts both halves at once plus the
+unseal on the way down. `force_closed()` is deleted — it had one caller.
+
+**The probe's first cut FAILED falsely** by measuring crossing along the
+through-axis: an 18.2 px slide along the wall read as walking through a sealed
+doorway. It measures against `doorway_normal()` now. Same trap CLAUDE.md
+already names, walked into anyway.
+
+### the original report
 
 *"when going up the stiars to a second floor, the main door entrance closes
 automatically, it should stay open"*. Changing floor should not touch a

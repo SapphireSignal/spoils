@@ -206,6 +206,9 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.76", [
+		"going up to a second floor leaves the front door exactly as you left it. it was shutting the door on purpose - upstairs has no walls of its own, so an open doorway is a hole you can walk out of at roof height - but the doorway is just held solid now instead, and the door itself is left alone",
+	]],
 	["v0.6.75", [
 		"opening a door from right up against it doesnt shove you back any more. to make a door sit at the right depth i was moving the door itself, and a door is solid - so nudging it nudged you with it. only the picture moves now, never the solid part",
 	]],

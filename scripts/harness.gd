@@ -121,6 +121,8 @@ func _ready() -> void:
 			_probe_drive.call_deferred()
 		elif arg == "--probe-sort":
 			_probe_sort.call_deferred()
+		elif arg == "--probe-floordoor":
+			_probe_floordoor.call_deferred()
 		elif arg.begins_with("--film-walk="):
 			_film_walk.call_deferred(arg.trim_prefix("--film-walk="))
 		elif arg.begins_with("--film="):
@@ -1866,6 +1868,108 @@ func _probe_drive() -> void:
 		str(player.get("driving") != null), before, after,
 		"FOLLOWS" if after < before + 8.0 else "LEFT BEHIND"])
 	get_tree().quit(0)
+
+
+func _cross_doorway(pl: Node2D, door: Door, thru: Vector2) -> bool:
+	## Stand inside, shove OUTWARD, and report whether the player ended up on
+	## the far side of the WALL PLANE.
+	##
+	## Measured against `doorway_normal()`, never the through-axis. CLAUDE.md:
+	## the two iso ground axes sit only 53 degrees apart on screen, so sliding
+	## ALONG a wall scores 0.6x on the through-axis — the first cut of this
+	## probe read an 18.2 px slide as walking through a sealed doorway.
+	var mid := door.doorway_center()
+	var norm := door.doorway_normal()
+	pl.global_position = mid + thru * 16.0
+	await get_tree().process_frame
+	var before := (pl.global_position - mid).dot(norm)
+	_shove(pl, -thru, 40.0)
+	var after := (pl.global_position - mid).dot(norm)
+	# crossed only if the side flipped AND it is clear of the plane, so a body
+	# resting flush against the wall cannot read as a crossing
+	return signf(after) != signf(before) and absf(after) > 3.0
+
+
+func _probe_floordoor() -> void:
+	## GOING UPSTAIRS MUST NOT TOUCH A DOOR, AND MUST NOT LEAVE A HOLE.
+	##
+	## Two things have to hold at once and they pull against each other, which
+	## is why this is a probe and not a screenshot:
+	##   1. the door the player left OPEN is still open when they get upstairs
+	##      (user: "it should stay open")
+	##   2. the doorway is still SOLID up there — `_build_upper` lays floor
+	##      tiles and nothing else, so the upper room reuses the ground shell
+	##      and an open doorway is a hole at storey height. Someone walked out
+	##      of one.
+	##
+	## The solidity test uses `_shove` — move_and_collide in fixed 1 px steps.
+	## NEVER velocity + move_and_slide here: that scales by frame delta, a
+	## headless run is uncapped, and the door smoke test passed for three
+	## releases while moving a fraction of a pixel and touching no door.
+	await _ensure_game_scene()
+	var main_node := get_tree().current_scene
+	var uppers: Array = (main_node.get("world_info") as Dictionary).get(
+		"uppers", []) as Array
+	var fl := main_node.get("_floor_layer") as TileMapLayer
+	var pl := _find_player()
+	if uppers.is_empty() or fl == null or pl == null:
+		print("FLOORDOOR FAIL: no uppers/player")
+		get_tree().quit(1)
+		return
+	# find a two-storey building that actually has a door in its cells
+	var chosen := -1
+	var chosen_door: Door = null
+	for i in uppers.size():
+		var cells: Rect2i = (uppers[i] as Dictionary)["cells"]
+		for node in get_tree().get_nodes_in_group("doors"):
+			var dd := node as Door
+			if cells.grow(2).has_point(fl.local_to_map(dd.wall_position())):
+				chosen = i
+				chosen_door = dd
+				break
+		if chosen >= 0:
+			break
+	if chosen_door == null:
+		print("FLOORDOOR FAIL: no upper building has a door")
+		get_tree().quit(1)
+		return
+	var thru := chosen_door.doorway_through()
+	# open it from OUTSIDE, the way a player arriving at a house does
+	pl.global_position = chosen_door.doorway_center() - thru * 22.0
+	await get_tree().process_frame
+	chosen_door.toggle(pl.global_position)
+	await get_tree().create_timer(0.45).timeout
+	var open_before := chosen_door.is_open()
+
+	# ...upstairs
+	var stairs_cell: Vector2i = (uppers[chosen] as Dictionary)["stairs_cell"]
+	pl.global_position = fl.map_to_local(stairs_cell)
+	await get_tree().process_frame
+	main_node.call("_on_stairs_used", chosen)
+	for i in 6:
+		await get_tree().process_frame
+	var open_up := chosen_door.is_open()
+	var solid_up := chosen_door.doorway_sealed()
+	var crossed := await _cross_doorway(pl, chosen_door, thru)
+
+	# ...and back down
+	main_node.call("_on_stairs_used", chosen)
+	for i in 6:
+		await get_tree().process_frame
+	var open_down := chosen_door.is_open()
+	var solid_down := chosen_door.doorway_sealed()
+	var crossed2 := await _cross_doorway(pl, chosen_door, thru)
+
+	var sealed_up := not crossed
+	var passable_down := crossed2
+	print("FLOORDOOR open before=%s upstairs=%s after=%s"
+		% [str(open_before), str(open_up), str(open_down)])
+	print("FLOORDOOR upstairs solid=%s crossed=%s | downstairs solid=%s crossed=%s"
+		% [str(solid_up), str(crossed), str(solid_down), str(crossed2)])
+	var ok := (open_before and open_up and open_down
+		and solid_up and sealed_up and not solid_down and passable_down)
+	print("FLOORDOOR %s" % ("PASS" if ok else "FAIL"))
+	get_tree().quit(0 if ok else 1)
 
 
 func _probe_sort() -> void:

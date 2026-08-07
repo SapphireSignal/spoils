@@ -26,6 +26,7 @@ var _animating := false
 var _frame := 0
 var _frame_timer := 0.0
 var _sort_shift := 0.0             # node pushed off the wall line, Y-SORT ONLY
+var _floor_blocked := false        # sealed for an UPPER floor, state untouched
 
 
 func setup(texture: Texture2D, origin: Vector2, poly_points: PackedVector2Array,
@@ -151,6 +152,13 @@ func leaf_normal() -> Vector2:
 
 func swings_out() -> bool:
 	return _swing_out
+
+
+func doorway_sealed() -> bool:
+	## Is the panel across the doorway solid right now? A LIVENESS FIGURE for
+	## the floor probe: it separates "the seal never got applied" from "the
+	## seal is on and my movement test is measuring the wrong axis".
+	return not _poly.disabled
 
 
 func sort_shift() -> float:
@@ -292,16 +300,29 @@ func toggle(from: Vector2 = Vector2.INF) -> void:
 	set_process(true)
 
 
-func force_closed() -> void:
-	# the stairs slam this shut behind a climber even if the leaf is still
-	# mid-swing — toggle() refuses while animating, and an open ground-floor
-	# doorway under a second story lets you walk out into the air
-	if not _open:
+func set_floor_blocked(blocked: bool) -> void:
+	## Seal the doorway for COLLISION ONLY, leaving the door exactly as the
+	## player left it — same state, same frame, same sound (none).
+	##
+	## The upper room has NO WALLS OF ITS OWN: `_build_upper` lays floor tiles
+	## and the building reuses the ground shell for collision. So an open
+	## ground-floor doorway is a real hole at storey height, and walking out of
+	## one was a real bug. That used to be handled by slamming the door shut
+	## behind the climber, which the user rejected outright: *"when going up
+	## the stiars to a second floor, the main door entrance closes
+	## automatically, it should stay open"*. Blocking the gap without touching
+	## `_open` satisfies both.
+	##
+	## The occluder deliberately stays with the VISUAL state — the door looks
+	## open, so light still comes through it. This is a floor abstraction, not
+	## a door that quietly shut itself.
+	if _floor_blocked == blocked:
 		return
-	_open = false
-	Sfx.play_door(false)
-	_animating = true
-	set_process(true)
+	_floor_blocked = blocked
+	if blocked:
+		_poly.set_deferred("disabled", false)
+	elif _open and not _animating:
+		_poly.set_deferred("disabled", true)
 
 
 func _process(delta: float) -> void:
@@ -314,7 +335,9 @@ func _process(delta: float) -> void:
 		_animating = false
 		set_process(false)
 		if _open:
-			_poly.set_deferred("disabled", true)    # the gap is real now
+			# ...unless an upper floor is standing on this shell, in which
+			# case the gap stays sealed while the door still reads as open
+			_poly.set_deferred("disabled", not _floor_blocked)
 			_occ.occluder = null                    # ...and light comes through
 		else:
 			_poly.set_deferred("disabled", false)

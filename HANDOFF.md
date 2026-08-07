@@ -41,6 +41,53 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-08 — the front door stays open when you climb
+
+**Shipped: v0.6.76.** `SEC`, `DOCS`, `CLAIMS`, `SMOKE` all pass, plus a new
+`FLOORDOOR PASS`.
+
+**B0f FIXED — and the guard it replaced was CORRECT, so read this before
+touching it.** Climbing the stairs slammed the front door shut on purpose:
+`_build_upper` lays floor tiles and nothing else, so the upper room reuses the
+GROUND SHELL for collision, and an open ground-floor doorway is a real hole at
+storey height that someone walked out of. The two concerns are separated now —
+`Door.set_floor_blocked()` seals the doorway for COLLISION while the door keeps
+its state, frame and silence. **Deleting the seal to "simplify" this would
+restore a bug the user already hit.** `force_closed()` is gone; it had one
+caller.
+
+**The user's words:** *"everything with the doors is now fixed and it all looks
+clean, except when you go up the second floor and the door closes"* — the door
+run through v0.6.72-75 is signed off in play.
+
+**Learned:**
+- **I walked into a trap CLAUDE.md names in bold.** The probe's first cut
+  measured crossing along the THROUGH-AXIS and reported a false FAIL: an
+  **18.2 px slide along the wall** scored as walking through a sealed doorway,
+  because the two iso ground axes are only 53 degrees apart on screen. Measure
+  against `doorway_normal()` — the WALL PLANE. Reading the rule is not the same
+  as applying it; check the axis every single time.
+- **The liveness figure is what saved it.** The probe prints `solid=` (is the
+  collider actually enabled?) beside the movement result. `solid=true` with
+  `crossed=true` said plainly that the seal was working and the MEASUREMENT was
+  wrong — without it I would have gone hunting in `set_floor_blocked` for a bug
+  that was never there.
+- **A probe that boots into the world must `await _ensure_game_scene()`.** Mine
+  awaited a single frame, ran against the menu, and hung — which on this
+  project looks exactly like the parse-error failure mode. Worth adding to the
+  list of things that present as a hang.
+- **Piping a headless run through `Select-String` hides the HEAD of the log**,
+  which is the one place a parse error shows. Write to a file and read both
+  ends.
+
+**Picked up at: B0c, the second floor** — four separate things in one report
+(clipping into the slab, the stair top showing, clipping on props, and the
+stairwell hole). **The stairwell hole needs the user's sign-off before
+building**: it was built once and they had it removed because the gap showed
+the ground room through it, so it has to read as a SHAFT, not a hole.
+
+---
+
 ## 2026-08-07 — migration, and the open door finally hides you
 
 **Shipped: v0.6.72 — an open door leaf now hides the player behind it — and

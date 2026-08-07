@@ -3,6 +3,48 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.76] - 2026-08-08 - the front door stays open when you go up
+
+### Fixed - climbing the stairs slammed the front door
+*"when going up the stiars to a second floor, the main door entrance closes
+automatically, it should stay open"*.
+
+It was doing it **on purpose**, and the reason is real, so this is not a
+deletion. `_build_upper` lays floor tiles and nothing else — the upper room
+reuses the GROUND SHELL for collision — so an open ground-floor doorway is a
+genuine hole at storey height, and someone walked out of one. The old guard
+shut the door behind the climber to plug it.
+
+The doorway is sealed for **collision only** now (`Door.set_floor_blocked`),
+while the door keeps its state, its frame and its silence. The occluder stays
+tied to the VISUAL state on purpose: the door looks open, so light still comes
+through it. This is a floor abstraction, not a door that quietly shut itself.
+
+`force_closed()` had exactly one caller and is gone with it — recoverable from
+git history if a real one ever appears, the same call made for
+`_scatter_around` in v0.4.12.
+
+### Added - `--probe-floordoor`
+Two things have to hold at once here and they pull against each other, which
+is why this is a probe and not a screenshot: the door is still open upstairs
+**and** the doorway is still solid up there. It also checks the seal lifts on
+the way back down, and that dying upstairs does not leave a building's
+doorways solid for the rest of the raid.
+
+**The first cut of it reported a false FAIL, from the mistake CLAUDE.md
+already names:** it measured crossing along the through-axis, where the two
+iso ground axes sit only 53 degrees apart, so an **18.2 px slide along the
+wall** read as walking through a sealed doorway. It measures against
+`doorway_normal()` — the wall plane — now. The probe prints `solid=` beside
+the movement result as a liveness figure, and that is what showed the seal was
+working and the *measurement* was wrong.
+
+### Verified
+`FLOORDOOR PASS`: open before/upstairs/after all true, `upstairs solid=true
+crossed=false`, `downstairs solid=false crossed=true`. DOORS 16 on identical
+cells, UPPERS 6 with floorless=0 propless=0.
+`SEC PASS`, `DOCS PASS`, `CLAIMS PASS`, `SMOKE PASS`.
+
 ## [0.6.75] - 2026-08-07 - opening a door stops shoving you
 
 ### Fixed - a door pushed the player back when opened from close up

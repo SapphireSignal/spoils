@@ -410,21 +410,35 @@ func _on_stairs_used(index: int) -> void:
 		_player_upper = -1
 		_player.floor_lift = 0.0
 		_player.upstairs = false
+		_block_ground_doors(index, false)
 	elif _player_upper == -1:
 		_set_upper_state(index, true)
 		_player_upper = index
 		_player.floor_lift = float(world_info.get("story_h", 32))
 		_player.upstairs = true
-		# the ground door is on the GROUND floor: shut it behind you so the
-		# doorway can't leak you outside mid-air (user walked out of one)
-		var cells: Rect2i = (_uppers[index] as Dictionary)["cells"]
-		for node in get_tree().get_nodes_in_group("doors"):
-			var door := node as Door
-			var door_cell := _floor_layer.local_to_map(door.wall_position())
-			if cells.grow(2).has_point(door_cell) and door.is_open():
-				# force, not toggle: a leaf still mid-swing ignores toggle()
-				# and the doorway would leak you outside mid-air
-				door.force_closed()
+		_block_ground_doors(index, true)
+
+
+func _block_ground_doors(index: int, blocked: bool) -> void:
+	## Seal this building's ground doorways while the player is upstairs.
+	##
+	## COLLISION ONLY — the door keeps its state, its frame and its silence.
+	## It used to be slammed shut behind the climber, and the user rejected
+	## that: "when going up the stiars to a second floor, the main door
+	## entrance closes automatically, it should stay open".
+	##
+	## The guard itself has to stay. `_build_upper` lays floor tiles and
+	## nothing else, so the upper room reuses the GROUND SHELL for collision —
+	## an open doorway really is a hole at storey height, and someone walked
+	## out of one.
+	if index < 0 or index >= _uppers.size():
+		return
+	var cells: Rect2i = (_uppers[index] as Dictionary)["cells"]
+	for node in get_tree().get_nodes_in_group("doors"):
+		var door := node as Door
+		var door_cell := _floor_layer.local_to_map(door.wall_position())
+		if cells.grow(2).has_point(door_cell):
+			door.set_floor_blocked(blocked)
 
 
 func _set_upper_state(index: int, up: bool) -> void:
@@ -743,6 +757,9 @@ func _on_player_died() -> void:
 		return
 	if _player_upper != -1:      # tidy the world you left behind
 		_set_upper_state(_player_upper, false)
+		# unseal before dropping the index, or the doorways of the building
+		# you died in stay solid for the rest of the raid
+		_block_ground_doors(_player_upper, false)
 		_player_upper = -1
 		_player.floor_lift = 0.0
 		_player.upstairs = false
