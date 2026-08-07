@@ -206,6 +206,9 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.68", [
+		"the boards down the sides of a doorway are the buildings own brick now instead of the doors colour - they are the edge of the hole in the wall, so they belong to the wall",
+	]],
 	["v0.6.67", [
 		"the bit of wall above a door is made from that buildings own wall now, so it matches instead of looking like a patch stuck on. a door can be wood on a grey building - the door type follows what the building is for, the wall colour is rolled separately",
 		"the warehouse doors were already sealed, what was wrong there was the same colour mismatch",

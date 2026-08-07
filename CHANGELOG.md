@@ -3,6 +3,28 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.68] - 2026-08-06 - the doorway reveal is wall, not door
+
+### Fixed - the boards either side of a door were the door's colour
+*"the side of the door is still not the same colour"*. The 6 px jamb boards
+flanking the leaf are **the edge of the hole in the wall**, so they belong to
+the building - but they were painted in the door's own material, which put
+brown boards down both sides of grey masonry.
+
+The door strip is generated per **style** as well as per kind and axis now, so
+the jambs take that building's brick while the leaf keeps its own material. A
+wooden door in a masonry building is intentional; brown *reveals* in a
+masonry building were not.
+
+This is the third piece of the same root cause, and worth stating plainly:
+**the door KIND follows the building's purpose (wood for houses, metal
+otherwise) while the wall STYLE is rolled independently, so neither can be
+derived from the other.** Anything that is structurally WALL - the header, the
+jambs - has to be told the style; only the leaf may follow the kind.
+
+### Verified
+`SMOKE PASS`, `DOORS` 16 on unchanged cells.
+
 ## [0.6.67] - 2026-08-06 - the door header is the building's own wall
 
 ### Fixed - the header above a door was the door's colour, not the wall's

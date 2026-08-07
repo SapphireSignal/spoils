@@ -3583,7 +3583,7 @@ def _door_leaf_vec(axis: str, t: float, outward: bool = False) -> tuple[float, f
             DOOR_LEAF * (cs * closed[1] + sn * opened[1]))
 
 
-def make_door_strip(kind: str, axis: str) -> tuple[Canvas, tuple, list]:
+def make_door_strip(kind: str, axis: str, style: str) -> tuple[Canvas, tuple, list]:
     """Interactive door: a DOOR_FRAMES-frame swing strip. Frame 0 = closed,
     flush IN the wall plane (nothing pokes through the wall any more); last
     frame = swung fully inward, a full quarter turn clear of the opening so
@@ -3643,12 +3643,22 @@ def make_door_strip(kind: str, axis: str) -> tuple[Canvas, tuple, list]:
                   C("10141f"))
 
         def draw_jambs() -> None:
-            # the fixed 6 px of edge either side of the leaf
+            # THE REVEAL EITHER SIDE OF THE LEAF IS WALL, NOT DOOR. These 6 px
+            # boards are the edge of the hole in the wall, so they take the
+            # BUILDING'S brick - user: "the side of the door is still not the
+            # same colour". They were painted in the door's own material, so a
+            # wood door put brown boards down both sides of grey masonry.
+            #
+            # This is why the strip is generated per STYLE as well as per kind
+            # and axis: the door KIND follows the building's purpose while the
+            # wall STYLE is rolled independently, so the two cannot be derived
+            # from each other.
+            jb, jm = (C(n) for n in BRICK_STYLES[style]["x" if axis == "x" else "y"])
             for j in list(range(-6, 0)) + list(range(DOOR_LEAF, DOOR_LEAF + 6)):
                 x = hx + j
                 by = hy + round(j * edge_dy)
                 for y in range(by - DOOR_H - 2, by + 1):
-                    c.set(x, y, dark if (y - by) % 5 else C("341c27"))
+                    c.set(x, y, jm if (y - by) % 5 == 0 else jb)
 
         # WHO OCCLUDES WHO depends on which way it swings. Inward, the leaf
         # travels away from the camera and the wall stands in front of it.
@@ -3691,7 +3701,7 @@ def make_door_strip(kind: str, axis: str) -> tuple[Canvas, tuple, list]:
     # the outward panel is the mirror of the inward one, so its thickness
     # runs the other way across the leaf
     n_out = (n_open[0], -n_open[1]) if axis == "x" else (-n_open[0], n_open[1])
-    DOOR_COLLIDERS[f"door_{kind}_{axis}"] = {
+    DOOR_COLLIDERS[f"door_{kind}_{axis}_{style}"] = {
         "open": ["poly", quad(hinge, (hinge[0] + ox, hinge[1] + oy), n_open)],
         "open_out": ["poly", quad(hinge, (hinge[0] + ux, hinge[1] + uy), n_out)],
         # the jambs are drawn solid, so they ARE solid — otherwise an open
@@ -5333,7 +5343,9 @@ def prop_inventory() -> tuple[dict, dict]:
     fam("traffic_light_flat", 1, mirror_prop(tl_flat))
     for kind in ("wood", "metal"):
         for axis in ("x", "y"):
-            props[f"door_{kind}_{axis}"] = make_door_strip(kind, axis)
+            for style in BRICK_STYLES:
+                props[f"door_{kind}_{axis}_{style}"] = make_door_strip(
+                    kind, axis, style)
     for i in range(4):
         rng = random.Random(f"{SEED}:stick:{i}")
         fam("stick", i, draw_stick(rng, i))

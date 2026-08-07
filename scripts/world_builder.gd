@@ -2138,7 +2138,10 @@ func _build_shell(plot: Dictionary) -> void:
 					# a REAL door, closed in the wall plane; F opens it
 					var leaf := "wood" if kind == "house" else "metal"
 					var axis: String = _EDGE_AXIS[side]
-					_add_door("door_%s_%s" % [leaf, axis],
+					# the strip carries the wall STYLE too: the jamb boards either
+					# side of the leaf are the edge of the hole in the wall, so they
+					# have to be that building's brick
+					_add_door("door_%s_%s_%s" % [leaf, axis, style],
 						center + (_EDGE_OFFSET[side] as Vector2))
 					# the header over the opening, in THIS building's wall. A door
 					# cell gets no wall segment, so without it you can see inside

@@ -516,6 +516,23 @@ cut edge opaque and the audit failed the build on all four pieces. Fixed by
 keeping the segment's FULL canvas with the lower rows transparent, so it
 touches only the edges the segment already touches - **no exemption added**.
 
+**Shipped: v0.6.68 - the doorway reveal is wall, not door.** The jamb boards
+either side of the leaf are the EDGE OF THE HOLE IN THE WALL and were painted
+in the door's material, so a wood door put brown boards down both sides of
+grey masonry. The strip is generated per STYLE now as well as per kind/axis.
+
+**THIS WAS THE THIRD ROUND OF ONE ROOT CAUSE** (v0.6.66 header baked into the
+door, v0.6.67 header made a wall piece, v0.6.68 jambs). State it once and
+apply it everywhere next time: **the door KIND follows the building's purpose
+while the wall STYLE is rolled independently - neither derives from the
+other. Anything structurally WALL must be told the style; only the leaf
+follows the kind.** The user reported it three times because each fix only
+covered one of the three pieces.
+
+**STILL OPEN from their last messages:** *"the top of the door is cut off"*
+(not addressed - look at the leaf's top edge against the lintel band), and
+going upstairs shutting the front door (TASKS.md B0f).
+
 **A CONFLICT WORTH CATCHING: the stairwell hole was BUILT ONCE AND REMOVED
 AT THE USER'S REQUEST.** `_build_upper`'s comment records it - *"the
 stairwell hole showed the ground and broke it"* - and they have now asked for

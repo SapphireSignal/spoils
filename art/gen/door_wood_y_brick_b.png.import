@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b50kccdud50em"
-path="res://.godot/imported/door_metal_x.png-bdef11894c041810c5c5a508de45bfe2.ctex"
+uid="uid://bwqrl4s5cmehl"
+path="res://.godot/imported/door_wood_y_brick_b.png-789797f734fbcb67bcde1f219cb32411.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/gen/door_metal_x.png"
-dest_files=["res://.godot/imported/door_metal_x.png-bdef11894c041810c5c5a508de45bfe2.ctex"]
+source_file="res://art/gen/door_wood_y_brick_b.png"
+dest_files=["res://.godot/imported/door_wood_y_brick_b.png-789797f734fbcb67bcde1f219cb32411.ctex"]
 
 [params]
 
