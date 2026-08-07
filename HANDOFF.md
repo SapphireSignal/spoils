@@ -580,6 +580,19 @@ created a second-order problem (ties) that only showed up in one specific
 place. **When you move a value onto a shared grid, ask what else is on that
 grid.**
 
+**OPEN AT THE END OF THE SESSION, both from the user's last two messages and
+both written up in TASKS.md with the mechanism already worked out:**
+- **B0h - an OPEN door leaf does not hide the player behind it.** NOT the
+  v0.6.71 tie-break (that is verified clean). A door node sits on the WALL
+  LINE while an open leaf swings toward the CAMERA, so the leaf can never
+  occlude anything south of that line. The fix pattern is the one CLAUDE.md
+  already records for the second-floor slab: **give the piece its own sort
+  position and offset the ART, never the node** - push `position.y` toward the
+  camera while opened outward and subtract the same from `_sprite.offset.y`.
+- **B0i - door/wall contrast was measured against the LIT face only.** Against
+  `brick_b`'s SHADED face the metal door clears it by 37, not 74. Check every
+  face, not just the lit one - the same error as v0.6.54's grey house.
+
 **A CONFLICT WORTH CATCHING: the stairwell hole was BUILT ONCE AND REMOVED
 AT THE USER'S REQUEST.** `_build_upper`'s comment records it - *"the
 stairwell hole showed the ground and broke it"* - and they have now asked for

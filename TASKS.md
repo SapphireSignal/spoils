@@ -595,6 +595,47 @@ give there. Options, in order of preference:
 3. Draw the header procedurally along the edge slope rather than cutting it
    from the segment, accepting that it then has to match the brick by hand.
 
+## B0h. An OPEN door leaf does not hide the player behind it *(user)*
+
+*"i can still see my character when he should be behind the door"*, with the
+door OPEN and the player standing in the opening. **This is NOT the v0.6.71
+tie-break** (that closed B0e and is verified: 0 disagreements over 810 px).
+
+**The mechanism.** A door node sits on the WALL LINE, but an open leaf swings
+several pixels TOWARD THE CAMERA. Y-sort orders by the node, so the leaf can
+never occlude anything whose node is south of the wall line - including a
+player standing right behind the open leaf. The sprite's screen extent and its
+sort anchor disagree.
+
+**CLAUDE.md already names the fix pattern, from the second-floor slab:** *"give
+each piece its own sort position and offset the ART, never the node."* So when
+the door opens OUTWARD, push `door.position.y` toward the camera by the leaf's
+depth and subtract the same from `_sprite.offset.y`. The art does not move; the
+sort does. Reverse it on close. `scripts/door.gd` already tracks `_swing_out`
+and has `leaf_center()` / `leaf_normal()` to size the shift from.
+
+**Verify with a screenshot of a player standing behind an open leaf** - there
+is no probe for occlusion, and `--smoke` will not catch it.
+
+## B0i. Door vs wall contrast is thin on SHADED faces *(user, 2026-08-07)*
+
+*"that door is also the same color as the warehouse, make sure all doors on
+all buildings are different colours than the building"*. v0.6.65 set the door
+colours against the wall's **lit** face; measured against the **shaded** one
+the margin is much thinner:
+
+| surface | luminance |
+|---|---|
+| `brick_b` lit face `819796` | 144 |
+| `brick_b` shaded face `577277` | 106 |
+| metal door `394a50` | 70 |
+
+37 against the shaded face, versus 74 against the lit one. **Check every
+door/wall/face combination, not just the lit one** - the same mistake as
+v0.6.54's grey house, which was measured against the wrong thing. A door
+should clear BOTH faces by a wide margin; consider giving doors a hue that no
+wall uses rather than chasing luminance.
+
 ## B0f. Going upstairs shuts the front door *(user, 2026-08-06)*
 
 *"when going up the stiars to a second floor, the main door entrance closes
