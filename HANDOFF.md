@@ -41,6 +41,47 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-08 — hugging the doorway stops peeling the door
+
+**Shipped: v0.6.94.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass.
+
+### The user's words
+
+- *"im as close to the left side of the doorway as i can be, everytime i walk
+  past that side of the door i can see it"*, *"its on the safehouse door"*,
+  *"it only shows up once im very close to it"*.
+
+### Shipped
+
+Pressed against the jamb and level with the wall, the player is BESIDE the
+leaf's hinge, not in front of its face — but the half-plane test scored them in
+front, so the leaf ducked behind them onto the wall line and lost to its own
+frame. `DUCK_MIN`: the leaf only ducks if the player is at least 4 px in FRONT
+of the wall plane. The safehouse door is the worst case — sideways facing,
+leading edge only 7.4, least room before it hits the wall.
+
+### Learned — THE PROBE HID THE BUG THREE DIFFERENT WAYS
+
+Every one of them made it greener than the game:
+1. It opened every door INWARD (sign of `doorway_through()`), so swing-out —
+   the only case ever reported broken — was never tested.
+2. It compared only leaf-vs-PLAYER, never leaf-vs-WALL. Added `flat_at_wall`.
+3. **It called every jamb-hugging square BLOCKED** via `test_move` with a
+   margin, and those are exactly the squares the user stands in — movement
+   pushes you into them. Margin is 0 now and the grid is 3 px, not 6.
+
+**A probe that excludes the awkward squares is a probe that passes.** When one
+disagrees with a user, suspect what it refuses to measure before suspecting
+them.
+
+### Picked up at
+
+1. **Clipping into walls from inside** — still open, diagnosis two entries down.
+2. The known 1-of-N threshold square on player-vs-leaf ordering — bounded.
+3. The standing backlog: B0-NEW, B0, B0b, B1, B2, B3, B4.
+
+---
+
 ## 2026-08-08 — and now on the OTHER facing
 
 **Shipped: v0.6.93.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass.

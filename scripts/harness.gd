@@ -2052,7 +2052,7 @@ func _probe_doorsort() -> void:
 		var row := ""
 		var shifts := ""
 		for gx in range(-10, 11):
-			var at := centre + Vector2(float(gx) * 6.0, float(gy) * 6.0)
+			var at := centre + Vector2(float(gx) * 3.0, float(gy) * 3.0)
 			# ONLY WHERE THE TWO CAN ACTUALLY OVERLAP ON SCREEN. A leaf is a
 			# FINITE panel, and the half-plane test below treats its plane as
 			# infinite — so it demands a correct draw order out past the leaf's
@@ -2074,7 +2074,7 @@ func _probe_doorsort() -> void:
 			# overlap without it, which is how a spawn guard in this file sat
 			# doing nothing for a long time.
 			var probe_xf := Transform2D(0.0, at)
-			if pl.test_move(probe_xf, Vector2.ZERO, null, 0.08, true):
+			if pl.test_move(probe_xf, Vector2.ZERO, null, 0.0, true):
 				row += "b"          # blocked: unreachable, not a fail
 				shifts += "  b "
 				continue
@@ -2104,7 +2104,7 @@ func _probe_doorsort() -> void:
 			else:
 				row += "X"
 				wrong += 1
-		print("DOORSORT %+3d %s   shift %s" % [gy * 6, row, shifts])
+		print("DOORSORT %+3d %s   shift %s" % [gy * 3, row, shifts])
 	print("DOORSORT squares=%d disagreeing=%d flat_at_wall=%d" % [tested, wrong, flat])
 	print("DOORSORT %s" % ("PASS" if wrong == 0 else "FAIL"))
 	get_tree().quit(0 if wrong == 0 else 1)

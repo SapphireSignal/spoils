@@ -14,6 +14,10 @@ const FRAMES := 4          # frames per swing; the sheet holds two swings
 const FRAME_TIME := 0.06
 const JAMB_EPS := 0.01     # sub-pixel; decides leaf-vs-jamb ties ONLY
 const LEAF_AIM_MARGIN := 1.0   # how far past the player the aimed leaf key sits
+const DUCK_MIN := 4.0          # the leaf only ducks behind a player standing
+                               # this far IN FRONT of the wall plane; inside
+                               # that they are in the doorway, level with it,
+                               # and there is nothing to duck behind
 const AIM_HALF_BODY := 7.0     # half the raider's drawn width; outside the
                                # leaf's screen-x span by this, they cannot
                                # overlap it and the aim must not fire
@@ -425,7 +429,19 @@ func _aim_leaf_sort() -> void:
 	var rel := player.global_position.y - global_position.y
 	var behind := (player.global_position - a0).dot(nrm) < 0.0
 	var want := lead
-	if (rel < lead) != behind:
+	## AND IT ONLY DUCKS IF THERE IS SOMETHING TO DUCK BEHIND. Hugging the jamb,
+	## level with the wall, the player is BESIDE the leaf's hinge — not in front
+	## of its face — but the half-plane test still scores them "in front", so the
+	## aim dropped the key past them to the wall line and the door frame drew
+	## over the leaf (user: "im as close to the left side of the doorway as i can
+	## be, everytime i walk past that side of the door i can see it").
+	##
+	## Below `DUCK_MIN` the player is in the doorway itself, level with the wall
+	## plane, and there is nothing in front to hide behind: keep the leading
+	## edge. What that costs is a sliver — at the hinge the panel is nearly
+	## edge-on, so it may overlap them by a pixel or two. What it buys is the
+	## wall never drawing over the door, which is the far louder artefact.
+	if (rel < lead) != behind and (behind or rel > DUCK_MIN):
 		# the fixed key puts the player on the wrong side of the leaf: move it
 		# just past them, and no further
 		want = rel + LEAF_AIM_MARGIN if behind else rel - LEAF_AIM_MARGIN

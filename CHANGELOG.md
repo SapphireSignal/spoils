@@ -3,6 +3,34 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.94] - 2026-08-08 - hugging the doorway stops peeling the door
+
+### Fixed - the door frame drew over the door, but only right up against it
+*"im as close to the left side of the doorway as i can be, everytime i walk past
+that side of the door i can see it"*, *"its on the safehouse door"*, *"it only
+shows up once im very close to it"*. Three details that between them pinned it
+exactly.
+
+Pressed against the jamb and level with the wall, you are BESIDE the leaf's
+hinge, not in front of its face - but the which-side-of-the-panel test still
+scored you as in front, so the leaf ducked behind you, landed on the wall line
+and lost to its own frame. The safehouse door is the worst case: it is on the
+facing whose leaf swings sideways, where the leading edge is only 7.4 px, so it
+has the least room to give before it hits the wall.
+
+The leaf only ducks behind you now if there is something to duck behind - if you
+are at least `DUCK_MIN` in front of the wall plane. Inside that you are in the
+doorway itself and the leaf keeps its leading edge. The cost is a sliver: at the
+hinge the panel is nearly edge-on, so it may overlap you by a pixel or two. The
+gain is that the frame never draws over the door.
+
+**Why the probe never saw it**: it teleported and asked `test_move` whether each
+square was standable, with a margin - which called every jamb-hugging square
+BLOCKED. In play you get pushed into exactly those squares. The margin is 0 now
+and the grid is 3 px instead of 6, and it reports `flat_at_wall` - swing-out
+leaves sitting at the wall line - which is the relation that was actually
+breaking. Safehouse door, 39 reachable squares: **flat_at_wall=0**.
+
 ## [0.6.93] - 2026-08-08 - and now on the other facing too
 
 ### Fixed - v0.6.92 fixed the overlapping door on one wall facing and left it standing on the other
