@@ -3,6 +3,43 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.97] - 2026-08-08 - walking along a wall inside stops cutting you in bands
+
+### Fixed - one sort key per wall face, while you are inside
+*"i can clip into walls from the inside, and then i see half my character
+through the wall"* — then the two details that actually solved it: *"it happens
+like 3 times on that side of the wall"* and *"theyre at regular intervals, not
+near the corners"*.
+
+A wall face is built as ONE SPRITE PER CELL, each carrying its own depth. Walk
+along the inside of one and you cross those depths in turn: at every cell
+boundary you are in front of the cell just passed and behind the next, so that
+next one's brick draws across you. One band per cell — which is why it repeated
+at intervals, and why corners were clear (you are not travelling parallel to a
+face there).
+
+A face has no reason to sort per-cell against the room it encloses. It is one
+flat surface, wholly behind the room or wholly in front of it. So each piece now
+takes a fixed offset onto its own face's extreme — computed once at build time —
+and the whole face becomes a single plane with no seams to cross.
+
+**Only while you are inside.** From the street a face genuinely does interleave
+with things standing along it, so outside it goes straight back to per-cell.
+
+**The sprite moves, never the node.** Wall pieces are static bodies; moving one
+would move the wall's collision and shove anything resting against it. Same
+split the second-floor slab and the door leaf already use.
+
+### The wrong fix, recorded because it was nearly built
+This was diagnosed as "collision lets you stand too close to the wall", and
+`--probe-wallclip` backs that reading — far walls do let the body 6-16 px past
+their line. Insetting the collider would have moved you back a few pixels and
+left the banding exactly where it was, only narrower. **A too-close bug bands the
+whole wall; it does not repeat at intervals.** The user's "3 times" is what ruled
+it out.
+
+Layout untouched: DOORS 16, LAMPS 53/15, VEHICLES 30, identical cells.
+
 ## [0.6.96] - 2026-08-08 - opening a door from inside stops showing you through it
 
 ### Fixed - the character showed through the leaf for the whole swing

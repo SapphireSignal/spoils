@@ -41,6 +41,50 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-08 — B11: one sort key per wall face
+
+**Shipped: v0.6.97.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass; layout untouched
+(DOORS 16 / LAMPS 53/15 / VEHICLES 30).
+
+### The user's words
+
+- *"i can clip into walls from the inside, and then i see half my character
+  through the wall"*, then *"it happens like 3 times on that side of the wall"*
+  and *"theyre at regular intervals, not near the corners"*.
+- *"fix b11, use the shared sort key per side"* — their choice of the two
+  options offered.
+
+### Shipped
+
+`RoofReveal.set_face_sort(on)`, called from main.gd's interior loop with the
+same `here` test as the roof fade. Each wall piece carries a build-time delta
+onto its own FACE's extreme (min y for north/west, max y for south/east), so
+inside a building a face is one plane with no per-cell seams. Outside it reverts
+to per-cell, where the interleaving is correct. Only the SPRITE moves —
+`y_sort_enabled` on the piece — because these are StaticBody2D and moving one
+would move the wall's collision.
+
+### Learned
+
+- **THE USER'S "3 TIMES" WAS THE WHOLE DIAGNOSIS.** I had this as a collision
+  problem and `--probe-wallclip` supported it (far walls let the body 6-16 px
+  past their line). I was one message away from insetting wall collision
+  district-wide, which would have narrowed the bands and fixed nothing.
+  **A too-close bug bands the whole wall; only a per-cell bug repeats at
+  intervals.** Ask for the SPACING of an artefact before touching anything.
+- **I FELL INTO THE HEREDOC TRAP CLAUDE.md NAMES IN BOLD.** A `python - <<'PY'`
+  block writing a GDScript line-continuation landed a mangled line in
+  `roof_reveal.gd`. Restructure so no backslash is needed, or use the Edit tool.
+
+### Picked up at
+
+1. Backlog: B4 (smoker, marked NEXT UP), B0-NEW geometry batch, B0, B0b, B1,
+   B2, B3, B6, B8, B10, C3.
+2. `--probe-wallclip` exists but only shoves STRAIGHT at a wall. If B11 ever
+   needs re-checking, walk it ALONG a face instead.
+
+---
+
 ## 2026-08-08 — opening a door stops showing you through it
 
 **Shipped: v0.6.96.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass.

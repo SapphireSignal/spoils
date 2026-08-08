@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.96.** The release history was renumbered evenly on
+**Current version: v0.6.97.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -848,15 +848,15 @@ Draw-neutral routes, in order of preference:
 
 Verify with DOORS 16 on identical cells, plus LAMPS and VEHICLES.
 
-## B11. Walking along an inside wall cuts the player in bands *(user, 2026-08-08)*
+## B11. Walking along an inside wall cuts the player in bands — **FIXED in v0.6.97**
 
 *"i can clip into walls from the inside, and then i see half my character
 through the wall"*, then the two details that actually solved it: *"it happens
 like 3 times on that side of the wall"* and *"theyre at regular intervals, not
 near the corners"*.
 
-**DIAGNOSED, NOT STARTED. The diagnosis is settled — do not re-derive it, and
-do NOT fix the collision.**
+**FIXED by option 2 below — one shared sort key per face, applied only while
+inside. Do NOT fix the collision; that was the wrong diagnosis.**
 
 A wall face is built as ONE SPRITE PER CELL, each with a single y-sort key.
 Walking along the inside of a wall crosses those keys one at a time, so at every

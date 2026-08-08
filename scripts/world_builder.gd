@@ -2151,6 +2151,10 @@ func _build_shell(plot: Dictionary) -> void:
 	# towering over the room they are standing in. A null low texture means the
 	# piece is second storey ONLY (the door transom) and simply goes away.
 	var low_walls: Array = []
+	# B11: every piece of ONE wall FACE, grouped by side, so the face can be
+	# given a single shared sort key while the player is inside. See
+	# RoofReveal.set_face_sort.
+	var face_pieces: Dictionary = {}
 
 	for y in range(interior.position.y, interior.end.y):
 		for x in range(interior.position.x, interior.end.x):
@@ -2230,6 +2234,9 @@ func _build_shell(plot: Dictionary) -> void:
 						(_EDGE_SIDE_IDS[side] as int))] = true
 				var wall_node := _add_prop(piece,
 					center + (_EDGE_OFFSET[side] as Vector2))
+				if not face_pieces.has(side):
+					face_pieces[side] = []
+				(face_pieces[side] as Array).append(wall_node)
 				if stories == 2:
 					# FAR = the edge offset pushes the piece UP the screen, so
 					# the room lies in front of it. Read off _EDGE_OFFSET rather
@@ -2246,6 +2253,45 @@ func _build_shell(plot: Dictionary) -> void:
 				(occ_segs[side] as Array).append([
 					(center + (verts[0] as Vector2)).round(),
 					(center + (verts[1] as Vector2)).round()])
+
+	# B11: ONE SORT KEY PER WALL FACE, while the player is inside.
+	#
+	# A face is one sprite per cell and each carries its own key, so walking
+	# ALONG the inside of a wall crosses those keys one at a time: at every cell
+	# boundary you are in front of the cell just passed and behind the next, and
+	# that next one's brick draws across you. The user saw it as being cut in
+	# half "like 3 times on that side of the wall ... at regular intervals, not
+	# near the corners" — one band per cell, and corners are clear because you
+	# do not travel parallel to a face there.
+	#
+	# THE COLLISION IS NOT THE BUG. `--probe-wallclip` shows the far walls let
+	# the body 6-16 px past their line, which reads like "you can stand too
+	# close" — but that would band the WHOLE wall, not repeat at intervals.
+	# Insetting the collider would have narrowed the bands and fixed nothing.
+	#
+	# A face has no reason to sort per-cell against the room it encloses: it is
+	# one flat surface, entirely behind the room (north/west) or entirely in
+	# front of it (south/east). So each piece gets a delta onto its own face's
+	# extreme, and RoofReveal applies it only while the player is inside — the
+	# per-cell keys stay exactly as they were from the street, where the face
+	# genuinely does interleave with things standing outside it.
+	var face_walls: Array = []
+	for side in face_pieces:
+		var pieces: Array = face_pieces[side]
+		var far_side := (_EDGE_OFFSET[side] as Vector2).y < 0.0
+		var shared := (pieces[0] as Node2D).position.y
+		for n in pieces:
+			var ny := (n as Node2D).position.y
+			shared = minf(shared, ny) if far_side else maxf(shared, ny)
+		for n in pieces:
+			var node2 := n as Node2D
+			var delta := shared - node2.position.y
+			if is_zero_approx(delta):
+				continue
+			# the SPRITE carries the depth, never the node: this is a
+			# StaticBody2D and moving it would move the wall's collision.
+			node2.y_sort_enabled = true
+			face_walls.append([node2, delta])
 
 	_emit_occluder_runs(occ_segs)
 
@@ -2287,7 +2333,7 @@ func _build_shell(plot: Dictionary) -> void:
 			_occupied[Vector2i(x, y)] = true
 
 	await _build_roof(interior, plot["tone"], posts.keys(), ruined,
-		_wall_h + (_story_h if stories == 2 else 0), low_walls)
+		_wall_h + (_story_h if stories == 2 else 0), low_walls, face_walls)
 
 	# the entrance pocket: the door cell and everything around it stays empty
 	var pocket: Array[Vector2i] = [door_cell]
@@ -2475,11 +2521,13 @@ func _register_low_wall(into: Array, node: Node2D, low_name: String,
 
 
 func _build_roof(interior: Rect2i, tone: String, post_positions: Array,
-		ruined: bool, roof_h: int = -1, low_walls: Array = []) -> void:
+		ruined: bool, roof_h: int = -1, low_walls: Array = [],
+		face_walls: Array = []) -> void:
 	var south_corner := interior.end - Vector2i(1, 1)  # position anchor AND ruin bite corner
 	var roof := RoofReveal.new()
 	roof.cells = interior
 	roof.low_walls = low_walls
+	roof.face_walls = face_walls
 	roof.position = _floor_layer.map_to_local(south_corner) + Vector2(0, 24)
 	var lift := Vector2(0, -float(roof_h if roof_h > 0 else _wall_h))
 	for y in range(interior.position.y, interior.end.y):

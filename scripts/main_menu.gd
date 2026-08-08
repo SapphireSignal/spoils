@@ -206,6 +206,9 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.97", [
+		"walking along the inside of a wall no longer slices your character into bands. a wall is built one panel per floor tile and each panel had its own depth, so walking past them you kept crossing from in front of one to behind the next and the next one drew across you - once per tile, which is why it repeated at even spacing and never at the corners. inside a building a wall face is now one flat surface with no seams to cross",
+	]],
 	["v0.6.96", [
 		"opening a door from inside no longer shows your character through it for the length of the swing. the door used to build up its depth as it came round, starting flat against the wall - so for the first half of every open, anyone stood behind it drew straight through it. it works out its real depth from frame one now",
 	]],
