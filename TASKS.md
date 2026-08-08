@@ -538,6 +538,27 @@ few, and none near comms" may remain — unmeasured, check before building.
      projecting leaves four triangular corners empty, and the left and right
      ones are exactly where that chrome should live - it stops being wasted
      space and starts being the frame.
+   - **HOVER TOOLTIPS OUT, A CLICKED POI WINDOW IN** *(user, 2026-08-08)*:
+     *"lets not make the stuff hoverable to show tooltips on the map, lets
+     change it so you have to click on the text or icon and it brings up a
+     window showing like a little picture of the POI and some loot you can
+     find there and a little background of the POI"*. So: click the icon OR
+     its label -> a panel with (a) a small picture of the place, (b) what loot
+     is found there, (c) a short background. Kill `TOOLTIP_DELAY` and the
+     hover path in `map_view.gd`.
+     **Two things to settle before building this one:**
+     - **There is no loot system yet.** DESIGN.md has loot in the later
+       milestones, not M1. The list would be flavour text until then — fine,
+       but say so rather than implying a real table, and keep it in one place
+       so it can be wired to the real one later.
+     - **The picture.** Cheapest honest source is a small in-engine capture
+       per POI, the way the menu backdrops were promoted from renders. Do NOT
+       hand-draw twelve new illustrations — that is exactly the redraw work
+       the standing ENGINE-EFFECTS-OVER-ART rule exists to avoid.
+     `LORE.md` already describes most POIs (courtyard and its dry fountain,
+     the bus depot, the scrapyard, the school over its playground, the gallery
+     "where somebody still paints", the comms relay in the trees) — take the
+     background text from there, do not invent parallel lore.
    - Free rein granted: *"you can add stuff do whatever you want"*.
 
    **STATUS 2026-08-08: structural sample rendered and sent, awaiting sign-off
