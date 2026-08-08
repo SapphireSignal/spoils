@@ -257,6 +257,7 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 	# the map bake and vector plan walk every cell — they yield on the same
 	# budget as everything above, instead of stalling the deploy tail
 	var map_image: Image = await _bake_map_image()
+	var map_iso: Image = await _bake_map_iso()
 	var map_vec: Dictionary = await _map_vectors()
 
 	var spawn := _floor_layer.map_to_local(_spawn_cell)
@@ -290,6 +291,8 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 		"story_h": _story_h,
 		"wall_h": _wall_h,
 		"map_image": map_image,
+		"map_iso": map_iso,
+		"map_iso_tile": [MAP_TW, MAP_TH],
 		"map_vec": map_vec,
 		# the parsed manifest rides along so nothing downstream re-reads the
 		# 137 KB json mid-deploy (the freight used to)
@@ -4691,6 +4694,160 @@ func _scatter_warehouse_stock() -> void:
 			var load_cell := tcell + Vector2i(_rng.randi_range(-1, 1), 1)
 			if not _occupied.has(load_cell) and not _on_road(load_cell):
 				_place_pile("crate", load_cell, _rng.randi_range(2, 3), 10.0)
+
+
+const MAP_TW := 16     # one cell, in map pixels — must match gen_art.MAP_TW
+const MAP_TH := 8
+## HOW FAR PAST THE WIRE THE MAP IS BAKED. Only cells this side of it exist in
+## the texture. The first cut baked all 256x256 and three quarters of it was
+## unreachable ground beyond the barricade: the district sat as a small lit
+## patch in a huge black diamond. Cropping to the playable window bought 4x the
+## pixels per cell at the same texture size, which is where the detail came
+## from — the tile went 8x4 to 16x8.
+const MAP_BAKE_PAD := 10
+
+
+func _map_bake_lo() -> int:
+	return maxi(0, BARRIER_INSET - MAP_BAKE_PAD)
+
+
+func _map_bake_span() -> int:
+	return MAP_W - 1 - _map_bake_lo() - _map_bake_lo() + 1
+
+
+func _map_iso_px(cell: Vector2i) -> Vector2i:
+	## THE GAME'S OWN PROJECTION, at map scale. The world uses
+	## ((cx-cy)*32, (cx+cy)*16); this is the same thing at 16x8, which is what
+	## makes "up" on the map the direction w actually walks. Coordinates are
+	## relative to the baked window, not to cell (0,0).
+	var lo := _map_bake_lo()
+	var n := _map_bake_span()
+	var ax := cell.x - lo
+	var ay := cell.y - lo
+	return Vector2i((ax - ay + n - 1) * (MAP_TW / 2), (ax + ay) * (MAP_TH / 2))
+
+
+func _map_major_roads() -> Array:
+	## Which roads read as THROUGH routes. Every road in the district is the
+	## same WIDTH (4) — which is exactly why "all the roads are just like look
+	## all the same" was true however many colours the map screen defined. The
+	## real difference between them is how far they RUN, so that is what the
+	## hierarchy keys on: longer than the median span is a major.
+	var lens: Array[int] = []
+	for s in _road_v_span:
+		lens.append(s.y - s.x)
+	for s in _road_h_span:
+		lens.append(s.y - s.x)
+	if lens.is_empty():
+		return [{}, {}]
+	lens.sort()
+	var med: int = lens[lens.size() / 2]
+	var majv: Dictionary = {}
+	var majh: Dictionary = {}
+	for i in _road_v_span.size():
+		if _road_v_span[i].y - _road_v_span[i].x >= med:
+			majv[i] = true
+	for i in _road_h_span.size():
+		if _road_h_span[i].y - _road_h_span[i].x >= med:
+			majh[i] = true
+	return [majv, majh]
+
+
+func _map_tile_kind(cell: Vector2i, majv: Dictionary, majh: Dictionary) -> String:
+	var inset := _cell_inset(cell)
+	if inset < BARRIER_INSET - 1:
+		return "outside"
+	if inset < BARRIER_INSET:
+		return "paved"                       # the barricade line itself
+	if _rail_cross.has(cell) or _rail_cells.has(cell):
+		return "rail"
+	if _ballast.has(cell):
+		return "ballast"
+	var vi := _road_v_at(cell)
+	var hi := _road_h_at(cell)
+	if vi >= 0 or hi >= 0:
+		if majv.has(vi) or majh.has(hi):
+			return "road_major"
+		return "road_minor"
+	if _sidewalk.has(cell):
+		return "walk"
+	if _plaza.has(cell) or _apron.has(cell):
+		return "paved"
+	if _forest.has(cell):
+		return "grass_aut" if _autumn_rect.has_point(cell) else "grass"
+	if _dirt_path.has(cell) or _road_rot.has(cell):
+		return "dirt"
+	if _in_any_block(cell):
+		return "urban"
+	return "land"
+
+
+func _in_any_block(cell: Vector2i) -> bool:
+	for b in _block_rects:
+		if (_block_rects[b] as Rect2i).has_point(cell):
+			return true
+	return false
+
+
+func _bake_map_iso() -> Image:
+	## THE PAINTED MAP. One 8x4 hand-painted iso tile per cell, composited with
+	## the native blend_rect — see gen_art's map-tile section for why this is
+	## tiles and not a per-pixel paint (2M pixels through set_pixel would cost
+	## seconds inside the deploy coroutine).
+	var atlas: Image = (load("res://art/gen/map_tiles.png") as Texture2D).get_image()
+	# blend_rect between MISMATCHED formats converts on every call, and this
+	# makes 65k of them — pin both sides to RGBA8 once instead.
+	atlas.decompress()
+	atlas.convert(Image.FORMAT_RGBA8)
+	var t0 := Time.get_ticks_msec()
+	var kinds: Dictionary = _manifest.get("map_tiles", {})
+	var variants: int = int(_manifest.get("map_tile_variants", 3))
+	var lo := _map_bake_lo()
+	var hi := MAP_W - 1 - lo
+	var n := _map_bake_span()
+	var img := Image.create(MAP_TW * n, MAP_TH * n, false, Image.FORMAT_RGBA8)
+	var majors := _map_major_roads()
+	var majv: Dictionary = majors[0]
+	var majh: Dictionary = majors[1]
+
+	# roofs last, so a building always sits ON its ground rather than being
+	# overwritten by the next row of terrain
+	var roof_of: Dictionary = {}
+	for plot in _plots:
+		var pr: Rect2i = plot["rect"]
+		var kind := "roof_house_a" if plot["style"] == "brick_a" else "roof_house_b"
+		if plot.get("safehouse", false):
+			kind = "roof_safe"
+		elif plot["kind"] == "school":
+			kind = "roof_school"
+		elif plot["kind"] == "warehouse":
+			kind = "roof_ware"
+		elif plot["kind"] != "house":
+			kind = "roof_civic"
+		for by in range(pr.position.y, pr.end.y):
+			for bx in range(pr.position.x, pr.end.x):
+				roof_of[Vector2i(bx, by)] = kind
+
+	# ROW ORDER IS (cx+cy), NOT y. That is the iso depth order, so a roof drawn
+	# for one cell can never be clipped by ground painted for a cell behind it.
+	for d in range(2 * n - 1):
+		await _tick()
+		for ax in range(maxi(0, d - n + 1), mini(n, d + 1)):
+			var cell := Vector2i(lo + ax, lo + d - ax)
+			if cell.x > hi or cell.y > hi:
+				continue
+			var kind: String = roof_of.get(cell, "")
+			if kind == "":
+				kind = _map_tile_kind(cell, majv, majh)
+			if not kinds.has(kind):
+				continue
+			var row: int = int((kinds[kind] as Array)[1])
+			var v: int = posmod(hash(Vector3i(cell.x, cell.y, _zone_salt ^ 0x5b1d)),
+				variants)
+			var at := _map_iso_px(cell)
+			img.blend_rect(atlas,
+				Rect2i(v * MAP_TW, row * MAP_TH, MAP_TW, MAP_TH), at)
+	return img
 
 
 func _bake_map_image() -> Image:

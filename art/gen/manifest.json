@@ -11340,5 +11340,92 @@
       "N",
       "NE"
     ]
-  }
+  },
+  "map_tiles": {
+    "outside": [
+      0,
+      0
+    ],
+    "land": [
+      0,
+      1
+    ],
+    "urban": [
+      0,
+      2
+    ],
+    "paved": [
+      0,
+      3
+    ],
+    "walk": [
+      0,
+      4
+    ],
+    "dirt": [
+      0,
+      5
+    ],
+    "grass": [
+      0,
+      6
+    ],
+    "grass_aut": [
+      0,
+      7
+    ],
+    "road_major": [
+      0,
+      8
+    ],
+    "road_minor": [
+      0,
+      9
+    ],
+    "road_line": [
+      0,
+      10
+    ],
+    "ballast": [
+      0,
+      11
+    ],
+    "rail": [
+      0,
+      12
+    ],
+    "water": [
+      0,
+      13
+    ],
+    "roof_house_a": [
+      0,
+      14
+    ],
+    "roof_house_b": [
+      0,
+      15
+    ],
+    "roof_civic": [
+      0,
+      16
+    ],
+    "roof_ware": [
+      0,
+      17
+    ],
+    "roof_school": [
+      0,
+      18
+    ],
+    "roof_safe": [
+      0,
+      19
+    ]
+  },
+  "map_tile": [
+    16,
+    8
+  ],
+  "map_tile_variants": 3
 }

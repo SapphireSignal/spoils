@@ -959,6 +959,176 @@ def make_floors_atlas() -> tuple[Image.Image, dict[str, list[int]]]:
         coords[name] = [cx, cy]
     return atlas, coords
 
+# ------------------------------------------------------------- map tiles -----
+# THE IN-GAME MAP, REBUILT AS A PAINTED ISO BAKE (2026-08-08).
+#
+# User: "i just want a map that youd see in real pixel top of the line triple a
+# games, i want it to be painted like i want it looking really detailed of the
+# actual map itself and all the things on it ... all the roads are just like
+# look all the same, just pure white with some border theres like nothing to
+# it", and "redesign the whole in game map to fit how my game looks".
+#
+# WHY TILES AND NOT A PER-PIXEL PAINT: the district is generated at runtime, so
+# the map has to be composed in GDScript during the deploy coroutine. A 2048x1024
+# map is 2M pixels and Image.set_pixel per pixel would cost seconds; blit_rect is
+# native C++ and a 8x4 tile is one call. Same shape as the world's own atlas.
+#
+# WHY 8x4: one cell becomes an 8x4 iso diamond, so a 256x256 district bakes to
+# (256+256)*4 = 2048 wide by (256+256)*2 = 1024 tall - EXACTLY 2:1, which is the
+# landscape framing the user asked for, and it lands at roughly 1:1 on their
+# screen so the painting reads exactly as drawn with no resampling.
+#
+# The projection is the GAME'S: screen = ((cx-cy)*4, (cx+cy)*2). That is what
+# makes "up" on the map the same as "up" in play - pressing w walks one iso
+# axis, which on the old axis-aligned bake came out as a diagonal.
+
+MAP_TW, MAP_TH = 16, 8       # one cell, in map pixels
+
+
+def map_diamond_span(y: int) -> tuple[int, int] | None:
+    """The iso diamond at map scale, same spirit as diamond_span's 64x32.
+    Offset neighbours by (TW/2, TH/2) and they interlock with no gap and no
+    overlap. Written for any 2:1 size so the tile can be retuned in one place
+    — at 16x8 the rows are 2, 6, 10, 14, 14, 10, 6, 2."""
+    if y < 0 or y >= MAP_TH:
+        return None
+    half = 2 * min(y, MAP_TH - 1 - y) + 1
+    return MAP_TW // 2 - half, MAP_TW // 2 + half - 1
+
+
+def _map_region() -> set:
+    out = set()
+    for y in range(MAP_TH):
+        s = map_diamond_span(y)
+        if s is not None:
+            for x in range(s[0], s[1] + 1):
+                out.add((x, y))
+    return out
+
+
+def make_map_tile(kind: str, variant: int) -> Canvas:
+    """One painted cell of the map. Sixteen pixels is a brush DAB, not a
+    picture - the detail in this map comes from how the dabs differ across a
+    field, which is why every kind carries three variants and why the lit/shade
+    split below is per-tile rather than per-material."""
+    c = Canvas(MAP_TW, MAP_TH)
+    rng = random.Random(hash((kind, variant)) & 0xFFFFFFFF)
+    region = _map_region()
+
+    def wash(base, dark, lite, dark_p=0.28, lite_p=0.16):
+        for (x, y) in region:
+            col = base
+            r = rng.random()
+            if r < dark_p:
+                col = dark
+            elif r < dark_p + lite_p:
+                col = lite
+            c.set(x, y, col)
+
+    def topline(col):
+        # the upper half catches the light, the lower half falls away. It is
+        # what stops a field of flat dabs reading as a bedsheet.
+        for (x, y) in region:
+            if y < MAP_TH // 2:
+                c.set(x, y, col)
+
+    if kind == "outside":                     # beyond the wire
+        wash(C("10141f"), C("090a14"), C("151d28"), 0.30, 0.12)
+    elif kind == "land":                      # open ground, verges, lots
+        wash(C("394a50"), C("202e37"), C("577277"), 0.26, 0.14)
+    elif kind == "urban":                     # denser city block ground
+        wash(C("202e37"), C("10141f"), C("394a50"), 0.30, 0.16)
+    elif kind == "paved":                     # plaza, apron, hardstanding
+        wash(C("577277"), C("394a50"), C("819796"), 0.24, 0.18)
+        if variant == 1:                      # a slab joint
+            c.hline(3, 12, MAP_TH // 2, C("394a50"))
+    elif kind == "walk":                      # sidewalk
+        wash(C("819796"), C("577277"), C("a8b5b2"), 0.22, 0.20)
+    elif kind == "dirt":
+        # SHADED DOWN, NEVER LIFTED - the same lesson v0.6.105 learned on the
+        # world's dirt: a pale tan highlight is what makes a brown field read
+        # orange, because the brightest value dominates a large area.
+        wash(C("884b2b"), C("602c2c"), C("7a4841"), 0.30, 0.20)
+    elif kind == "grass":
+        wash(C("25562e"), C("19332d"), C("468232"), 0.30, 0.14)
+    elif kind == "grass_aut":
+        wash(C("884b2b"), C("602c2c"), C("be772b"), 0.28, 0.16)
+    elif kind == "road_major":
+        # THE THROUGH ROUTES MUST BEAT THE MINOR ONES BY MORE THAN A HAIR.
+        # "all the roads are just like look all the same" was true even though
+        # ROAD_MAJOR/ROAD_MINOR both existed: they sat one palette step apart.
+        # Two steps, plus a lit top edge only the majors get.
+        wash(C("819796"), C("577277"), C("a8b5b2"), 0.22, 0.16)
+        topline(C("a8b5b2"))
+    elif kind == "road_minor":
+        wash(C("577277"), C("394a50"), C("819796"), 0.24, 0.14)
+    elif kind == "road_line":                 # centre dash, drawn sparsely
+        wash(C("819796"), C("577277"), C("a8b5b2"), 0.20, 0.14)
+        for dy in (MAP_TH // 2 - 1, MAP_TH // 2):
+            c.hline(MAP_TW // 2 - 2, MAP_TW // 2 + 1, dy, C("de9e41"))
+    elif kind == "ballast":
+        wash(C("4d2b32"), C("341c27"), C("577277"), 0.34, 0.14)
+    elif kind == "rail":
+        wash(C("341c27"), C("241527"), C("4d2b32"), 0.30, 0.16)
+        # two rails running the tile's long iso axis, catching the light, with
+        # sleepers between them — at 16x8 there is finally room to show it
+        for i in range(4):
+            c.set(3 + i * 2, 2 + i, C("819796"))
+            c.set(9 + i * 2, 4 + i, C("819796"))
+        for i in range(3):
+            c.set(6 + i * 3, 4 + i, C("577277"))
+    elif kind == "water":
+        wash(C("3c5e8b"), C("253a5e"), C("4f8fba"), 0.28, 0.18)
+    elif kind.startswith("roof_"):
+        # EVERY BUILDING KIND GETS ITS OWN ROOF, which is the fix for "all the
+        # houses looking the same at the top" - they were one flat salmon fill
+        # with one lighter edge, for every plot in the district.
+        tone = {
+            "roof_house_a": (C("7a4841"), C("602c2c"), C("ad7757")),
+            "roof_house_b": (C("577277"), C("394a50"), C("819796")),
+            "roof_civic":   (C("411d31"), C("241527"), C("752438")),
+            "roof_ware":    (C("253a5e"), C("172038"), C("3c5e8b")),
+            "roof_school":  (C("ad7757"), C("884b2b"), C("de9e41")),
+            "roof_safe":    (C("468232"), C("25562e"), C("a8ca58")),
+        }[kind]
+        wash(tone[0], tone[1], tone[2], 0.24, 0.14)
+        topline(tone[2])
+        # a ridge along the roof's long axis, and a vent block — enough that a
+        # roof reads as a built thing rather than a coloured patch
+        for i in range(6):
+            c.set(2 + i * 2, 2 + i, tone[1])
+        if variant == 1:
+            c.rect(9, 3, 11, 4, tone[1])
+        elif variant == 2:
+            c.rect(4, 4, 5, 5, tone[2])
+    else:
+        raise ValueError("unknown map tile %r" % kind)
+    return c
+
+
+MAP_TILE_KINDS = [
+    "outside", "land", "urban", "paved", "walk", "dirt", "grass", "grass_aut",
+    "road_major", "road_minor", "road_line", "ballast", "rail", "water",
+    "roof_house_a", "roof_house_b", "roof_civic", "roof_ware", "roof_school",
+    "roof_safe",
+]
+MAP_TILE_VARIANTS = 3
+
+
+def make_map_atlas() -> tuple[Image.Image, dict[str, list[int]]]:
+    """One row per kind, one column per variant — so world_builder addresses a
+    tile as (variant, kind_index) and never has to know the packing order."""
+    cols = MAP_TILE_VARIANTS
+    rows = len(MAP_TILE_KINDS)
+    atlas = Image.new("RGBA", (cols * MAP_TW, rows * MAP_TH), (0, 0, 0, 0))
+    coords: dict[str, list[int]] = {}
+    for r, kind in enumerate(MAP_TILE_KINDS):
+        for v in range(cols):
+            atlas.paste(make_map_tile(kind, v).img, (v * MAP_TW, r * MAP_TH))
+        coords[kind] = [0, r]
+    return atlas, coords
+
+
 # ---------------------------------------------------------------- walls ------
 # 0.4.1: thin EDGE walls (user: buildings must be walls, not full-tile blocks).
 # A segment stands on one tile edge: base line spans (-16,-8)->(16,8) local px
@@ -19407,6 +19577,13 @@ def main() -> None:
     assert_palette(floors, "floors")
     floors.save(OUT / "floors.png")
     manifest["floors"] = coords
+
+    map_atlas, map_coords = make_map_atlas()
+    assert_palette(map_atlas, "map_tiles")
+    map_atlas.save(OUT / "map_tiles.png")
+    manifest["map_tiles"] = map_coords
+    manifest["map_tile"] = [MAP_TW, MAP_TH]
+    manifest["map_tile_variants"] = MAP_TILE_VARIANTS
 
     # entries: 3-tuples, or 4 with light coords (vehicles)
     entries, families = prop_inventory()

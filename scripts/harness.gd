@@ -137,6 +137,8 @@ func _ready() -> void:
 			_probe_railwalk.call_deferred()
 		elif arg == "--probe-terrain":
 			_probe_terrain.call_deferred()
+		elif arg.begins_with("--bake-map="):
+			_bake_map.call_deferred(arg.trim_prefix("--bake-map="))
 		elif arg.begins_with("--film-walk="):
 			_film_walk.call_deferred(arg.trim_prefix("--film-walk="))
 		elif arg.begins_with("--film="):
@@ -2483,6 +2485,29 @@ func _terrain_stem(tile_name: String) -> String:
 	if tail.is_valid_int():
 		return tile_name.substr(0, cut)
 	return tile_name
+
+
+func _bake_map(shot_name: String) -> void:
+	## Writes the painted iso map bake straight to shots/ as a PNG, WITHOUT
+	## going through map_view. That order is deliberate: it puts the picture in
+	## front of the user for sign-off before the 1147-line view is rewritten,
+	## and this screen has already been built and thrown away twice.
+	await _ensure_game_scene()
+	var main_node := get_tree().current_scene
+	var info: Dictionary = main_node.get("world_info")
+	var img: Image = info.get("map_iso")
+	if img == null:
+		printerr("BAKEMAP FAIL: world_info has no map_iso")
+		get_tree().quit(1)
+		return
+	var path := "shots/%s.png" % shot_name
+	var err := img.save_png(path)
+	if err != OK:
+		printerr("BAKEMAP FAIL: save_png -> %d" % err)
+		get_tree().quit(1)
+		return
+	print("BAKEMAP SAVED: %s (%dx%d)" % [path, img.get_width(), img.get_height()])
+	get_tree().quit(0)
 
 
 func _probe_terrain() -> void:
