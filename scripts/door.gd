@@ -48,6 +48,16 @@ func setup(texture: Texture2D, origin: Vector2, poly_points: PackedVector2Array,
 	# the sprite carries this door's depth on its own (see _apply_sort_shift),
 	# so the body itself never has to move to sort correctly
 	y_sort_enabled = true
+	# AFTER THE PLAYER, EVERY FRAME. `_aim_leaf_sort` reads the player's
+	# position, and doors are built into the tree long before the raider spawns,
+	# so at equal priority they process FIRST and aim at where the player was
+	# LAST frame. Crossing the leaf's plane then spends one frame sorted the old
+	# way and the character flickers through the door — one frame at 240 Hz,
+	# which is exactly what the user described: "i can see my character go
+	# through the door for like 1 hundredth of a millisecond ... then it goes
+	# away". Higher priority runs later, so the aim always sees the position
+	# that is about to be drawn.
+	process_priority = 10
 	_sprite = Sprite2D.new()
 	_sprite.texture = texture
 	_sprite.hframes = FRAMES * 2

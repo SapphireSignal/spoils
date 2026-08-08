@@ -3,6 +3,27 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.95] - 2026-08-08 - the one-frame flicker through an open door
+
+### Fixed - crossing behind an open door flashed the character through it
+*"i can see my character go through the door for like 1 hundredth of a
+millisecond, it looks like some blacki thing on the door when i walk to it, then
+it goes away"*. One frame, and the duration is the tell - at 240 Hz a single
+frame is about 4 ms.
+
+An open leaf works out its depth from where the player is. Doors are built into
+the scene long before the raider spawns, so at equal process priority they run
+FIRST and aim at the position the player had LAST frame. Crossing the leaf's
+plane therefore spends exactly one frame sorted the old way, and the character
+flashes through the door.
+
+Doors now carry `process_priority = 10`, so they always update after the player
+has moved and aim at the position that is about to be drawn.
+
+`--probe-doorsort` is unchanged by this (it steps a frame between placements, so
+it could never have seen the lag): safehouse door, 39 reachable squares,
+`flat_at_wall=0`.
+
 ## [0.6.94] - 2026-08-08 - hugging the doorway stops peeling the door
 
 ### Fixed - the door frame drew over the door, but only right up against it

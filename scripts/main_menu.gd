@@ -206,6 +206,9 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.95", [
+		"walking across the back of an open door no longer flashes your character through it for a single frame. the door works out its depth from where you are, but it was being updated before you moved, so it aimed at where you stood last frame - one frame of the old answer, about four milliseconds, right as you cross",
+	]],
 	["v0.6.94", [
 		"standing hard against the side of a doorway no longer peels the door open frame-over-leaf. pressed against the jamb youre beside the hinge, not in front of the door, but it was treating you as in front and ducking behind you onto the wall line where its own frame beat it. worst on the safehouse door, which has the least room to give",
 	]],

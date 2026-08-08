@@ -41,6 +41,46 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-08 — the one-frame flicker through an open door
+
+**Shipped: v0.6.95.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass.
+
+### The user's words
+
+- *"i can see my character go through the door for like 1 hundredth of a
+  millisecond, it looks like some blacki thing on the door when i walk to it,
+  then it goes away"* — **FIXED.**
+- *"also my character can clip in the door, he should be in front of the door in
+  this position"* — **NOT FIXED, see below.**
+
+### Shipped
+
+`Door.process_priority = 10`. `_aim_leaf_sort` reads the player's position, and
+doors are in the tree long before the raider spawns, so at equal priority they
+ran FIRST and aimed at LAST frame's position. Crossing the leaf's plane spent
+one frame sorted the old way. **The duration in the report is the diagnosis:
+one frame at 240 Hz is ~4 ms.** `--probe-doorsort` could never have caught it —
+it steps a frame between placements, which is precisely the lag being measured.
+
+### Picked up at — OPEN
+
+1. **"he should be in front of the door in this position."** This is the
+   DUCK_MIN trade from v0.6.94, and it was made knowingly: right at the hinge
+   the leaf may overlap the player by a sliver, bought in exchange for the frame
+   never drawing over the door. The user has now seen the sliver and does not
+   accept it. It is the SAME residual `--probe-doorsort` reports as its 1
+   disagreeing square. **The real fix is not another constant** — a single
+   y-sort key cannot describe a panel standing on a diagonal, and this session
+   has now spent five releases proving it. Next honest step is to SPLIT the open
+   leaf into two sprites, hinge half and free half, each with its own sort key;
+   that halves the error geometrically instead of trading one end against the
+   other. Do NOT tune DUCK_MIN further.
+2. **Clipping into walls from inside** — still open, diagnosis three entries
+   down.
+3. The standing backlog: B0-NEW, B0, B0b, B1, B2, B3, B4.
+
+---
+
 ## 2026-08-08 — hugging the doorway stops peeling the door
 
 **Shipped: v0.6.94.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass.
