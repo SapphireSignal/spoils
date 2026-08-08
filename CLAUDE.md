@@ -339,7 +339,8 @@ Deliver the intent with additive glow sprites, the way lamps already do.
   either for a different size resamples and blurs it. If text must be
   smaller, draw a new cut in `tools/gen_font.py`.
 - **Perf baseline:** 240 fps, ~4.7 ms worst frame, **~9.8k nodes** in a raid
-  (9763 measured at v0.6.103), day and storm-night alike. (Was ~8.5k;
+  (9766 measured at v0.6.105; 9763 at v0.6.103), day and storm-night alike.
+  (Was ~8.5k;
   v0.6.103's wall sort-strips added **+1,236 nodes** — four render strips
   under every NEAR wall piece so the sort can follow the wall's diagonal;
   frame cost none, worst frame 4.58 ms. Before that ~8.0k; v0.6.80's
@@ -351,7 +352,7 @@ Deliver the intent with additive glow sprites, the way lamps already do.
   **THE INVARIANT IS THE TREND, NOT THE ABSOLUTE COUNT** — `--leakcheck`
   must print `nodes+0 objects+0 orphans=0` with memory flat to ~0.06 MB.
   That is the thing to assert. The absolute menu count is **~1717 nodes /
-  4410 objects at v0.6.44** — it was ~818 / 3362 at v0.6.26 and the jump is
+  4410 objects at v0.6.44**, and **1976 / 4928 measured at v0.6.105** — it was ~818 / 3362 at v0.6.26 and the jump is
   not a leak: the living layers added ~740 sprites of simulated rain alone
   (one per drop plus one per splash, on the yard and the warden), and the
   drain, underpass and counter each carry their own. It also legitimately
@@ -1196,8 +1197,10 @@ then `godot_console --headless --path . --import`.
   source has to be visible. **Outside, not inside.** What satisfies this
   today is the **exterior power box** bolted to each house wall
   (`_place_power_boxes`, world_builder.gd:2548), never under a window, with
-  exactly one hanging open and arcing (that house gets no working light —
-  it is the B5 repair job). **The INTERIOR cable is CUT and must not come
+  exactly one hanging open and arcing (that house gets no working light — it
+  is deliberate quest fodder for the M6 repair job; it had a TASKS entry, B5,
+  until the user removed it on 2026-08-08: *"we dont need to have that in the
+  list right now"*). **The INTERIOR cable is CUT and must not come
   back**: the flex from fixture to box shipped, and the user had it deleted
   — "the cables inside houses are gone" — because it read as floor clutter
   rather than wiring. `_add_cable` still exists with **zero call sites**;

@@ -377,7 +377,7 @@ Also asked for: **upgrade the two existing backdrops** (den, drain).
 
 # B. GAMEPLAY THE USER HAS ASKED FOR
 
-## B0-NEW. THE 2026-08-05 BACKLOG - "i dont just want my whole game to look
+## B0-NEW. THE 2026-08-05 BACKLOG - NEXT UP - "i dont just want my whole game to look
 ## square" *(user)*
 
 All of these came in one burst while the terrain blending was being fixed.
@@ -1444,8 +1444,12 @@ keeps counting (0.6.16, 0.6.17…) rather than stealing 0.7.
   read as other raiders, the real lighting pass (the "graphics quality"
   setting is stored but drives nothing until this), and trading.
 
-- **M6 → v1.1 — quests.** The safehouse power box repair (B5 above) is
-  the first one and is deliberately built to be quest fodder.
+- **M6 → v1.1 — quests.** The one power box that hangs open and arcs is the
+  first one, and is deliberately built to be quest fodder. (It had an entry
+  here, B5, until the user removed it on 2026-08-08 — *"we dont need to have
+  that in the list right now"*. The box itself is still in the world; only the
+  task line is gone. See `_place_power_boxes` and CLAUDE.md's powered-thing
+  rule.)
 
 - **M7 → v1.2 — a second map.** **DO NOT reuse the transit district
   system for this.** DESIGN.md §8.7 carries a HARD RULE (user call,

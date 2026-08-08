@@ -41,6 +41,70 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-08 — MIGRATION POINT: read this first
+
+**v0.6.105 shipped. Tree clean, everything pushed, every gate green**
+(`SEC` `DOCS` `CLAIMS` `SMOKE`). Nothing is half-finished and nothing is
+waiting on a decision. Read this entry and the three below it and you are
+caught up; `TASKS.md` has the work, `CLAUDE.md` has the rules.
+
+### Where the project is
+
+Milestone 1 (a walkable world) is DONE. Milestone 2 — guns, tunnels, the story
+opening — is designed and still waiting on the user's explicit "go". Everything
+shipped since has been polish and bug work on the world.
+
+### What this session did, in one line each
+
+- **v0.6.87-90** — the second storey: ground floor no longer vanishes when you
+  climb, the upper floor sits at `_wall_h` not `_story_h`, the storey is as tall
+  as the ground floor, and the two floors of a house are furnished from
+  disjoint families.
+- **v0.6.91-102** — the door and wall sorting saga, eleven releases; see the
+  compressed entry below. Ended with the user's standing STATIC RULE.
+- **v0.6.103** — the wall bands, solved. Each near wall piece's rendering is cut
+  into four 8 px sort strips whose keys sit on the wall's own diagonal. Static
+  forever, verified by `--probe-walkband` (2,826 samples, 0 violations).
+- **v0.6.104** — the smoker (B4) rebuilt from the player's character sheet and
+  dyed his own man; his bench's rear legs stopped drawing across its own seat.
+- **v0.6.105** — the dirt reads as earth: saturation 45% -> 28%, hue held.
+
+### THE THREE RULES THAT MATTER MOST RIGHT NOW
+
+All three are in CLAUDE.md in full. They are listed here because breaking any
+of them is how this session lost most of its time.
+
+1. **Nothing in the world changes appearance based on where the player is.**
+   The user's call, verbatim, and it is absolute. The roof fade and the
+   upstairs wall-band switch are the only sanctioned exceptions because they
+   were asked for by name. It rules out fading near walls, any player-aware
+   sort, and any reveal that switches at a doorway.
+2. **The user playtests from the WORKING TREE before a push.** They run
+   `Play.bat` on uncommitted work — so keep the tree runnable at all times and
+   say plainly when something in it is mid-change. Several "it's broken"
+   reports this session were half-finished edits of mine, not releases.
+3. **A probe is silent about every relation you did not give it.** Three
+   separate green probes hid real bugs here. When a probe disagrees with the
+   user, suspect what it refuses to measure before suspecting them.
+
+### What to do next
+
+`TASKS.md` marks **B0-NEW** as NEXT UP: the "i dont just want my whole game to
+look square" batch. It is the biggest visual item left and the user has raised
+it more than once. Its heaviest piece, non-rectangular buildings, is C3 and is a
+real builder job — every downstream system assumes `Rect2i`.
+
+Smaller, fully diagnosed, pick up any of them cold: **B0** parking spurs joining
+the roads, **B0b** broken cars reading as broken, **B8** the warden facing the
+road, **B2** his dialogue, **B1** sprint, **B10** a door creak, **B3** the
+scrapyard, **B6** a cosy safehouse, **B13** uneven prop outlines (measured, not
+started — wants sample -> sign-off -> fleet).
+
+**Nothing is blocked and nothing needs a user decision to start**, except M2
+itself.
+
+---
+
 ## 2026-08-08 - v0.6.105: the dirt, settled by measurement
 
 **Shipped: v0.6.105.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass, layout identical,
@@ -160,444 +224,38 @@ B3, B6, B8, B10, B13 (outlines, needs sample->sign-off->fleet), C3.
 
 ---
 
-## 2026-08-08 — v0.6.102: the static rule, and props that escaped their rooms
-
-**Shipped: v0.6.102.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass, `--probe-propclip`
-0 of 165.
-
-### THE RULE THAT NOW GOVERNS ALL OF THIS
-
-*"like every single thing in my world shouldnt move or change the way it looks
-like that you know what i mean? everything is static unless i asked otherwise
-... stuff shouldnt change on depending on where i am on the map or if i go
-through a door"*. In CLAUDE.md, in full. **Read it before touching sorting.**
-
-Exceptions are ONLY the two asked for by name: the roof fade, and
-`set_wall_storey` when climbing. It permanently rules out fading the near walls
-while inside — so B11 has static options only (collision clearance, or art).
-
-### Shipped
-
-`_sprite_escapes` + `--probe-propclip`. `_drop_hidden_furniture` only cleared
-the two NEAR rows; the FAR rows were unguarded and upstairs had no pass at all.
-7 of 172 props hung out through a wall; now 0 of 165. Freed after placement, so
-no draw moves — DOORS 16 / LAMPS 53/15 / VEHICLES 30 / UPPERS 6 propless=0.
-
-### Learned
-
-- **MEASURE THE POPULATION BEFORE FIXING ONE INSTANCE.** The user photographed
-  one crate. The probe found seven, in three different buildings, including two
-  upstairs that no cleanup pass had ever visited. Fixing the photographed one
-  would have left six.
-- **The probe's first cut counted the WALLS as escapees** (248 of 413) because
-  structure is supposed to straddle the boundary. A probe that flags everything
-  is as useless as one that flags nothing — filter to the population you mean.
-
-### Picked up at
-
-1. **B11** — banding, static options only now. Do not attempt a fourth sorting
-   fix.
-2. **B12** — power boxes (was only an issue under the reverted aiming; recheck
-   whether it still reproduces before doing anything).
-3. Backlog: B4 (smoker, NEXT UP), B0-NEW, B0, B0b, B1, B2, B3, B6, B8, B10, C3.
-
----
-
-## 2026-08-08 — v0.6.101: the face-sort mechanism is gone entirely
-
-**Shipped: v0.6.101.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass.
-
-*"fix the boxes and any furniture changing when i walk in the buildings or
-houses, like i can see it clip out and back in"*.
-
-v0.6.100 reverted the aimed near faces but kept the FAR-face collapse. That is
-still a state change at the doorway: far pieces move to their face's northern
-extreme on entry and back on exit, so anything near a far wall changes what
-covers it as you cross. Removed. `roof_reveal.gd`, `world_builder.gd` and
-`main.gd` are restored to their v0.6.96 state.
-
-**THE RULE THIS EARNED: DO NOT SWITCH SORT STATE AT A THRESHOLD.** Any scheme
-that draws walls one way inside and another way outside will pop at the moment
-of crossing, and the player is looking straight at the building when it happens.
-Three versions were spent learning it (v0.6.97 near+far, v0.6.98 far only,
-v0.6.100 far only again). If a fix cannot be applied identically inside and out,
-it is the wrong fix.
-
-**ALSO LEARNED, and it explains several confusing reports:** the user plays from
-the working tree, so uncommitted edits reach their running game immediately.
-Several "it's broken" reports were half-finished work, not shipped versions.
-**Keep the tree runnable at all times**, and say explicitly when something in it
-is mid-change.
-
-### Picked up at
-
-1. **B11 open.** Three sorting attempts, three regressions. Do not try a fourth.
-   The industry answer is to CUT THE NEAR WALLS AWAY while inside — which this
-   repo already does for the roof — and it is blocked only by the user's
-   standing "walls always stay visible" rule. **Ask that question first.**
-2. **B12** (power boxes) — only reachable once B11's approach is settled.
-3. Backlog: B4 (smoker, NEXT UP), B0-NEW, B0, B0b, B1, B2, B3, B6, B8, B10, C3.
-
----
-
-## 2026-08-08 — v0.6.100: reverted the near-face aiming, and the REAL fix named
-
-**Shipped: v0.6.100.** Scripts restored to v0.6.98's face behaviour.
-
-*"stuff seems really broken now"*, and *"can you pretend you are one of the best
-godot top down pixel engineers in the world please and do this stuff correct,
-make it how an actual game would be made and how an actual game like this is
-played"*.
-
-### What went wrong, honestly
-
-v0.6.99 aimed each NEAR wall face at the player. It cured the bands and broke
-four things in a row — corner posts, door jambs, power boxes, warehouse crates —
-each found only after the last was patched. **Aiming a wall face at the player
-makes everything mounted on or standing near that wall depend on where the
-player is**, so every such object needs the same treatment and anything missed
-flickers. That is a design failing, not bad luck. Reverted.
-
-### THE ANSWER THE INDUSTRY USES, AND WHY IT IS NOT IN THIS REPO
-
-Top-down/iso games do not solve "the near wall hides the player" with sorting.
-They **cut the near walls away** — fade or hide the walls between the camera and
-the player while they are inside. Zomboid does it, and this project ALREADY does
-exactly that for the ROOF (`RoofReveal.set_inside`).
-
-**It is not done for walls because the user rejected it**, and CLAUDE.md carries
-that as a hard rule: *"Interior reveal: roof fades to 0 ONLY when the player is
-inside the interior cells; walls always stay visible (user rejected wall
-fading)."*
-
-**That rule is what forces all the sorting gymnastics.** Every artefact in
-v0.6.91-v0.6.100 — door leaf, bands, posts, boxes, crates — comes from trying to
-sort a wall that is standing between the camera and the player instead of
-getting it out of the way. With near-wall fading, none of them can exist.
-
-**So the next session's first move is a QUESTION, not code:** ask whether the
-near walls may fade (or drop to a low alpha / cut to a stub) while inside. If
-yes, B11 and half the door work collapse into the existing roof-reveal
-mechanism. If no, the honest answer is that the bands are inherent to per-tile
-wall sprites and a character who can stand against them, and the only remaining
-lever is keeping the player far enough off the wall that their sprite never
-overlaps more than one tile — which is a collision change with its own costs.
-
-### Picked up at
-
-1. **B11 open** — with the above. Do not attempt another sorting patch first.
-2. **B12 open** — power boxes (only reachable once B11's approach is settled).
-3. Backlog: B4 (smoker, NEXT UP), B0-NEW, B0, B0b, B1, B2, B3, B6, B8, B10, C3.
-
----
-
-## 2026-08-08 — B11 done: the near faces aim at the player
-
-**Shipped: v0.6.99.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass.
-
-*"do b11 properly, aim the near face at the player"*, then the catch that
-mattered: *"why did the interior check matter? you stayed in the middle of the
-house, the near wall bands only happen when the character is near the walls"*.
-
-Near faces: one shared key, aimed at `player.y + 1` every frame, in
-`RoofReveal._aim_near_faces` at `process_priority = 10`. Far faces keep the
-fixed collapse onto min y. Both halves treated, neither breaks the other.
-
-### Learned
-
-- **A VERIFICATION SHOT MUST STAND WHERE THE BUG LIVES.** I photographed the
-  room from the middle and called it verified. Near-wall bands cannot appear
-  there — the shot could only ever have come out clean. The user caught it.
-  **Before sending a shot as proof, ask what it would look like if the bug were
-  still present.** If the answer is "the same", it proves nothing.
-- The door and the wall are the same problem — a flat surface on a diagonal, cut
-  into pieces, one depth each — and the same cure works: aim at the player.
-
-### Picked up at
-
-Backlog: B4 (smoker, NEXT UP), B0-NEW geometry batch, B0, B0b, B1, B2, B3, B6,
-B8, B10, C3.
-
----
-
-## 2026-08-08 — the shared wall sort is FAR faces only
-
-**Shipped: v0.6.98.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass.
-
-*"now when the door is opened towards outside, it clips in the wall"*, then
-*"make sure you test on different door"*.
-
-v0.6.97's shared face key moved NEAR-face pieces up to a building width toward
-the camera, so the wall out-sorted an open door leaf. Far faces only now: they
-collapse onto their MINIMUM y, which only moves pieces further behind, and that
-direction cannot cover anything in the room.
-
-**Learned: a fix whose direction is only safe one way must be applied only that
-way.** Far = behind = safe. Near = forward = it can out-sort anything. I applied
-it to both without asking which direction each moved.
-
-**And the user had to say "test on different door" for the THIRD time.** Both
-facings, every time — the rule is already in CLAUDE.md. Shot picks 0, 1, 4, 8.
-
----
-
-## 2026-08-08 — B11: one sort key per wall face
-
-**Shipped: v0.6.97.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass; layout untouched
-(DOORS 16 / LAMPS 53/15 / VEHICLES 30).
-
-### The user's words
-
-- *"i can clip into walls from the inside, and then i see half my character
-  through the wall"*, then *"it happens like 3 times on that side of the wall"*
-  and *"theyre at regular intervals, not near the corners"*.
-- *"fix b11, use the shared sort key per side"* — their choice of the two
-  options offered.
-
-### Shipped
-
-`RoofReveal.set_face_sort(on)`, called from main.gd's interior loop with the
-same `here` test as the roof fade. Each wall piece carries a build-time delta
-onto its own FACE's extreme (min y for north/west, max y for south/east), so
-inside a building a face is one plane with no per-cell seams. Outside it reverts
-to per-cell, where the interleaving is correct. Only the SPRITE moves —
-`y_sort_enabled` on the piece — because these are StaticBody2D and moving one
-would move the wall's collision.
-
-### Learned
-
-- **THE USER'S "3 TIMES" WAS THE WHOLE DIAGNOSIS.** I had this as a collision
-  problem and `--probe-wallclip` supported it (far walls let the body 6-16 px
-  past their line). I was one message away from insetting wall collision
-  district-wide, which would have narrowed the bands and fixed nothing.
-  **A too-close bug bands the whole wall; only a per-cell bug repeats at
-  intervals.** Ask for the SPACING of an artefact before touching anything.
-- **I FELL INTO THE HEREDOC TRAP CLAUDE.md NAMES IN BOLD.** A `python - <<'PY'`
-  block writing a GDScript line-continuation landed a mangled line in
-  `roof_reveal.gd`. Restructure so no backslash is needed, or use the Edit tool.
-
-### Picked up at
-
-1. Backlog: B4 (smoker, marked NEXT UP), B0-NEW geometry batch, B0, B0b, B1,
-   B2, B3, B6, B8, B10, C3.
-2. `--probe-wallclip` exists but only shoves STRAIGHT at a wall. If B11 ever
-   needs re-checking, walk it ALONG a face instead.
-
----
-
-## 2026-08-08 — opening a door stops showing you through it
-
-**Shipped: v0.6.96.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass.
-
-### The user's words
-
-- *"i literally just finished opening the door from the inside, and my character
-  is inside of the house ... it shows my character through the door for a
-  second, then it goes back to normal"*.
-
-### Shipped
-
-The leaf's sort key RODE THE SWING FRAME — 0 at the start, leading edge at the
-end — so for the first half of every open it sat at the wall line and anyone
-behind it drew through the door. Opening now calls `_aim_leaf_sort()` every
-frame instead. Closing still ramps: the leaf ends flat in the wall plane with
-nothing to occlude.
-
-**THREE DIFFERENT DOOR ARTEFACTS IN ONE DAY, AND THE DURATION SEPARATED THEM
-EVERY TIME.** One frame (~4 ms) = the process-order lag, v0.6.95. A quarter
-second = the swing ramp, this one. Permanent = the sort key itself, v0.6.91-94.
-**Ask how long it lasts before looking at anything.**
-
-### Picked up at — OPEN
-
-1. **CLOSED BY THE USER 2026-08-08** — *"the doors fine like this for now"*,
-   and when asked whether the "door split" meant the hinge sliver: *"if it is,
-   we dont need to mention it anymore, its all good"*. That covers the DUCK_MIN
-   trade from v0.6.94 AND the probe's 1 remaining disagreeing square. **Do not
-   raise it again.** The split-the-leaf-in-two design is recorded in v0.6.94's
-   changelog if it is ever wanted.
-2. **Clipping into walls from inside** — open, diagnosis further down.
-3. Backlog: B0-NEW, B0, B0b, B1, B2, B3, B4.
-
----
-
-## 2026-08-08 — the one-frame flicker through an open door
-
-**Shipped: v0.6.95.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass.
-
-### The user's words
-
-- *"i can see my character go through the door for like 1 hundredth of a
-  millisecond, it looks like some blacki thing on the door when i walk to it,
-  then it goes away"* — **FIXED.**
-- *"also my character can clip in the door, he should be in front of the door in
-  this position"* — **NOT FIXED, see below.**
-
-### Shipped
-
-`Door.process_priority = 10`. `_aim_leaf_sort` reads the player's position, and
-doors are in the tree long before the raider spawns, so at equal priority they
-ran FIRST and aimed at LAST frame's position. Crossing the leaf's plane spent
-one frame sorted the old way. **The duration in the report is the diagnosis:
-one frame at 240 Hz is ~4 ms.** `--probe-doorsort` could never have caught it —
-it steps a frame between placements, which is precisely the lag being measured.
-
-### Picked up at — OPEN
-
-1. **"he should be in front of the door in this position."** This is the
-   DUCK_MIN trade from v0.6.94, and it was made knowingly: right at the hinge
-   the leaf may overlap the player by a sliver, bought in exchange for the frame
-   never drawing over the door. The user has now seen the sliver and does not
-   accept it. It is the SAME residual `--probe-doorsort` reports as its 1
-   disagreeing square. **The real fix is not another constant** — a single
-   y-sort key cannot describe a panel standing on a diagonal, and this session
-   has now spent five releases proving it. Next honest step is to SPLIT the open
-   leaf into two sprites, hinge half and free half, each with its own sort key;
-   that halves the error geometrically instead of trading one end against the
-   other. Do NOT tune DUCK_MIN further.
-2. **Clipping into walls from inside** — still open, diagnosis three entries
-   down.
-3. The standing backlog: B0-NEW, B0, B0b, B1, B2, B3, B4.
-
----
-
-## 2026-08-08 — hugging the doorway stops peeling the door
-
-**Shipped: v0.6.94.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass.
-
-### The user's words
-
-- *"im as close to the left side of the doorway as i can be, everytime i walk
-  past that side of the door i can see it"*, *"its on the safehouse door"*,
-  *"it only shows up once im very close to it"*.
-
-### Shipped
-
-Pressed against the jamb and level with the wall, the player is BESIDE the
-leaf's hinge, not in front of its face — but the half-plane test scored them in
-front, so the leaf ducked behind them onto the wall line and lost to its own
-frame. `DUCK_MIN`: the leaf only ducks if the player is at least 4 px in FRONT
-of the wall plane. The safehouse door is the worst case — sideways facing,
-leading edge only 7.4, least room before it hits the wall.
-
-### Learned — THE PROBE HID THE BUG THREE DIFFERENT WAYS
-
-Every one of them made it greener than the game:
-1. It opened every door INWARD (sign of `doorway_through()`), so swing-out —
-   the only case ever reported broken — was never tested.
-2. It compared only leaf-vs-PLAYER, never leaf-vs-WALL. Added `flat_at_wall`.
-3. **It called every jamb-hugging square BLOCKED** via `test_move` with a
-   margin, and those are exactly the squares the user stands in — movement
-   pushes you into them. Margin is 0 now and the grid is 3 px, not 6.
-
-**A probe that excludes the awkward squares is a probe that passes.** When one
-disagrees with a user, suspect what it refuses to measure before suspecting
-them.
-
-### Picked up at
-
-1. **Clipping into walls from inside** — still open, diagnosis two entries down.
-2. The known 1-of-N threshold square on player-vs-leaf ordering — bounded.
-3. The standing backlog: B0-NEW, B0, B0b, B1, B2, B3, B4.
-
----
-
-## 2026-08-08 — and now on the OTHER facing
-
-**Shipped: v0.6.93.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass.
-
-### The user's words
-
-- *"you are measuring on the wrong facing door again"*.
-
-### What happened
-
-v0.6.92 fixed the wall-over-door overlap, verified it on `--door-pick=1`, and
-shipped. Pick 1 is the facing where the leaf swings TOWARD the camera. On the
-other facing — the leaf swings sideways — the same symptom was untouched, and I
-never shot it. **`harness.gd` carries a comment warning about exactly this, from
-the last time the user caught it.** Reading a warning is not acting on one.
-
-Cause: the finite-panel problem again. The half-plane test treats the leaf's
-plane as INFINITE, so on the sideways facing a player standing inside and to the
-far side scored "in front of" a leaf they could not possibly overlap; the aim
-then hauled the key to the wall line and the neighbouring wall segment (a cell
-nearer, +16) drew over the door. The runtime now applies the same screen-x
-overlap gate `--probe-doorsort` already used, so probe and game agree.
-
-Measured `shift`, both facings, inside and behind: 7.4 / 7.4 / 17.4 / 17.4 —
-each leaf's real leading edge. Was 0.0 on the sideways facing.
-
-### Learned
-
-- **BOTH FACINGS, EVERY TIME.** Now a rule in CLAUDE.md with the exact commands.
-- **A PROBE IS SILENT ABOUT RELATIONS YOU DID NOT GIVE IT.** `--probe-doorsort`
-  was green through both of these regressions because it only ever compares
-  player-vs-leaf, and the bug was leaf-vs-wall. Also in CLAUDE.md now.
-- **A three-line edit still needs its syntax checked.** `a1` was used and never
-  declared; the shot run came back with a parse error and no shot.
-  `--check-only --script scripts/door.gd` is one second.
-
-### Picked up at
-
-1. **Clipping into walls from inside** — still open, diagnosis in the entry
-   below. Not from any change this session.
-2. **The 1-of-15 threshold square** on inward-swinging doors — bounded and
-   deliberate.
-3. The standing backlog: B0-NEW, B0, B0b, B1, B2, B3, B4.
-
----
-
-## 2026-08-08 — the wall stops drawing over the door (v0.6.91 regression)
-
-**Shipped: v0.6.92.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass, `--probe-doorsort`
-unchanged (0/16 and 1/15).
-
-### The user's words
-
-- *"the side of the door overlaps with the door now, whenever i go inside, but
-  it looks fine when im outside"*.
-- *"i can also clip into walls from the inside, and then i see half my character
-  through the wall"* — **NOT FIXED, see below.**
-
-### Shipped
-
-v0.6.91's `_aim_leaf_sort` aimed the key at the player UNCONDITIONALLY, floored
-only by `JAMB_EPS`. Inside + swung out, the player is far behind, so the aim
-went very negative and the floor pinned it to the WALL LINE — where the leaf
-loses to the neighbouring wall segment a cell nearer (+16 px), and that wall
-drew over the door. It resolved near the leading edge from outside, which is
-why only one side showed it. Now the aim starts from `_leaf_sort_depth()` and
-moves ONLY when that value provably puts the player on the wrong side.
-Measured `shift` from inside: 0.0 before, 17.4 after.
-
-### Learned
-
-- **"AIM IT AT THE PLAYER" MUST BE A CORRECTION, NOT A REPLACEMENT.** The old
-  fixed key carried guarantees nobody had written down — clearing the jambs and
-  both neighbouring wall segments. Replacing it wholesale and re-deriving one of
-  those guarantees as a clamp lost the others. **Default to the proven value;
-  deviate only where it is measurably wrong.**
-- **`--probe-doorsort` DID NOT CATCH THIS**, and could not: it only ever asks
-  about the player-vs-leaf pair. The regression was leaf-vs-WALL. A probe
-  measures the relation you gave it and is silent about every other one — do
-  not read a PASS as "the frame is correct".
-
-### Picked up at — OPEN, with a diagnosis
-
-1. **Clipping into walls from inside, half the character showing through.**
-   Reproduced in `shots/jamb_fix.png` (player top-centre, cut at the waist by
-   the near wall). It is NOT from any change this session. Wall segments carry
-   a ~5 px thin parallelogram along their base line
-   (`make_wall_segment`'s `poly`) while the player's body collider is a small
-   circle, so the player can stand with their feet legally clear and their
-   SPRITE well inside the wall's drawn area. Fix is to thicken the wall
-   collider, or inset it toward the room, and then re-check doorway width so
-   entrances do not become impassable.
-2. **B0c item 3** (clipping on props upstairs) — `--probe-upper` says
-   `invisible=0`; needs a repro or it is closed.
-3. The standing backlog: B0-NEW geometry batch, B0 parking spurs, B0b broken
-   cars, B1 sprint, B2 warden, B3 scrapyard, B4 smoker.
+## 2026-08-08 — v0.6.91 to v0.6.102, compressed: the door and wall saga
+
+Eleven releases in one day, all on ONE question: how does a flat surface
+standing on a DIAGONAL sort against the player? Kept short because every
+durable lesson is now a rule in CLAUDE.md; go there first, and only come back
+here if you need the blow-by-blow.
+
+- **v0.6.91-96, doors.** An open leaf's depth is aimed at the player each
+  frame (`Door._aim_leaf_sort`), starting from `_leaf_sort_depth()` and moving
+  only when that is provably wrong. Fixed in this order, each found by the
+  user: sorting vs the player, then vs the WALL (v0.6.92), then on the OTHER
+  wall facing (v0.6.93), then hugging the jamb (v0.6.94), then a one-frame lag
+  from process order (v0.6.95), then the swing ramp (v0.6.96).
+- **v0.6.97-101, walls: four failed attempts, all reverted.** Every one
+  replaced the diagonal with a different single number — face extreme, extreme
+  while inside, aimed at the player — and each cured the bands while breaking
+  something worse (swallowed doors, vanishing power boxes, posts and crates
+  popping at the doorway). v0.6.101 removed the mechanism entirely.
+- **v0.6.102, the rule that ended it.** The user made it standing: nothing in
+  the world may change appearance based on where the player is. That killed
+  every approach above AND the industry-standard one (fading near walls).
+  Same release: `_sprite_escapes` + `--probe-propclip`, 7 interior props were
+  hanging through their own walls, now 0 of 165.
+
+**The four probes those releases left behind are the useful residue:**
+`--probe-doorsort`, `--probe-walkband`, `--probe-propclip`, `--probe-wallclip`.
+Also `--settle=SECONDS` on `--shot`.
+
+**Two corrections to entries below this one, since the chain is append-only:**
+the v0.6.100 entry says "B12 open" — B12 no longer exists, the aiming that
+caused it was reverted and the power boxes are fine. And a much older entry
+points at "TASKS.md A3", which is not a section that exists.
 
 ---
 
