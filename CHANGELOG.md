@@ -3,6 +3,32 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.100] - 2026-08-08 - reverted: the near wall faces stop aiming at you
+
+### Reverted - v0.6.99 traded one artefact for four
+*"the two posts near the door and the power box are still being weird"*, *"when
+i go inside the warehouse why can i see the boxes get unclipped from the walls?
+... stuff seems really broken now"*.
+
+v0.6.99 gave every NEAR wall face one shared depth, aimed at the player. It did
+cure the bands. It also broke, in order: the corner posts (flipping between
+flush and proud as the aimed key swept past them), the power boxes (a face
+aimed at the player drags its western pieces south past a box mounted on one of
+them), and the warehouse crates (which jump as the face switches between aimed
+and per-tile at the doorway). Each had a patch; each patch found the next one.
+
+**That is a design failing, not a run of bad luck.** Aiming a whole wall face at
+the player makes every other object mounted on or standing near that wall
+depend on where the player is standing. Everything nailed to a wall then needs
+the same treatment, and anything I miss flickers.
+
+Reverted to v0.6.98's behaviour: FAR faces keep their fixed collapse (that
+direction only moves pieces further behind and has never caused a problem), NEAR
+faces go back to per-tile. The bands return; nothing else is broken.
+
+B11 stays open with the analysis, including the option that was never on the
+table — see below.
+
 ## [0.6.99] - 2026-08-08 - the near wall faces aim at you
 
 ### Fixed - B11 properly: no bands, and no wall swallowing a door

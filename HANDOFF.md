@@ -41,6 +41,57 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-08 — v0.6.100: reverted the near-face aiming, and the REAL fix named
+
+**Shipped: v0.6.100.** Scripts restored to v0.6.98's face behaviour.
+
+*"stuff seems really broken now"*, and *"can you pretend you are one of the best
+godot top down pixel engineers in the world please and do this stuff correct,
+make it how an actual game would be made and how an actual game like this is
+played"*.
+
+### What went wrong, honestly
+
+v0.6.99 aimed each NEAR wall face at the player. It cured the bands and broke
+four things in a row — corner posts, door jambs, power boxes, warehouse crates —
+each found only after the last was patched. **Aiming a wall face at the player
+makes everything mounted on or standing near that wall depend on where the
+player is**, so every such object needs the same treatment and anything missed
+flickers. That is a design failing, not bad luck. Reverted.
+
+### THE ANSWER THE INDUSTRY USES, AND WHY IT IS NOT IN THIS REPO
+
+Top-down/iso games do not solve "the near wall hides the player" with sorting.
+They **cut the near walls away** — fade or hide the walls between the camera and
+the player while they are inside. Zomboid does it, and this project ALREADY does
+exactly that for the ROOF (`RoofReveal.set_inside`).
+
+**It is not done for walls because the user rejected it**, and CLAUDE.md carries
+that as a hard rule: *"Interior reveal: roof fades to 0 ONLY when the player is
+inside the interior cells; walls always stay visible (user rejected wall
+fading)."*
+
+**That rule is what forces all the sorting gymnastics.** Every artefact in
+v0.6.91-v0.6.100 — door leaf, bands, posts, boxes, crates — comes from trying to
+sort a wall that is standing between the camera and the player instead of
+getting it out of the way. With near-wall fading, none of them can exist.
+
+**So the next session's first move is a QUESTION, not code:** ask whether the
+near walls may fade (or drop to a low alpha / cut to a stub) while inside. If
+yes, B11 and half the door work collapse into the existing roof-reveal
+mechanism. If no, the honest answer is that the bands are inherent to per-tile
+wall sprites and a character who can stand against them, and the only remaining
+lever is keeping the player far enough off the wall that their sprite never
+overlaps more than one tile — which is a collision change with its own costs.
+
+### Picked up at
+
+1. **B11 open** — with the above. Do not attempt another sorting patch first.
+2. **B12 open** — power boxes (only reachable once B11's approach is settled).
+3. Backlog: B4 (smoker, NEXT UP), B0-NEW, B0, B0b, B1, B2, B3, B6, B8, B10, C3.
+
+---
+
 ## 2026-08-08 — B11 done: the near faces aim at the player
 
 **Shipped: v0.6.99.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass.

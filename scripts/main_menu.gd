@@ -206,6 +206,9 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.100", [
+		"reverted last version's wall change. making a whole wall face take its depth from where you stand cured the banding, but it made everything attached to that wall depend on you too - the corner posts flickered, the power boxes vanished, and the warehouse crates jumped as you crossed the doorway. the bands are back and nothing else is broken while a proper fix is designed",
+	]],
 	["v0.6.99", [
 		"the wall bands are gone for good, and the door still opens clean. a wall face is one panel per tile and each had its own depth, so walking along one you kept crossing their seams. the near faces now take a single depth parked just behind you - no seams to cross, and close enough to you that it never reaches far enough forward to swallow an open door, which is what the first attempt did",
 	]],
