@@ -2018,8 +2018,12 @@ func _probe_doorsort() -> void:
 	pick = clampi(pick, 0, doors.size() - 1)
 	var d := doors[pick] as Door
 	var centre := d.doorway_center()
-	# open it OUTWARD: stand inside first, so the leaf swings toward the camera
-	pl.global_position = centre - d.doorway_through() * 22.0
+	# OPEN IT OUTWARD, and the sign matters: `doorway_through()` points INTO the
+	# room and a door swings AWAY from whoever opens it, so the opener has to
+	# stand on the +through side. The first cut had this backwards, opened every
+	# door INWARD, and so never once exercised the swing-out case — which is the
+	# only one the user has ever reported a fault in.
+	pl.global_position = centre + d.doorway_through() * 22.0
 	await get_tree().process_frame
 	d.toggle(pl.global_position)
 	for i in 30:
@@ -2037,9 +2041,17 @@ func _probe_doorsort() -> void:
 		% [pick, str(d.is_open()), d.sort_shift(), a0.x, a0.y, a1.x, a1.y])
 	var wrong := 0
 	var tested := 0
-	for gy in range(-3, 4):
+	# ALSO REPORT THE SHIFT ITSELF, not just the player-vs-leaf verdict. This
+	# probe was green through two regressions where the leaf lost to the WALL,
+	# because it only ever compared the leaf against the PLAYER. The shift is
+	# what decides leaf-vs-wall: a swing-out leaf that collapses toward 0 is
+	# down at the wall line, where the jamb and the next wall segment along beat
+	# it and draw over the door.
+	var flat := 0
+	for gy in range(-6, 7):
 		var row := ""
-		for gx in range(-5, 6):
+		var shifts := ""
+		for gx in range(-10, 11):
 			var at := centre + Vector2(float(gx) * 6.0, float(gy) * 6.0)
 			# ONLY WHERE THE TWO CAN ACTUALLY OVERLAP ON SCREEN. A leaf is a
 			# FINITE panel, and the half-plane test below treats its plane as
@@ -2052,6 +2064,7 @@ func _probe_doorsort() -> void:
 			var lx1 := maxf(a0.x, a1.x) + 7.0
 			if at.x < lx0 or at.x > lx1:
 				row += "-"          # cannot overlap; unobservable, not a fail
+				shifts += "  . "
 				continue
 			# ...AND ONLY WHERE THE PLAYER CAN ACTUALLY STAND. This probe
 			# teleports, so it will happily place them inside the leaf's own
@@ -2063,6 +2076,7 @@ func _probe_doorsort() -> void:
 			var probe_xf := Transform2D(0.0, at)
 			if pl.test_move(probe_xf, Vector2.ZERO, null, 0.08, true):
 				row += "b"          # blocked: unreachable, not a fail
+				shifts += "  b "
 				continue
 			# TRUE answer: which side of the leaf's own plane the player stands
 			var side := (at - a0).dot(nrm)
@@ -2075,7 +2089,12 @@ func _probe_doorsort() -> void:
 			# the old design and report a fail that is not there any more.
 			pl.global_position = at
 			await get_tree().process_frame
-			var leaf_key: float = d.global_position.y + d.sort_shift()
+			var sh := d.sort_shift()
+			shifts += "%4.1f" % sh
+			# a swing-out leaf sitting at the wall line has lost to its own wall
+			if d.swings_out() and sh < 1.0:
+				flat += 1
+			var leaf_key: float = d.global_position.y + sh
 			var truly_behind := side < 0.0
 			# DRAWN answer: y-sort compares the two keys
 			var drawn_behind := at.y < leaf_key
@@ -2085,8 +2104,8 @@ func _probe_doorsort() -> void:
 			else:
 				row += "X"
 				wrong += 1
-		print("DOORSORT %+3d %s" % [gy * 6, row])
-	print("DOORSORT squares=%d disagreeing=%d" % [tested, wrong])
+		print("DOORSORT %+3d %s   shift %s" % [gy * 6, row, shifts])
+	print("DOORSORT squares=%d disagreeing=%d flat_at_wall=%d" % [tested, wrong, flat])
 	print("DOORSORT %s" % ("PASS" if wrong == 0 else "FAIL"))
 	get_tree().quit(0 if wrong == 0 else 1)
 
