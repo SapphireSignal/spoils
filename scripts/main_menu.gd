@@ -206,6 +206,10 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.104", [
+		"the man on the bench is built from your own character sheet now, so he stands in the same world as you instead of looking like he wandered in from another game - but dyed his own man: rust coat, grey beard, blue eyes, black beanie. he sits on the bench rather than inside it, facing out from the backrest, and his exhale is real smoke now instead of a white speck",
+		"the benches were drawing their own back legs straight across the seat - which is what that black bar on his lap was - and their four feet never shared a ground plane, so one pair stood hovering. both fixed, and the broken bench has lost its bent leg",
+	]],
 	["v0.6.103", [
 		"the wall bands are gone. walking along the inside of a wall no longer slices your character - and this time nothing else changed to pay for it: doors, posts, power boxes and crates all draw exactly as before, inside and out. a wall is a diagonal surface, and instead of forcing one depth onto it the game now lets its drawing follow that diagonal piece by piece",
 	]],

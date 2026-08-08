@@ -41,6 +41,52 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-08 - v0.6.104: the smoker and his bench
+
+**Shipped: v0.6.104.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass, propclip 0/165,
+layout identical. B4 DONE.
+
+### The user's words
+
+*"why does this guy on the bench look so much different than me"* (the original
+B4 report), then through review: *"he looks too much like me, make him have a
+beard, and different eye colour, and different clothing color"*, *"whats that
+thing on the smokers lap? looks like one of the bench legs"*, *"im not talking
+about his spray can, im talking about the black bench leg on his lap"*, *"the
+bottom piece of one of the bench legs are not in the right spot"*, *"the bench
+leg is still bent"*, *"what is this thing on the smokers thighs"*.
+
+### The pattern worth keeping
+
+**BUILD AN NPC FROM THE PLAYER'S MODEL AND DYE IT, never draw it alongside.**
+He calls `draw_head`/`draw_torso` on the player's canvas and anchor, then
+re-dyes the finished jacket pixels. Shape and shading cannot drift; only the
+colour does. Any future human should be made this way.
+
+### Learned
+
+- **THE USER'S "IT LOOKS LIKE X" IS A RENDERING CLUE, NOT A GUESS.** "Looks
+  like one of the bench legs" was literally true - a rear bench leg WAS drawn
+  across the seat, on his lap. I first assumed they meant the spray can and
+  recoloured the wrong thing. Reproduce the sprite in ISOLATION before deciding
+  which object a complaint is about; rendering the smoker alone, then the bench
+  alone, found both faults in one pass.
+- **DRAW ORDER INSIDE A SPRITE IS AS REAL AS Y-SORT.** The bench's rear legs
+  were correct in position and wrong in order.
+- **DERIVE A FOOT FROM ITS GROUND PLANE, NEVER FROM A FIXED LENGTH.** Two leg
+  pairs attach at different heights; a shared length puts one pair in the air.
+- **A SMALL OBJECT CANNOT RIDE A 32 px SEATED FIGURE.** The spray can was
+  mistaken for two different things before it came off.
+
+### Picked up at
+
+**Next: the dirt reads too orange** (user, 2026-08-08: *"can you make all of
+the dirt on the world look more brown, its like orangeish"*) - not started.
+Then the backlog: B0-NEW geometry batch, B0, B0b, B1, B2, B3, B6, B8, B10, B13
+(prop outlines), C3.
+
+---
+
 ## 2026-08-08 — v0.6.103: B11 solved statically, user-verified before push
 
 **Shipped: v0.6.103.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass, `--probe-walkband`

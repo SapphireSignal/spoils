@@ -3498,6 +3498,7 @@ func _place_gallery() -> void:
 					_add_prop_at_cell(_pick_variant("spray_cans"), can_cell,
 						Vector2(10, 5))
 		wall_x += 2
+	var strays: Array = []                       # [cell, node], vetted below
 	for i in 2:                                  # strays dropped mid-flight
 		await _tick()
 		var stray_cell := Vector2i(
@@ -3506,23 +3507,61 @@ func _place_gallery() -> void:
 		if not _occupied.has(stray_cell) and not _on_road(stray_cell) \
 				and not _forest.has(stray_cell) \
 				and not _sidewalk.has(stray_cell):
-			_add_prop_at_cell(_pick_variant("spray_cans"), stray_cell,
-				Vector2(10, 5))
+			# NOT ON HIS HEAD. A stray can landing on the smoker's cell — or
+			# the cell behind it — draws over his face, because a can there
+			# sorts after him (user: "move the ground item that sits over his
+			# head"). His cell is not known yet when the strays drop, so the
+			# check runs after both are placed, in _clear_smoker_headroom.
+			strays.append([stray_cell,
+				_add_prop_at_cell(_pick_variant("spray_cans"), stray_cell,
+					Vector2(10, 5))])
 	var bench_y := r.end.y - 2
-	var smoker_placed := false
+	var benches: Array[Node2D] = []
 	for i in 2:
 		var cell := Vector2i(r.position.x + 2 + i * 3 + _rng.randi_range(0, 1),
 			bench_y)
 		if _occupied.has(cell) or _on_road(cell) or _forest.has(cell) \
 				or _sidewalk.has(cell):
 			continue
-		var bench := _add_prop_at_cell("bench_x_0" if not smoker_placed
-			else _pick_variant("bench_x"), cell, Vector2(2, 1))
-		if not smoker_placed:
-			smoker_placed = true
-			var smoker := Smoker.new()
-			smoker.position = (bench.position + Vector2(0.0, 1.0)).round()
-			_ysort.add_child(smoker)
+		# THE TERNARY SHORT-CIRCUITS, AND THAT IS LOAD-BEARING: the first bench
+		# is always bench_x_0 and takes NO draw, only the second rolls. Hoisting
+		# the roll out to a variable "so the stream cannot notice" adds a draw
+		# per bench and re-rolls the district — measured, LAMPS 53->50 and
+		# VEHICLES 30->35 before this line was put back.
+		benches.append(_add_prop_at_cell(
+			"bench_x_0" if benches.is_empty() else _pick_variant("bench_x"),
+			cell, Vector2(2, 1)))
+	if not benches.is_empty():
+		# THE BENCH BELOW HIM, AND SITTING ON IT RATHER THAN IN IT.
+		#
+		# He used to go on the FIRST bench placed and sat at its dead centre,
+		# one pixel off the bench's own sort key — so he read as buried in the
+		# backrest of the upper bench with an empty bench below him (user:
+		# "seat him on the bench BELOW him, not the one he is currently
+		# inside"). Two fixes, both static:
+		#   - pick the bench with the greatest screen y, which IS "the one
+		#     below" however the two land;
+		#   - seat him three steps toward the seat's NEAR edge. The bench runs
+		#     along (2,1) with its backrest on the far edge, so the near
+		#     direction is -(2,-1): 3 steps is (-6, +3). That also puts him
+		#     clear of the bench's sort key instead of tying with it.
+		var seat: Node2D = benches[0]
+		for b in benches:
+			if b.position.y > seat.position.y:
+				seat = b
+		var smoker := Smoker.new()
+		smoker.position = (seat.position + Vector2(-6.0, 3.0)).round()
+		_ysort.add_child(smoker)
+		# NOTHING PARKED ON HIS HEAD. A stray can on his cell — or the one
+		# behind it — sorts after him and draws across his face (user: "move
+		# the ground item that sits over his head"). Freed AFTER placement,
+		# never filtered before it, so the layout stream is untouched — the
+		# same rule _drop_hidden_furniture follows.
+		var his := _floor_layer.local_to_map(smoker.position)
+		for entry in strays:
+			var scell: Vector2i = entry[0]
+			if scell == his or scell == his + Vector2i(0, -1) 					or scell == his + Vector2i(-1, 0):
+				(entry[1] as Node).queue_free()
 	_map_marks.append([r.get_center(), "gallery"])
 
 

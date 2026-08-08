@@ -3,6 +3,73 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.104] - 2026-08-08 - the smoker, and the bench he sits on
+
+### Changed - he is built from the player's own character sheet now
+*"why does this guy on the bench look so much different than me"*. He was drawn
+beside the player's model rather than from it - his own head, torso, limbs and
+colours, at his own scale - so he read as a sprite from a different game.
+
+He comes off `draw_head`/`draw_torso` with the raider's palette, on the same
+32x40 canvas with the same feet anchor, so his proportions, folds and shading
+cannot drift from the player's by construction. Then he is dyed his own man
+(user: *"he looks too much like me, make him have a beard, and different eye
+colour, and different clothing color"*): a rust coat against the raider's
+green, a grey beard across the jaw, pale blue eyes against the raider's black,
+and the black beanie that tells him apart at a glance.
+
+### Fixed - he sits on the bench instead of in it
+*"seat him on the bench BELOW him, not the one he is currently inside"*. He went
+on the FIRST bench placed and sat at its dead centre, one pixel off the bench's
+own sort key. He now takes whichever bench sits lower on screen - so it is "the
+one below" however the two land - seated three steps toward the front of the
+seat, clear of the bench's key. He faces away from the backrest, which is why
+the sheet is drawn and then mirrored.
+
+### Fixed - the bench was drawing its own back legs across the seat
+Two faults, one cause, and they are what the user kept pointing at on his lap:
+
+- **The rear legs were drawn AFTER the seat.** A rear leg starts one pixel
+  under the seat's top face and runs nine pixels down - straight through the
+  slab it is meant to be beneath - so each one painted a steel bar across the
+  seat surface. On the gallery bench that bar lands exactly where the smoker
+  sits (*"the black bench leg on his lap"*). They go down before the seat now.
+- **The four feet did not share a ground plane.** Every leg ran a fixed nine
+  pixels from wherever it attached, but the near pair hangs from under the slab
+  and the far pair from the seat's top face, so the far pair finished three
+  pixels short and stood hovering (*"the bottom piece of one of the bench legs
+  are not in the right spot"*). Each foot is now derived from
+  `pt(i, d).y + slab + leg_h` - one plane, whatever the depth.
+- **The broken bench's bent leg is gone** (*"the bench leg is still bent"*,
+  twice). At this size a kinked leg reads as a drawing error rather than as
+  damage; the splintered gap in the seat already says it.
+
+### Fixed - the smaller things on him
+- **No spray can.** Pale grey it was mistaken for a bench leg, recoloured it
+  became *"that thing on his lap"* - a small object welded to a seated figure
+  has nowhere to read at 32 px. The loose cans on the gallery ground tell it.
+- **No bar across his thighs.** A thigh slab wider than his torso, meant to
+  carry the knees forward, read as an object lying on him (*"what is this thing
+  on the smokers thighs"*). His hips are torso width; the bench carries the
+  seated read.
+- **Bigger smoke.** The wisps were a 3x3 dust pixel and read as a small white
+  blob. They are soft radials now - the one class this project lets scale - so
+  each puff starts about 10 px and billows past 30 as it rises and thins, four
+  or five per exhale, each on its own drift line.
+- **Nothing parked on his head.** Stray cans landing on his cell or the two
+  behind it are freed after placement.
+
+### Added - `--settle=SECONDS` for the screenshot tool
+His first drag is 2-5 s after he spawns and a shot fires at 0.8 s, so every
+still of him came back idle and the animation could not be reviewed at all.
+
+**Costs the layout nothing.** DOORS 16, LAMPS 53/15, VEHICLES 30, identical
+cells - verified after a stumble worth recording: hoisting the bench variant
+roll into a variable "so the stream cannot notice" added a draw per bench and
+re-rolled the district (LAMPS 53->50, VEHICLES 30->35). The original ternary
+short-circuits and only the SECOND bench rolls; that is load-bearing and now
+says so.
+
 ## [0.6.103] - 2026-08-08 - the wall bands, solved for good
 
 ### Fixed - B11, on the fifth design and the first fully static one

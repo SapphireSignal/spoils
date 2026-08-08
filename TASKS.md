@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.103.** The release history was renumbered evenly on
+**Current version: v0.6.104.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -1114,7 +1114,7 @@ threads, not a random ramble. `toll_dialog.gd`.
   cylinders, tires, part-stripped wrecks. Keep it restrained; their
   standing note is that too many objects looks odd.
 
-## B4. The smoker on the bench *(user)* — NEXT UP
+## B4. The smoker on the bench — **DONE in v0.6.104**
 
 Benches were rebuilt with a real seat (v0.6.12). The smoker still needs:
 - **Rebuild him from the PLAYER's character sheet** so his shading and

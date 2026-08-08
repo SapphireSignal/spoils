@@ -1689,7 +1689,15 @@ func _shot(shot_name: String) -> void:
 	# It is the same class as the vacuous door test: work counted in frames tells
 	# you nothing about elapsed time on an uncapped run. 0.8 s is the 0.28 s fade
 	# with room to spare; `ignore_time_scale` so a hit-stop cannot stretch it.
-	await get_tree().create_timer(0.8, true, false, true).timeout
+	# --settle=SECONDS holds LONGER before the capture, for anything on a timer
+	# of its own. The smoker's first drag is 2-5 s after he spawns, so every
+	# shot of him came back idle and his animation could not be reviewed at all
+	# from a still. Default stays 0.8.
+	var settle := 0.8
+	for a5 in OS.get_cmdline_user_args():
+		if a5.begins_with("--settle="):
+			settle = maxf(0.0, float(a5.trim_prefix("--settle=")))
+	await get_tree().create_timer(settle, true, false, true).timeout
 	for i in 4:                 # and let the settled frame actually render
 		await get_tree().process_frame
 	var image := get_viewport().get_texture().get_image()

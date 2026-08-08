@@ -3025,6 +3025,46 @@ def draw_bench(rng: random.Random, broken: bool) -> tuple[Canvas, tuple, list]:
 
     gap_lo, gap_hi = (12, 20) if broken else (-1, -1)
 
+    def legs(near: bool) -> None:
+        """One pair of legs. `near` is the pair at the seat's front edge.
+
+        ALL FOUR FEET LAND ON ONE GROUND PLANE, and that is the whole trick:
+        a leg's foot belongs at `pt(i, d).y + slab + leg_h` — the same constant
+        offset from its own point on the seat, whatever its depth — because the
+        ground under the bench is flat. Both pairs used to run a fixed nine
+        pixels from wherever they attached, and the two pairs attach at
+        DIFFERENT heights (the near pair under the slab, the far pair at the
+        seat's top face), so the far pair finished three pixels short and stood
+        hovering (user: "the bottom piece of one of the bench legs are not in
+        the right spot"). Length is derived from the foot line now, never
+        assumed.
+
+        NO BENT LEG. The broken bench used to kink one leg sideways halfway
+        down; at this size it reads as a drawing mistake rather than damage
+        (user, twice: "the bench leg is still bent"). The broken bench still
+        has its splintered gap in the seat, which says the same thing without
+        looking like an error.
+        """
+        for i in (2, ln - 3):
+            d = 1 if near else depth - 2
+            x, y = pt(i, d)
+            top = y + (slab + 1 if near else 1)
+            foot = y + slab + leg_h
+            for yy in range(top, foot + 1):
+                c.set(x, yy, steel)
+                c.set(x + 1, yy, steel_dk)
+
+    # THE BACK LEGS GO DOWN FIRST, SO THE SEAT COVERS THEM. They stand at
+    # depth-2, which is the FAR side of the slab, and a leg there starts one
+    # pixel under the seat's top face and runs nine pixels down — straight
+    # through the slab it is supposed to be beneath. Drawn after the seat (as
+    # they were) each one painted a steel bar across the seat surface, and on
+    # the gallery bench that bar lands exactly where the smoker sits: user,
+    # "whats that thing on the smoker's lap ... the black bench leg on his
+    # lap", and "the bottom piece of one of the bench legs are not in the right
+    # spot". Behind the slab they read as legs again, emerging below it.
+    legs(near=False)
+
     # THE SEAT, as a real surface: a parallelogram top face with slats
     # running along the bench. Without this the bench had a one-pixel seat
     # line and read as a fence going up, with nothing to sit on (user).
@@ -3074,16 +3114,8 @@ def draw_bench(rng: random.Random, broken: bool) -> tuple[Canvas, tuple, list]:
             c.set(x, y - k, col)
         c.set(x, y - back_h, wood_dk)
 
-    # LEGS at both ends, front pair and back pair
-    for i in (2, ln - 3):
-        for d in (1, depth - 2):
-            x, y = pt(i, d)
-            lean = 1 if (broken and i > 4 and d == 1) else 0
-            top = y + (slab + 1 if d == 1 else 1)
-            for k in range(leg_h):
-                dx = (k // 5) * lean
-                c.set(x + dx, top + k, steel)
-                c.set(x + dx + 1, top + k, steel_dk)
+    # ...and the FRONT pair last, standing clear below the slab's near edge.
+    legs(near=True)
     c.outline_auto()
     cr, orr = crop_canvas(c, (ox + ln // 2 + depth // 2,
                               oy + ln // 4 - depth // 4 + slab + leg_h))
@@ -4914,62 +4946,148 @@ def make_spray_cans(variant: int) -> tuple[Canvas, tuple, list | None]:
     c.outline_auto()
     return c, (16, 14), None
 
+SMOKER_SEAT = 11          # bench seat height above the ground (draw_bench)
+BEANIE, BEANIE_D = C("151d28"), C("10141f")
+# HE IS BUILT FROM THE PLAYER'S MODEL, SO HE NEEDS HIS OWN DYE. Same body,
+# same shading, different man (user: "he looks too much like me, make him have
+# a beard, and different eye colour, and different clothing color"). A rust
+# coat against the raider's green, a grey beard, and pale blue eyes against
+# the raider's black dots.
+SMK_JKT_L, SMK_JKT, SMK_JKT_D = C("ad7757"), C("884b2b"), C("602c2c")
+SMK_PANT, SMK_PANT_D = C("202e37"), C("151d28")   # = the raider's PANT/PANT_D:
+# darkening his trousers turned his whole lap into one black slab, which was
+# the other half of "that black thing on his lap". Defined by hex, not by the
+# PANT constants, because those are declared further down the file.
+BEARD, BEARD_D = C("577277"), C("394a50")
+SMK_EYE = C("3c5e8b")
+
+
 def make_smoker_sheet() -> tuple[Canvas, tuple, list | None]:
-    """The gallery regular: seated on a bench, spray can in one hand,
-    cigarette in the other. 3 frames: resting, drag (ember hot), exhale.
-    Drawn at PLAYER scale (user: "make him the size of me") — seated
-    height ~30px against the 36px standing character."""
+    """The gallery regular, seated on his bench: spray can beside him,
+    cigarette working. 3 frames — resting, drag (ember hot), exhale.
+
+    HE IS BUILT FROM THE PLAYER'S OWN MODEL, not hand-drawn beside it. The
+    previous cut drew its own head, torso and limbs in its own colours at
+    its own scale, and read as a different game's sprite sitting in this
+    one — user: *"why does this guy on the bench look so much different
+    than me"*. Head, torso and arms now come from `draw_head`/`draw_torso`
+    and the same JKT/SKIN/PANT palette the raider uses, on the SAME 32x40
+    canvas with the SAME feet-anchored origin, so his shading, contrast and
+    proportions cannot drift from the player's by construction. A black
+    BEANIE is the whole difference (user asked for a hat to tell him
+    apart) — that, and he is sitting down.
+
+    The pose: the upper body rides `bob = -(SMOKER_SEAT - 9)` so his hips
+    land on the bench seat (the raider's hips sit 9 px above his feet
+    standing; the seat is SMOKER_SEAT above the ground), and the legs are
+    replaced by a seated pair — thigh block foreshortened toward the
+    camera, shins dropping to boots on the ground in front of the bench.
+
+    Drawn as front34 and MIRRORED: the bench runs along the (2,1) axis with
+    its backrest on the far edge, so a man sitting on it properly faces
+    down-LEFT, away from the backrest (user: *"have him face away from the
+    backrest, not into it"*).
+    """
+    bob = -(SMOKER_SEAT - 9)              # hips from standing height to seat
+    hip = 27 + bob + 2                    # draw_torso's pants row, bottom
     frames = []
     for f in range(3):
-        fc = Canvas(28, 36)
-        cx = 13
-        # legs seated: thighs forward, shins down to the ground
-        for k in range(8):
-            fc.set(cx - 2 + k, 22, C("241527"))
-            fc.set(cx - 2 + k, 23, C("241527"))
-        for k in range(9):
-            fc.set(cx + 5, 24 + k, C("241527"))
-            fc.set(cx + 6, 24 + k, C("10141f"))
-        for bx in range(cx + 4, cx + 8):       # boots
-            fc.set(bx, 33, C("151d28"))
-        for y in range(11, 22):                # torso: worn coat
-            for x in range(cx - 4, cx + 4):
-                col = C("4d2b32")
-                if x == cx - 4 or y == 21:
-                    col = C("341c27")
-                fc.set(x, y, col)
-        for y in range(4, 11):                 # head + beanie
-            for x in range(cx - 3, cx + 3):
-                fc.set(x, y, C("d7b594") if y > 6 else C("151d28"))
-        fc.set(cx + 1, 9, C("341c27"))         # stubble hint
-        fc.set(cx + 2, 9, C("341c27"))
-        # LEFT hand: the spray can parked on the seat beside him
-        fc.set(cx - 5, 20, C("d7b594"))
-        fc.set(cx - 6, 20, C("d7b594"))
-        for k in range(5):
-            fc.set(cx - 7, 17 + k, C("819796"))
-            fc.set(cx - 6, 17 + k, C("577277"))
-        fc.set(cx - 7, 16, C("a23e8c"))        # its cap
-        # RIGHT hand + cigarette: down (f0), at the mouth (f1), easing (f2)
+        c = Canvas(32, 40)
+        # ---- seated legs, drawn first so the torso overlaps the thigh top.
+        #
+        # THE SILHOUETTE HAS TO DO THE WORK. This character's legs are only
+        # 9 px, so sitting on an 11 px bench does not LOWER him — the first
+        # cut kept the thighs inside the torso's width and he simply read as
+        # standing. A seated read at this scale is a thigh band WIDER than the
+        # torso (knees carried forward, toward the camera) with two short
+        # shins hanging under it.
+        # NO THIGH BAR. This was a slab wider than the torso with a lit top
+        # edge, meant to carry the knees forward — at 8 px wide it read as a
+        # separate object lying across him instead (user, circling it: "what is
+        # this thing on the smokers thighs"). The seated read comes from the
+        # BENCH he is on and from short shins, not from a shape that competes
+        # with his own silhouette. Hips stay exactly the torso's width.
+        c.rect(CX - 4, hip + 1, CX + 3, hip + 2, SMK_PANT)
+        c.hline(CX - 4, CX + 3, hip + 2, SMK_PANT_D)
+        for x0, pcol in ((CX - 3, SMK_PANT_D), (CX + 2, SMK_PANT)):  # far, near
+            c.rect(x0, hip + 3, x0 + 2, 33, pcol)   # shins start at the hips now
+            c.rect(x0, 34, x0 + 2, 36, BOOT)
+            c.hline(x0, x0 + 2, FEET, BOOT_D)
+        # ---- the player's own upper body
+        draw_torso(c, "front34", bob)
+        # HIS COAT IS NOT THE RAIDER'S. `draw_torso` paints the player's jacket
+        # constants, so the finished torso is RE-DYED rather than the shared
+        # helper being parameterised — the whole point of using the helper is
+        # that his shape, folds and shading stay the player's; only the colour
+        # differs. The straps stay their own darker tone, so they still read.
+        dye = {JKT[:3]: SMK_JKT, JKT_L[:3]: SMK_JKT_L, JKT_D[:3]: SMK_JKT_D}
+        for yy in range(c.h):
+            for xx in range(c.w):
+                sub = dye.get(c.px[xx, yy][:3])
+                if sub is not None and c.px[xx, yy][3] > 0:
+                    c.set(xx, yy, sub)
+        draw_head(c, "front34", bob)
+        # the beanie, over the hair rows draw_head just laid down
+        hy = 8 + bob
+        c.rect(CX - 3, hy, CX + 4, hy + 2, BEANIE)
+        c.vline(CX + 4, hy, hy + 2, BEANIE_D)
+        c.hline(CX - 3, CX + 4, hy + 3, BEANIE_D)       # the turned-up brim
+        # THE BEARD, over the jaw draw_head left as skin. Grey rather than his
+        # hair colour: he is the old regular, and at 8 px wide a beard only
+        # reads if it is a clearly different value from the face above it.
+        c.hline(CX - 3, CX + 4, hy + 7, BEARD)
+        c.hline(CX - 2, CX + 3, hy + 6, BEARD)
+        c.set(CX - 3, hy + 6, BEARD_D)                  # jaw corners in shadow
+        c.set(CX + 4, hy + 6, BEARD_D)
+        c.hline(CX - 3, CX + 4, hy + 8, BEARD_D)        # under the chin
+        # ...and his eyes, which draw_head set as black dots like the raider's
+        c.set(CX, hy + 5, SMK_EYE)
+        c.set(CX + 3, hy + 5, SMK_EYE)
+        # ---- arms. Same 2 px columns and jacket tones draw_arms uses, but
+        # posed rather than swinging: the near arm rests the spray can on the
+        # seat, the far one works the cigarette.
+        ay = 17 + bob
+        c.rect(CX - 5, ay, CX - 4, ay + 7, SMK_JKT)     # near arm, down
+        c.vline(CX - 4, ay, ay + 7, SMK_JKT_D)
+        c.rect(CX - 5, ay + 8, CX - 4, ay + 9, SKIN)    # hand on the seat
+        # NO SPRAY CAN ON HIM. He carried one parked at his hip, and at this
+        # size a small object welded to a seated figure has nowhere to read
+        # from: pale grey it was mistaken for one of the bench's steel legs,
+        # recoloured it became "that thing on his lap". He is identifiable by
+        # the beard, the beanie and the rust coat without it, and the gallery
+        # already has loose cans on the ground around him telling the story.
+        # cigarette arm: down (f0), at the mouth (f1), easing away (f2)
         if f == 0:
-            fc.set(cx + 5, 20, C("d7b594"))
-            fc.set(cx + 6, 19, C("c7cfcc"))
-            fc.set(cx + 7, 19, C("602c2c"))
+            c.rect(CX + 4, ay, CX + 5, ay + 7, SMK_JKT)
+            c.rect(CX + 4, ay + 8, CX + 5, ay + 9, SKIN)
+            c.set(CX + 6, ay + 8, C("c7cfcc"))
+            c.set(CX + 7, ay + 8, C("602c2c"))
         elif f == 1:
-            fc.set(cx + 3, 10, C("d7b594"))
-            fc.set(cx + 4, 9, C("c7cfcc"))
-            fc.set(cx + 5, 9, C("cf573c"))     # ember, pulling hot
+            # THE FOREARM RISES OUTSIDE THE FACE, not across it. Folding it
+            # over the jaw hid the head — at 8 px wide there is no room for an
+            # arm to cross a face and still read as either.
+            c.rect(CX + 4, ay + 2, CX + 5, ay + 6, SMK_JKT)  # upper arm, down
+            c.rect(CX + 4, ay - 4, CX + 5, ay + 1, SMK_JKT)  # forearm, up
+            c.rect(CX + 4, ay - 6, CX + 5, ay - 5, SKIN)    # hand at the cheek
+            c.set(CX + 3, ay - 6, C("c7cfcc"))              # cigarette
+            c.set(CX + 3, ay - 7, C("cf573c"))              # ember, pulling hot
         else:
-            fc.set(cx + 4, 14, C("d7b594"))
-            fc.set(cx + 5, 13, C("c7cfcc"))
-            fc.set(cx + 6, 13, C("de9e41"))    # ember cooling
-        fc.outline_auto()
-        frames.append(fc)
-    sheet = Canvas(28 * 3, 36)
+            c.rect(CX + 4, ay, CX + 5, ay + 4, SMK_JKT)
+            c.rect(CX + 4, ay - 1, CX + 5, ay - 1, SMK_JKT)
+            c.rect(CX + 4, ay - 3, CX + 5, ay - 2, SKIN)    # hand easing down
+            c.set(CX + 3, ay - 3, C("c7cfcc"))
+            c.set(CX + 3, ay - 4, C("de9e41"))              # ember cooling
+        c.outline_auto()
+        frames.append(c.mirrored())        # face away from the backrest
+    sheet = Canvas(32 * 3, 40)
     for i, fr in enumerate(frames):
-        sheet.img.alpha_composite(fr.img, (i * 28, 0))
+        sheet.img.alpha_composite(fr.img, (i * 32, 0))
     sheet.px = sheet.img.load()
-    return sheet, (14, 34), None
+    # MIRRORING MOVES THE ANCHOR. A flip maps x -> 31 - x on a 32 wide frame,
+    # so the body centre that was drawn at CX now sits at 31 - CX. Returning
+    # CX would hang him a pixel off his own feet — the kind of 1 px error this
+    # user reads instantly.
+    return sheet, (31 - CX, FEET), None
 
 # The crossarms sit a FIXED height above the base, and the insulators a
 # fixed distance along them, so the wires strung between poles actually
