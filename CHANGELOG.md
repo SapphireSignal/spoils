@@ -3,6 +3,30 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.96] - 2026-08-08 - opening a door from inside stops showing you through it
+
+### Fixed - the character showed through the leaf for the whole swing
+*"i literally just finished opening the door from the inside, and my character
+is inside of the house in that picture, and it shows my character through the
+door for a second, then it goes back to normal"*.
+
+A different cause from the one-frame flicker in v0.6.95, with a different
+duration - a whole quarter-second swing rather than a single frame.
+
+The leaf's sort key used to RIDE THE SWING FRAME: zero at the start of the
+animation, its leading edge at the end. So for the first half of every open the
+leaf sat at the wall line, and anyone standing behind it out-sorted it and
+showed straight through the door until the swing landed and the key snapped to
+its proper value.
+
+Opening now AIMS every frame instead of ramping, so the leaf gives the right
+answer for the player from frame one. The aim's floor is the leading edge, so it
+still clears its own wall throughout the swing. Closing still ramps down - the
+leaf ends flat in the wall plane with nothing left to occlude, so the smooth
+return is correct there.
+
+`--probe-doorsort`: safehouse door, 39 reachable squares, `flat_at_wall=0`.
+
 ## [0.6.95] - 2026-08-08 - the one-frame flicker through an open door
 
 ### Fixed - crossing behind an open door flashed the character through it

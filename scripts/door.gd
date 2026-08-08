@@ -501,6 +501,22 @@ func _process(delta: float) -> void:
 	_frame += 1 if target > _frame else -1
 	# the outward swing lives in the second half of the sheet
 	_sprite.frame = (FRAMES if _swing_out else 0) + _frame
-	# ...and the sort key rides the same frame, so the leaf starts occluding as
-	# it comes round instead of snapping at one end of the swing
-	_apply_sort_shift(_leaf_sort_depth() * float(_frame) / float(FRAMES - 1))
+	if _open:
+		# AIM WHILE IT SWINGS, DO NOT RAMP. The sort key used to ride the swing
+		# frame — 0 at the start, the leading edge at the end — so for the first
+		# half of every OPEN the leaf sat at the wall line, and anyone standing
+		# behind it out-sorted it and showed straight through the door until the
+		# swing landed (user: "i literally just finished opening the door from
+		# the inside, and my character is inside of the house ... it shows my
+		# character through the door for a second, then it goes back to normal").
+		#
+		# The ramp existed so the leaf would start occluding as it came round
+		# rather than snapping at one end. Aiming does that better: it gives the
+		# correct answer for the player on frame one and every frame after, and
+		# its floor is the leading edge, so the leaf still clears its own wall
+		# throughout the swing.
+		_aim_leaf_sort()
+	else:
+		# CLOSING still ramps down. There is nothing to occlude by the end — the
+		# leaf finishes flat in the wall plane — so the smooth return is right.
+		_apply_sort_shift(_leaf_sort_depth() * float(_frame) / float(FRAMES - 1))

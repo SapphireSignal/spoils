@@ -41,6 +41,41 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-08 — opening a door stops showing you through it
+
+**Shipped: v0.6.96.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass.
+
+### The user's words
+
+- *"i literally just finished opening the door from the inside, and my character
+  is inside of the house ... it shows my character through the door for a
+  second, then it goes back to normal"*.
+
+### Shipped
+
+The leaf's sort key RODE THE SWING FRAME — 0 at the start, leading edge at the
+end — so for the first half of every open it sat at the wall line and anyone
+behind it drew through the door. Opening now calls `_aim_leaf_sort()` every
+frame instead. Closing still ramps: the leaf ends flat in the wall plane with
+nothing to occlude.
+
+**THREE DIFFERENT DOOR ARTEFACTS IN ONE DAY, AND THE DURATION SEPARATED THEM
+EVERY TIME.** One frame (~4 ms) = the process-order lag, v0.6.95. A quarter
+second = the swing ramp, this one. Permanent = the sort key itself, v0.6.91-94.
+**Ask how long it lasts before looking at anything.**
+
+### Picked up at — OPEN
+
+1. **"he should be in front of the door in this position"** — the DUCK_MIN trade
+   from v0.6.94, and the probe's 1 disagreeing square. **Do not tune DUCK_MIN
+   further**; split the open leaf into two sprites (hinge half, free half) with
+   their own sort keys. A single key cannot describe a panel on a diagonal and
+   six releases have now proved it.
+2. **Clipping into walls from inside** — open, diagnosis further down.
+3. Backlog: B0-NEW, B0, B0b, B1, B2, B3, B4.
+
+---
+
 ## 2026-08-08 — the one-frame flicker through an open door
 
 **Shipped: v0.6.95.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass.
