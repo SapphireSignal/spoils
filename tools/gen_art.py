@@ -1216,6 +1216,132 @@ MAP_TILE_KINDS = [
 MAP_TILE_VARIANTS = 3
 
 
+MAP_ICON = 20                # one POI marker, square
+
+# What a place is FOR decides its badge colour, not what it is made of — the
+# same three-way split the map screen already used for its vector discs.
+MAP_ICON_ROLE = {
+    "lz": "exit", "toll gate": "exit", "trainyard": "exit",
+    "safehouse": "home",
+}
+
+
+def _icon_plaque(c: Canvas, role: str) -> None:
+    """A dark plaque with a lit border. A marker has to survive landing on red
+    roofs, pale road and black woodland alike, and a symbol alone does not —
+    this is the same reason the world's own labels carry a halo."""
+    face = C("151d28")
+    edge = {"exit": C("468232"), "home": C("a53030")}.get(role, C("577277"))
+    n = MAP_ICON
+    for y in range(n):
+        for x in range(n):
+            # rounded square: clip the four corner pixels
+            if (x < 2 or x > n - 3) and (y < 2 or y > n - 3):
+                continue
+            border = x <= 1 or x >= n - 2 or y <= 1 or y >= n - 2
+            c.set(x, y, edge if border else face)
+    for (x, y) in ((2, 2), (n - 3, 2), (2, n - 3), (n - 3, n - 3)):
+        c.set(x, y, edge)
+
+
+def make_map_icon(name: str) -> Canvas:
+    """One hand-painted POI marker. Every place gets one — town, warehouse,
+    trainyard, forest and the gallery had a bare text label and nothing else
+    (user: "all icons on each POI", then "theres still no gallery")."""
+    c = Canvas(MAP_ICON, MAP_ICON)
+    _icon_plaque(c, MAP_ICON_ROLE.get(name, "place"))
+    ink = C("ebede9")
+    dim = C("a8b5b2")
+
+    def roof(x0, x1, y, col):            # a little pitched roof
+        # NARROW AT THE RIDGE, WIDENING DOWN. The first cut had this inverted
+        # and both the town and the safehouse read as funnels.
+        w = (x1 - x0) // 2
+        for i in range(w + 1):
+            c.hline(x0 + w - i, x1 - w + i, y + i, col)
+
+    if name == "town":                   # three roofs, packed
+        roof(4, 10, 6, C("cf573c")); c.rect(5, 10, 9, 13, C("884b2b"))
+        roof(9, 15, 8, C("a53030")); c.rect(10, 12, 14, 14, C("602c2c"))
+        c.rect(4, 13, 15, 14, C("341c27"))
+    elif name == "forest":               # a conifer
+        for i in range(4):
+            c.hline(9 - i, 10 + i, 5 + i, C("468232") if i < 2 else C("25562e"))
+        for i in range(4):
+            c.hline(9 - i, 10 + i, 10 + i, C("25562e") if i < 2 else C("19332d"))
+        c.rect(9, 14, 10, 16, C("341c27"))
+    elif name == "warehouse":            # a shed with a roller door
+        c.rect(4, 7, 15, 15, C("577277")); c.hline(4, 15, 6, C("819796"))
+        c.rect(7, 10, 12, 15, C("341c27"))
+        for y in range(10, 16, 2):
+            c.hline(7, 12, y, C("4d2b32"))
+    elif name == "school":               # a hall with a bell tower
+        c.rect(4, 9, 15, 15, C("ad7757")); c.hline(4, 15, 8, C("de9e41"))
+        c.rect(9, 4, 10, 8, C("819796")); c.set(9, 3, C("e8c170"))
+        c.rect(6, 11, 7, 15, C("341c27")); c.rect(12, 11, 13, 13, C("3c5e8b"))
+    elif name == "playground":           # a swing frame
+        c.rect(4, 6, 15, 7, C("819796"))
+        for x in (5, 14):
+            for i in range(8):
+                c.set(x + (1 if x == 5 else -1) * (i // 3), 7 + i, C("577277"))
+        c.rect(8, 8, 8, 12, C("a8b5b2")); c.rect(11, 8, 11, 12, C("a8b5b2"))
+        c.rect(7, 12, 12, 13, C("de9e41"))
+    elif name == "courtyard":            # a fountain, dry
+        c.rect(4, 12, 15, 15, C("819796")); c.hline(4, 15, 11, C("a8b5b2"))
+        c.rect(9, 5, 10, 11, C("577277"))
+        c.hline(7, 12, 8, C("a8b5b2")); c.hline(8, 11, 4, C("a8b5b2"))
+    elif name == "trainyard":            # a boxcar on rails
+        c.rect(4, 6, 15, 12, C("752438")); c.hline(4, 15, 6, C("a53030"))
+        c.rect(7, 8, 12, 11, C("341c27"))
+        c.hline(3, 16, 14, C("819796")); c.hline(3, 16, 16, C("819796"))
+        for x in range(4, 16, 3):
+            c.vline(x, 14, 16, C("4d2b32"))
+    elif name == "bus depot":            # a bus, head on
+        c.rect(4, 6, 15, 15, C("de9e41")); c.hline(4, 15, 6, C("e8c170"))
+        c.rect(6, 8, 13, 11, C("253a5e"))
+        c.rect(5, 16, 7, 16, C("341c27")); c.rect(12, 16, 14, 16, C("341c27"))
+        c.rect(5, 13, 6, 14, C("ebede9")); c.rect(13, 13, 14, 14, C("ebede9"))
+    elif name == "comms":                # a mast, still blinking
+        c.rect(9, 6, 10, 16, C("819796"))
+        for i in range(5):
+            c.set(7 - i // 2, 8 + i, C("577277")); c.set(12 + i // 2, 8 + i, C("577277"))
+        c.set(9, 4, C("a53030")); c.set(10, 4, C("a53030"))
+        c.set(6, 5, dim); c.set(13, 5, dim)
+    elif name == "gallery":              # a spray can over a painted wall
+        c.rect(4, 8, 15, 16, C("577277"))
+        c.rect(5, 10, 9, 13, C("a23e8c")); c.rect(10, 11, 14, 14, C("4f8fba"))
+        c.rect(11, 4, 13, 9, C("de9e41")); c.rect(11, 3, 13, 3, C("a8b5b2"))
+        c.set(14, 3, C("d0da91")); c.set(15, 2, C("d0da91"))
+    elif name == "scrapyard":            # a crane hook over a crushed car
+        c.rect(4, 4, 5, 14, C("de9e41")); c.rect(4, 4, 13, 5, C("de9e41"))
+        c.vline(12, 5, 8, C("819796")); c.rect(11, 8, 13, 10, C("577277"))
+        c.rect(6, 13, 15, 15, C("752438")); c.hline(7, 14, 12, C("a53030"))
+    elif name == "safehouse":            # home
+        roof(3, 16, 4, C("cf573c"))
+        c.rect(5, 11, 14, 16, C("884b2b"))
+        c.rect(8, 12, 11, 16, C("341c27")); c.set(10, 14, C("e8c170"))
+    elif name == "lz":                   # a rotor over a pad
+        c.rect(3, 6, 16, 7, C("a8b5b2")); c.rect(9, 8, 10, 10, C("577277"))
+        c.rect(6, 10, 13, 13, C("468232")); c.hline(7, 12, 10, C("75a743"))
+        c.rect(5, 15, 14, 16, C("25562e"))
+        c.set(4, 5, dim); c.set(15, 5, dim)
+    elif name == "toll gate":            # a barrier arm across the road
+        c.rect(4, 8, 5, 16, C("577277"))
+        for i in range(10):
+            c.set(6 + i, 9 - i // 3, C("a53030") if (i // 2) % 2 == 0 else C("ebede9"))
+            c.set(6 + i, 10 - i // 3, C("a53030") if (i // 2) % 2 == 0 else C("ebede9"))
+        c.rect(3, 15, 16, 16, C("394a50"))
+    else:                                # never silently blank: an unknown POI
+        c.rect(8, 8, 11, 11, ink)        # gets a plain mark, loudly generic
+    return c
+
+
+MAP_ICON_NAMES = [
+    "town", "forest", "warehouse", "school", "playground", "courtyard",
+    "trainyard", "bus depot", "comms", "gallery", "scrapyard", "safehouse",
+    "lz", "toll gate",
+]
+
 MAP_TREE_VARIANTS = 6        # 0-2 green, 3-5 turned
 
 
@@ -19702,6 +19828,11 @@ def main() -> None:
     assert_palette(floors, "floors")
     floors.save(OUT / "floors.png")
     manifest["floors"] = coords
+
+    for icon_name in MAP_ICON_NAMES:
+        icon = make_map_icon(icon_name)
+        assert_palette(icon.img, "map_icon_%s" % icon_name)
+        icon.img.save(OUT / ("map_icon_%s.png" % icon_name.replace(" ", "_")))
 
     map_atlas, map_coords = make_map_atlas()
     assert_palette(map_atlas, "map_tiles")

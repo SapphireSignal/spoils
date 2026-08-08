@@ -113,6 +113,15 @@ var _hover_key := ""
 var _hover_time := 0.0
 var _time_accum := 0.0
 var _world_tiles: Array[Dictionary] = []   # {control, blurb}
+# the baked map's own geometry, taken from world_info so this screen can never
+# disagree with the texture it is drawing
+var _bake_size := Vector2.ZERO
+var _bake_lo := 0.0
+var _bake_n := 1.0
+var _bake_top := 0.0
+var _bake_hw := 8.0
+var _bake_hh := 4.0
+var _icons: Dictionary = {}                # poi name -> Texture2D
 
 
 func setup(info: Dictionary, player: Player, environment: Node,
@@ -120,8 +129,18 @@ func setup(info: Dictionary, player: Player, environment: Node,
 	_player = player
 	_environment = environment
 	_floor_layer = floor_layer
-	var map_image: Image = info["map_image"]
+	# THE PAINTED ISO BAKE, not the 1px-per-cell sheet. `map_image` is still
+	# published and still feeds the menu's map-select tile; this screen draws
+	# the bake and its own live overlays on top.
+	var map_image: Image = info.get("map_iso", info["map_image"])
 	_map_tex = ImageTexture.create_from_image(map_image)
+	_bake_size = Vector2(map_image.get_width(), map_image.get_height())
+	_bake_lo = float(info.get("map_bake_lo", 0))
+	_bake_n = float(info.get("map_bake_span", 1))
+	_bake_top = float(info.get("map_bake_top", 0))
+	var tile: Array = info.get("map_iso_tile", [16, 8])
+	_bake_hw = float(tile[0]) * 0.5
+	_bake_hh = float(tile[1]) * 0.5
 	_vec = info.get("map_vec", {})
 	var theme := UITheme.get_theme()
 	_font = theme.default_font
@@ -131,16 +150,28 @@ func setup(info: Dictionary, player: Player, environment: Node,
 	if tiny != null:
 		_tiny_font = tiny
 	_build_poi_list(info)
+	for poi in _pois:
+		var icon_name := str(poi["name"])
+		if _icons.has(icon_name):
+			continue
+		var tex: Texture2D = load("res://art/gen/map_icon_%s.png"
+			% icon_name.replace(" ", "_"))
+		if tex != null:
+			_icons[icon_name] = tex
 	layer = 75
 	visible = false
 	_build_ui()
 
 
 func _playable() -> Rect2:
-	var inset := float(WorldBuilder.BARRIER_INSET)
-	return Rect2(inset, inset,
-		float(WorldBuilder.MAP_W) - inset * 2.0,
-		float(WorldBuilder.MAP_H) - inset * 2.0)
+	## IN BAKE PIXELS, not cells — `_zoom` scales the painted texture now, so
+	## everything that frames or clamps the view has to speak the same units.
+	if _bake_size == Vector2.ZERO:
+		var inset := float(WorldBuilder.BARRIER_INSET)
+		return Rect2(inset, inset,
+			float(WorldBuilder.MAP_W) - inset * 2.0,
+			float(WorldBuilder.MAP_H) - inset * 2.0)
+	return Rect2(Vector2.ZERO, _bake_size)
 
 
 func _build_poi_list(info: Dictionary) -> void:
@@ -173,14 +204,25 @@ func _build_poi_list(info: Dictionary) -> void:
 			"blurb": blurbs.get(key, key), "label": true, "glyph": true})
 	var zones: Dictionary = info.get("zones", {})
 	for zone_name in ["town", "forest", "warehouse", "trainyard"]:
-		for r in (zones.get(zone_name, []) as Array):
-			# a REGION gets a name and no symbol — that is how a drawn map
-			# handles an area, and a zone repeats over several rects, so a
-			# symbol on each would carpet the sheet
+		var rects: Array = zones.get(zone_name, []) as Array
+		# EVERY PLACE GETS A MARKER (user: "all icons on each POI"). These four
+		# were the ones with a bare word and nothing else. A zone can repeat
+		# over several rects and a marker on each would carpet the map, so only
+		# the LARGEST rect of a zone carries one — the rest keep just the name.
+		var best := -1
+		var best_area := -1.0
+		for i in rects.size():
+			var rr: Array = rects[i]
+			var area := float(rr[2]) * float(rr[3])
+			if area > best_area:
+				best_area = area
+				best = i
+		for i in rects.size():
+			var r: Array = rects[i]
 			_pois.append({"name": zone_name,
 				"rect": Rect2(float(r[0]), float(r[1]), float(r[2]), float(r[3])),
 				"blurb": blurbs.get(zone_name, zone_name), "label": true,
-				"glyph": false})
+				"glyph": i == best})
 
 
 func _build_ui() -> void:
@@ -295,6 +337,9 @@ func _build_ui() -> void:
 	_canvas = Control.new()
 	_canvas.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_canvas.clip_contents = true
+	# the bake is PIXEL ART and lands near 1:1 — smoothing it would blur every
+	# painted edge the map screen exists to show
+	_canvas.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	_canvas.mouse_filter = Control.MOUSE_FILTER_STOP
 	_canvas.draw.connect(_draw_district)
 	_canvas.gui_input.connect(_on_canvas_input)
@@ -313,29 +358,37 @@ func _build_ui() -> void:
 	back.custom_minimum_size = Vector2(64, 22)
 	back.pressed.connect(func() -> void: _set_mode("world"))
 	_transit_root.add_child(back)
+	# ---- the chrome, ALL OF IT DOWN ONE SIDE -----------------------------
+	# User: "make sure no text is overlapping, like the 'drag to pan , wheel to
+	# zoom, press m to close, weather, district stuff isnt anywhere on the map,
+	# make it on the side somewhere". It was scattered: the controls hint sat
+	# ON the map's bottom-right corner and the clock floated loose in a margin.
+	#
+	# The projection is what makes this free. A diamond in a rectangle leaves
+	# four empty triangles, and the left one is dead space that no longer has to
+	# be wasted — the chrome stops being an overlay and becomes the frame.
+	var side := VBoxContainer.new()
+	side.position = Vector2(10, 38)
+	side.custom_minimum_size = Vector2(190, 0)
+	side.size = Vector2(190, 0)
+	side.add_theme_constant_override("separation", 6)
+	side.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_transit_root.add_child(side)
 	var district_tag := Label.new()
 	district_tag.text = "district: transit"
-	district_tag.position = Vector2(84, 13)
 	district_tag.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	district_tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_transit_root.add_child(district_tag)
+	side.add_child(district_tag)
 	_status = Label.new()
-	_status.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	_status.offset_left = 12
-	_status.offset_top = -22
 	_status.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	_status.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_transit_root.add_child(_status)
+	side.add_child(_status)
 	_hint = Label.new()
-	_hint.text = "drag to pan  -  wheel to zoom  -  press m to close"
-	_hint.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	_hint.offset_left = -260
-	_hint.offset_top = -22
-	_hint.offset_right = -12
-	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_hint.text = "drag to pan\nwheel to zoom\npress m to close"
+	_hint.custom_minimum_size = Vector2(190, 0)
 	_hint.add_theme_color_override("font_color", UITheme.TEXT_DIM)
 	_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_transit_root.add_child(_hint)
+	side.add_child(_hint)
 
 	# ---- shared tooltip --------------------------------------------------
 	_tooltip = PanelContainer.new()
@@ -371,7 +424,7 @@ func _center_view() -> void:
 		_pan = _canvas.size * 0.5 - play.get_center() * _zoom
 	else:
 		var cell := Vector2(_floor_layer.local_to_map(_player.global_position))
-		_pan = _canvas.size * 0.5 - cell * _zoom
+		_pan = _canvas.size * 0.5 - _cell_to_bake(cell) * _zoom
 	_clamp_pan()
 
 
@@ -552,8 +605,22 @@ func _update_tooltip(delta: float) -> void:
 		_tooltip.position = at.round()
 
 
+func _cell_to_bake(cell: Vector2) -> Vector2:
+	## Cell space -> pixels in the baked texture, in the GAME'S projection. This
+	## is the same arithmetic `_map_iso_px` uses in world_builder, written
+	## continuously so a fractional cell lands where you would expect: an
+	## integer cell gives its tile's top vertex and (cx+0.5, cy+0.5) its centre.
+	##
+	## IT MUST NOT BE RE-DERIVED FROM CONSTANTS HERE. Every number comes from
+	## world_info, so retuning the tile size or the bake window cannot slide the
+	## markers off the painting they sit on.
+	return Vector2((cell.x - cell.y) * _bake_hw + (_bake_n - 1.0) * _bake_hw
+			+ _bake_hw,
+		(cell.x + cell.y - 2.0 * _bake_lo) * _bake_hh + _bake_top)
+
+
 func _cell_to_screen(cell: Vector2) -> Vector2:
-	return _pan + cell * _zoom
+	return _pan + _cell_to_bake(cell) * _zoom
 
 
 func _draw_district() -> void:
@@ -567,259 +634,22 @@ func _draw_district() -> void:
 		_zoom = minf(_canvas.size.x / (play.size.x + 8.0),
 			_canvas.size.y / (play.size.y + 8.0))
 		_center_view()
-	if _vec.is_empty():
-		_canvas.draw_texture_rect(_map_tex,
-			Rect2(_pan, Vector2(256, 256) * _zoom), false)
+	if _map_tex == null:
 		return
-	var z := _zoom
-	var inset := float(_vec["inset"])
-	var w := float((_vec["size"] as Array)[0])
-	var h := float((_vec["size"] as Array)[1])
-
-	# THE GROUND. Open land first; everything below is a different SURFACE
-	# drawn on it, which is what makes this terrain rather than a sheet.
-	# BEYOND THE WIRE FIRST. The buffer band has real woods in it and they were
-	# being drawn onto the panel background, so trees floated on nothing
-	# outside the ring. Dim ground under them says "this is still the world,
-	# you just can't go there" — which is true; crossing it gets you sniped.
-	_canvas.draw_rect(Rect2(_cell_to_screen(Vector2.ZERO), Vector2(w, h) * z),
-		OUTSIDE)
-	var land := Rect2(_cell_to_screen(Vector2(inset, inset)),
-		Vector2(w - inset * 2.0, h - inset * 2.0) * z)
-	_canvas.draw_rect(land, LAND)
-	# city blocks: denser, darker ground. A FULL fill, not the 45% tint the
-	# paper map needed — that tint existed only so the paper showed through,
-	# and there is no paper any more.
-	for b in (_vec["blocks"] as Array):
-		var br := Rect2(_cell_to_screen(Vector2(float(b[0]), float(b[1]))),
-			Vector2(float(b[2]), float(b[3])) * z)
-		_canvas.draw_colored_polygon(
-			_wobble(br, int(b[0]) * 31 + int(b[1]), z * 0.9), URBAN)
-	# GROUND MOTTLE. Without it the open ground and the blocks are two flat
-	# colour fields, which is most of what still read as "squares and lines"
-	# once the colour was in. These are broken concrete, weeds and rubble —
-	# the district really is weathered in patches (the builder mixes
-	# concrete_worn/damp off two offset hash grids), so this is texture the
-	# ground genuinely has, not invented structure.
+	# ONE BLIT. The district is a PAINTED TEXTURE, baked once at deploy — see
+	# world_builder._bake_map_iso. This function used to rebuild the district
+	# from vector shapes on every pan and every zoom step, and that is precisely
+	# what capped it at flat fills and wobbled polygons: hundreds of draw calls
+	# per frame leave no budget for surface detail. It is why "all the roads are
+	# just like look all the same, just pure white with some border theres like
+	# nothing to it" was true however many road colours were defined here.
 	#
-	# HASHED OFF THE CELL, never rolled — this redraws on every pan, and a
-	# random patch would crawl across the map while you dragged it.
-	# SMALL AND TIGHT. The first cut used radius 1.6-4.3 CELLS at ~0.16 alpha
-	# and it read as soft grey smudges drifting over the district — closer to
-	# fog than to ground, and this user spots an artifact instantly. Patch
-	# size is what decides whether this reads as texture or as a rendering
-	# fault; it is well under a cell now.
-	var step := 5
-	var mx := int(inset)
-	while mx < int(w - inset):
-		var my := int(inset)
-		while my < int(h - inset):
-			var hsh: int = absi((mx * 374761393) ^ (my * 668265263))
-			if (hsh & 255) < 132:
-				var jx := float((hsh >> 8) & 3)
-				var jy := float((hsh >> 10) & 3)
-				var rr := (0.45 + float((hsh >> 12) & 3) * 0.3) * z
-				var dark := ((hsh >> 16) & 1) == 0
-				_canvas.draw_circle(
-					_cell_to_screen(Vector2(float(mx) + jx, float(my) + jy)),
-					rr,
-					Color(0.02, 0.03, 0.05, 0.13) if dark
-						else Color(0.62, 0.70, 0.68, 0.05),
-					true, -1.0, false)
-			my += step
-		mx += step
-	# the plaza and the depot apron: paved clearings
-	for paved in [_vec["plaza"], _vec["apron"]]:
-		var pr: Array = paved
-		if float(pr[2]) <= 0.0:
-			continue
-		var prect := Rect2(_cell_to_screen(Vector2(float(pr[0]), float(pr[1]))),
-			Vector2(float(pr[2]), float(pr[3])) * z)
-		_canvas.draw_colored_polygon(
-			_wobble(prect, int(pr[0]) * 11 + int(pr[1]) * 5, z * 0.7), PAVED)
-	# named areas get a SURFACE, keyed to what the ground there actually is.
-	# They used to get a thin hollow rectangle each, which is most of what the
-	# user meant by "the map just looks like squares and lines" — seven empty
-	# boxes with a word in them.
-	for area in (_vec.get("areas", []) as Array):
-		var ar: Array = area
-		if float(ar[2]) <= 0.0:
-			continue
-		var kind_a := str(ar[4]) if ar.size() > 4 else ""
-		var surface := PAVED
-		match kind_a:
-			"scrapyard", "trainyard":
-				surface = DIRT
-			"playground":
-				surface = WOOD
-			"lz":
-				surface = PAVED.lightened(0.08)
-		# A TINT, NOT A FILL. The trainyard area is a whole block and the
-		# scrapyard nearly one, so at full opacity they came out as two big
-		# solid slabs — "squares", the exact thing being fixed. At 0.72 the
-		# ground underneath still reads through and they land as surfaces.
-		surface.a = 0.72
-		var arect := Rect2(_cell_to_screen(Vector2(float(ar[0]), float(ar[1]))),
-			Vector2(float(ar[2]), float(ar[3])) * z)
-		_canvas.draw_colored_polygon(
-			_wobble(arect, int(ar[0]) * 17 + int(ar[1]) * 7, z * 1.1), surface)
-	# THE WOODS ARE CANOPY MASSES. They were diagonal hatch strokes — the way
-	# a surveyor draws tree cover, and the user's words were "the trees are
-	# just lines in there too".
-	#
-	# Each grove is a clump of overlapping discs rather than one circle: a
-	# single circle per bucket is the "diagram" read the hatching was trying
-	# to escape, but the answer is an IRREGULAR EDGE, not a different stroke.
-	# Deep tone first, canopy over it, a sunlit cap offset up-left, so the
-	# wood has a light direction like everything else in the game.
-	#
-	# Everything here is HASHED OFF THE GROVE'S OWN CELL, never rolled: this
-	# runs on every redraw, so anything random would crawl while you pan.
-	for g in (_vec["groves"] as Array):
-		var density := float(g[2])
-		if density < 2.0:
-			continue
-		var gx := int(g[0])
-		var gy := int(g[1])
-		var autumn := int(g[3]) == 1
-		var centre := _cell_to_screen(Vector2(float(gx) + 1.5, float(gy) + 1.5))
-		var radius := (1.1 + minf(density, 9.0) * 0.19) * z
-		var deep: Color = WOOD_AUT.darkened(0.4) if autumn else WOOD_DEEP
-		var body: Color = WOOD_AUT if autumn else WOOD
-		var lit: Color = WOOD_AUT_HI if autumn else WOOD_HI
-		var lobes := clampi(int(density * 0.5), 2, 4)
-		for i in lobes:
-			var hsh: int = absi((gx * 73856093) ^ (gy * 19349663) ^ (i * 83492791))
-			var ang := float(hsh & 1023) / 1023.0 * TAU
-			var off := radius * 0.45 * float((hsh >> 10) & 255) / 255.0
-			var at := centre + Vector2(cos(ang), sin(ang)) * off
-			var rr := radius * (0.62 + float((hsh >> 18) & 127) / 127.0 * 0.38)
-			# ANTIALIASING OFF, deliberately. These are the single most
-			# numerous primitive on the map — hundreds of groves, several
-			# lobes each — and an antialiased draw_circle builds edge geometry
-			# every frame the map is up. The whole district layer is re-
-			# rasterised per frame whether or not the draw callback re-runs,
-			# so this is a per-frame cost, and it measured 240 -> 210 fps.
-			# At these radii the aliased edge is also the more correct look
-			# for a game that renders on a pixel grid.
-			_canvas.draw_circle(at + Vector2(rr * 0.16, rr * 0.2), rr, deep,
-				true, -1.0, false)
-			_canvas.draw_circle(at, rr * 0.92, body, true, -1.0, false)
-			_canvas.draw_circle(at - Vector2(rr * 0.22, rr * 0.26), rr * 0.44,
-				lit, true, -1.0, false)
-	# ROADS, AND THEY HAVE A HIERARCHY (user: "all the roads are the same size
-	# oin the map"). They were — and so is the WORLD: _plan_roads appends
-	# Vector2i(base, 4) for every road, so all of them really are four cells
-	# wide and the old map was telling the truth.
-	#
-	# The honest hierarchy is the SPAN. A road that runs the full height or
-	# width of the district is a through route you can drive end to end; one
-	# that stops short is a stub the council never finished. That is a real
-	# difference, it is in the data, and it is the one a player cares about —
-	# so through routes are drawn wide and bright with a centre line, stubs
-	# narrow and dull. Nothing here invents a width the world does not have;
-	# it picks which roads to EMPHASISE, which is what a map is for.
-	for r in (_vec["roads_v"] as Array):
-		var x := float(r[0])
-		# a road that stops short is drawn stopping short (v0.5.4)
-		var from_y := float(r[2]) if r.size() > 3 else inset
-		var to_y := float(r[3]) if r.size() > 3 else h - inset
-		var through := from_y <= inset + 1.0 and to_y >= h - inset - 1.0
-		var rw := float(r[1]) * z * (1.0 if through else 0.62)
-		var top := _cell_to_screen(Vector2(x, maxf(from_y, inset)))
-		var bot := _cell_to_screen(Vector2(x, minf(to_y, h - inset)))
-		var mid := top.x + float(r[1]) * z * 0.5
-		_canvas.draw_line(Vector2(mid, top.y), Vector2(mid, bot.y),
-			ROAD_CASE, rw + maxf(2.0, z * 0.5), true)
-		_canvas.draw_line(Vector2(mid, top.y), Vector2(mid, bot.y),
-			ROAD_MAJOR if through else ROAD_MINOR, rw, true)
-		if through and z > 1.6:
-			_dashed_line(Vector2(mid, top.y), Vector2(mid, bot.y),
-				ROAD_CASE, maxf(1.0, z * 0.18), z * 2.2, z * 2.2)
-	for r in (_vec["roads_h"] as Array):
-		var y := float(r[0])
-		var from_x := float(r[2]) if r.size() > 3 else inset
-		var to_x := float(r[3]) if r.size() > 3 else w - inset
-		var through2 := from_x <= inset + 1.0 and to_x >= w - inset - 1.0
-		var rw2 := float(r[1]) * z * (1.0 if through2 else 0.62)
-		var left := _cell_to_screen(Vector2(maxf(from_x, inset), y))
-		var right := _cell_to_screen(Vector2(minf(to_x, w - inset), y))
-		var mid2 := left.y + float(r[1]) * z * 0.5
-		_canvas.draw_line(Vector2(left.x, mid2), Vector2(right.x, mid2),
-			ROAD_CASE, rw2 + maxf(2.0, z * 0.5), true)
-		_canvas.draw_line(Vector2(left.x, mid2), Vector2(right.x, mid2),
-			ROAD_MAJOR if through2 else ROAD_MINOR, rw2, true)
-		if through2 and z > 1.6:
-			_dashed_line(Vector2(left.x, mid2), Vector2(right.x, mid2),
-				ROAD_CASE, maxf(1.0, z * 0.18), z * 2.2, z * 2.2)
-	# BROKEN STRETCHES, drawn over the road lines. Without these the network is
-	# a set of perfectly ruled bands, which is exactly what the user objected to
-	# ("the straight roads just look really weird, especially on the map"). They
-	# are real: the same cells the world paints as bare earth.
-	# ROUND, NOT SQUARE. These were one draw_rect per cell, which is a grid of
-	# little squares - the exact thing being designed out (user: "all the dirt
-	# just looks like squares on the map too"). Overlapping discs merge into
-	# organic patches, and a cell's own hash sizes each one so a run of them
-	# does not read as a line of identical dots.
-	for rc in (_vec.get("road_rot", []) as Array):
-		var rcell: Array = rc
-		var rp := _cell_to_screen(Vector2(float(rcell[0]) + 0.5,
-			float(rcell[1]) + 0.5))
-		var hh: int = absi(int(rcell[0]) * 73856093 ^ int(rcell[1]) * 19349663)
-		var rr := z * (0.75 + float(hh & 63) / 63.0 * 0.5)
-		_canvas.draw_circle(rp, rr, DIRT, true, -1.0, false)
-	# the rail line, with ties
-	var rail_row := float(_vec["rail_row"])
-	if rail_row > 0.0:
-		var ry := _cell_to_screen(Vector2(0.0, rail_row + 0.5)).y
-		var rx0 := _cell_to_screen(Vector2(inset, 0.0)).x
-		var rx1 := _cell_to_screen(Vector2(w - inset, 0.0)).x
-		_canvas.draw_line(Vector2(rx0, ry), Vector2(rx1, ry), RAIL,
-			maxf(2.0, z * 1.6), true)
-		var tie := rx0
-		while tie < rx1:
-			_canvas.draw_line(Vector2(tie, ry - z), Vector2(tie, ry + z),
-				TIE, 1.0, true)
-			tie += maxf(6.0, z * 3.0)
-	# buildings: solid footprints, lit from the top-left like the rest of the
-	# game. The edge is a DARK GROUND SHADOW on the bottom-right rather than a
-	# full ink outline — an outline on all four sides is what made these read
-	# as boxes drawn on a diagram instead of structures standing on ground.
-	for b in (_vec["buildings"] as Array):
-		var rect := Rect2(_cell_to_screen(Vector2(float(b[0]), float(b[1]))),
-			Vector2(float(b[2]), float(b[3])) * z)
-		var kind := str(b[4])
-		var col := BUILDING
-		if kind == "house" or kind == "safehouse":
-			col = BUILDING_WARM
-		elif kind == "school":
-			col = BUILDING_WARM.lightened(0.12)
-		var lip := maxf(1.0, z * 0.22)
-		_canvas.draw_rect(Rect2(rect.position + Vector2(lip, lip), rect.size),
-			Color(0.035, 0.04, 0.08, 0.5))
-		_canvas.draw_rect(rect, col)
-		if int(b[5]) == 2:                       # two-story: a lighter core
-			_canvas.draw_rect(rect.grow(-maxf(1.0, z * 0.5)), col.lightened(0.16))
-		# a lit top edge and a shaded bottom one: the same 1 px rim trick the
-		# wordmark uses, and it is what stops a filled rect reading as flat
-		_canvas.draw_line(rect.position, Vector2(rect.end.x, rect.position.y),
-			col.lightened(0.3), maxf(1.0, z * 0.14), false)
-		_canvas.draw_line(Vector2(rect.position.x, rect.end.y), rect.end,
-			col.darkened(0.45), maxf(1.0, z * 0.14), false)
-		if kind == "safehouse":
-			# home is RINGED, not lit up: a bright slab here competed with
-			# the "me" marker that stands on it half the time
-			_canvas.draw_rect(rect.grow(maxf(1.5, z * 0.4)),
-				DISC_HOME, false, 1.5)
-	# the wire: a broken red line all the way round the playable district
-	var ring := Rect2(_cell_to_screen(Vector2(inset, inset)),
-		Vector2(w - inset * 2.0, h - inset * 2.0) * z)
-	_draw_dashed_rect(_canvas, ring, RING, 2.0, 7.0, 5.0)
-	# the place names belong to THIS layer: they only move when you pan or
-	# zoom, exactly like everything else here. They used to sit on the
-	# markers layer, which redraws every frame, so ~135 text-shaping calls
-	# ran at render rate the whole time the map was up — on top of the raid,
-	# because the map deliberately does not pause the tree.
+	# Everything still drawn live sits on TOP of this: markers, labels, icons and
+	# the player, none of which can be baked because they move.
+	_canvas.draw_texture_rect(_map_tex, Rect2(_pan, _bake_size * _zoom), false)
+	# ...and the place markers on top of it. These belong to the STATIC layer,
+	# not to `_markers`: they only move when you pan or zoom, while `_markers`
+	# redraws every frame to follow the player.
 	_draw_poi_labels(_canvas)
 
 
@@ -890,113 +720,26 @@ func _dashed_line(from: Vector2, to: Vector2, col: Color, width: float,
 
 
 func _draw_poi_glyph(on: Control, name: String, at: Vector2) -> void:
-	## ONE DRAWN SYMBOL PER PLACE, in ink. The old map put a word on open
-	## ground and nothing else, which is most of why it read as a diagram
-	## (user: "its like some minecraft map").
+	## ONE HAND-PAINTED MARKER PER PLACE (user, 2026-08-08: "all icons on each
+	## POI"). This drew vector arcs and strokes before; every marker is now a
+	## painted 20x20 plaque from `art/gen/map_icon_*.png`, made in gen_art with
+	## the rest of the art and in the Apollo palette.
 	##
 	## FIXED PIXEL SIZE on purpose — a map symbol does not grow when you zoom,
-	## and these have to stay readable at whole-district zoom, which is where
-	## the map opens. Each sits on a paper disc so it survives landing on a
-	## road, a wood or a rooftop, the same job the text halo does.
-	const S := 5.0
-	const LW := 1.4
-	# THE DISC IS COLOURED BY WHAT THE PLACE IS FOR. Every marker used to be
-	# the same ink symbol on the same paper disc, inside the same thin hollow
-	# rectangle — so a way out of the district and a building worth looting
-	# were visually identical, and the user's read was "all the pois are like
-	# in the same spot". Green means you can leave from here, red is home,
-	# blue is somewhere to go. That is legible before you read a single word.
-	var disc := _poi_disc(name)
-	on.draw_circle(at + Vector2(1.0, 1.2), S + 2.0, Color(0.035, 0.04, 0.08, 0.55),
-		true, -1.0, true)
-	on.draw_circle(at, S + 2.0, disc, true, -1.0, true)
-	on.draw_arc(at, S + 2.0, 0.0, TAU, 20, DISC_EDGE, 1.4, true)
-	on.draw_arc(at, S + 1.0, PI * 1.05, PI * 1.75, 12,
-		Color(1.0, 1.0, 1.0, 0.28), 1.0, true)
-	match name:
-		"bus depot":                                  # a bus
-			on.draw_rect(Rect2(at + Vector2(-S, -S * 0.75),
-				Vector2(S * 2.0, S * 1.3)), GLYPH, false, LW)
-			on.draw_line(at + Vector2(-S + 1.0, -S * 0.2),
-				at + Vector2(S - 1.0, -S * 0.2), GLYPH, 1.0, true)
-			on.draw_circle(at + Vector2(-S * 0.45, S * 0.75), 1.1, GLYPH, true, -1.0, true)
-			on.draw_circle(at + Vector2(S * 0.45, S * 0.75), 1.1, GLYPH, true, -1.0, true)
-		"scrapyard":                                  # a crane and its hook
-			on.draw_line(at + Vector2(-S * 0.3, S), at + Vector2(-S * 0.3, -S), GLYPH, LW, true)
-			on.draw_line(at + Vector2(-S, -S), at + Vector2(S, -S), GLYPH, LW, true)
-			on.draw_line(at + Vector2(S * 0.6, -S), at + Vector2(S * 0.6, S * 0.2), GLYPH, 1.0, true)
-			on.draw_arc(at + Vector2(S * 0.6, S * 0.45), 1.5, PI, TAU + 0.7, 10, GLYPH, 1.0, true)
-		"warehouse":                                  # a shed with a chimney
-			on.draw_rect(Rect2(at + Vector2(-S, 0.0), Vector2(S * 2.0, S)), GLYPH, false, LW)
-			on.draw_line(at + Vector2(-S, 0.0), at + Vector2(0.0, -S * 0.85), GLYPH, LW, true)
-			on.draw_line(at + Vector2(S, 0.0), at + Vector2(0.0, -S * 0.85), GLYPH, LW, true)
-			on.draw_line(at + Vector2(S * 0.5, -S * 0.42), at + Vector2(S * 0.5, -S * 1.3),
-				GLYPH, LW, true)
-		"playground":                                 # a swing
-			on.draw_line(at + Vector2(-S, S), at + Vector2(0.0, -S), GLYPH, LW, true)
-			on.draw_line(at + Vector2(S, S), at + Vector2(0.0, -S), GLYPH, LW, true)
-			on.draw_line(at + Vector2(-S * 0.6, -S * 0.1), at + Vector2(S * 0.6, -S * 0.1),
-				GLYPH, 1.0, true)
-			on.draw_line(at + Vector2(S * 0.2, -S * 0.1), at + Vector2(S * 0.2, S * 0.55),
-				GLYPH, 1.0, true)
-			on.draw_line(at + Vector2(S * 0.55, S * 0.55), at + Vector2(-S * 0.15, S * 0.55),
-				GLYPH, LW, true)
-		"comms":                                      # a mast, still blinking
-			on.draw_line(at + Vector2(-S * 0.7, S), at + Vector2(0.0, -S), GLYPH, LW, true)
-			on.draw_line(at + Vector2(S * 0.7, S), at + Vector2(0.0, -S), GLYPH, LW, true)
-			on.draw_line(at + Vector2(-S * 0.45, S * 0.3), at + Vector2(S * 0.45, S * 0.3),
-				GLYPH, 1.0, true)
-			on.draw_arc(at + Vector2(0.0, -S), 2.6, PI * 1.15, PI * 1.85, 8, GLYPH, 1.0, true)
-			on.draw_arc(at + Vector2(0.0, -S), 4.0, PI * 1.2, PI * 1.8, 8, GLYPH, 1.0, true)
-		"toll gate":                                  # the boom across the road
-			on.draw_line(at + Vector2(-S * 0.8, S), at + Vector2(-S * 0.8, -S * 0.5),
-				GLYPH, LW, true)
-			on.draw_line(at + Vector2(-S * 0.8, -S * 0.3), at + Vector2(S, S * 0.5),
-				GLYPH, LW, true)
-			on.draw_line(at + Vector2(-S * 1.3, S), at + Vector2(-S * 0.3, S), GLYPH, LW, true)
-		"safehouse":                                  # home
-			on.draw_line(at + Vector2(-S, 0.0), at + Vector2(0.0, -S), ME, LW, true)
-			on.draw_line(at + Vector2(S, 0.0), at + Vector2(0.0, -S), ME, LW, true)
-			on.draw_rect(Rect2(at + Vector2(-S * 0.7, 0.0),
-				Vector2(S * 1.4, S * 0.9)), ME, false, LW)
-			on.draw_rect(Rect2(at + Vector2(-S * 0.2, S * 0.3),
-				Vector2(S * 0.45, S * 0.6)), ME, false, 1.0)
-		"lz":                                         # the landing pad: an H
-			on.draw_arc(at, S * 0.95, 0.0, TAU, 22, GLYPH, LW, true)
-			on.draw_line(at + Vector2(-S * 0.4, -S * 0.5), at + Vector2(-S * 0.4, S * 0.5),
-				GLYPH, LW, true)
-			on.draw_line(at + Vector2(S * 0.4, -S * 0.5), at + Vector2(S * 0.4, S * 0.5),
-				GLYPH, LW, true)
-			on.draw_line(at + Vector2(-S * 0.4, 0.0), at + Vector2(S * 0.4, 0.0), GLYPH, LW, true)
-		"school":                                     # a schoolhouse bell
-			on.draw_rect(Rect2(at + Vector2(-S, -S * 0.2),
-				Vector2(S * 2.0, S * 1.1)), GLYPH, false, LW)
-			on.draw_line(at + Vector2(-S, -S * 0.2), at + Vector2(0.0, -S * 0.9), GLYPH, LW, true)
-			on.draw_line(at + Vector2(S, -S * 0.2), at + Vector2(0.0, -S * 0.9), GLYPH, LW, true)
-			on.draw_arc(at + Vector2(0.0, -S * 0.95), 1.5, PI, TAU, 8, GLYPH, LW, true)
-		"courtyard":                                  # the dry fountain
-			on.draw_arc(at, S * 0.9, 0.0, TAU, 22, GLYPH, LW, true)
-			on.draw_arc(at, S * 0.35, 0.0, TAU, 12, GLYPH, 1.0, true)
-			on.draw_line(at + Vector2(0.0, -S * 0.35), at + Vector2(0.0, -S * 0.95),
-				GLYPH, 1.0, true)
-		"trainyard":                                  # a boxcar on rails
-			on.draw_rect(Rect2(at + Vector2(-S, -S * 0.8),
-				Vector2(S * 2.0, S * 1.2)), GLYPH, false, LW)
-			on.draw_line(at + Vector2(-S, S * 0.85), at + Vector2(S, S * 0.85), GLYPH, 1.0, true)
-			on.draw_circle(at + Vector2(-S * 0.45, S * 0.5), 1.0, GLYPH, true, -1.0, true)
-			on.draw_circle(at + Vector2(S * 0.45, S * 0.5), 1.0, GLYPH, true, -1.0, true)
-		"gallery":                                    # a framed picture
-			on.draw_rect(Rect2(at + Vector2(-S * 0.9, -S * 0.8),
-				Vector2(S * 1.8, S * 1.6)), GLYPH, false, LW)
-			on.draw_line(at + Vector2(-S * 0.6, S * 0.5), at + Vector2(-S * 0.05, -S * 0.3),
-				GLYPH, 1.0, true)
-			on.draw_line(at + Vector2(-S * 0.05, -S * 0.3), at + Vector2(S * 0.6, S * 0.5),
-				GLYPH, 1.0, true)
-		_:
-			# anything without its own symbol still gets a surveyor's mark
-			# rather than nothing — a ringed dot reads as "a place".
-			on.draw_circle(at, 1.6, GLYPH, true, -1.0, true)
-			on.draw_arc(at, S * 0.75, 0.0, TAU, 16, GLYPH, 1.0, true)
+	## and these have to stay readable at whole-district zoom, which is where the
+	## map opens.
+	##
+	## THE PLAQUE BORDER IS COLOURED BY WHAT THE PLACE IS FOR: green means you
+	## can leave from here, red is home, grey is somewhere to go. That is legible
+	## before a single word is read.
+	var tex: Texture2D = _icons.get(name)
+	if tex == null:
+		return
+	var size := Vector2(tex.get_width(), tex.get_height())
+	# a soft drop shadow, so a marker survives landing on pale road or bright roof
+	on.draw_rect(Rect2((at - size * 0.5 + Vector2(1.0, 2.0)).round(), size),
+		Color(0.035, 0.04, 0.08, 0.5), true)
+	on.draw_texture_rect(tex, Rect2((at - size * 0.5).round(), size), false)
 
 
 func _draw_poi_labels(on: Control) -> void:
@@ -1015,15 +758,31 @@ func _draw_poi_labels(on: Control) -> void:
 			_font_size).x
 		# the name sits UNDER its symbol; a region has no symbol and keeps the
 		# centred placement it always had
-		var drop := 13.0 if has_glyph else float(_font_size) * 0.5
+		var drop := 16.0 if has_glyph else float(_font_size) * 0.5
 		var pos := (centre + Vector2(-tw * 0.5, drop)).round()
+		# NOTHING HANGS OFF THE EDGE (user: "the toll gate extraction icon and
+		# text isnt inside of the map, make sure everythign is inside"). The
+		# toll gate sits hard against the south edge, and a label was placed
+		# straight off its cell with no regard for its own width. Clamp both the
+		# name and the marker into the canvas.
+		var map_rect := Rect2(_pan, _bake_size * _zoom)
+		var lim := map_rect.intersection(Rect2(Vector2.ZERO, _canvas.size))
+		if lim.size.x > tw + 8.0 and lim.size.y > float(_font_size) * 3.0:
+			pos.x = clampf(pos.x, lim.position.x + 3.0,
+				lim.end.x - tw - 3.0)
+			pos.y = clampf(pos.y, lim.position.y + float(_font_size) + 2.0,
+				lim.end.y - 3.0)
+			centre.x = clampf(centre.x, lim.position.x + 11.0, lim.end.x - 11.0)
+			centre.y = clampf(centre.y, lim.position.y + 11.0,
+				lim.end.y - float(_font_size) - 14.0)
+			pos = pos.round()
 		var bounds := Rect2(pos - Vector2(3.0, float(_font_size)),
 			Vector2(tw + 6.0, float(_font_size) + 4.0))
 		if has_glyph:
 			# the symbol is part of what must not be landed on, or a
 			# neighbour's name prints straight through it
-			bounds = bounds.merge(Rect2(centre - Vector2(8.0, 8.0),
-				Vector2(16.0, 16.0)))
+			bounds = bounds.merge(Rect2(centre - Vector2(11.0, 11.0),
+				Vector2(22.0, 22.0)))
 		var clash := false
 		for r in drawn:
 			if r.intersects(bounds):

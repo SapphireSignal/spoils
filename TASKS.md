@@ -576,6 +576,17 @@ few, and none near comms" may remain — unmeasured, check before building.
      the bus depot, the scrapyard, the school over its playground, the gallery
      "where somebody still paints", the comms relay in the trees) — take the
      background text from there, do not invent parallel lore.
+   - **SUBTLE LIVE WEATHER ON THE MAP** *(user, 2026-08-08)*: *"can we add
+     some subtle weather effects to the map, like if its raining add some
+     subtle rain, if its sunny add some subtle sunlight, add subtle fogs
+     around the map whereever the fog is in game stuff like that"*. Reads off
+     `environment_system.gd`, which already owns weather, the sun clock and
+     `_fog_spots` — the map should SHOW that state, never roll its own.
+     **These are OVERLAYS on the view, never baked**: the bake happens once at
+     deploy and the weather changes during the raid. Note `world_info` already
+     publishes `fog_spots`, so the fog can sit exactly where it does in play.
+     Keep it SUBTLE (their word, twice) and mind the standing rule that a
+     gradual full-screen ramp must dither itself.
    - Free rein granted: *"you can add stuff do whatever you want"*.
 
    **ARCHITECTURE DECISION 2026-08-08 — PAINTED BAKE, NOT VECTOR DRAW. This

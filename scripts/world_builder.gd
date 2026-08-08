@@ -293,6 +293,11 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 		"map_image": map_image,
 		"map_iso": map_iso,
 		"map_iso_tile": [MAP_TW, MAP_TH],
+		# the bake's own geometry, so map_view projects with the SAME numbers
+		# the texture was painted with and its markers cannot drift off it
+		"map_bake_lo": _map_bake_lo(),
+		"map_bake_span": _map_bake_span(),
+		"map_bake_top": MAP_BAKE_TOP,
 		"map_vec": map_vec,
 		# the parsed manifest rides along so nothing downstream re-reads the
 		# 137 KB json mid-deploy (the freight used to)
