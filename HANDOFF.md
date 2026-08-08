@@ -41,6 +41,52 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-08 — and now on the OTHER facing
+
+**Shipped: v0.6.93.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass.
+
+### The user's words
+
+- *"you are measuring on the wrong facing door again"*.
+
+### What happened
+
+v0.6.92 fixed the wall-over-door overlap, verified it on `--door-pick=1`, and
+shipped. Pick 1 is the facing where the leaf swings TOWARD the camera. On the
+other facing — the leaf swings sideways — the same symptom was untouched, and I
+never shot it. **`harness.gd` carries a comment warning about exactly this, from
+the last time the user caught it.** Reading a warning is not acting on one.
+
+Cause: the finite-panel problem again. The half-plane test treats the leaf's
+plane as INFINITE, so on the sideways facing a player standing inside and to the
+far side scored "in front of" a leaf they could not possibly overlap; the aim
+then hauled the key to the wall line and the neighbouring wall segment (a cell
+nearer, +16) drew over the door. The runtime now applies the same screen-x
+overlap gate `--probe-doorsort` already used, so probe and game agree.
+
+Measured `shift`, both facings, inside and behind: 7.4 / 7.4 / 17.4 / 17.4 —
+each leaf's real leading edge. Was 0.0 on the sideways facing.
+
+### Learned
+
+- **BOTH FACINGS, EVERY TIME.** Now a rule in CLAUDE.md with the exact commands.
+- **A PROBE IS SILENT ABOUT RELATIONS YOU DID NOT GIVE IT.** `--probe-doorsort`
+  was green through both of these regressions because it only ever compares
+  player-vs-leaf, and the bug was leaf-vs-wall. Also in CLAUDE.md now.
+- **A three-line edit still needs its syntax checked.** `a1` was used and never
+  declared; the shot run came back with a parse error and no shot.
+  `--check-only --script scripts/door.gd` is one second.
+
+### Picked up at
+
+1. **Clipping into walls from inside** — still open, diagnosis in the entry
+   below. Not from any change this session.
+2. **The 1-of-15 threshold square** on inward-swinging doors — bounded and
+   deliberate.
+3. The standing backlog: B0-NEW, B0, B0b, B1, B2, B3, B4.
+
+---
+
 ## 2026-08-08 — the wall stops drawing over the door (v0.6.91 regression)
 
 **Shipped: v0.6.92.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass, `--probe-doorsort`

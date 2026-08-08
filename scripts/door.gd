@@ -14,6 +14,9 @@ const FRAMES := 4          # frames per swing; the sheet holds two swings
 const FRAME_TIME := 0.06
 const JAMB_EPS := 0.01     # sub-pixel; decides leaf-vs-jamb ties ONLY
 const LEAF_AIM_MARGIN := 1.0   # how far past the player the aimed leaf key sits
+const AIM_HALF_BODY := 7.0     # half the raider's drawn width; outside the
+                               # leaf's screen-x span by this, they cannot
+                               # overlap it and the aim must not fire
 
 var _sprite: Sprite2D
 var _occ: LightOccluder2D          # blocks LIGHT exactly when _poly blocks bodies
@@ -375,7 +378,8 @@ func _aim_leaf_sort() -> void:
 		return
 	var seg := leaf_base_segment()
 	var a0: Vector2 = seg[0]
-	var along: Vector2 = (seg[1] - a0).normalized()
+	var a1: Vector2 = seg[1]
+	var along: Vector2 = (a1 - a0).normalized()
 	# screen normal pointing TOWARD the camera; +y is toward the viewer
 	var nrm := Vector2(-along.y, along.x)
 	if nrm.y < 0.0:
@@ -394,6 +398,30 @@ func _aim_leaf_sort() -> void:
 	## Everything the leading edge already guaranteed — clearing its own wall,
 	## its jambs, the segments either side — is then untouched by construction.
 	var lead := _leaf_sort_depth()
+	## AIM ONLY WHERE THE TWO CAN ACTUALLY OVERLAP ON SCREEN, and this is the
+	## second half of the same lesson. A leaf is a FINITE panel; the half-plane
+	## test below treats its plane as INFINITE, so out past the leaf's ends it
+	## keeps answering — with an answer that means nothing, because the player
+	## and the leaf share no pixels there and no draw order is observable.
+	##
+	## On the straddling facing that mattered. The leaf swings hard to one side,
+	## so a player standing inside and to the OTHER side scores "in front" of
+	## the infinite plane; the aim then hauled the key down past them to the
+	## wall line, where the leaf loses to the neighbouring wall segment a cell
+	## nearer, and that wall drew over the door. v0.6.92 fixed exactly this on
+	## the OTHER facing and left it standing here (user: "you are measuring on
+	## the wrong facing door again"). `--probe-doorsort` already discounts these
+	## squares; the runtime has to discount them too or the two disagree.
+	##
+	## The panel is vertical, so its screen-x range IS its base segment's.
+	## Outside that, by more than half a body width, keep the leading edge —
+	## the value that is safe against the wall, the jambs and the segments
+	## either side.
+	var px := player.global_position.x
+	if px < minf(a0.x, a1.x) - AIM_HALF_BODY \
+			or px > maxf(a0.x, a1.x) + AIM_HALF_BODY:
+		_apply_sort_shift(lead)
+		return
 	var rel := player.global_position.y - global_position.y
 	var behind := (player.global_position - a0).dot(nrm) < 0.0
 	var want := lead

@@ -206,6 +206,9 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.93", [
+		"the same door fix, but on the other wall facing this time. doors sit on two facings and they behave nothing alike - on one the open door swings toward you, on the other it swings sideways across the screen - and only the first one had been checked. the sideways one still had the wall drawing over the door from inside",
+	]],
 	["v0.6.92", [
 		"the wall beside a door stopped drawing over the door you just opened. it only happened from inside, and it was new last version - the door was aiming its depth at you so hard that it fell back to the wall line and lost to the next wall panel along",
 	]],

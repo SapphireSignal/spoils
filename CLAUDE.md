@@ -35,7 +35,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
 	 form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.92 shipped, 2026-08-08.** Milestone 1 (a walkable world) is DONE.
+**v0.6.93 shipped, 2026-08-08.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 
@@ -181,6 +181,23 @@ Deliver the intent with additive glow sprites, the way lamps already do.
   the index IS the geometry.**
   Doors are only ever on `yp`/`xp` (`_DOOR_INWARD` has no far entries), so a
   full-height door piece can never land on a far wall and repeat this.
+- **A DOOR BUG IS NOT VERIFIED UNTIL BOTH WALL FACINGS ARE SHOT. THIS HAS NOW
+  COST FOUR RELEASES.** The two facings behave nothing alike: on one the open
+  leaf swings TOWARD the camera (`depth_out=10`, `span_out=2.6..17.4`), on the
+  other it swings SIDEWAYS across the screen (`depth_out=0`,
+  `span_out=-7.4..7.4`, `straddles=true`). A fix can be perfect on one and
+  untouched on the other, and `--door=` picks the deepest outward leaf by
+  default, which is ALWAYS the same facing. **Always pass `--door-pick=` for one
+  of each** — `--door=inside --door-pick=0` and `--door-pick=1` is the minimum
+  pair; the `DOORLIST` table printed by any `--door=` run says which is which.
+  The user has had to report this twice (*"the door needs to be on a specific
+  facing wall for it to show this glitch"*, then *"you are measuring on the
+  wrong facing door again"*).
+- **A PROBE IS SILENT ABOUT EVERY RELATION YOU DID NOT GIVE IT.**
+  `--probe-doorsort` measures player-vs-leaf and passed green through a
+  regression where the leaf lost to the WALL. Do not read a probe PASS as "the
+  frame is right" — it means only that the one pair it compares is ordered
+  correctly.
 - **THE CAMERA RIDES `floor_lift`, AND THE USER WANTS IT THAT WAY. SETTLED,
   DO NOT REOPEN** (2026-08-07: *"the camera already lifts with me, and i like
   it like that"*, then *"remove the camera lift from open"* when it was still

@@ -3,6 +3,38 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.93] - 2026-08-08 - and now on the other facing too
+
+### Fixed - v0.6.92 fixed the overlapping door on one wall facing and left it standing on the other
+*"you are measuring on the wrong facing door again"*. Right, and it is the
+second time on this exact bug — `harness.gd` carries a comment warning about it
+that nobody, including me, acted on.
+
+Doors sit on two wall facings and they behave completely differently. On one the
+open leaf swings toward the camera; on the other it swings sideways across the
+screen. v0.6.92 was verified on the first and shipped without the second ever
+being looked at, where the same symptom was still there.
+
+The remaining cause is the finite-panel problem again. A leaf is a panel of
+limited width, but the "which side of it are you on" test treats its plane as
+**infinite**, so it keeps answering out past the leaf's ends where the two share
+no pixels and no answer means anything. On the sideways facing the leaf swings
+hard to one side, so a player standing inside and to the **other** side scored
+as "in front of" it — and the aim then hauled the leaf's depth down past them to
+the wall line, where it loses to the neighbouring wall segment a cell nearer.
+That wall drew over the door.
+
+The leaf is vertical, so its screen-x range is exactly its base line's. Outside
+that by more than half a body width, the aim no longer fires and the leaf keeps
+its leading edge — the value that is safe against its own wall, its jambs and
+the segments either side. `--probe-doorsort` already discounted those squares;
+the game now discounts them the same way, so probe and runtime agree.
+
+Measured `shift` standing inside, both facings, both poses: **0.0 before on the
+sideways facing, 7.4 and 17.4 after** — each leaf's real leading edge.
+`--probe-doorsort`: 0 wrong of 16 on doors 0, 4 and 8; the known 1-of-15
+threshold square remains on 1 and 5.
+
 ## [0.6.92] - 2026-08-08 - the wall stops drawing over the door you opened
 
 ### Fixed - a regression in v0.6.91, visible only from inside
