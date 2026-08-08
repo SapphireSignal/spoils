@@ -470,9 +470,84 @@ few, and none near comms" may remain — unmeasured, check before building.
    SIGN-OFF BEFORE BUILDING**: this is the THIRD direction for the map
    screen (flat rects -> paper chart, rejected -> game map), and the second
    was rebuilt in full and thrown away. Do not rebuild it blind again.
-   Note the constraint the paper version violated: they also said *"i dont
-   want a real looking map i just want it to look like a good real map that
-   youd see in other video games"*.
+
+   **FULL BRIEF GIVEN 2026-08-08.** The user corrected their earlier line —
+   *"i dont want a real looking map i just want it to look like a good real
+   map that youd see in other video games"* — with what they actually meant:
+
+   *"i just want a map that youd see in real pixel top of the line triple a
+   games, i want it to be painted like i want it looking really detailed of
+   the actual map itself and all the things on it, all icons on each POI, the
+   dirt not looking so huge, the random dirt layer on top of scrapyard and
+   trainyard, all the houses looking the same at the top, a weird grid long
+   the edges of the map, the map only being square, make it like landscape
+   view, all the roads are just like look all the same, just pure white with
+   some border theres like nothing to it, so yea redesign the whole in game
+   map to fit how my game looks, and you can add stuff do whatever you want to
+   make it look better if you want too"*
+
+   Then two more, same day:
+
+   *"when the player is moving up like when im clicking w, on the map it shows
+   me going top left diagonal, it should show me going upwards in the map,
+   like how im moving in game"*
+
+   *"also the toll gate extraction icon and text isnt inside of the map, make
+   sure everythign is inside"*
+
+   **THE ONE INSIGHT THAT ORGANISES MOST OF THIS: DRAW THE MAP IN THE GAME'S
+   OWN ISO PROJECTION.** The bake is one pixel per CELL, axis-aligned, so the
+   map is cell-space and the world is iso-space. Three separate complaints are
+   all that single mismatch:
+   - *W moves the marker diagonally.* Pressing W walks one iso axis, which in
+     cell space is a diagonal. Nothing is wrong with the marker; the map is
+     in the wrong space.
+   - *The map is square.* World = `((cx-cy)*32, (cx+cy)*16)`, so the 256x256
+     cell square projects to a diamond **exactly 2:1** — landscape, for free,
+     with no cropping and no letterbox.
+   - *"fit how my game looks."* The projection IS how the game looks.
+   Verified against `gen_art.py`'s own projection comment and `_bake_map_image`
+   (`world_builder.gd:4696`), which writes `img.set_pixel(x, y, ...)` straight
+   off the cell — that is the axis-aligned bake to replace.
+
+   **The rest, each confirmed by cropping the real screenshot first:**
+   - **Every POI needs an icon.** town, warehouse, trainyard and forest have a
+     text label and no marker at all; courtyard, scrapyard, bus depot, gallery,
+     lz, playground, comms, school and toll gate do have one.
+   - **The dirt is huge**, drawn as sprawling flat amoeba lobes that dominate
+     the frame.
+   - **Scrapyard and trainyard carry a flat dirt-coloured RECTANGLE** over the
+     whole zone block - both a colour fault and one of the squares.
+   - **Every building is the same salmon rect with the same lighter top edge**
+     (`_bake_map_image` gives all of one kind a single `fill`).
+   - **The roads are one flat pale bar with a casing**, no hierarchy in
+     evidence on screen despite `ROAD_MAJOR`/`ROAD_MINOR` both existing in
+     `map_view.gd`. Check why they do not read apart before adding more.
+   - **A grid shows along the edges** - the zone blocks reading as faintly
+     different panels.
+   - **The toll gate marker and label hang BELOW the border.** Its POI is at
+     [147, 187], hard against the south edge; markers are placed off the cell
+     with no clamp for the label's own extent.
+   - **NO CHROME ON THE MAP, AND NO TEXT OVERLAPPING ANYTHING.** *"make sure
+     no text is overlapping, like the 'drag to pan , wheel to zoom, press m to
+     close, weather, district stuff isnt anywhere on the map, make it on the
+     side somewhere"*. Today `drag to pan - wheel to zoom - press m to close`
+     sits ON the map's bottom-right corner, and the clock/weather and
+     `district: transit` float loose in the margins. All of it belongs in a
+     panel to the SIDE. **The iso diamond helps here rather than fighting it:**
+     projecting leaves four triangular corners empty, and the left and right
+     ones are exactly where that chrome should live - it stops being wasted
+     space and starts being the frame.
+   - Free rein granted: *"you can add stuff do whatever you want"*.
+
+   **STATUS 2026-08-08: structural sample rendered and sent, awaiting sign-off
+   before ANY build.** It is the current map art pushed through the real iso
+   transform - proof of the landscape framing and of W reading as straight up,
+   NOT a repaint. Two things in it are artifacts of the mock and must not be
+   copied: the labels come out rotated (they would be drawn upright after the
+   projection, never transformed), and the buildings become bare rhombuses
+   (they want real iso blocks with a top face, which is also the fix for
+   "all the houses looking the same at the top").
 8. **Power pylons: only three, and unconnected** *(user)* - *"is there only 3
    power pylons? add some more in the forest area and around comms, and make
    them all connected like how it is in this picture like with the lines"*.
