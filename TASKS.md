@@ -848,6 +848,44 @@ Draw-neutral routes, in order of preference:
 
 Verify with DOORS 16 on identical cells, plus LAMPS and VEHICLES.
 
+## B11. Walking along an inside wall cuts the player in bands *(user, 2026-08-08)*
+
+*"i can clip into walls from the inside, and then i see half my character
+through the wall"*, then the two details that actually solved it: *"it happens
+like 3 times on that side of the wall"* and *"theyre at regular intervals, not
+near the corners"*.
+
+**DIAGNOSED, NOT STARTED. The diagnosis is settled — do not re-derive it, and
+do NOT fix the collision.**
+
+A wall face is built as ONE SPRITE PER CELL, each with a single y-sort key.
+Walking along the inside of a wall crosses those keys one at a time, so at every
+cell boundary there is a band where the player is in front of the cell just
+passed and behind the next one — and that next one's brick draws across them.
+Hence half a character, at one-cell intervals. Corners are clear because you are
+not travelling parallel to a face there.
+
+**Why the obvious fix is the WRONG one.** The first diagnosis was "collision
+lets the player too close to the wall", and `--probe-wallclip` supports it
+(far walls let the body 6-16 px past their line and it then draws over the face).
+Insetting that collision would have moved the player a few px back and left the
+banding exactly where it is, only narrower. **The user's "3 times" is what ruled
+it out — a too-close bug happens everywhere along the wall, not at intervals.**
+
+Same underlying shape as the door work in v0.6.91-96: a flat surface standing on
+a diagonal, cut into pieces, each given ONE number for its depth. The door fix
+(aim the key at the player every frame) does not transplant unchanged — there
+are hundreds of wall pieces and only the two or three nearest matter.
+
+**Do this first, before any code:** extend `--probe-wallclip` to WALK ALONG the
+inside of a wall instead of straight at it, printing which wall cell out-sorts
+the player at each step. That prints the banding directly and confirms the
+one-cell spacing. Then choose between:
+1. aiming the nearest two or three wall cells at the player, the way doors do; or
+2. giving an interior wall face ONE shared sort key per side, so there are no
+   seams to cross at all — cheaper, and a wall face has no reason to sort
+   per-cell against the room it encloses.
+
 ## B0. Parking lots and aprons should JOIN the road network *(user, 2026-08-05)*
 
 Their words: *"lets make all parking lots or roads connected to eachother,
