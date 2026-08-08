@@ -741,6 +741,12 @@ func _build_poi_card(parent: Control) -> void:
 	_card = PanelContainer.new()
 	_card.visible = false
 	_card.custom_minimum_size = Vector2(228, 0)
+	# POSITIONED ABSOLUTELY AT SHOW TIME, never anchored. Anchoring it to the
+	# bottom-right shrank the map canvas by the card's width — the district
+	# came out smaller and off-centre even with the card shut. Its ancestors
+	# are plain Controls that should not aggregate a child's minimum size, but
+	# they measurably did, and a map that resizes itself because a window
+	# exists is worse than a hardcoded corner.
 	_card.position = Vector2(10, 300)
 	_card.mouse_filter = Control.MOUSE_FILTER_STOP
 	parent.add_child(_card)
@@ -786,6 +792,15 @@ func _show_poi_card(poi_name: String) -> void:
 	var entry: Array = POI_CARD.get(poi_name, ["", ""])
 	_card_body.text = "%s\n\nfound here: %s" % [str(entry[0]), str(entry[1])]
 	_card.visible = true
+	# BOTTOM-RIGHT: the emptiest of the four corners the projection leaves.
+	# The left one already carries the chrome, and the card sitting there
+	# covered the lz marker on the district's west edge.
+	await get_tree().process_frame        # let it size to its content first
+	if _card == null or _canvas == null:
+		return
+	_card.position = Vector2(
+		maxf(10.0, _canvas.size.x - _card.size.x - 12.0),
+		maxf(10.0, _canvas.size.y - _card.size.y - 12.0)).round()
 	Sfx.play_click()
 
 
@@ -817,6 +832,17 @@ func _draw_map_weather() -> void:
 	var view := map_rect.intersection(Rect2(Vector2.ZERO, _canvas.size))
 	if view.size.x <= 1.0 or view.size.y <= 1.0:
 		return
+	# THE WEATHER STOPS AT THE DISTRICT'S EDGE. Filling the texture's bounding
+	# RECT tints the four corners the projection leaves empty, so it rained on
+	# the panel surround as well as on the world. The washes are drawn as the
+	# diamond itself and the streaks are tested against it.
+	var half := Vector2(_bake_size.x * 0.5,
+		(_bake_size.y - _bake_top) * 0.5) * _zoom
+	var mid := Vector2(map_rect.position.x + half.x,
+		map_rect.position.y + _bake_top * _zoom + half.y)
+	var diamond := PackedVector2Array([
+		mid + Vector2(0.0, -half.y), mid + Vector2(half.x, 0.0),
+		mid + Vector2(0.0, half.y), mid + Vector2(-half.x, 0.0)])
 	var spell: int = int(_environment.get("weather"))
 	var wet := spell == 2 or spell == 3          # RAIN or STORM
 	var t: float = float(_environment.get("day_time"))
@@ -827,15 +853,15 @@ func _draw_map_weather() -> void:
 	var noon := 1.0 - clampf(absf(t - 0.5) * 3.4, 0.0, 1.0)
 	var sun := noon * (1.0 - blocked)
 	if sun > 0.01:
-		_canvas.draw_rect(view,
-			Color(0.91, 0.76, 0.40, 0.11 * sun), true)
+		_canvas.draw_colored_polygon(diamond,
+			Color(0.91, 0.76, 0.40, 0.11 * sun))
 	elif spell == 1:                             # OVERCAST: flat and grey
-		_canvas.draw_rect(view, Color(0.55, 0.60, 0.63, 0.09), true)
+		_canvas.draw_colored_polygon(diamond, Color(0.55, 0.60, 0.63, 0.09))
 
 	# RAIN: short streaks on the same diagonal the world's rain falls on,
 	# hashed off their index so they do not crawl while you drag the map.
 	if wet:
-		_canvas.draw_rect(view, Color(0.24, 0.37, 0.55, 0.13), true)
+		_canvas.draw_colored_polygon(diamond, Color(0.24, 0.37, 0.55, 0.13))
 		var count := 90 if spell == 3 else 52
 		var drift := _time_accum * (150.0 if spell == 3 else 96.0)
 		for i in count:
@@ -844,6 +870,10 @@ func _draw_map_weather() -> void:
 			var x := view.position.x + hx * view.size.x
 			var y := view.position.y + fmod(hy * view.size.y + drift,
 				view.size.y)
+			# only where there is district under it
+			var d := Vector2(x, y) - mid
+			if absf(d.x) / maxf(1.0, half.x) + absf(d.y) / maxf(1.0, half.y) > 1.0:
+				continue
 			_canvas.draw_line(Vector2(x, y), Vector2(x - 2.0, y + 6.0),
 				Color(0.72, 0.83, 0.90, 0.30), 1.0)
 
