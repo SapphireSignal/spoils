@@ -416,7 +416,11 @@ func _on_stairs_used(index: int) -> void:
 	elif _player_upper == -1:
 		_set_upper_state(index, true)
 		_player_upper = index
-		_player.floor_lift = float(world_info.get("story_h", 32))
+		# `wall_h`, not `story_h` — the player has to rise by the height of the
+		# storey they are now standing ON TOP OF, which is the same lift the
+		# slab and its furniture take. See _build_upper: story_h is what the
+		# storey ABOVE adds, and using it left everything upstairs 8 px low.
+		_player.floor_lift = float(world_info.get("wall_h", 40))
 		_player.upstairs = true
 		_block_ground_doors(index, true)
 
@@ -750,12 +754,24 @@ func _process(delta: float) -> void:
 		var reveal := roof as RoofReveal
 		var here := reveal.cells.has_point(cell)
 		reveal.set_inside(here)
-		# WHICH STOREY'S WALL YOU SEE. Outside, both bands - the building has
-		# to read as two storeys from the street. Inside, only the band you
-		# are standing on: the ground band downstairs, the upper band (and its
-		# windows) once you climb.
+		# WHICH STOREY'S WALL YOU SEE.
+		#
+		# THE GROUND BAND IS NEVER HIDDEN — that `true` is deliberate, do not
+		# turn it back into `not up_here`. It was, and climbing the stairs
+		# deleted the whole ground storey out from under you: the upper room
+		# and its slab hung in the air over open street with only the door
+		# frame left standing (user, with a photo: "the bottom of the houses
+		# are gone when i enter the second floor ... it looks like its
+		# floating right now", then "please make it so i see all the walls
+		# when im on the second floor").
+		#
+		# The UPPER band still hides, and only in one case: you are inside on
+		# the GROUND floor, where a second storey of wall would tower over the
+		# room you are standing in and block the view the roof fade just
+		# opened. Outside both bands (the building reads as two storeys from
+		# the street); upstairs both bands (the facade stays whole under you).
 		var up_here := here and _player.upstairs
-		reveal.set_wall_storey(not up_here, (not here) or up_here)
+		reveal.set_wall_storey(true, (not here) or up_here)
 		indoors = indoors or here
 	_indoors_now = indoors
 	# a roof over your head muffles the weather (user). Same test that

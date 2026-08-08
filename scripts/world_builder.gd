@@ -69,8 +69,8 @@ var _rng := RandomNumberGenerator.new()
 var _manifest: Dictionary = {}
 var _floor_coords: Dictionary = {}
 var _families: Dictionary = {}
-var _wall_h := 40
-var _story_h := 32
+var _wall_h := 40      # face height of ONE storey — and the SECOND FLOOR'S HEIGHT
+var _story_h := 32     # extra face height a second storey adds on top
 var _floor_layer: TileMapLayer
 var _fringe_layer: TileMapLayer
 var _road_rot: Dictionary = {}   # road cells worn back to bare earth
@@ -284,6 +284,7 @@ func build(root: Node2D, seed_text: String = "") -> Dictionary:
 		"cars": _cars,
 		"zones": _zone_summary(),
 		"story_h": _story_h,
+		"wall_h": _wall_h,
 		"map_image": map_image,
 		"map_vec": map_vec,
 		# the parsed manifest rides along so nothing downstream re-reads the
@@ -2628,7 +2629,8 @@ func _build_upper(interior: Rect2i, stairs_cell: Vector2i, kind: String,
 		ground_floor_tile: String, ground_props: Array[Node2D]) -> void:
 	# the SECOND STORY: an upper room drawn only while the player is up
 	# there. Furniture keeps its TRUE ground position for collision and
-	# sorting, lifting only its sprites by story_h. The stairs prop is
+	# sorting, lifting only its sprites by `_wall_h` — the height of the
+	# storey underneath, which is where this floor sits. The stairs prop is
 	# shared by both floors.
 	#
 	# EVERY floor tile is its OWN child of the y-sort, sitting at its true
@@ -2678,8 +2680,18 @@ func _build_upper(interior: Rect2i, stairs_cell: Vector2i, kind: String,
 			# greater); the far walls now draw over the slab's back edge,
 			# which is the wall/floor junction line and reads as the wall
 			# standing ON the floor.
+			# THE LIFT IS `_wall_h`, NOT `_story_h`. A second floor sits on top
+			# of the storey BELOW it, and that storey is `_wall_h` = 40 px of
+			# wall. `_story_h` = 32 is what the storey ABOVE adds — the wrong
+			# end of the building. Lifted 32 the whole upper room sat 8 px low,
+			# so the wall's own floor line — the pale string course
+			# `make_wall_segment` bakes at exactly this height, where its two
+			# bands meet — hung 8 px clear of the boards and you could see
+			# straight out through the gap (user: "the second floor walls are
+			# also slightly above the actual second floor, like i can see the
+			# outside, its not sealed").
 			tile.position = _floor_layer.map_to_local(cell) \
-				+ Vector2(0.0, -float(_story_h))
+				+ Vector2(0.0, -float(_wall_h))
 			tile.offset = Vector2.ZERO
 			tile.visible = false
 			_ysort.add_child(tile)
@@ -2713,7 +2725,7 @@ func _build_upper(interior: Rect2i, stairs_cell: Vector2i, kind: String,
 		lip.centered = false
 		lip.offset = Vector2(-32.0, -16.0)
 		lip.position = _floor_layer.map_to_local(
-			Vector2i(x, interior.end.y - 1)) + Vector2(0.0, -float(_story_h))
+			Vector2i(x, interior.end.y - 1)) + Vector2(0.0, -float(_wall_h))
 		lip.visible = false
 		_ysort.add_child(lip)
 		floor_tiles.append(lip)
@@ -2723,7 +2735,7 @@ func _build_upper(interior: Rect2i, stairs_cell: Vector2i, kind: String,
 		lip2.centered = false
 		lip2.offset = Vector2(-32.0, -16.0)
 		lip2.position = _floor_layer.map_to_local(
-			Vector2i(interior.end.x - 1, y)) + Vector2(0.0, -float(_story_h))
+			Vector2i(interior.end.x - 1, y)) + Vector2(0.0, -float(_wall_h))
 		lip2.visible = false
 		_ysort.add_child(lip2)
 		floor_tiles.append(lip2)
@@ -2761,7 +2773,9 @@ func _build_upper(interior: Rect2i, stairs_cell: Vector2i, kind: String,
 		var node := _add_prop_at_cell(piece, cells.pop_front(), Vector2(6, 3))
 		for child in node.get_children():
 			if child is Sprite2D:
-				child.position += Vector2(0.0, -float(_story_h))
+				# the same `_wall_h` lift as the slab: furniture stands ON the
+				# upper floor, so it has to rise by exactly what the floor rose
+				child.position += Vector2(0.0, -float(_wall_h))
 		node.visible = false
 		if node is StaticBody2D:
 			(node as StaticBody2D).collision_layer = 0

@@ -35,7 +35,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
 	 form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.86 shipped, 2026-08-07.** Milestone 1 (a walkable world) is DONE.
+**v0.6.87 shipped, 2026-08-07.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 
@@ -134,6 +134,23 @@ Deliver the intent with additive glow sprites, the way lamps already do.
   position and offset the ART, never the node. A z-band puts a thing in
   front of *everything* — that is how the upper floor ended up clipping
   over the roofline.
+- **A SECOND FLOOR SITS AT `_wall_h` (40), NEVER `_story_h` (32).** The two
+  read interchangeably and are not: `_wall_h` is one storey's face height —
+  the height of the storey you are standing ON TOP OF — while `_story_h` is
+  what the storey ABOVE adds. The upper slab, its edge lips, its furniture
+  and `player.floor_lift` all take `_wall_h`; only the ROOF takes
+  `_wall_h + _story_h` = 72, the whole face. Getting it wrong laid the entire
+  upper room 8 px below its own walls and you could see daylight through the
+  gap all the way round (v0.6.87). **The art is the arbiter and it is exact:**
+  `seg2_*_upper` ends 39 px above the wall base, `seg2_*_low` starts at 41,
+  so the string course where they meet — the wall's own floor line — is at
+  **40**. Measure the sprites before trusting either constant.
+- **THE GROUND WALL BAND IS NEVER HIDDEN** (user call, v0.6.87: *"please make
+  it so i see all the walls when im on the second floor"*). Only the UPPER
+  band hides, and only while you are inside on the GROUND floor. Hiding the
+  low band upstairs deletes the storey you just climbed out of and the house
+  hangs in the air — do not "restore symmetry" in `main.gd`'s
+  `set_wall_storey(true, …)` call.
 - **A colour grade must not change brightness.** Multiplying by a tint
   colour whose own luminance is 0.38 dimmed every shadowed pixel to a
   third. Normalise tints to luminance 1 so they shift hue only.

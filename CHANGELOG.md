@@ -3,6 +3,52 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.87] - 2026-08-07 - the house keeps its ground floor while you are upstairs
+
+### Fixed - climbing the stairs deleted the storey underneath you
+*"the bottom of the houses are gone when i enter the second floor, please make
+it so i see all the floors when im on the second floor, it looks like its
+floating right now"*, then *"please make it so i see all the walls when im on
+the second floor"*.
+
+v0.6.86 split a two-storey wall into a ground band and an upper band so that
+going upstairs would stop showing you the whole facade. It went one step too
+far: upstairs it hid the ground band as well, so the storey you had just
+climbed out of was erased. The upper room and its slab hung in the air over
+open street with nothing under them but the door frame.
+
+The ground band is **never hidden** now. The upper band still hides, and only
+in the one case it was built for:
+
+| where you are | wall |
+|---|---|
+| outside | both bands |
+| ground floor | the ground band alone — a second storey would tower over the room you are in |
+| upstairs | **both bands** — the facade stays whole underneath you |
+
+### Fixed - the second floor sat 8 px below its own walls
+*"the second floor walls are also slightly above the actual second floor, like
+i can see the outside, itrs not sealed"*. Measurably true, and the number was
+8 px.
+
+A second floor sits on top of the storey **below** it, and that storey is
+`WALL_H` = 40 px of wall. Everything upstairs — the floor slab, its edge lips,
+the furniture and the player — was being lifted by `STORY_H` = 32 px instead,
+which is what the storey **above** adds. The wrong end of the building.
+
+The wall art had been saying so all along. Measured off the shipped sprites:
+`seg2_*_upper` ends **39 px** above the wall base and `seg2_*_low` begins
+**41 px** above it, so the two bands meet on the string course at **40 px** —
+the wall's own floor line. The boards were laid at 32. The 8 px of daylight
+between them is exactly what you could see through.
+
+Everything upstairs lifts by `_wall_h` now, so the floor lands on the string
+course the wall bakes in. As a bonus the staircase arrives at the boards
+instead of poking a hand's width through them.
+
+**Costs the layout nothing** — no rng draw was added or removed. Verified by
+`--probe-world`: DOORS 16, LAMPS 53/15, VEHICLES 30, on identical cells.
+
 ## [0.6.86] - 2026-08-07 - a second floor that is actually a second floor
 
 ### Fixed - going upstairs only ever recoloured the floor

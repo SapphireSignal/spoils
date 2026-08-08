@@ -206,6 +206,11 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.87", [
+		"going up the stairs no longer deletes the ground floor underneath you. the house was left hanging in the air on its second storey with only the door frame holding it up. you see the whole building again while youre upstairs",
+		"the second floor was laid 8 pixels below its own walls, so there was a slot of daylight all the way round the room where the boards should have met the brick. the floor, the furniture and you all sit on the line the wall paints for them now",
+		"the staircase arrives at the floorboards instead of poking through them",
+	]],
 	["v0.6.86", [
 		"the second floor is actually a second floor now. a two storey wall was one picture, so going upstairs never hid the lower half - you stood up there looking at the whole front of the building, both rows of windows. its two separate bands now, and you see the storey youre standing on",
 		"the ground floor of the halls and the school was floored in the street - the same two colours as the pavement outside. its proper lino now, and upstairs is its own timber, so the two floors can never look like the same room recoloured",

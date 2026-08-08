@@ -41,6 +41,62 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-07 — the house keeps its ground floor (migration session)
+
+**Shipped: v0.6.87.** `SEC` `DOCS` `CLAIMS` `SMOKE` all pass, plus
+`FLOORDOOR PASS` and `--probe-upper invisible=0`.
+
+**The judgement the entry below was waiting on came back, and it was NO.**
+That entry's item 1 says "user judgement pending on whether upstairs now reads
+as up a level". It does not — v0.6.86 went one step too far.
+
+### The user's words
+
+- *"the bottom of the houses are gone when i enter the second floor, please
+  make it so i see all the floors when im on the second floor, it looks like
+  its floating right now"*, corrected a moment later to *"please make it so i
+  see all the **walls** when im on the second floor"*.
+- *"the second floor walls are also slightly above the actual second floor,
+  like i can see the outside, itrs not sealed"*.
+
+### Shipped
+
+1. **The ground band is never hidden.** `main.gd` passes
+   `set_wall_storey(true, …)`. The upper band still hides, only while inside
+   on the ground floor. v0.6.86 hid the low band upstairs, which erased the
+   storey you had just climbed out of.
+2. **Everything upstairs lifts by `_wall_h` (40), not `_story_h` (32)** — the
+   slab, the lips, the furniture and `player.floor_lift`. It was 8 px low.
+
+### Learned
+
+- **The user's second complaint was a NUMBER, and the art already knew it.**
+  I nearly settled it by eye and could not — the before/after would not align
+  because raising `floor_lift` raises the CAMERA too, so the whole frame
+  shifts and an image diff says nothing. Measuring the shipped sprites
+  settled it in one command: `seg2_*_upper` bottom = 39 px above the base,
+  `seg2_*_low` top = 41, so the floor line is 40 and the slab was at 32.
+  **When a complaint is "slightly off", go to the art's own geometry, not to
+  a screenshot comparison.**
+- **`_wall_h` and `_story_h` read as synonyms and are opposite ends of the
+  building.** Both now carry a comment saying which. CLAUDE.md has the rule.
+- **A fix can overshoot its own brief.** v0.6.86 was asked to stop showing the
+  whole facade upstairs and answered by hiding half the building. The band
+  system was right; only which bands got shown was wrong.
+
+### Picked up at
+
+1. **User judgement pending again** on whether upstairs now reads correctly.
+   Two things they have not commented on either way: the camera still does not
+   lift with the storey (only the art does), and B0n below.
+2. **B0n** — upper/ground furniture still share cabinet, bookshelf, crate.
+3. **B0c item 3** (clipping on props upstairs) — `--probe-upper` reports
+   `invisible=0`, so if it is still there it is not a hidden collider.
+4. Then the standing backlog: B0-NEW geometry batch, B0 parking spurs, B0b
+   broken cars, B1 sprint, B2 warden, B3 scrapyard, B4 smoker.
+
+---
+
 ## 2026-08-07 — MIGRATION POINT: the storey system, and what it still owes
 
 **Shipped: v0.6.72 → v0.6.86, all pushed, tree clean, every gate green**
