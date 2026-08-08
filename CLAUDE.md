@@ -35,7 +35,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
 	 form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.102 shipped, 2026-08-08.** Milestone 1 (a walkable world) is DONE.
+**v0.6.103 shipped, 2026-08-08.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 
@@ -220,6 +220,16 @@ Deliver the intent with additive glow sprites, the way lamps already do.
   position; any "reveal" that switches at a doorway. If an artefact cannot be
   fixed by changing the ART or the COLLISION — both static — then say so plainly
   rather than reaching for a positional trick.
+  **HOW B11 WAS SOLVED WITHIN THIS RULE (v0.6.103), and the pattern to reuse:**
+  a wall's depth is a DIAGONAL, and every failed fix replaced it with one
+  number. The static answer is to SAMPLE it: each near wall piece's rendering
+  is cut into four 8 px sort strips (`_slice_near_wall_piece`), keys on the
+  wall's own base line, built once and never touched again. Error ±2 px,
+  less than the clearance collision enforces, so the sort seam can never
+  cross a legally-standing sprite. `--probe-walkband` is the verdict tool:
+  2,826 pressed-against-wall samples district-wide, zero violations. Anything
+  BOLTED to a near wall must ride the same plane — the power boxes take a
+  sort-only 6 px drop (`BOX_SORT_DROP`) with the art compensated back.
 - **THE CAMERA RIDES `floor_lift`, AND THE USER WANTS IT THAT WAY. SETTLED,
   DO NOT REOPEN** (2026-08-07: *"the camera already lifts with me, and i like
   it like that"*, then *"remove the camera lift from open"* when it was still
@@ -312,8 +322,11 @@ Deliver the intent with additive glow sprites, the way lamps already do.
   `spoils_tiny` (3 in 6) for map dot labels. Both are BITMAP fonts — asking
   either for a different size resamples and blurs it. If text must be
   smaller, draw a new cut in `tools/gen_font.py`.
-- **Perf baseline:** 240 fps, ~4.7 ms worst frame, **~8.5k nodes** in a raid
-  (8527 measured at v0.6.81), day and storm-night alike. (Was ~8.0k; v0.6.80's
+- **Perf baseline:** 240 fps, ~4.7 ms worst frame, **~9.8k nodes** in a raid
+  (9763 measured at v0.6.103), day and storm-night alike. (Was ~8.5k;
+  v0.6.103's wall sort-strips added **+1,236 nodes** — four render strips
+  under every NEAR wall piece so the sort can follow the wall's diagonal;
+  frame cost none, worst frame 4.58 ms. Before that ~8.0k; v0.6.80's
   two-layer walls added **+145 nodes** — one low-band sprite under every
   two-storey wall piece so the upper band can fade — and v0.6.45's wall
   occluders +113 before that. Neither is a leak, and v0.6.80 shipped WITHOUT

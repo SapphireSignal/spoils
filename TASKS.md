@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.102.** The release history was renumbered evenly on
+**Current version: v0.6.103.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -848,7 +848,7 @@ Draw-neutral routes, in order of preference:
 
 Verify with DOORS 16 on identical cells, plus LAMPS and VEHICLES.
 
-## B11. Walking along an inside wall cuts the player in bands — **REOPENED (v0.6.99 reverted in v0.6.100)**
+## B11. Walking along an inside wall cuts the player in bands — **DONE in v0.6.103, user-verified in play** (sort strips; see CLAUDE.md static rule)
 
 *"i can clip into walls from the inside, and then i see half my character
 through the wall"*, then the two details that actually solved it: *"it happens

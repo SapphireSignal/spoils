@@ -3,6 +3,43 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.103] - 2026-08-08 - the wall bands, solved for good
+
+### Fixed - B11, on the fifth design and the first fully static one
+*"can we try fixing the wall bands again? without breaking anything"* — and this
+time verified in play before shipping: *"the walls are fixed now"*.
+
+A wall's depth is a DIAGONAL - 16 px of screen depth across each piece - and
+y-sort gives a sprite ONE depth. Four earlier attempts replaced the diagonal
+with a different single number (per-tile, a face extreme, a key aimed at the
+player) and each traded the bands for something worse.
+
+The fix stops replacing the diagonal and SAMPLES it. Every NEAR wall piece's
+rendering is cut into four 8 px strips, each strip its own sort item whose key
+sits exactly on the wall's base line at that strip's centre. The sort now
+follows the wall's true geometry to within 2 px - less than the clearance
+collision enforces between a body and the wall - so the seam between "in front"
+and "behind" can never cross a sprite standing anywhere legal. Built once at
+world-gen, never modified, identical inside and out: the standing static rule
+holds by construction.
+
+Nothing else moved: collision, occluders, textures and the two-storey band
+fade are untouched (the strips carry the band sprites; the fade drives them
+per-strip). Power boxes are bolted to sliced walls, so their sort key rides
+the same plane - 6 px south, art compensated back, pixel-identical.
+
+### Verified
+- New `--probe-walkband`: the player pressed against every near wall of all 16
+  buildings, inside and outside, through corners and doorways - 2,826 samples,
+  **zero violations, minimum margin 3.37 px**. (Its first two cuts over-counted
+  - transparent canvas margins, and door-depenetrated samples labelled by
+  intent instead of by where physics put the player - both fixed before
+  trusting it.)
+- Layout: DOORS 16, LAMPS 53/15, VEHICLES 30, identical cells - no rng moved.
+- Doors both facings, propclip 0/165, floordoor seal, upper probe: all green.
+- Perf: 240 fps flat, worst frame 4.58 ms, +1,236 nodes (the strips).
+- User playtest sign-off before the push.
+
 ## [0.6.102] - 2026-08-08 - no furniture hangs out through its own wall
 
 ### Fixed - crates, pallets and a bed standing half outside their building

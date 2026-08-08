@@ -206,6 +206,9 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.103", [
+		"the wall bands are gone. walking along the inside of a wall no longer slices your character - and this time nothing else changed to pay for it: doors, posts, power boxes and crates all draw exactly as before, inside and out. a wall is a diagonal surface, and instead of forcing one depth onto it the game now lets its drawing follow that diagonal piece by piece",
+	]],
 	["v0.6.102", [
 		"no furniture hangs out through its own wall any more. crates, a pallet and a bed were standing half outside their buildings - the cleanup pass only ever checked the two walls nearest the camera, and never checked upstairs at all. seven across the district, all gone, and no room lost its furniture",
 	]],

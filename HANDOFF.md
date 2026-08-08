@@ -41,6 +41,36 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-08 — v0.6.103: B11 solved statically, user-verified before push
+
+**Shipped: v0.6.103.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass, `--probe-walkband`
+2,826 samples / 0 violations, user played the build BEFORE the commit:
+*"the walls are fixed now, push it"*.
+
+### The design (fifth attempt, first static one — reuse the pattern)
+
+A wall's depth is a diagonal; y-sort keys are scalars. Do not replace the
+diagonal with one number — SAMPLE it. `_slice_near_wall_piece` cuts each near
+wall piece's rendering into four 8 px strips, keys on the base line, error
+±2 px < collision clearance. Static forever, so the standing rule holds.
+Wall-mounted props ride the same plane (`BOX_SORT_DROP`).
+
+### Learned
+
+- **A probe's first result is a claim about the PROBE, not the world.** 119
+  "violations" were transparent canvas margins; 7 more were samples labelled
+  by intent after the door's collider depenetrated the player to the other
+  side. Test opaque pixels; classify by where physics actually put the body.
+- **The user's playtest before the push caught nothing my battery missed** —
+  first time this session. The battery is finally measuring the right things.
+
+### Picked up at
+
+Backlog head: B4 smoker (NEXT UP), B0-NEW geometry batch, B0, B0b, B1, B2,
+B3, B6, B8, B10, B13 (outlines, needs sample->sign-off->fleet), C3.
+
+---
+
 ## 2026-08-08 — v0.6.102: the static rule, and props that escaped their rooms
 
 **Shipped: v0.6.102.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass, `--probe-propclip`

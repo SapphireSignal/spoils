@@ -125,6 +125,8 @@ func _ready() -> void:
 			_probe_floordoor.call_deferred()
 		elif arg == "--probe-upper":
 			_probe_upper.call_deferred()
+		elif arg == "--probe-walkband":
+			_probe_walkband.call_deferred()
 		elif arg == "--probe-propclip":
 			_probe_propclip.call_deferred()
 		elif arg == "--probe-wallclip":
@@ -1974,17 +1976,8 @@ func _probe_upper() -> void:
 		if not cells.has_point(cell):
 			continue
 		solid += 1
-		var drawing := false
-		for ch in body.find_children("*", "Sprite2D", true, false):
-			if (ch as CanvasItem).is_visible_in_tree():
-				drawing = true
-				break
-		var tex := ""
-		for ch in body.find_children("*", "Sprite2D", true, false):
-			var sp := ch as Sprite2D
-			if sp.texture != null:
-				tex = sp.texture.resource_path.get_file()
-				break
+		var drawing := _body_draws(body)
+		var tex := _body_tex(body)
 		print("UPPER BODY %-16s cell=%s drawing=%s %s"
 			% [body.name, str(cell), str(drawing), tex])
 		if not drawing:
@@ -2138,6 +2131,176 @@ func _ysort_children(main_node: Node) -> Array:
 				world = c
 				break
 	return [] if world == null else world.get_children()
+
+
+func _body_draws(body: Node) -> bool:
+	## Is anything rendered for this body? Since v0.6.103 a near wall piece
+	## hands its sprites to sort-strip siblings (B11) and remembers them in
+	## meta "sliced_into" — a body with empty children is not necessarily a
+	## ghost. Checking only the children was how the sliced walls would all
+	## have read as solid-and-invisible, which is this project's definition
+	## of a bug, reported 200 times over by a probe that no longer matched
+	## the renderer.
+	for ch in body.find_children("*", "Sprite2D", true, false):
+		if (ch as CanvasItem).is_visible_in_tree():
+			return true
+	for strip in body.get_meta("sliced_into", []) as Array:
+		var sn := strip as Node
+		if sn == null or not is_instance_valid(sn):
+			continue
+		for ch in sn.find_children("*", "Sprite2D", true, false):
+			if (ch as CanvasItem).is_visible_in_tree():
+				return true
+	return false
+
+
+func _body_tex(body: Node) -> String:
+	## the first texture drawn FOR this body — following the sliced-wall
+	## indirection the same way _body_draws does
+	for ch in body.find_children("*", "Sprite2D", true, false):
+		var sp := ch as Sprite2D
+		if sp.texture != null:
+			return sp.texture.resource_path.get_file()
+	for strip in body.get_meta("sliced_into", []) as Array:
+		var sn := strip as Node
+		if sn == null or not is_instance_valid(sn):
+			continue
+		for ch in sn.find_children("*", "Sprite2D", true, false):
+			var sp2 := ch as Sprite2D
+			if sp2.texture != null:
+				return sp2.texture.resource_path.get_file()
+	return ""
+
+
+var _img_cache: Dictionary = {}   # texture path -> decompressed Image
+
+
+func _region_has_opaque(sp: Sprite2D, local_pos: Vector2, size: Vector2) -> bool:
+	## does this sprite actually DRAW anything inside the given sub-rect of
+	## its visible region? local_pos is relative to the drawn top-left.
+	var path := sp.texture.resource_path
+	if not _img_cache.has(path):
+		_img_cache[path] = sp.texture.get_image()
+	var img := _img_cache[path] as Image
+	if img == null:
+		return true   # cannot decode: fail toward testing, never toward silence
+	var base := sp.region_rect.position if sp.region_enabled else Vector2.ZERO
+	var x0 := maxi(0, int(base.x + local_pos.x))
+	var y0 := maxi(0, int(base.y + local_pos.y))
+	var x1 := mini(img.get_width(), int(base.x + local_pos.x + size.x) + 1)
+	var y1 := mini(img.get_height(), int(base.y + local_pos.y + size.y) + 1)
+	for py in range(y0, y1):
+		for px in range(x0, x1):
+			if img.get_pixel(px, py).a > 0.0:
+				return true
+	return false
+
+
+func _probe_walkband() -> void:
+	## THE B11 VERDICT: walk the player pressed against every near wall in
+	## the district — inside AND outside, through the corners — and at every
+	## step check each wall sort-strip whose ART overlaps the player's sprite
+	## against the drawn order y-sort will produce.
+	##
+	## Inside, every overlapping strip must sort IN FRONT of the player (the
+	## wall covers you whole; a strip behind you is a band across your body).
+	## Outside it is the mirror: every overlapping strip must sort BEHIND.
+	## One rule, no special cases, and it is exactly the artefact the user
+	## kept photographing — a probe that samples cell centres or stands in
+	## the middle of the room can never see it (learned twice this session).
+	await _ensure_game_scene()
+	var main_node := get_tree().current_scene
+	var info: Dictionary = main_node.get("world_info")
+	var fl: TileMapLayer = info["floor"]
+	var pl := _find_player()
+	var roofs: Array = info.get("roofs", []) as Array
+	if pl == null or roofs.is_empty():
+		print("WALKBAND FAIL: no world")
+		get_tree().quit(1)
+		return
+	var strips := get_tree().get_nodes_in_group("wall_strips")
+	print("WALKBAND strips=%d buildings=%d" % [strips.size(), roofs.size()])
+	if strips.is_empty():
+		print("WALKBAND FAIL: no strips built")
+		get_tree().quit(1)
+		return
+	var violations := 0
+	var samples := 0
+	var min_margin := 1.0e9
+	for ri in roofs.size():
+		var cells: Rect2i = (roofs[ri] as RoofReveal).cells
+		# the two near faces: yp runs along the south row, xp down the east
+		for face in ["yp", "xp"]:
+			var inward: Vector2
+			var first: Vector2
+			var last: Vector2
+			if face == "yp":
+				inward = Vector2(16, -8).normalized()
+				first = fl.map_to_local(Vector2i(cells.position.x, cells.end.y - 1)) + Vector2(-16, 8)
+				last = fl.map_to_local(Vector2i(cells.end.x - 1, cells.end.y - 1)) + Vector2(-16, 8)
+			else:
+				inward = Vector2(-16, -8).normalized()
+				first = fl.map_to_local(Vector2i(cells.end.x - 1, cells.position.y)) + Vector2(16, 8)
+				last = fl.map_to_local(Vector2i(cells.end.x - 1, cells.end.y - 1)) + Vector2(16, 8)
+			var span := (last - first).length()
+			var dir := (last - first).normalized()
+			var step := 4.0
+			for side_i in 2:
+				var side_sign := 1.0 if side_i == 0 else -1.0   # inside, outside
+				var t := 0.0
+				while t <= span:
+					var on_line := first + dir * t
+					pl.global_position = on_line + inward * 14.0 * side_sign
+					await get_tree().process_frame
+					_shove(pl, -inward * side_sign, 24.0)
+					var p := pl.global_position
+					# WHICH SIDE DID PHYSICS ACTUALLY PUT THEM ON? A start
+					# point that lands on the closed door's collider gets
+					# depenetrated to whichever side is nearer — the outside
+					# walk at building 13's doorway settled INSIDE, and the
+					# intended label called correct rendering a violation
+					# seven times. The line itself is the truth: classify by
+					# the settled position, never by intent.
+					var line_y := first.y + (p.x - first.x) * (dir.y / dir.x)
+					var actual := 1.0 if p.y < line_y else -1.0
+					samples += 1
+					var prect := Rect2(p.x - 7.0, p.y - 30.0, 14.0, 30.0)
+					for sn in strips:
+						var strip := sn as Node2D
+						# only this building's strips can matter
+						if not cells.grow(1).has_point(fl.local_to_map(strip.global_position)):
+							continue
+						for ch in strip.get_children():
+							var sp := ch as Sprite2D
+							if sp == null:
+								continue
+							var tl := strip.global_position + sp.position + sp.offset
+							var sz := sp.region_rect.size if sp.region_enabled else Vector2(sp.texture.get_size())
+							var overlap := prect.intersection(Rect2(tl, sz))
+							if not overlap.has_area():
+								continue
+							# OPAQUE PIXELS ONLY. A strip's region includes the
+							# canvas's transparent outline margin and the coping
+							# overhang columns; a rect test counts those as art
+							# and reported 119 phantom violations at the piece
+							# joins — every one over pixels the renderer never
+							# draws. The criterion is what is DRAWN.
+							if not _region_has_opaque(sp, overlap.position - tl,
+									overlap.size):
+								continue
+							var margin := (strip.global_position.y - p.y) * actual
+							min_margin = minf(min_margin, margin)
+							if margin <= 0.0:
+								violations += 1
+								print("WALKBAND VIOLATION bld=%d %s %s t=%.0f p=%s strip_y=%.1f"
+									% [ri, face,
+										("inside" if actual > 0.0 else "outside"),
+										t, str(p.round()), strip.global_position.y])
+					t += step
+	print("WALKBAND samples=%d violations=%d min_margin=%.2f"
+		% [samples, violations, min_margin])
+	print("WALKBAND %s" % ("PASS" if violations == 0 else "FAIL"))
+	get_tree().quit(0 if violations == 0 else 1)
 
 
 func _probe_doorsort() -> void:
@@ -2329,14 +2492,8 @@ func _probe_railwalk() -> void:
 			var who := "nothing?"
 			if not hit.is_empty():
 				var body := hit["collider"] as Node
-				var tex := ""
-				var drawing := false
-				for ch in body.find_children("*", "Sprite2D", true, false):
-					var sp := ch as Sprite2D
-					if sp.texture != null and tex == "":
-						tex = sp.texture.resource_path.get_file()
-					if sp.is_visible_in_tree():
-						drawing = true
+				var tex := _body_tex(body)
+				var drawing := _body_draws(body)
 				who = "%s(%s) tex=%s drawing=%s at=%s" % [body.name,
 					body.get_class(), tex, str(drawing),
 					str(fl.local_to_map((body as Node2D).global_position))]

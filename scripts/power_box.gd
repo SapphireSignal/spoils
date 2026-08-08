@@ -16,18 +16,26 @@ var _fly_tex: Texture2D                 # the thrown sparks (tinted white dot)
 var _flying: Array[Dictionary] = []
 
 
+## the node is parked BOX_SORT_DROP south of the wall line so it out-sorts
+## every 8 px strip of the wall piece it hangs on (world_builder.gd) — the art
+## is pulled back the same amount here, so nothing moves on screen. The spark
+## and its glow ride the same correction; the thrown sparks spawn off
+## _spark.position and inherit it for free.
+const SORT_DROP := 6.0
+
+
 func setup(box_name: String) -> void:
 	var body := Sprite2D.new()
 	body.texture = load("res://art/gen/%s.png" % box_name)
 	body.centered = false
-	var info_offset := Vector2(-9, -21)
+	var info_offset := Vector2(-9, -21 - SORT_DROP)
 	body.offset = info_offset
 	add_child(body)
 	for i in 3:
 		_spark_tex.append(load("res://art/gen/spark_%d.png" % i))
 	_spark = Sprite2D.new()
 	_spark.texture = _spark_tex[0]
-	_spark.position = Vector2(-2.0, -9.0)
+	_spark.position = Vector2(-2.0, -9.0 - SORT_DROP)
 	_spark.visible = false
 	add_child(_spark)
 	_glow = PointLight2D.new()

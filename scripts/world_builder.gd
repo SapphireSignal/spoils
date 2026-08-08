@@ -23,6 +23,10 @@ extends RefCounted
 const MAP_W := 256
 const MAP_H := 256
 const TILE := Vector2i(64, 32)
+# a wall-mounted power box's sort key sits this far south of the wall line,
+# clearing every 8 px sort strip of its own wall piece (see _slice_near_wall
+# _piece and _place_power_boxes). Sort only — the art is compensated back.
+const BOX_SORT_DROP := 6.0
 const EDGE_FOREST := 68      # content margin: gameplay stays inside the
                              # ring. DERIVED from BARRIER_INSET — it was
                              # left at 85 when the ring moved to 66, so
@@ -2230,6 +2234,7 @@ func _build_shell(plot: Dictionary) -> void:
 						(_EDGE_SIDE_IDS[side] as int))] = true
 				var wall_node := _add_prop(piece,
 					center + (_EDGE_OFFSET[side] as Vector2))
+				var side_is_far := (_EDGE_OFFSET[side] as Vector2).y < 0.0
 				if stories == 2:
 					# FAR = the edge offset pushes the piece UP the screen, so
 					# the room lies in front of it. Read off _EDGE_OFFSET rather
@@ -2237,7 +2242,11 @@ func _build_shell(plot: Dictionary) -> void:
 					# which way a side faces, so this cannot drift out of step
 					# with them.
 					_register_low_wall(low_walls, wall_node, piece + "_low",
-						(_EDGE_OFFSET[side] as Vector2).y < 0.0)
+						side_is_far)
+				if not side_is_far:
+					# B11, fifth design, and the first STATIC one — see
+					# _slice_near_wall_piece for the geometry and the reasoning.
+					_slice_near_wall_piece(wall_node, side, low_walls)
 				# this wall blocks light. The occluder line is the cell EDGE
 				# itself — the same two verts the corner posts hang off — so
 				# the shadow boundary lands exactly on the wall plane the art
@@ -2437,6 +2446,113 @@ func _yard_fits(yard: Rect2i) -> bool:
 			if _on_road(cell) or _forest.has(cell) or _occupied.has(cell):
 				return false
 	return true
+
+
+func _slice_near_wall_piece(body: Node2D, side: String, low_walls: Array) -> void:
+	## B11 — THE BANDS, SOLVED STATICALLY. A wall piece's base runs on a
+	## DIAGONAL (16 px of screen y across its 32 px of screen x), but y-sort
+	## gives the whole piece ONE depth: its anchor, the diagonal's midpoint.
+	## The real wall line is up to 8 px in FRONT of that key at one end of the
+	## piece and 8 px BEHIND it at the other — so a player walking along the
+	## inside crosses the key of each piece in turn, and at every crossing the
+	## next piece's brick draws across them. One band per cell, at even
+	## spacing, which is exactly what the user reported.
+	##
+	## Four attempts replaced the diagonal with a DIFFERENT single number (a
+	## face extreme, or a key aimed at the player) and each traded the bands
+	## for something worse — swallowed doors, vanishing power boxes, crates
+	## popping at the doorway — because one number cannot describe a surface
+	## that spans 16 px of depth, and keying it off the player violates the
+	## standing rule that nothing changes with where the player stands.
+	##
+	## So: stop replacing the diagonal and SAMPLE it. The piece's RENDERING is
+	## cut into four 8 px vertical strips, each strip its own y-sort item whose
+	## key sits exactly on the wall's base line at that strip's centre. The
+	## sort now follows the wall's true geometry to within ±2 px — less than
+	## the clearance collision enforces between a body and the wall line — so
+	## the seam between "in front" and "behind" can never cross a sprite
+	## standing legally against the wall. No bands, no special cases.
+	##
+	## WHAT THIS IS NOT: it is not a reveal, not a state, not player-aware.
+	## Strips are built once, here, and never move or change again — inside
+	## and outside draw identically, which is the standing rule.
+	##
+	## NEAR faces (yp/xp) only. Far faces never band: the room is in front of
+	## them, so the player never walks the front side of their diagonal.
+	##
+	## Collision, the light occluder and the door pieces are untouched — the
+	## StaticBody2D keeps its polygon and only hands its SPRITES to the
+	## strips. Corner posts stay whole: a post is a point on the line, not a
+	## span of it, and 12 px wide it cannot band.
+	var sprites: Array[Sprite2D] = []
+	for ch in body.get_children():
+		if ch is Sprite2D:
+			sprites.append(ch)
+	if sprites.is_empty():
+		return
+	# the low_walls entry _register_low_wall just appended points at the
+	# sprites being retired; it gets replaced with per-strip entries below
+	var entry: Array = []
+	if not low_walls.is_empty():
+		var last: Array = low_walls[low_walls.size() - 1]
+		if (last[0] as Sprite2D) in sprites:
+			entry = low_walls.pop_back()
+	# the base line's slope in screen space: yp rises toward +x, xp falls.
+	# ±0.5 per px, so 8 px strips give whole-pixel keys — rule 1 holds.
+	var slope := 0.5 if side == "yp" else -0.5
+	var strips: Array = []
+	for k in 4:
+		var dx_centre := -12.0 + 8.0 * float(k)
+		var dy := slope * dx_centre        # -6/-2/+2/+6: whole pixels
+		var strip := Node2D.new()
+		strip.position = body.position + Vector2(0.0, dy)
+		strip.add_to_group("wall_strips")   # --probe-walkband enumerates these
+		_ysort.add_child(strip)
+		strips.append(strip)
+		# world x-band this strip owns, relative to the piece anchor. End
+		# strips take the overhang (coping, outline margins) so every source
+		# pixel is owned by exactly one strip and the wall re-tiles losslessly.
+		var band_x0 := -8.0 + 8.0 * float(k - 1) if k > 0 else -1.0e6
+		var band_x1 := -8.0 + 8.0 * float(k) if k < 3 else 1.0e6
+		var strip_upper: Sprite2D = null
+		var strip_low: Sprite2D = null
+		# draw order inside a strip matches the body: `sprites` is in child
+		# order — low band at index 0, upper after — and children render in
+		# add order, so iterating forward keeps low under upper. (The overlap
+		# pixels are identical in both bands by construction, but the order
+		# stays correct rather than coincidental.)
+		for si in sprites.size():
+			var s := sprites[si]
+			var s_left := s.position.x + s.offset.x
+			var tex_w := float(s.texture.get_width())
+			var x0 := maxf(band_x0, s_left)
+			var x1 := minf(band_x1, s_left + tex_w)
+			if x1 - x0 < 0.5:
+				continue
+			var rs := Sprite2D.new()
+			rs.texture = s.texture
+			rs.centered = false
+			rs.region_enabled = true
+			rs.region_rect = Rect2(x0 - s_left, 0.0,
+				x1 - x0, float(s.texture.get_height()))
+			# same world pixels as the source: the strip node sits dy off the
+			# body, so the art is pulled dy back — and shifted to its region's
+			# own column, so the four strips re-tile into the original image
+			rs.offset = s.offset
+			rs.position = Vector2(s.position.x + (x0 - s_left),
+				s.position.y - dy)
+			strip.add_child(rs)
+			if not entry.is_empty() and entry[1] != null and s == entry[1]:
+				strip_low = rs
+			else:
+				strip_upper = rs
+		if not entry.is_empty():
+			low_walls.append([strip_upper, strip_low, bool(entry[2])])
+	for s in sprites:
+		s.queue_free()
+	# probes ask bodies "are you drawing anything?" — the honest answer now
+	# lives in the strips, so leave a pointer for them to follow
+	body.set_meta("sliced_into", strips)
 
 
 func _register_low_wall(into: Array, node: Node2D, low_name: String,
@@ -3440,14 +3556,27 @@ func _place_power_boxes() -> void:
 		var center := _floor_layer.map_to_local(box_cell)
 		var pos := center + (_EDGE_OFFSET[door_side] as Vector2) \
 			+ Vector2(0.0, 1.0)
+		# BOLTED TO A SLICED WALL, SO IT MUST OUT-SORT EVERY STRIP OF ITS OWN
+		# PIECE. The box's art spans ~±9 px around the piece anchor, which
+		# reaches the outermost strips, whose keys sit up to 6 px south of the
+		# anchor (_slice_near_wall_piece). A key at anchor+1 — the old value —
+		# would put the box BEHIND those strips and the wall would eat its
+		# edges. anchor+7 clears every strip of the piece by ≥1 px, exactly as
+		# the box used to clear its single-piece key, and nothing else lives
+		# in the 3..7 px band in front of a house wall. SORT ONLY: the art is
+		# pulled back the same 6 px, so the box draws pixel-identical.
+		pos += Vector2(0.0, BOX_SORT_DROP)
 		if broken:
 			var box := PowerBox.new()
 			box.position = pos.round()
 			_ysort.add_child(box)
-			box.setup(box_name)
+			box.setup(box_name)          # setup compensates its own art
 			_map_marks.append([box_cell, "spark"])
 		else:
-			_add_prop(box_name, pos)
+			var box_node := _add_prop(box_name, pos)
+			for ch in box_node.get_children():
+				if ch is Sprite2D:
+					(ch as Sprite2D).offset.y -= BOX_SORT_DROP
 		# the room this box feeds: one light hung mid-floor and NO cable —
 		# the interior flex was cut on a user call, so this box on the
 		# outside wall is the whole of "a powered thing must SHOW where
