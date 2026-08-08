@@ -41,6 +41,59 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-08 — the wall stops drawing over the door (v0.6.91 regression)
+
+**Shipped: v0.6.92.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass, `--probe-doorsort`
+unchanged (0/16 and 1/15).
+
+### The user's words
+
+- *"the side of the door overlaps with the door now, whenever i go inside, but
+  it looks fine when im outside"*.
+- *"i can also clip into walls from the inside, and then i see half my character
+  through the wall"* — **NOT FIXED, see below.**
+
+### Shipped
+
+v0.6.91's `_aim_leaf_sort` aimed the key at the player UNCONDITIONALLY, floored
+only by `JAMB_EPS`. Inside + swung out, the player is far behind, so the aim
+went very negative and the floor pinned it to the WALL LINE — where the leaf
+loses to the neighbouring wall segment a cell nearer (+16 px), and that wall
+drew over the door. It resolved near the leading edge from outside, which is
+why only one side showed it. Now the aim starts from `_leaf_sort_depth()` and
+moves ONLY when that value provably puts the player on the wrong side.
+Measured `shift` from inside: 0.0 before, 17.4 after.
+
+### Learned
+
+- **"AIM IT AT THE PLAYER" MUST BE A CORRECTION, NOT A REPLACEMENT.** The old
+  fixed key carried guarantees nobody had written down — clearing the jambs and
+  both neighbouring wall segments. Replacing it wholesale and re-deriving one of
+  those guarantees as a clamp lost the others. **Default to the proven value;
+  deviate only where it is measurably wrong.**
+- **`--probe-doorsort` DID NOT CATCH THIS**, and could not: it only ever asks
+  about the player-vs-leaf pair. The regression was leaf-vs-WALL. A probe
+  measures the relation you gave it and is silent about every other one — do
+  not read a PASS as "the frame is correct".
+
+### Picked up at — OPEN, with a diagnosis
+
+1. **Clipping into walls from inside, half the character showing through.**
+   Reproduced in `shots/jamb_fix.png` (player top-centre, cut at the waist by
+   the near wall). It is NOT from any change this session. Wall segments carry
+   a ~5 px thin parallelogram along their base line
+   (`make_wall_segment`'s `poly`) while the player's body collider is a small
+   circle, so the player can stand with their feet legally clear and their
+   SPRITE well inside the wall's drawn area. Fix is to thicken the wall
+   collider, or inset it toward the room, and then re-check doorway width so
+   entrances do not become impassable.
+2. **B0c item 3** (clipping on props upstairs) — `--probe-upper` says
+   `invisible=0`; needs a repro or it is closed.
+3. The standing backlog: B0-NEW geometry batch, B0 parking spurs, B0b broken
+   cars, B1 sprint, B2 warden, B3 scrapyard, B4 smoker.
+
+---
+
 ## 2026-08-07 — an open door knows which side of it you are on
 
 **Shipped: v0.6.91.** `SEC` `DOCS` `CLAIMS` `SMOKE` all pass, plus the new

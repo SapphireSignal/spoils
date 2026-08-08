@@ -3,6 +3,32 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.92] - 2026-08-08 - the wall stops drawing over the door you opened
+
+### Fixed - a regression in v0.6.91, visible only from inside
+*"the side of the door overlaps with the door now, whenever i go inside, but it
+looks fine when im outside"*. Correct on both counts, and the outside half is
+what made it a regression rather than an old bug.
+
+v0.6.91 aimed an open leaf's sort key at the player every frame. It aimed it
+**unconditionally**, with only the jamb tie-breaker as a floor. Standing inside
+with the door swung out, the player is far behind the leaf, so the aimed key
+came out very negative and the floor clamped it to the wall line — where the
+leaf loses to the neighbouring wall segment, which sits a whole cell nearer
+(+16 px). That wall then drew over the top of the door. From outside the aim
+resolved near the leading edge, so nothing looked wrong.
+
+The aim is **minimal-intervention** now. It starts from the leading edge, which
+was already right for every case except the wedge v0.6.91 set out to fix, and
+moves only when that value provably puts the player on the wrong side. So every
+guarantee the leading edge carried — clearing its own wall, its jambs, the
+segments either side — holds by construction instead of by a clamp.
+
+Measured `shift` standing inside: **0.0 before, 17.4 after** (the leaf's real
+leading edge). `--probe-doorsort` is unchanged by the correction — still 0 wrong
+of 16 squares on one facing and 1 of 15 on the other, so the v0.6.91 fix
+survived intact.
+
 ## [0.6.91] - 2026-08-07 - an open door knows which side of it you are standing
 
 ### Fixed - standing behind an open door drew you in front of it, and standing beside one cut you in half

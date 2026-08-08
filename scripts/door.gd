@@ -380,9 +380,29 @@ func _aim_leaf_sort() -> void:
 	var nrm := Vector2(-along.y, along.x)
 	if nrm.y < 0.0:
 		nrm = -nrm
+	## MINIMAL INTERVENTION, and this part is a FIX FOR A FIX. The first cut
+	## aimed the key at the player unconditionally, clamped only by JAMB_EPS.
+	## Standing INSIDE with the door swung out, the player is far behind the
+	## leaf, so `rel + margin` came out very negative and the clamp dropped the
+	## key to ~0 — the wall line. The leaf then lost to the neighbouring wall
+	## segment, which sits a whole cell nearer (+16), and that wall drew over
+	## the top of the door (user: "the side of the door overlaps with the door
+	## now, whenever i go inside, but it looks fine when im outside").
+	##
+	## `_leaf_sort_depth()` was already RIGHT for every case except the wedge.
+	## So start from it, and move only when it is provably wrong for the player.
+	## Everything the leading edge already guaranteed — clearing its own wall,
+	## its jambs, the segments either side — is then untouched by construction.
+	var lead := _leaf_sort_depth()
 	var rel := player.global_position.y - global_position.y
 	var behind := (player.global_position - a0).dot(nrm) < 0.0
-	var want := rel + LEAF_AIM_MARGIN if behind else rel - LEAF_AIM_MARGIN
+	var want := lead
+	if (rel < lead) != behind:
+		# the fixed key puts the player on the wrong side of the leaf: move it
+		# just past them, and no further
+		want = rel + LEAF_AIM_MARGIN if behind else rel - LEAF_AIM_MARGIN
+	# the jamb sign is a guarantee the GENERATOR relies on and is never traded:
+	# swinging out the leaf covers the jamb, swinging in the jamb covers it
 	if _swing_out:
 		want = maxf(want, JAMB_EPS)
 	else:
