@@ -3,6 +3,38 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.99] - 2026-08-08 - the near wall faces aim at you
+
+### Fixed - B11 properly: no bands, and no wall swallowing a door
+The two halves of this fought each other for two releases. A wall face is one
+panel per floor tile, each with its own depth, so walking along one crosses
+their seams and each next panel draws across you — bands at one-tile spacing.
+Giving a face a single depth cures that. But a NEAR face's own extreme is its
+southernmost point, so collapsing onto it moved the wall up to a building width
+toward the camera and it swallowed an open door (v0.6.97). Dropping the near
+half instead just brought the bands back (v0.6.98).
+
+**A near face is now aimed at the player**, the way an open door leaf already
+is. Every panel of the face takes one shared key parked just south of the
+player, so:
+- there are no seams left to cross, which is what kills the bands;
+- the face covers the player uniformly, which is what a near wall should do to
+  someone standing behind it;
+- and it lands only just past the player — who is INSIDE — so it stays well
+  behind an open leaf, whose key is `door_y + 7.4..17.4` while an inside player
+  has `y < door_y`. That is exactly the margin v0.6.97 spent and this does not.
+
+Far faces keep their fixed collapse onto their minimum y: that direction only
+moves pieces further behind, and is safe by construction.
+
+Aimed every frame at `process_priority = 10`, so it updates AFTER the player
+moves — the same trap the door hit, which would otherwise band by one frame on
+the frame you cross.
+
+Verified standing hard against a near wall, not in the middle of the room —
+where the artefact cannot appear at all — and on **both door facings** with the
+leaf open.
+
 ## [0.6.98] - 2026-08-08 - the shared wall sort applies to the FAR faces only
 
 ### Fixed - a v0.6.97 regression: an outward-opening door clipped into the wall

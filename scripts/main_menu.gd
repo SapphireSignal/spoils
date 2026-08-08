@@ -206,6 +206,9 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.99", [
+		"the wall bands are gone for good, and the door still opens clean. a wall face is one panel per tile and each had its own depth, so walking along one you kept crossing their seams. the near faces now take a single depth parked just behind you - no seams to cross, and close enough to you that it never reaches far enough forward to swallow an open door, which is what the first attempt did",
+	]],
 	["v0.6.98", [
 		"a door opened outwards no longer clips into the wall beside it. last version gave each wall face a single depth to stop it slicing you into bands - but on the near faces that pushed the wall forward, far enough to out-sort a door standing in front of it. the shared depth is on the far faces only now, where it can only ever move a wall further back",
 	]],

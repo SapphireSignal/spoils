@@ -41,6 +41,35 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-08 — B11 done: the near faces aim at the player
+
+**Shipped: v0.6.99.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass.
+
+*"do b11 properly, aim the near face at the player"*, then the catch that
+mattered: *"why did the interior check matter? you stayed in the middle of the
+house, the near wall bands only happen when the character is near the walls"*.
+
+Near faces: one shared key, aimed at `player.y + 1` every frame, in
+`RoofReveal._aim_near_faces` at `process_priority = 10`. Far faces keep the
+fixed collapse onto min y. Both halves treated, neither breaks the other.
+
+### Learned
+
+- **A VERIFICATION SHOT MUST STAND WHERE THE BUG LIVES.** I photographed the
+  room from the middle and called it verified. Near-wall bands cannot appear
+  there — the shot could only ever have come out clean. The user caught it.
+  **Before sending a shot as proof, ask what it would look like if the bug were
+  still present.** If the answer is "the same", it proves nothing.
+- The door and the wall are the same problem — a flat surface on a diagonal, cut
+  into pieces, one depth each — and the same cure works: aim at the player.
+
+### Picked up at
+
+Backlog: B4 (smoker, NEXT UP), B0-NEW geometry batch, B0, B0b, B1, B2, B3, B6,
+B8, B10, C3.
+
+---
+
 ## 2026-08-08 — the shared wall sort is FAR faces only
 
 **Shipped: v0.6.98.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass.

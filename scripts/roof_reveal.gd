@@ -15,6 +15,8 @@ var low_walls: Array = []
 ## while the player is inside — see set_face_sort.
 var face_walls: Array = []
 var _face_on := false
+## how far past the player a NEAR face parks its shared sort key
+const FACE_AIM_MARGIN := 1.0
 
 var _inside := false
 var _tween: Tween
@@ -105,16 +107,62 @@ func set_face_sort(on: bool) -> void:
 	if on == _face_on:
 		return
 	_face_on = on
+	# the NEAR faces are aimed at the player and must keep being aimed, so this
+	# node processes for as long as the player is inside
+	# AFTER THE PLAYER, every frame — the same trap the door hit. Roofs are
+	# built long before the raider spawns, so at equal priority they aim at
+	# LAST frame's position and the face bands by one frame on the frame you
+	# cross it. Higher priority runs later.
+	process_priority = 10
+	set_process(on)
 	for entry in face_walls:
+		if on and bool(entry[2]) == false:
+			continue          # near face: _process aims it, starting this frame
+		_shift_face_piece(entry[0] as Node2D, float(entry[1]) if on else 0.0)
+	if on:
+		_aim_near_faces()
+
+
+func _shift_face_piece(node: Node2D, delta: float) -> void:
+	for child in node.get_children():
+		var spr := child as Sprite2D
+		if spr == null:
+			continue
+		spr.position.y = delta
+		spr.offset.y = _sprite_base_offset(spr) - delta
+
+
+func _aim_near_faces() -> void:
+	## THE NEAR FACES AIM AT THE PLAYER, exactly as an open door leaf does.
+	##
+	## A near face still needs ONE key across all its pieces or the player
+	## crosses their seams and gets cut into bands. But it must NOT be the
+	## face's own southern extreme: that is up to a building width toward the
+	## camera, far enough to out-sort an open door standing in front of the wall.
+	##
+	## Aiming solves both at once. Put the whole face just SOUTH of the player:
+	##   - one key for every piece, so there are no seams left to cross;
+	##   - the face covers the player uniformly, which is what a near wall
+	##     should do to someone standing behind it;
+	##   - and it lands only just past the player, who is INSIDE — so it stays
+	##     well behind an open leaf, whose key is `door_y + 7.4..17.4` while an
+	##     inside player has `y < door_y`. That is the exact margin v0.6.97 spent
+	##     and this does not.
+	## Anything outdoors south of the wall still out-sorts it, correctly.
+	var player := get_tree().get_first_node_in_group("player_shake") as Node2D
+	if player == null:
+		return
+	var target := player.global_position.y + FACE_AIM_MARGIN
+	for entry in face_walls:
+		if bool(entry[2]):
+			continue          # far face: fixed delta, already applied
 		var node := entry[0] as Node2D
-		var delta := float(entry[1]) if on else 0.0
-		var back := -float(entry[1]) if on else 0.0
-		for child in node.get_children():
-			var spr := child as Sprite2D
-			if spr == null:
-				continue
-			spr.position.y = delta
-			spr.offset.y = _sprite_base_offset(spr) + back
+		_shift_face_piece(node, target - node.global_position.y)
+
+
+func _process(_delta: float) -> void:
+	if _face_on:
+		_aim_near_faces()
 
 
 func _sprite_base_offset(spr: Sprite2D) -> float:

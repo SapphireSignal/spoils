@@ -2279,32 +2279,34 @@ func _build_shell(plot: Dictionary) -> void:
 	for side in face_pieces:
 		var pieces: Array = face_pieces[side]
 		var far_side := (_EDGE_OFFSET[side] as Vector2).y < 0.0
-		# FAR FACES ONLY, and this is a fix for a fix. Collapsing a NEAR face
-		# onto its extreme moves every piece SOUTH — up to a whole building
-		# width — so the wall then out-sorts things genuinely standing in front
-		# of it, and an open door leaf was the first casualty (user: "now when
-		# the door is opened towards outside, it clips in the wall").
+		# THE TWO HALVES NEED DIFFERENT TREATMENT, and finding that out cost two
+		# releases:
 		#
-		# A far face collapses onto its MINIMUM y, which only ever moves pieces
-		# further BEHIND. That direction is safe by construction: it cannot make
-		# a wall cover anything in the room it encloses. A near face is also the
-		# half you are behind, where the wall covers you whatever the seams do,
-		# so it has the least to gain from this and the most to break.
-		if not far_side:
-			continue
+		#   FAR face   collapse onto its MINIMUM y — a fixed delta, computed
+		#              here, once. That direction only moves pieces further
+		#              BEHIND, which is safe by construction: it cannot make a
+		#              wall cover anything in the room it encloses.
+		#   NEAR face  AIMED AT THE PLAYER every frame, in RoofReveal. Its own
+		#              extreme is its southernmost point, so collapsing onto it
+		#              moved pieces up to a whole building width TOWARD the
+		#              camera, and the wall swallowed an open door leaf
+		#              (v0.6.97, user: "now when the door is opened towards
+		#              outside, it clips in the wall"). Dropping the near half
+		#              instead just brought the bands back (v0.6.98, user: "now
+		#              the interval wall clippings are back"). It is the half
+		#              the bands live on, so it has to be treated — just not
+		#              with its own extreme.
+		#
+		# Both entries carry the fixed delta; only the FAR one uses it.
 		var shared := (pieces[0] as Node2D).position.y
 		for n in pieces:
-			var ny := (n as Node2D).position.y
-			shared = minf(shared, ny) if far_side else maxf(shared, ny)
+			shared = minf(shared, (n as Node2D).position.y)
 		for n in pieces:
 			var node2 := n as Node2D
-			var delta := shared - node2.position.y
-			if is_zero_approx(delta):
-				continue
 			# the SPRITE carries the depth, never the node: this is a
 			# StaticBody2D and moving it would move the wall's collision.
 			node2.y_sort_enabled = true
-			face_walls.append([node2, delta])
+			face_walls.append([node2, shared - node2.position.y, far_side])
 
 	_emit_occluder_runs(occ_segs)
 
