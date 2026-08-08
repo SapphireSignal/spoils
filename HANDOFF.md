@@ -41,6 +41,59 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-07 — the second floor gets its floor back
+
+**Shipped: v0.6.88.** `SEC` `DOCS` `CLAIMS` `SMOKE` all pass.
+
+**I SHIPPED A REGRESSION IN v0.6.87 AND CALLED IT VERIFIED. Read this before
+touching the wall bands.** v0.6.87 restored every ground band while upstairs.
+The near ones were right; the FAR ones (north/west) draw straight over the back
+of the upper floor, because the slab sorts a storey north of the walls while
+furniture keeps its true-cell sort and draws in front of them. The room lost
+its back rows of boards and the furniture there floated on brick. The three
+states and the reasoning are now in CLAUDE.md.
+
+### The user's words
+
+- *"the floor is still on the ground, it should be on the second level, you can
+  see the furniture floating, and theres a line in the middle of the wall
+  showing where the second floor should be, how can you not fix this? weve been
+  trying for so long"*.
+- *"those pictures you send you are taking them too quickly to see, let it fade
+  in or whatever before you take the pic"*.
+- *"the camera already lifts with me, and i like it like that"* — asked whether
+  they wanted the camera changed; **they do not. Do not touch it.**
+
+### Learned — three, and the first two are mine to own
+
+- **I JUDGED MY OWN FIX OFF MID-FADE SCREENSHOTS.** `--shot` waited 40 FRAMES,
+  not a duration; at 240 fps that is 0.167 s against 0.28 s fades. Every
+  capture froze the world halfway through the reveal, and I presented those as
+  proof. It now waits 0.8 s on a clock. **Same class as the vacuous door test —
+  a frame count is not a duration on an uncapped run.** If a capture ever looks
+  subtly wrong, check what it waited on before theorising.
+- **THE DEFECT WAS VISIBLE IN A CROP I HAD ALREADY TAKEN.** I had the
+  before/after crops of the same wall and did not compare them; I reasoned from
+  the generator's arithmetic instead and concluded "sealed". The arithmetic was
+  right and irrelevant — it answered a different question than the one the user
+  asked. **Crop the thing the user is pointing at, then compare it against the
+  build that worked.** That one comparison settled it in seconds.
+- **A z-sort fix that is right for near walls is wrong for far walls.** Do not
+  look for a single ordering that satisfies both; the sides genuinely differ.
+
+### Picked up at
+
+1. **Still unanswered by the user**: whether upstairs now reads as up a level.
+   The room lands on IDENTICAL screen pixels on both storeys, because the art
+   rises 40 px and the camera rises the same 40 px. They said they like the
+   camera as is, so this is theirs to call — I asked and they dismissed the
+   question. **Do not change the camera without them asking.**
+2. **B0n** — upper/ground furniture still share cabinet, bookshelf, crate.
+3. Then the standing backlog: B0-NEW geometry batch, B0 parking spurs, B0b
+   broken cars, B1 sprint, B2 warden, B3 scrapyard, B4 smoker.
+
+---
+
 ## 2026-08-07 — the house keeps its ground floor (migration session)
 
 **Shipped: v0.6.87.** `SEC` `DOCS` `CLAIMS` `SMOKE` all pass, plus

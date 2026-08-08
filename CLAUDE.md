@@ -35,7 +35,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
 	 form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.87 shipped, 2026-08-07.** Milestone 1 (a walkable world) is DONE.
+**v0.6.88 shipped, 2026-08-07.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 
@@ -145,12 +145,29 @@ Deliver the intent with additive glow sprites, the way lamps already do.
   `seg2_*_upper` ends 39 px above the wall base, `seg2_*_low` starts at 41,
   so the string course where they meet — the wall's own floor line — is at
   **40**. Measure the sprites before trusting either constant.
-- **THE GROUND WALL BAND IS NEVER HIDDEN** (user call, v0.6.87: *"please make
-  it so i see all the walls when im on the second floor"*). Only the UPPER
-  band hides, and only while you are inside on the GROUND floor. Hiding the
-  low band upstairs deletes the storey you just climbed out of and the house
-  hangs in the air — do not "restore symmetry" in `main.gd`'s
-  `set_wall_storey(true, …)` call.
+- **THE WALL-BAND STATES ARE THREE, AND EACH ONE COST A USER REPORT.**
+  `set_wall_storey(show_low_near, show_low_far, show_upper)` — outside
+  everything; on the ground floor the ground bands only; **upstairs the upper
+  band plus the NEAR ground bands, never the FAR ones.** Both halves are
+  load-bearing and each was broken in turn:
+  - Hide the NEAR ground band upstairs (v0.6.86 hid every ground band) and the
+    storey under the player is deleted — the room hangs in the air on the door
+    frame (*"the bottom of the houses are gone when i enter the second floor
+    ... it looks like its floating right now"*).
+  - Show the FAR ground band upstairs (v0.6.87 showed every ground band) and it
+    draws straight **over the back of the upper floor**, because the slab sorts
+    a storey NORTH of the walls while furniture keeps its true-cell sort and
+    draws in FRONT of them — so the room loses its back rows of boards and the
+    furniture standing there floats on bare brick (*"the floor is still on the
+    ground ... you can see the furniture floating"*). That far band is the
+    storey below your feet seen from behind: **your own floor is what should be
+    hiding it.**
+  FAR is derived from `_EDGE_OFFSET[side].y < 0` (never from hardcoded side
+  names, so it cannot drift), and for corner posts from `pos.y < mid_y`
+  **strictly** — the east and west posts sit level with the middle and must
+  count as NEAR or the building gains a notch out of its side upstairs.
+  Doors are only ever on `yp`/`xp` (`_DOOR_INWARD` has no far entries), so a
+  full-height door piece can never land on a far wall and repeat this.
 - **A colour grade must not change brightness.** Multiplying by a tint
   colour whose own luminance is 0.38 dimmed every shadowed pixel to a
   third. Normalise tints to luminance 1 so they shift hue only.

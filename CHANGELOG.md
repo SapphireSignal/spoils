@@ -3,6 +3,59 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.88] - 2026-08-07 - the second floor gets its floor back
+
+### Fixed - the upper room's floor was being covered by its own back walls
+*"the floor is still on the ground, it should be on the second level, you can
+see the furniture floating, and theres a line in the middle of the wall showing
+where the second floor should be"*. The line is the string course, and it was
+in the right place — the boards just were not reaching it.
+
+v0.6.87 brought back every ground wall band while upstairs, to stop the house
+looking like it was floating. Two of the four walls should not have come back.
+The floor slab sorts a **storey north** of the walls, so a wall on the north or
+west edge draws **over** the back rows of the floor. Furniture does not: it
+keeps its true-cell sort and draws in **front** of the same wall. So the back
+of the room lost its boards and anything standing there was left on bare brick,
+floating.
+
+A far wall's ground band is the storey **below** the floor you are standing on,
+seen from **behind** it — your own floor is what should be hiding it. So it now
+does:
+
+| where you are | wall |
+|---|---|
+| outside | everything |
+| ground floor | the ground bands |
+| upstairs | the upper band + the **near** ground bands only |
+
+The near bands are the faces between you and the street, and they are what
+stops the house floating. The far ones you were never meant to see from up
+there.
+
+"Far" is read off `_EDGE_OFFSET[side].y < 0` rather than a hardcoded list of
+side names, so it cannot drift out of step with the edge geometry. Corner posts
+use `pos.y < mid_y` **strictly**, which keeps the east and west posts full
+height — call them far and the building gains a notch out of its side every
+time you go upstairs.
+
+### Fixed - every screenshot the tooling produced was caught mid-fade
+*"those pictures you send you are taking them too quickly to see, let it fade
+in or whatever before you take the pic"*. Exactly right, and it had been
+costing review rounds.
+
+`--shot` waited **40 frames** before capturing. A frame count is not a
+duration: the window runs at 240 fps, so that is 0.167 s, while every fade in
+the game is a 0.28 s tween. Every capture therefore froze the world halfway
+through the roof reveal and the wall fades — half-transparent walls presented
+as finished work. It waits **0.8 s on a clock** now, immune to time scale.
+
+Same class as the vacuous door test: work counted in frames says nothing about
+elapsed time on an uncapped run.
+
+**Costs the layout nothing.** `--probe-world`: DOORS 16, LAMPS 53/15,
+VEHICLES 30, UPPERS 6 floorless=0, on identical cells.
+
 ## [0.6.87] - 2026-08-07 - the house keeps its ground floor while you are upstairs
 
 ### Fixed - climbing the stairs deleted the storey underneath you

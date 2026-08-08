@@ -754,24 +754,30 @@ func _process(delta: float) -> void:
 		var reveal := roof as RoofReveal
 		var here := reveal.cells.has_point(cell)
 		reveal.set_inside(here)
-		# WHICH STOREY'S WALL YOU SEE.
+		# WHICH STOREY'S WALL YOU SEE. Three states, and every one of them was
+		# paid for by a user report — read set_wall_storey before changing any
+		# of them.
 		#
-		# THE GROUND BAND IS NEVER HIDDEN — that `true` is deliberate, do not
-		# turn it back into `not up_here`. It was, and climbing the stairs
-		# deleted the whole ground storey out from under you: the upper room
-		# and its slab hung in the air over open street with only the door
-		# frame left standing (user, with a photo: "the bottom of the houses
-		# are gone when i enter the second floor ... it looks like its
-		# floating right now", then "please make it so i see all the walls
-		# when im on the second floor").
+		#   outside        everything
+		#   ground floor   ground bands only; an upper storey would tower over
+		#                  the room the roof fade just opened up
+		#   upstairs       upper band + the NEAR ground bands
 		#
-		# The UPPER band still hides, and only in one case: you are inside on
-		# the GROUND floor, where a second storey of wall would tower over the
-		# room you are standing in and block the view the roof fade just
-		# opened. Outside both bands (the building reads as two storeys from
-		# the street); upstairs both bands (the facade stays whole under you).
+		# THE NEAR GROUND BAND IS NEVER HIDDEN. v0.6.86 hid every ground band
+		# upstairs and deleted the storey out from under the player — the room
+		# hung in the air over open street with only the door frame holding it
+		# up ("the bottom of the houses are gone when i enter the second floor
+		# ... it looks like its floating right now").
+		#
+		# THE FAR GROUND BAND MUST GO WHEN UPSTAIRS. v0.6.87 showed it again
+		# and it drew straight over the back of the upper floor, because the
+		# slab sorts a storey north of the walls — so the room lost its back
+		# rows of boards and the furniture there was left standing on brick
+		# ("the floor is still on the ground ... you can see the furniture
+		# floating"). It is the storey below your feet, seen from behind: your
+		# own floor is what should be hiding it.
 		var up_here := here and _player.upstairs
-		reveal.set_wall_storey(true, (not here) or up_here)
+		reveal.set_wall_storey(true, not up_here, (not here) or up_here)
 		indoors = indoors or here
 	_indoors_now = indoors
 	# a roof over your head muffles the weather (user). Same test that

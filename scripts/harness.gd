@@ -1668,7 +1668,21 @@ func _shot(shot_name: String) -> void:
 				map_view.call("_set_mode", wanted)
 				for i in 4:
 					await get_tree().process_frame
-	for i in 40:
+	# SETTLE ON A CLOCK, NEVER ON A FRAME COUNT. This was `for i in 40:
+	# process_frame`, and a frame count is not a duration — the window runs at
+	# 240 fps, so 40 frames is 0.167 s while EVERY fade in this game is a 0.28 s
+	# tween (the roof reveal, both wall bands, the grade). Every shot therefore
+	# captured the world MID-FADE: half-transparent walls, a roof still on its
+	# way out. It cost the user a whole review round — *"those pictures you send
+	# you are taking them too quickly to see, let it fade in or whatever before
+	# you take the pic, i dont see the second floor"* — and I had judged the
+	# same frames myself and called them proof.
+	#
+	# It is the same class as the vacuous door test: work counted in frames tells
+	# you nothing about elapsed time on an uncapped run. 0.8 s is the 0.28 s fade
+	# with room to spare; `ignore_time_scale` so a hit-stop cannot stretch it.
+	await get_tree().create_timer(0.8, true, false, true).timeout
+	for i in 4:                 # and let the settled frame actually render
 		await get_tree().process_frame
 	var image := get_viewport().get_texture().get_image()
 	var dir := ProjectSettings.globalize_path("res://shots")

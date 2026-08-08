@@ -206,6 +206,10 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.88", [
+		"the second floor has its floor back. the two walls behind you were drawing over the back of the room, so the boards stopped short and any furniture standing there was left floating on bare brick. those two walls are the storey below your feet seen from behind - your own floor hides them now, the way it should",
+		"the walls between you and the street still stand their full height while youre up there, so the house doesnt look like its hanging in the air",
+	]],
 	["v0.6.87", [
 		"going up the stairs no longer deletes the ground floor underneath you. the house was left hanging in the air on its second storey with only the door frame holding it up. you see the whole building again while youre upstairs",
 		"the second floor was laid 8 pixels below its own walls, so there was a slot of daylight all the way round the room where the boards should have met the brick. the floor, the furniture and you all sit on the line the wall paints for them now",

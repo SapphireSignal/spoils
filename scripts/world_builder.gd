@@ -2185,7 +2185,8 @@ func _build_shell(plot: Dictionary) -> void:
 						# second storey ONLY, so downstairs it goes entirely
 						_register_low_wall(low_walls,
 							_add_prop("seg2_%s_%s_upper" % [style, axis],
-								center + (_EDGE_OFFSET[side] as Vector2)), "")
+								center + (_EDGE_OFFSET[side] as Vector2)), "",
+							(_EDGE_OFFSET[side] as Vector2).y < 0.0)
 					continue
 				var axis2: String = _EDGE_AXIS[side]
 				# plain segments roll among three variants, weighted to the
@@ -2210,7 +2211,13 @@ func _build_shell(plot: Dictionary) -> void:
 				var wall_node := _add_prop(piece,
 					center + (_EDGE_OFFSET[side] as Vector2))
 				if stories == 2:
-					_register_low_wall(low_walls, wall_node, piece + "_low")
+					# FAR = the edge offset pushes the piece UP the screen, so
+					# the room lies in front of it. Read off _EDGE_OFFSET rather
+					# than naming "yn"/"xn": the offsets are the definition of
+					# which way a side faces, so this cannot drift out of step
+					# with them.
+					_register_low_wall(low_walls, wall_node, piece + "_low",
+						(_EDGE_OFFSET[side] as Vector2).y < 0.0)
 				# this wall blocks light. The occluder line is the cell EDGE
 				# itself — the same two verts the corner posts hang off — so
 				# the shadow boundary lands exactly on the wall plane the art
@@ -2231,6 +2238,15 @@ func _build_shell(plot: Dictionary) -> void:
 	for entry in corner_cells:
 		var pos := _floor_layer.map_to_local(entry[0] as Vector2i) + (entry[1] as Vector2)
 		posts[pos.round()] = true
+	# a post has no side of its own — it is the join between two — so FAR is
+	# decided by where it stands: strictly north of the room's middle and the
+	# floor is in front of it. STRICTLY, on purpose. The east and west corner
+	# posts sit level with the middle and count as NEAR, which is what keeps
+	# the ground storey unbroken at the two corners you can actually see; call
+	# them far and the building gains a notch out of its side every time you
+	# go upstairs.
+	var mid_y := _floor_layer.map_to_local(
+		interior.position + interior.size / 2).y
 	for pos in posts:
 		var post_node := _add_prop("%s_%s" % [post_prefix, style], pos as Vector2)
 		if stories == 2:
@@ -2238,7 +2254,8 @@ func _build_shell(plot: Dictionary) -> void:
 			# but a different canvas - the origins are 32 px apart, (8,44) vs
 			# (8,76) - so swapping to it displaces every corner. The low piece
 			# shares post2's canvas and origin.
-			_register_low_wall(low_walls, post_node, "post2_%s_low" % style)
+			_register_low_wall(low_walls, post_node, "post2_%s_low" % style,
+				(pos as Vector2).y < mid_y)
 
 	for y in range(rect.position.y, rect.end.y):
 		for x in range(rect.position.x, rect.end.x):
@@ -2357,11 +2374,16 @@ func _yard_fits(yard: Rect2i) -> bool:
 	return true
 
 
-func _register_low_wall(into: Array, node: Node2D, low_name: String) -> void:
+func _register_low_wall(into: Array, node: Node2D, low_name: String,
+		far: bool) -> void:
 	## Record a two-storey wall piece with the texture it wears while the
 	## player is inside on the ground floor. Textures are resolved ONCE here,
 	## not on every toggle. An empty low_name means the piece is upper storey
 	## only and gets hidden instead of swapped.
+	##
+	## `far` = this piece is on the building's NORTH or WEST edge, so the room
+	## is in front of it on screen. It decides whether the ground band may be
+	## drawn while the player is upstairs — see RoofReveal.set_wall_storey.
 	if node == null:
 		return
 	var sprite: Sprite2D = null
@@ -2376,13 +2398,23 @@ func _register_low_wall(into: Array, node: Node2D, low_name: String) -> void:
 	# show whichever storey the player is actually standing on:
 	#   outside        both bands - the building reads as two storeys
 	#   ground floor   the ground band alone
-	#   upstairs       the upper band alone
+	#   upstairs       both bands on the NEAR walls, upper band alone on the FAR
 	#
-	# The last one is why this exists. Going upstairs used to leave the whole
-	# facade drawn, both window rows and all, so the floor switch was
-	# cosmetic - user: "you are still on the ground, it just looks different
-	# colours now ... if you would be on the second floor, you wouldnt see all
-	# those windows".
+	# Going upstairs used to leave the whole facade drawn, both window rows and
+	# all, so the floor switch was cosmetic - user: "you are still on the
+	# ground, it just looks different colours now ... if you would be on the
+	# second floor, you wouldnt see all those windows".
+	#
+	# WHY THE FAR WALLS ARE THE SPECIAL CASE, and it is not a fudge: a far
+	# wall's ground band is the storey BELOW the floor you are standing on and
+	# BEHIND it, so from this camera your own floor hides it. Drawing it is not
+	# just redundant, it actively covers the room — the slab sorts a storey
+	# north of the walls, so the wall wins and eats the back rows of the floor,
+	# while furniture (which sorts at its true cell) keeps drawing in front of
+	# the wall and is left standing on bare brick (user, with a photo: "the
+	# floor is still on the ground ... you can see the furniture floating").
+	# The NEAR walls keep both bands: those are the faces between you and the
+	# street, and hiding them is what left the house floating in v0.6.86.
 	#
 	# The two overlap by the string course, drawn identically in both from the
 	# same rng stream, so together they are exactly the old full wall. Separate
@@ -2414,7 +2446,7 @@ func _register_low_wall(into: Array, node: Node2D, low_name: String) -> void:
 				+ "switch storey. Generate it in wall_piece_inventory.")
 		else:
 			sprite.texture = up_tex
-	into.append([sprite, low_sprite])
+	into.append([sprite, low_sprite, far])
 
 
 func _build_roof(interior: Rect2i, tone: String, post_positions: Array,
