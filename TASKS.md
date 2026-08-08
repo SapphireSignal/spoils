@@ -381,10 +381,19 @@ Also asked for: **upgrade the two existing backdrops** (den, drain).
 ## square" *(user)*
 
 All of these came in one burst while the terrain blending was being fixed.
-None are started. **The unifying complaint is GEOMETRY: the user can see the
-grid.** Their words: *"all the houses are square too, i want some variation
+**The unifying complaint is GEOMETRY: the user can see the grid.** Their words: *"all the houses are square too, i want some variation
 to it, you know what i mean? like i dont just want my whole game to look
 square"*.
+
+**AUDIT 2026-08-08 — TWO OF THE TEN WERE ALREADY DONE.** Item 0 shipped
+(v0.6.106); items **3 (the lined-up trucks)** and **4 (the invisible door)**
+were found already fixed and were struck out. Both had sat at the top of a
+"NEXT UP" list for two days after shipping, and item 4's quote is the very
+quote its own fix is titled after. **Check any item here against
+`CHANGELOG.md` before starting it** — `--checkdocs` proves versions agree and
+paths exist, never that a task is still open. Item **8 is PARTLY done**: the
+pylon spans were connected and straightened already, so only "there are too
+few, and none near comms" may remain — unmeasured, check before building.
 
 0. **Lone trees grew in a square** - **DONE in v0.6.106.** Not on the original
    list, and it turned out to be the one that produced the visible rectangles.
@@ -415,15 +424,33 @@ square"*.
    buildings) - it is a real builder job: L and T footprints, and every
    downstream system assumes `Rect2i` (roof, interior reveal, door side,
    entrance pockets).
-3. **Three trucks parked identically, evenly spaced, same variant** - *"why
-   are these 3 trucks just side by side all perfectly lined up? looks odd"*.
-   This is the standing NO VISUAL REPETITION rule being broken outright.
-   Whatever places the loading-dock trucks needs per-instance offset, spacing
-   jitter and `_pick_variant_varied`.
-4. **A door is invisible against its own wall** - *"the door on this building
-   i can barely see it because its the same colour as the building"*. Same
-   class of defect as the grey house in v0.6.54, and that one was found by
-   COMPARING THE ACTUAL VALUES rather than by eye - do that again.
+3. **Three trucks parked identically, evenly spaced, same variant** — **DONE
+   in v0.6.65 and v0.6.66. REMOVED FROM THE BACKLOG 2026-08-08 by the user**
+   (*"you can remove the lined up trucks we fixed that in some earlier
+   session"*), and they were right — checked against `CHANGELOG.md` before
+   deleting it. v0.6.65 fixed the ROAD vehicles and missed the call site that
+   actually made these (*"i still see these three same trucks outside the
+   warehouse, i thought you fixed that"*); v0.6.66 fixed the warehouse stalls:
+   `_pick_variant_norepeat`, a `stall_cells[i - 1]` that indexed -1 and wrapped
+   to the last element, and a hashed +/-1 cell nudge to break the showroom
+   line-up.
+   **THE LESSON IS THE STALENESS, NOT THE TRUCKS.** This item sat at the top
+   of the NEXT UP batch for two days after it shipped, and nothing could catch
+   it: `--checkdocs` proves versions agree and paths exist, never that a task
+   is still open. When picking work out of this file, check the item against
+   `CHANGELOG.md` before starting it.
+4. **A door is invisible against its own wall** — **DONE in v0.6.65, and the
+   follow-up CLOSED by the user in play 2026-08-07** (*"the door colours are
+   fine now"*). Found 2026-08-08 to be a second stale entry in this same
+   batch. The quote here — *"the door on this building i can barely see it
+   because its the same colour as the building"* — **is the very quote
+   v0.6.65's fix is titled after.** Both door kinds were measured BYTE
+   IDENTICAL to the wall they sat in (`577277`/`394a50` metal against
+   `brick_b`'s shaded face; `7a4841`/`4d2b32` wood against `brick_a`'s), a
+   collision v0.6.54 caused by lifting `brick_b` onto the door. Metal now goes
+   darker than its wall, wood lighter; luminance gaps 37 and 45. See **B0i**,
+   which keeps the numbers and the still-live lesson: *check every
+   door/wall/face combination, not just the LIT one.*
 5. **Fallen trees** - *"lets make some trees fallen over on the ground, not
    but alot, maybe like 10% of trees are, not bushes though"*. A new baked
    variant (`bake_lean` will not do it - a felled trunk is a different
