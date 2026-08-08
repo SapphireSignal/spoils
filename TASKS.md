@@ -578,6 +578,30 @@ few, and none near comms" may remain — unmeasured, check before building.
      background text from there, do not invent parallel lore.
    - Free rein granted: *"you can add stuff do whatever you want"*.
 
+   **ARCHITECTURE DECISION 2026-08-08 — PAINTED BAKE, NOT VECTOR DRAW. This
+   REVERSES an earlier user instruction, deliberately and with their newer one
+   in hand.** `_map_vectors` exists because they once said *"vector drawn nice
+   art, not pixel"*, so `_draw_district` rebuilds the district from shapes on
+   every pan and zoom. That is exactly what caps the detail: hundreds of draw
+   calls per frame, so every surface has to be a flat fill or a wobbled
+   polygon, which is what "the roads are just pure white with some border
+   theres like nothing to it" IS. Their newer brief asks for the opposite —
+   *"real pixel top of the line triple a games ... painted ... really
+   detailed"* — and names pixel art as the target.
+   So: **bake the map ONCE, in iso, by compositing hand-painted tiles**, and
+   let `map_view` blit that texture with only the live things (player,
+   vehicles, markers, labels) drawn over it.
+   - **Per-pixel painting in GDScript is NOT the way** — a detailed map wants
+     ~2-4 px per cell, i.e. 0.5-2M pixels, and `Image.set_pixel` per pixel in
+     a deploy coroutine would cost seconds. Composite small painted iso tiles
+     with `blit_rect`/`blend_rect`, which are native. Same shape as the world's
+     own atlas, and it is what makes "painted" affordable at all.
+   - The tiles are hand-painted in `tools/gen_art.py` alongside everything
+     else, in the Apollo palette, under the new HAND-DRAWN ART rule.
+   - Markers, labels and the player stay VECTOR/Control overlays drawn upright
+     after the projection — never baked, or they rotate with it and cannot be
+     clicked.
+
    **STATUS 2026-08-08: structural sample rendered and sent, awaiting sign-off
    before ANY build.** It is the current map art pushed through the real iso
    transform - proof of the landscape framing and of W reading as straight up,
