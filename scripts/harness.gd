@@ -135,6 +135,8 @@ func _ready() -> void:
 			_probe_doorsort.call_deferred()
 		elif arg == "--probe-railwalk":
 			_probe_railwalk.call_deferred()
+		elif arg == "--probe-terrain":
+			_probe_terrain.call_deferred()
 		elif arg.begins_with("--film-walk="):
 			_film_walk.call_deferred(arg.trim_prefix("--film-walk="))
 		elif arg.begins_with("--film="):
@@ -177,8 +179,8 @@ func _ready() -> void:
 		printerr("HARNESS: expected --smoke, --shot=<name>, "
 			+ "--shot-splash=<name>, --perf, "
 			+ "--perf-deploy, --probe-world, --probe-sniper, "
-			+ "--probe-exclusive, --shaderwarm, --checkdocs, --checkclaims, "
-			+ "--checksec or "
+			+ "--probe-exclusive, --probe-terrain, --shaderwarm, --checkdocs, "
+			+ "--checkclaims, --checksec or "
 			+ "--leakcheck. --toll/--freight/--at=/--seed= are MODIFIERS, "
 			+ "not actions of their own — and --seed= pins the district for "
 			+ "ANY action that builds a world (--shot, --probe-world, "
@@ -2428,6 +2430,205 @@ func _probe_doorsort() -> void:
 	print("DOORSORT squares=%d disagreeing=%d flat_at_wall=%d" % [tested, wrong, flat])
 	print("DOORSORT %s" % ("PASS" if wrong == 0 else "FAIL"))
 	get_tree().quit(0 if wrong == 0 else 1)
+
+
+## Tile-name stem -> the material class the fringe system treats it as.
+##
+## EVERY HARD SURFACE IS ONE CLASS. `FRINGE_RANK` gives stone, paved, walk and
+## asphalt the SAME rank, and `_paint_fringes` only ever creeps down the
+## ranking — so a kerb between a sidewalk and the road carries no overlay BY
+## DESIGN and is a legitimate straight line. Splitting them here would report
+## every kerb in the district as a fault and bury the real ones.
+const TERRAIN_CLASS := {
+	"forest": "grass",
+	"dirt": "dirt",
+	# BOTH BLEND TILES ARE CONCRETE. `make_floor_tile` builds them on CONC_BASE
+	# and speckles grass or earth over the top, and `_cell_material` agrees —
+	# a cell painted grass_blend is not in `_forest`, so it still reports as
+	# whatever hard surface it was. Reading the speckle as the material put a
+	# phantom ring of "grass" around every pocket and made the boundary that
+	# actually goes unblended look already solved.
+	"grass_blend": "hard", "dirt_blend": "hard",
+	"ballast": "gravel",
+	# A RAIL TILE IS BALLAST WITH RAILS DRAWN ON IT, so its ground material is
+	# gravel — the same reading this table already gives every other decorated
+	# tile ("crack" is concrete with a crack, "asphalt_line" is asphalt with a
+	# line). Measured off the atlas: ballast means (33,47,56) and rail_x
+	# (43,56,64), a delta of ~16, against ~49 for dirt-to-concrete and ~68 for
+	# dirt-to-gravel. Calling it a material of its own reported 218 hard edges
+	# along a boundary no player can see, and buried the ones they can.
+	"rail_x": "gravel", "rail_cross_x": "gravel",
+	"concrete": "hard", "concrete_worn": "hard", "concrete_damp": "hard",
+	"crack": "hard", "stain": "hard", "moss": "hard", "screed": "hard",
+	"asphalt": "hard", "asphalt_crack": "hard", "asphalt_hole": "hard",
+	"asphalt_line": "hard", "asphalt_line_b": "hard", "asphalt_stall": "hard",
+	"asphalt_line_h": "hard", "asphalt_line_h_b": "hard",
+	"crosswalk_v": "hard", "crosswalk_h": "hard", "manhole": "hard",
+	"plaza": "hard", "wood": "hard",
+	"sidewalk_v": "hard", "sidewalk_h": "hard",
+	"sidewalk_v_crack": "hard", "sidewalk_h_crack": "hard",
+	"sidewalk_v_broken": "hard", "sidewalk_h_broken": "hard",
+	"lino": "indoor", "board": "indoor",
+}
+
+
+func _terrain_stem(tile_name: String) -> String:
+	## "concrete_worn_0" -> "concrete_worn", "rail_x" -> "rail_x". Only a
+	## trailing all-digit segment is a variant index; "asphalt_line_b" and
+	## "sidewalk_v" keep their tails.
+	var cut := tile_name.rfind("_")
+	if cut <= 0:
+		return tile_name
+	var tail := tile_name.substr(cut + 1)
+	if tail.is_valid_int():
+		return tile_name.substr(0, cut)
+	return tile_name
+
+
+func _probe_terrain() -> void:
+	## HOW MUCH OF THE GROUND STILL MEETS IN A DEAD STRAIGHT LINE? (user,
+	## 2026-08-05: "train tracks road just looks square when blended into the
+	## dirt, i dont want to see any square stuff")
+	##
+	## The fringe system exists so no two ground materials meet on a bare tile
+	## edge. This measures where it did not run: a boundary is HARD when the
+	## two cells report different material classes and NEITHER carries a fringe
+	## overlay.
+	##
+	## IT REPORTS RUN LENGTH, NOT JUST A COUNT, because length is what reads as
+	## square. A scattered handful of hard edges is invisible; thirty in a row
+	## is a drawn line. The verdict is the LONGEST run and the worst offenders
+	## are printed with their cells, so they can be shot directly.
+	##
+	## Materials are read back off the TILES — the builder itself is a local in
+	## main.gd and is gone by the time this runs. That mapping can drift from
+	## `_cell_material`, so an unrecognised tile is a FAIL, never a silent skip.
+	await _ensure_game_scene()
+	var main_node := get_tree().current_scene
+	var info: Dictionary = main_node.get("world_info")
+	var fl := main_node.get_node_or_null("Floor") as TileMapLayer
+	var fr := main_node.get_node_or_null("Fringe") as TileMapLayer
+	if fl == null or fr == null:
+		printerr("TERRAIN FAIL: floor=%s fringe=%s" % [str(fl), str(fr)])
+		get_tree().quit(1)
+		return
+	var coords: Dictionary = info.get("floor_coords", {})
+	var by_coord: Dictionary = {}
+	for tile_name in coords:
+		var tc: Array = coords[tile_name]
+		by_coord[Vector2i(int(tc[0]), int(tc[1]))] = tile_name
+	var cells: Vector2i = info.get("cells", Vector2i.ZERO)
+	var lo := WorldBuilder.BARRIER_INSET - 6
+	# A FLOOR IS NOT TERRAIN. `_paint_fringes` skips building interiors, and it
+	# is right to — so counting a hall's screed against the dirt outside its
+	# wall reports a fault that must never be fixed.
+	var inside: Dictionary = {}
+	for roof in info.get("roofs", []) as Array:
+		var rc: Rect2i = (roof as RoofReveal).cells
+		for iy in range(rc.position.y, rc.end.y):
+			for ix in range(rc.position.x, rc.end.x):
+				inside[Vector2i(ix, iy)] = true
+
+	# classify every cell once
+	var klass: Dictionary = {}
+	var unknown: Dictionary = {}
+	for y in cells.y:
+		for x in cells.x:
+			var cell := Vector2i(x, y)
+			if mini(mini(x, cells.x - 1 - x), mini(y, cells.y - 1 - y)) < lo:
+				continue
+			if inside.has(cell):
+				continue
+			var ac := fl.get_cell_atlas_coords(cell)
+			if not by_coord.has(ac):
+				continue                      # empty cell: nothing was laid
+			var stem := _terrain_stem(by_coord[ac])
+			if not TERRAIN_CLASS.has(stem):
+				unknown[stem] = int(unknown.get(stem, 0)) + 1
+				continue
+			var k: String = TERRAIN_CLASS[stem]
+			if k != "indoor":
+				klass[cell] = k
+
+	# a boundary is HARD when the classes differ and neither side was softened
+	var hard_v: Dictionary = {}   # (x,y) | (x+1,y) — these stack along y
+	var hard_h: Dictionary = {}   # (x,y) | (x,y+1) — these stack along x
+	var total := 0
+	var hard := 0
+	var by_pair: Dictionary = {}
+	for cell_key in klass:
+		var cell: Vector2i = cell_key
+		for i in 2:
+			var other := cell + (Vector2i.RIGHT if i == 0 else Vector2i.DOWN)
+			if not klass.has(other):
+				continue
+			var a: String = klass[cell]
+			var b: String = klass[other]
+			if a == b:
+				continue
+			total += 1
+			var pair: String = ("%s|%s" % [a, b]) if a < b else ("%s|%s" % [b, a])
+			var seen_pair: Array = by_pair.get(pair, [0, 0])
+			seen_pair[0] = int(seen_pair[0]) + 1
+			by_pair[pair] = seen_pair
+			if fr.get_cell_source_id(cell) != -1 or fr.get_cell_source_id(other) != -1:
+				continue
+			hard += 1
+			seen_pair[1] = int(seen_pair[1]) + 1
+			if i == 0:
+				hard_v[cell] = true
+			else:
+				hard_h[cell] = true
+
+	# straight runs: consecutive hard boundaries sharing a column (v) or row (h)
+	var runs: Array = []
+	for axis in 2:
+		var field: Dictionary = hard_v if axis == 0 else hard_h
+		var seen: Dictionary = {}
+		var step := Vector2i.DOWN if axis == 0 else Vector2i.RIGHT
+		for cell_key in field:
+			var start: Vector2i = cell_key
+			if seen.has(start) or field.has(start - step):
+				continue                      # only ever begin at a run's head
+			var n := 0
+			var walk := start
+			while field.has(walk):
+				seen[walk] = true
+				n += 1
+				walk += step
+			runs.append([n, start, "v" if axis == 0 else "h"])
+	runs.sort_custom(func(p, q): return int(p[0]) > int(q[0]))
+
+	var longest: int = 0 if runs.is_empty() else int(runs[0][0])
+	var long_runs := 0
+	for r in runs:
+		if int(r[0]) >= 8:
+			long_runs += 1
+	for pair_key in by_pair:
+		var pv: Array = by_pair[pair_key]
+		var pct := 100.0 * float(pv[1]) / maxf(1.0, float(pv[0]))
+		print("TERRAIN pair %-14s hard=%-4d of %-5d (%.0f%%)"
+			% [pair_key, int(pv[1]), int(pv[0]), pct])
+	for i in mini(8, runs.size()):
+		var r: Array = runs[i]
+		print("TERRAIN run len=%-3d axis=%s at=%d,%d"
+			% [int(r[0]), str(r[2]), (r[1] as Vector2i).x, (r[1] as Vector2i).y])
+	var rate := 0.0
+	if total > 0:
+		rate = 100.0 * float(hard) / float(total)
+	print("TERRAIN boundaries=%d hard=%d (%.1f%%) runs>=8=%d longest=%d"
+		% [total, hard, rate, long_runs, longest])
+	# UNKNOWN TILES FAIL. A tile this probe cannot classify is silently absent
+	# from every number above — the vacuous-green failure mode this project has
+	# already shipped once (the door test that touched no door).
+	if not unknown.is_empty():
+		for stem_key in unknown:
+			printerr("TERRAIN FAIL unclassified tile stem '%s' x%d"
+				% [str(stem_key), int(unknown[stem_key])])
+		get_tree().quit(1)
+		return
+	print("TERRAIN %s" % ("PASS" if longest < 8 else "FAIL"))
+	get_tree().quit(0 if longest < 8 else 1)
 
 
 func _probe_railwalk() -> void:

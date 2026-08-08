@@ -41,6 +41,70 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-08 — v0.6.106: lone trees stopped growing in squares
+
+**Shipped: v0.6.106.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass, layout
+bit-identical (`--probe-world`: 16 doors, 53 lamps, 30 vehicles, 1323 walks,
+safehouse [174, 73], fringe counts unchanged).
+
+First slice of **B0-NEW**. The user picked it off a four-way choice: *"Ground
+& terrain edges"*, over houses, the lined-up trucks, and fallen trees.
+
+### Shipped
+
+- **The halo is gone.** `_place_lone_trees` stamped a `grass_blend` tile on
+  every orthogonal neighbour of every cell in a tree's grass pocket. **A
+  constant-width border traces the pocket's BOUNDING BOX**, so the shape was a
+  rectangle however ragged the tile art was. Redundant too — `_paint_fringes`
+  already runs after this function precisely so it can blend the pocket from
+  its own true outline — and it was painting CONCRETE (`grass_blend` is built
+  on `CONC_BASE`) onto ballast, sidewalk, plaza and apron. **Draws taken and
+  thrown away**, so the fixed district is untouched.
+- **`--probe-terrain`** — new verdict tool. Hard boundaries per material pair
+  with a rate, plus the straight RUN each belongs to.
+
+### What I got WRONG, and what the docs had wrong
+
+- **`TASKS.md` item 1's diagnosis was wrong, and I nearly built on it.** It
+  said the rail corridor "never frays" and that this is the square the user
+  sees. The code half is true; the conclusion is not. A rail tile is *ballast
+  with rails on it* — a ~16 mean-colour delta, against ~49 for
+  dirt-to-concrete. My first probe cut counted `rail` as its own material and
+  reported **218 hard edges on a boundary nobody can see**, more than half the
+  total, which would have sent the whole release at the wrong thing.
+- **My own probe's first cut read `grass_blend` as grass. It is concrete.**
+  That put a phantom ring of "grass" around every pocket. Both corrections had
+  to land before any number meant anything.
+- **`CLAUDE.md` was wrong about the fringe system it documents.** "3 pairs …
+  composited from THE REAL TILES of both materials" — there are no pairs;
+  there are three INTRUDING materials, one overlay each, transparent where
+  they have not reached. Per-pair is the architecture that was built, failed
+  and removed. **And it named three functions that do not exist anywhere** —
+  `_fringe_depth`, `_fringe_mask`, `_open_ground_mask`. `gen_art.py` carries
+  the same dead pointer. All fixed; `--checkdocs` cannot see either class of
+  fault (it checks backticked PATHS, not function names or prose).
+
+### The lesson worth keeping
+
+**A SOFT TILE EDGE AND A RECTANGULAR OUTLINE ARE DIFFERENT FAULTS.**
+`--probe-terrain` did not move by a single edge when the halo was removed —
+every one of those boundaries was already correctly fringed, and `grass|hard`
+measures **0% hard across 1352 boundaries**. The blending system works. The
+squareness was SHAPE, and no coverage metric can see it. `_wash_dirt_over_hard`
+had already learned this once ("ragged at the pixel level, dead straight in
+SHAPE"); it cost a second discovery here.
+
+### Picked up at
+
+B0-NEW continues. Residual hard boundaries for the next slice: `dirt|gravel`
+42% (24), `dirt|grass` 27% (123), `gravel|hard` 10% (263), `dirt|hard` 7%
+(1717), longest run 8. Then the rest of the batch: trucks, fallen trees,
+pylons, puddles, the invisible door, autumn leaves, the map repaint (needs a
+sample and sign-off — third attempt), the one-frame pop (item 10, frame-diff
+is the next step), and C3 non-rectangular buildings.
+
+---
+
 ## 2026-08-08 — MIGRATION POINT: read this first
 
 **v0.6.105 shipped. Tree clean, everything pushed, every gate green**

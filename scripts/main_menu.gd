@@ -206,6 +206,10 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.106", [
+		"lone trees no longer grow in a square. every tree standing out on its own had a pale border painted one tile deep all the way around its patch of grass, and a border like that traces a rectangle no matter how rough the edges of it are - which is why those patches read as blocks. the border is gone, and the grass now blends into whatever it is sitting on from its own real outline",
+		"that same border was quietly dropping a concrete tile onto ballast, pavement and plaza wherever a tree happened to land on them",
+	]],
 	["v0.6.105", [
 		"the dirt is brown now instead of orange. it turned out the colour itself was right all along - it was the pale tan flecks mixed through it that the eye kept picking out, and the trees you compared it to use the exact same brown, just shaded darker instead of lighter. same idea now, with more of the grey mud showing through",
 	]],

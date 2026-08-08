@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.105.** The release history was renumbered evenly on
+**Current version: v0.6.106.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -386,12 +386,31 @@ grid.** Their words: *"all the houses are square too, i want some variation
 to it, you know what i mean? like i dont just want my whole game to look
 square"*.
 
+0. **Lone trees grew in a square** - **DONE in v0.6.106.** Not on the original
+   list, and it turned out to be the one that produced the visible rectangles.
+   `_place_lone_trees` stamped a `grass_blend` tile on every orthogonal
+   neighbour of every pocket cell: a constant-width border traces the pocket's
+   BOUNDING BOX, so the shape was a rectangle however ragged the art was. It
+   was also redundant (the directional fringe pass runs after it, by design)
+   and was painting CONCRETE onto ballast, sidewalk, plaza and apron.
+   **The rng draws are still taken and thrown away** - district bit-identical.
+
 1. **The rail corridor reads as a hard parallelogram** - *"train tracks road
    just looks square when blended into the dirt, i dont want to see any
-   square stuff"*. `_cell_material` returns "rail" for `_rail_cells`/
-   `_rail_cross` and `_paint_fringes` skips those cells outright, so the bed
-   never frays. The RAILS should stay crisp; the BALLAST should not. The
-   `fr_gravel_*` overlays already exist and are barely used.
+   square stuff"*. **RE-DIAGNOSED 2026-08-08 BY MEASUREMENT — the reading
+   below was wrong, do not act on it as written.** It is true that
+   `_cell_material` returns "rail" and `_paint_fringes` skips those cells. It
+   does NOT follow that this is what the user is seeing: a rail tile is
+   *ballast with rails drawn on it*, and ballast-to-rail is a ~16 mean-colour
+   delta against ~49 for dirt-to-concrete. Counting rail as its own material
+   reported 218 hard edges along a join nobody can see and buried the rest.
+   With rail read as gravel, the whole corridor contributes `dirt|gravel` 10
+   and part of `gravel|hard` 25 — real, but small.
+   **What is still open here:** those ~35 edges, and the question of whether
+   the corridor should fray at all. `--probe-terrain` is the verdict tool.
+   **If the fix is to let grass/dirt creep onto rail cells, mind the cost:**
+   the overlay is a whole-tile mask that would draw over the rails, and the
+   rails are the readable feature of the corridor. Shoot it before shipping.
 2. **Houses are rectangles.** Already logged as C3 (non-rectangular
    buildings) - it is a real builder job: L and T footprints, and every
    downstream system assumes `Rect2i` (roof, interior reveal, door side,

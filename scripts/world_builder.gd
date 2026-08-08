@@ -4457,12 +4457,31 @@ func _place_lone_trees() -> void:
 		for pcell in pocket:
 			_set_tile(pcell, "forest_%d" % _rng.randi_range(0, 2))
 			_forest[pcell] = true
+		# NO HALO ROUND THE POCKET. This used to stamp a grass_blend tile on
+		# every orthogonal neighbour of every pocket cell, and that is what made
+		# a lone tree read as a SQUARE (user: "i dont just want my whole game to
+		# look square"). A constant-width border traces the pocket's bounding
+		# box, so however ragged the tile art is, the SHAPE is a rectangle — the
+		# same "ragged at the pixel level, dead straight in shape" trap that
+		# _wash_dirt_over_hard was rewritten to escape.
+		#
+		# It is also redundant now. grass_blend is the NON-DIRECTIONAL blend the
+		# v0.6.54 fringe system replaced, and `_paint_fringes` deliberately runs
+		# after this function so it can blend whatever the pocket landed on,
+		# directionally and from the pocket's own true outline.
+		#
+		# And it was painting CONCRETE. grass_blend is built on CONC_BASE, and
+		# the guard below lets it through onto ballast, sidewalk, plaza and
+		# apron cells — a grey slab dropped into the middle of them.
+		#
+		# THE DRAW IS TAKEN AND THROWN AWAY: the district is FIXED, and skipping
+		# an _rng call here would shift every draw after it and re-roll the map.
 		for pcell in pocket:
 			for off in [Vector2i.RIGHT, Vector2i.LEFT, Vector2i.UP, Vector2i.DOWN]:
 				var ncell: Vector2i = pcell + off
 				if not _forest.has(ncell) and not _dirt_path.has(ncell) \
 						and not _on_road(ncell) and not _occupied.has(ncell):
-					_set_tile(ncell, "grass_blend_%d" % _rng.randi_range(0, 1))
+					_rng.randi_range(0, 1)
 		# a few turned trees out on the edges of the district (user). Rolled
 		# from the SIDE rng so it costs the layout stream nothing and every
 		# building, road and poi stays exactly where it was.

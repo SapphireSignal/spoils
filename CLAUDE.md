@@ -35,7 +35,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
 	 form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.105 shipped, 2026-08-08.** Milestone 1 (a walkable world) is DONE.
+**v0.6.106 shipped, 2026-08-08.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 
@@ -656,15 +656,37 @@ update CHANGELOG.md. Tag releases (`git tag vX.Y.Z`, push with `--tags`).
   **DIRECTIONAL TERRAIN FRINGES (v0.6.54)** — ground materials blend into each
   other instead of meeting at a hard 64x32 diamond (user: *"can we make all of
   the biomes blend more together with another"*, *"yes they are hard edges
-  blocks everywhere"*). `gen_art._fringe_entries` bakes 135 tiles: 3 pairs
-  (grass-into-stone, dirt-into-stone, stone-into-grass) x 15 edge masks x 3
-  variants, each composited from THE REAL TILES of both materials so a fringe
-  can never drift out of step with what it blends. The 4-bit mask is a
-  **CONTRACT** between `gen_art`'s `_fringe_depth` and world_builder's
-  `_fringe_mask`/`_open_ground_mask` — bit 0 = cell (x, y-1) = the NE screen
-  edge, then RIGHT/DOWN/LEFT clockwise. The predecessor picked one of three
+  blocks everywhere"*). `gen_art._fringe_entries` bakes 135 tiles: **3
+  INTRUDING MATERIALS — grass, dirt, gravel — NOT 3 pairs** x 15 edge masks x 3
+  variants, named `fr_<material>_<mask>_<variant>`. **Each overlay is the
+  intruder ALONE, transparent everywhere it has not reached**, so one tile
+  composites onto anything — grass onto concrete, onto asphalt, onto ballast —
+  and the base's own crack, stain and wear still show through underneath.
+  *(This paragraph claimed "3 pairs (grass-into-stone, dirt-into-stone,
+  stone-into-grass), each composited from THE REAL TILES of both materials".
+  Per-pair is the architecture that was BUILT, FAILED and REMOVED: it exploded
+  combinatorially so only three pairs ever existed and every other boundary
+  stayed a hard diamond, and replacing the whole tile threw away the wear
+  underneath. `make_fringe_overlay`'s own comment records both faults.)*
+  Which way a pair blends is decided ONCE by `FRINGE_RANK` in
+  `world_builder.gd` — grass 0, dirt 1, gravel 2, and every hard surface
+  (stone/paved/walk/asphalt) 3. **A cell only ever receives an overlay from a
+  STRICTLY lower rank**, so a boundary carries one wandering front instead of
+  two bands facing each other, and equal ranks — a kerb between sidewalk and
+  road — are left as a clean line on purpose.
+  The 4-bit mask is a **CONTRACT** between `gen_art`'s `_EDGE_COORDS`/`_wander`
+  and the neighbour loop inside world_builder's `_paint_fringes` — bit 0 = cell
+  (x, y-1) = the NE screen
+  edge, then RIGHT/DOWN/LEFT clockwise. *(It named `_fringe_depth`,
+  `_fringe_mask` and `_open_ground_mask`. **None of those three exist** — not
+  in either file; `gen_art.py` carries the same dead pointer in a comment.
+  Verified 2026-08-08. `--checkdocs` cannot see this: it checks backticked
+  repo PATHS, never function names.)* The predecessor picked one of three
   `grass_blend` tiles at RANDOM with no idea which side the grass was on,
-  which is why it never softened anything. **The concrete-side branches still
+  which is why it never softened anything — and **`grass_blend` is CONCRETE
+  with grass speckled over it**, not grass, which is why stamping it around a
+  tree pocket both drew a rectangle and dropped a grey slab onto ballast
+  (v0.6.106). **The concrete-side branches still
   take exactly ONE `_rng` draw each and the new forest-side branch takes NONE
   (it hashes)** — the layout stream is untouched, verified by DOORS staying 16
   on the same cells.
@@ -1038,6 +1060,24 @@ then `godot_console --headless --path . --import`.
   **The obvious motion metric LIES about thin fast things** — downsampling
   averages 2 px rain streaks away, so rain and sparks barely register. It
   detects a DEAD scene reliably; it does not grade a live one.
+- Terrain: `godot_console --headless --path . -- --probe-terrain` → the
+  verdict tool for "does the ground still meet in a straight line". A boundary
+  is HARD when two cells report different materials and NEITHER carries a
+  fringe overlay; it reports those, per material pair with a RATE, plus the
+  straight RUN each belongs to — **length is what reads as square, a scattered
+  handful of hard edges is invisible**. Baseline at v0.6.106: **3496
+  boundaries, 192 hard (5.5%), longest run 8**, and `grass|hard` — the biggest
+  pair at 1352 — is **0% hard**. Residual worst rates: `dirt|gravel` 42%,
+  `dirt|grass` 27%, `gravel|hard` 10%, `dirt|hard` 7%.
+  **IT MEASURES COVERAGE, NOT SHAPE, AND THAT LIMIT IS THE WHOLE LESSON OF
+  v0.6.106.** The lone-tree halo drew a perfect rectangle and this probe did
+  not move by a single edge when it was removed, because every one of those
+  boundaries was already correctly fringed. **A soft tile edge and a
+  rectangular OUTLINE are different faults; only the eye catches the second.**
+  It classifies cells by their TILE (the builder is a local in `main.gd` and is
+  gone by then), so an unrecognised tile **FAILS** rather than being skipped —
+  and classify a decorated tile by its BASE, the way `crack` is concrete and
+  `rail_x` is ballast-with-rails.
 - Perf: `godot_console --path . -- --perf [--weather=rain --tod=0 ...]` →
   prints avg fps / worst frame ms / node count. Compare against the baseline
   in "Current state of the world" above — that is the ONE place the numbers

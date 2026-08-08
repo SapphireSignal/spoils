@@ -3,6 +3,68 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.106] - 2026-08-08 - lone trees stop growing in squares
+
+### Fixed - the halo that drew a rectangle round every tree
+
+First slice of the "i dont just want my whole game to look square" batch.
+
+`_place_lone_trees` stamped a `grass_blend` tile on every orthogonal
+neighbour of every cell in a tree's grass pocket. A constant-width border
+traces the pocket's BOUNDING BOX, so however ragged the tile art was, the
+SHAPE it drew was a rectangle - the same "ragged at the pixel level, dead
+straight in shape" trap `_wash_dirt_over_hard` was rewritten to escape.
+
+It was also two other things:
+
+- **Redundant.** `grass_blend` is the non-directional blend the v0.6.54
+  fringe system replaced, and `_paint_fringes` already runs *after* this
+  function precisely so it can blend whatever a pocket landed on -
+  directionally, and from the pocket's own true outline.
+- **Painting concrete into places concrete does not belong.**
+  `grass_blend` is built on `CONC_BASE`, and the guard let it through onto
+  ballast, sidewalk, plaza and apron cells: a grey slab dropped into the
+  middle of them.
+
+The ring is gone. **The rng draws it used are still taken and thrown away**,
+so the FIXED district is bit-identical - `--probe-world` reports the same 16
+doors, 53 lamps, 30 vehicles, 1323 walk cells, the same safehouse and the
+same fringe counts as v0.6.105.
+
+### Added - `--probe-terrain`, and it overturned the inherited diagnosis
+
+A ground boundary is HARD when two cells report different materials and
+neither carries a fringe overlay. The probe measures those, and measures the
+straight RUN each belongs to, because length is what reads as square.
+
+It was written to confirm that the rail corridor "never frays", which is
+what `TASKS.md` had recorded. **Measured, that was wrong twice over:**
+
+- Counting `rail` as a material of its own reported 218 hard edges along the
+  ballast-to-rail join - a boundary whose two tiles differ by ~16 in mean
+  colour, against ~49 for dirt-to-concrete. A rail tile is *ballast with
+  rails drawn on it*, exactly as `crack` is concrete with a crack.
+- The probe's own first cut read `grass_blend` as grass. It is concrete.
+  That put a phantom ring of "grass" around every pocket and made the
+  boundary that actually goes unblended look already solved.
+
+With both corrected the district measures **3496 boundaries, 192 hard
+(5.5%), longest straight run 8 cells** - and `grass|hard`, the largest pair
+at 1352 boundaries, is **0% hard**. The blending system works; the squareness
+was a SHAPE problem, not a coverage one.
+
+Residual, left for the next slice: `dirt|gravel` 42% hard (24 boundaries),
+`dirt|grass` 27% (123), `gravel|hard` 10% (263), `dirt|hard` 7% (1717).
+
+### Fixed - documentation that was wrong about its own system
+
+`CLAUDE.md` described the fringe tiles as "3 pairs (grass-into-stone,
+dirt-into-stone, stone-into-grass), each composited from THE REAL TILES of
+both materials". There are no pairs: there are three INTRUDING materials,
+one overlay each, composited from ONE material and transparent everywhere
+it has not reached. `make_fringe_overlay`'s own comment records that the
+per-pair architecture was built, failed and was removed.
+
 ## [0.6.105] - 2026-08-08 - the dirt reads as earth, not terracotta
 
 ### Changed - browner ground, measured rather than eyeballed
