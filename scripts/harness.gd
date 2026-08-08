@@ -125,6 +125,8 @@ func _ready() -> void:
 			_probe_floordoor.call_deferred()
 		elif arg == "--probe-upper":
 			_probe_upper.call_deferred()
+		elif arg == "--probe-wallclip":
+			_probe_wallclip.call_deferred()
 		elif arg == "--probe-doorsort":
 			_probe_doorsort.call_deferred()
 		elif arg == "--probe-railwalk":
@@ -1989,6 +1991,80 @@ func _probe_upper() -> void:
 	for g in ghosts.slice(0, 12):
 		print("UPPER GHOST %s" % g)
 	get_tree().quit(0)
+
+
+func _probe_wallclip() -> void:
+	## HOW FAR INTO A WALL CAN THE PLAYER GET FROM INSIDE, AND DOES THE SORT
+	## FOLLOW THEM IN?
+	##
+	## The report is *"i can clip into walls from the inside, and then i see half
+	## my character through the wall"*. Two things have to be true for that: the
+	## body has to end up inside the wall's DRAWN footprint, and it has to then
+	## y-sort in FRONT of the wall piece, or you would simply be hidden by it.
+	## Measure both, per wall, rather than guessing which one is loose.
+	await _ensure_game_scene()
+	var main_node := get_tree().current_scene
+	var info: Dictionary = main_node.get("world_info")
+	var uppers: Array = info.get("uppers", []) as Array
+	var fl := main_node.get("_floor_layer") as TileMapLayer
+	var pl := _find_player()
+	if uppers.is_empty() or fl == null or pl == null:
+		print("WALLCLIP FAIL: no world")
+		get_tree().quit(1)
+		return
+	var reg: Dictionary = uppers[0]
+	var cells: Rect2i = reg["cells"]
+	var centre := fl.map_to_local(cells.position + cells.size / 2)
+	# the four interior wall directions, in SCREEN space
+	var dirs := {
+		"north(yn)": Vector2(16, -8).normalized(),
+		"west(xn)": Vector2(-16, -8).normalized(),
+		"south(yp)": Vector2(-16, 8).normalized(),
+		"east(xp)": Vector2(16, 8).normalized(),
+	}
+	var bad := 0
+	for name in dirs:
+		pl.global_position = centre
+		await get_tree().process_frame
+		_shove(pl, dirs[name] as Vector2, 200.0)
+		var at := pl.global_position
+		# ASK THE PHYSICS WHAT IT HIT, do not hunt the scene tree for it. Two
+		# cuts of this walked the node graph looking for a sprite whose texture was
+		# named seg_/seg2_ and found NOTHING, then printed PASS on the empty
+		# result — the vacuous-green failure again. `move_and_collide` in test
+		# mode names the collider outright.
+		var hit := pl.move_and_collide((dirs[name] as Vector2) * 6.0, true)
+		var best: Node2D = null if hit == null else hit.get_collider() as Node2D
+		if best == null:
+			print("WALLCLIP %-10s nothing solid in that direction" % name)
+			continue
+		# the wall's base LINE runs along the cell edge; how far past it is the
+		# body, measured square to that line, and does it sort in front?
+		var dy := at.y - best.global_position.y
+		var in_front := at.y > best.global_position.y
+		var flag := ""
+		if in_front and dy < 8.0:
+			flag = "  <-- SORTS IN FRONT while inside the wall"
+			bad += 1
+		print("WALLCLIP %-10s moved=%.1f  player_y-wall_y=%+.1f  in_front=%s%s"
+			% [name, at.distance_to(centre), dy, str(in_front), flag])
+	print("WALLCLIP bad=%d" % bad)
+	print("WALLCLIP %s" % ("PASS" if bad == 0 else "FAIL"))
+	get_tree().quit(0 if bad == 0 else 1)
+
+
+func _ysort_children(main_node: Node) -> Array:
+	## Props are DIRECT children of the y-sort node, which is itself named
+	## "World" (world_builder.gd:197). The first cut of this walked World's
+	## grandchildren and found nothing at all — and reported PASS on the empty
+	## result, which is the vacuous-green failure this project keeps relearning.
+	var world := main_node.get_node_or_null("World")
+	if world == null:
+		for c in main_node.get_children():
+			if c.name == "World":
+				world = c
+				break
+	return [] if world == null else world.get_children()
 
 
 func _probe_doorsort() -> void:

@@ -1016,21 +1016,6 @@ a thick coloured signal plume: denser, more saturated green, rising in
 distinct billows rather than a soft haze. It is also a good first customer
 for the glow pass above.
 
-## B5. Power box repair — the first quest interaction
-
-1. Near the broken box: a subtle spark sound (positional, quiet — the
-   standing rule is one-shots ≤ -18 dB on the `sfx` bus).
-2. Prompt: **"press f to open the power box"**.
-3. F opens a window showing the box **and the player's inventory**, with
-   **"drag electricians kit on the power box"**.
-4. Dragging the kit plays a wire-cutter animation of a couple of seconds.
-5. Repaired: no further interaction, and the sparks, arc and glow stop.
-
-Needs a stub inventory holding an "electricians kit" (the real one is M4),
-drag-and-drop, cutter frames, a repaired sprite, and a repaired state in
-`power_box.gd`. The box is pinned to the safehouse so it is always
-findable.
-
 ## B6. Cosy safehouse
 
 **Inside:** bookshelf, cabinet, TV, plus **posters and pictures on the

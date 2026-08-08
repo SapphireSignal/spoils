@@ -66,11 +66,12 @@ second = the swing ramp, this one. Permanent = the sort key itself, v0.6.91-94.
 
 ### Picked up at — OPEN
 
-1. **"he should be in front of the door in this position"** — the DUCK_MIN trade
-   from v0.6.94, and the probe's 1 disagreeing square. **Do not tune DUCK_MIN
-   further**; split the open leaf into two sprites (hinge half, free half) with
-   their own sort keys. A single key cannot describe a panel on a diagonal and
-   six releases have now proved it.
+1. **CLOSED BY THE USER 2026-08-08** — *"the doors fine like this for now"*,
+   and when asked whether the "door split" meant the hinge sliver: *"if it is,
+   we dont need to mention it anymore, its all good"*. That covers the DUCK_MIN
+   trade from v0.6.94 AND the probe's 1 remaining disagreeing square. **Do not
+   raise it again.** The split-the-leaf-in-two design is recorded in v0.6.94's
+   changelog if it is ever wanted.
 2. **Clipping into walls from inside** — open, diagnosis further down.
 3. Backlog: B0-NEW, B0, B0b, B1, B2, B3, B4.
 
