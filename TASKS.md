@@ -551,10 +551,27 @@ few, and none near comms" may remain — unmeasured, check before building.
        milestones, not M1. The list would be flavour text until then — fine,
        but say so rather than implying a real table, and keep it in one place
        so it can be wired to the real one later.
-     - **The picture.** Cheapest honest source is a small in-engine capture
-       per POI, the way the menu backdrops were promoted from renders. Do NOT
-       hand-draw twelve new illustrations — that is exactly the redraw work
-       the standing ENGINE-EFFECTS-OVER-ART rule exists to avoid.
+     - **The picture: HAND-PAINTED, user's explicit call 2026-08-08.** *"im
+       fine with hand drawn art as long as it like looks good and fits,
+       becuase those menu backdrops were hand drawn werent they? they are
+       paintings and those look really good, so if thats the case hand drawn
+       stuff is completely fine"*.
+       **I had written the opposite here and it was WRONG on both counts.** It
+       said to take in-engine captures and "do NOT hand-draw twelve new
+       illustrations - that is exactly the redraw work the standing
+       ENGINE-EFFECTS-OVER-ART rule exists to avoid." Two errors:
+       (a) **The menu backdrops were never captures.** They are painted stroke
+       by stroke in `tools/gen_art.py` — `make_scene_den`, `make_scene_yard`,
+       `make_scene_warden`, `make_scene_underpass`, `make_scene_drain` and the
+       counter. "Promoted" in those docstrings means promoted from the pitch
+       the user chose, not captured from a render.
+       (b) **The rule does not apply, by its own wording.** It governs POLISH
+       — not repainting the world's sprites family by family when lighting and
+       shaders lift everything at once — and it ends "unless the user asks for
+       a specific sprite to change." They asked. Citing it against work the
+       user requested inverts it.
+       So the POI pictures are hand-painted illustrations in the same pipeline
+       and the same palette as the backdrops.
      `LORE.md` already describes most POIs (courtyard and its dry fountain,
      the bus depot, the scrapyard, the school over its playground, the gallery
      "where somebody still paints", the comms relay in the trees) — take the

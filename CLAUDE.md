@@ -86,6 +86,28 @@ Godot 2D has no shadow-casting sun, and the real mechanism is
 (v0.6.50), the title (v0.6.51). **Still untouched: ui and icons, the player
 model, world objects and textures.**
 
+**THE ART QUEUE, IN THE USER'S OWN ORDER (2026-08-08):** *"yes do the map
+then the warden, then deploy screen and so on, do whatever you think is best
+now"*. So:
+1. **The in-game map — FULL redesign**, brief and sign-off in TASKS.md B0-NEW
+   item 7. Structure APPROVED: the iso diamond (*"yes the diamond looks
+   right"*). Hand-painted pieces assembled by code — it must still show the
+   real district, your position and live vehicles, so it can never be one
+   fixed painting the way a backdrop is.
+2. **The warden** — his portrait is a 48x48 flat blocky head shown at 96x96,
+   and he is the ONLY character met face to face. Bundle it with **B2** (he
+   monologues instead of conversing) and **B8** (he faces away from the road)
+   so the toll gate lands as one finished thing rather than three open bugs.
+3. **The deploy screen** — "deploying to transit" in text over black, seen at
+   the start of every raid, and already covering the world build, so a
+   painting there costs no frames.
+4. **The debrief** — a code-drawn hit doll plus labels today, at the emotional
+   end of every raid, win or lose.
+5. **Item and weapon icons, BEFORE M2 lands** rather than retrofitted after.
+**Deliberately NOT on this queue: the world's iso sprites.** Hundreds of them,
+small and in motion, and they already read well — the payoff per hour is far
+below a portrait held at 96 px while the player reads three lines.
+
 **THE MAP SCREEN WAS BUILT TWICE.** v0.6.46 made it a drawn paper chart —
 inked edges, hatched woods, a symbol per place — and **the user rejected it**
 (*"i dont want it like that"*, *"the trees are just lines"*, *"squares and
@@ -1294,11 +1316,39 @@ then `godot_console --headless --path . --import`.
 - Deploy + boot: time-budgeted work only (~2.4ms/frame); the one remaining
   ~30ms frame is the menu→game scene swap itself (documented, accepted).
 
-- **ENGINE EFFECTS OVER REDRAWN ART** (user call 2026-08-02, standing):
+- **HAND-DRAWN ART IS SANCTIONED — THE BAR IS QUALITY, NOT MEDIUM** (user
+  call 2026-08-08, standing, and they asked for it to be written down):
+  *"im fine with hand drawn art as long as it like looks good and fits,
+  becuase those menu backdrops were hand drawn werent they? they are
+  paintings and those look really good, so if thats the case hand drawn
+  stuff is completely fine"*, then *"do whatever you think is best now
+  because were allowing hand drawn stuff, make sure thats in a .md somewhere
+  saying hand drawn art is fine as long as its done really well"*.
+  **The only condition is that it is DONE REALLY WELL.** The reference
+  standard is the six menu backdrops — and they are the proof this pipeline
+  can do it, because they ARE hand-painted: authored stroke by stroke in
+  `tools/gen_art.py` (`make_scene_den`, `make_scene_yard`,
+  `make_scene_warden`, `make_scene_underpass`, `make_scene_drain`, the
+  counter). *"Promoted" in those docstrings means promoted from the concept
+  the user picked, NOT captured from a render — a session claimed the latter
+  and it was false.* New illustration goes through the same pipeline and the
+  same Apollo palette, so rule 5 (palette purity) still binds.
+  **If it will not clear the backdrops' bar, do not ship it** — the medium is
+  approved, mediocrity is not.
+- **ENGINE EFFECTS OVER REDRAWN ART** (user call 2026-08-02, standing —
+  **READ THE RULE ABOVE FIRST, THEY INTERACT**):
   polish comes from lighting, shaders, particles and camera work, not from
   repainting sprites. It lifts everything at once and it is much faster.
   The base art stays as it is unless the user asks for a specific sprite
   to change.
+  **IT GOVERNS UNPROMPTED POLISH ONLY, AND IT HAS ALREADY BEEN MISAPPLIED
+  ONCE.** On 2026-08-08 it was cited to argue AGAINST hand-painting the map's
+  POI pictures — work the user had just asked for — which inverts it: its own
+  last clause yields the moment they ask. It is about not repainting the
+  WORLD's hundreds of small iso sprites family by family when engine work
+  lifts all of them at once. **It says nothing about illustration** — menu
+  paintings, portraits, screens, icons, the map. Never quote it back at a
+  request.
 - **Anything full-screen and gradual must dither itself.** The film on the
   layer above cannot fix banding a later pass creates.
 - **Never scale or rotate a PIXEL-ART sprite at runtime** — including
