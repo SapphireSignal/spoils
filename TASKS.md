@@ -933,6 +933,39 @@ will band by one frame on the frame you cross.
 **Verify with BOTH wall facings and an open door in the same shot**
 (`--door-pick=0` and `=1`), plus a walk along the inside of a near wall.
 
+## B13. Uneven black outlines across props *(user, 2026-08-08)*
+
+*"why do someboxes have a thicker black outline than others? make them all have
+the same thin black outline i dont want it thick"*, and *"same with anything in
+my game"* — this is DISTRICT-WIDE, not just the boxes.
+
+**MEASURED, not started.** Two things were ruled out first:
+
+1. **It is NOT a double outline pass.** `clutter_variants` pads, leans, wears
+   and crops — it never calls `outline_auto` a second time.
+2. **It is NOT the lean.** `crate_0` has lean 0.0 and reads as one of the
+   thickest.
+
+**The outline colour `090a14` is also used as FILL inside the art** — dark faces,
+plank gaps, shadowed sides — so no colour-based measurement can separate
+"outline" from "dark pixels". Every automated metric tried (run length, pixels
+not touching fill, edge thickness) is confounded by that, and each reported
+different sprites as the worst. Do not trust them; a contact sheet at 4x is what
+actually showed it.
+
+**What the sheet shows:** the taller crate variants carry a 2 px dark band along
+their bottom and lower-left edges where the shorter ones carry 1 px. So it is
+BAKED SHADING/plank structure in `make_crate` (and its equivalents), not the
+outline system.
+
+**Route:** normalise the darkest baked edge in the prop builders so the
+silhouette's dark rim is always exactly the 1 px `outline_auto` ring, and any
+interior shadow uses a value clearly above `090a14`. That is a `gen_art.py` job
+across several families, and it needs the sample -> user sign-off -> fleet
+workflow because it touches everything.
+
+**Verify with a 4x contact sheet per family**, not with a pixel metric.
+
 ## B0. Parking lots and aprons should JOIN the road network *(user, 2026-08-05)*
 
 Their words: *"lets make all parking lots or roads connected to eachother,
