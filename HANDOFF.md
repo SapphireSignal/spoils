@@ -41,6 +41,58 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-07 — the upstairs corner, and a taller second storey
+
+**Shipped: v0.6.89.** `SEC` `DOCS` `CLAIMS` `SMOKE` all pass.
+
+### The user's words
+
+- *"the top floor left corner is too far out, i want it lined up like the right
+  corner"*, then *"like the post disappears or something when going up the
+  second floor, only the left corner does that, i want it how the right corner
+  is"*.
+- *"the second floors walls seem a bit smaller in height compared to the first
+  floor, can we increase it so its the same height as the first floor"*.
+
+### Shipped
+
+1. **Corner posts: FAR is decided by INDEX, not position.** v0.6.88 used
+   `pos.y < mid_y`, and `interior.size / 2` floors — so a 6x5 room scored the
+   west corner far and the east near. Only the NORTH corner is far now; east
+   and west are far/near joins and must keep their full height. A post is far
+   only if EVERY wall meeting it is.
+2. **`STORY_H` 32 -> 40**, so the upper storey matches the ground floor. ONE
+   constant in `tools/gen_art.py`; everything downstream is written in terms
+   of it and rescaled by itself. Re-measured the regenerated sprites to prove
+   the band split did not move: upper ends 39 above base, low starts at 41,
+   string course still 40, slab lift still `_wall_h`.
+
+### Learned
+
+- **A DERIVED COORDINATE IS A SECOND SOURCE OF TRUTH AND IT WILL DISAGREE.**
+  The corner list already encodes which corner is which, by index. I threw
+  that away and recomputed it from a midpoint, which introduced a dependency
+  on room proportions that has nothing to do with the question. When the data
+  already says it, read it — do not re-derive it.
+- **A CONSTANT IS SAFE TO RETUNE ONLY IF NOTHING HARDCODES ITS VALUE.**
+  `STORY_H` 32->40 needed no other edit because every downstream number was
+  expressed symbolically. That is worth preserving: do NOT hardcode 40 in the
+  wall generator.
+- **`_wall_h` AND `_story_h` ARE NOW BOTH 40, WHICH HIDES A REAL TRAP.**
+  Swapping one for the other now compiles, runs and looks correct, and breaks
+  the moment either is retuned. CLAUDE.md carries the warning.
+
+### Picked up at
+
+1. **Still the user's call**: the room lands on identical screen pixels on both
+   storeys (art rises 40, camera rises 40). They like the camera as is and
+   dismissed the question. **Do not change the camera unless they ask.**
+2. **B0n** — upper/ground furniture still share cabinet, bookshelf, crate.
+3. Then the standing backlog: B0-NEW geometry batch, B0 parking spurs, B0b
+   broken cars, B1 sprint, B2 warden, B3 scrapyard, B4 smoker.
+
+---
+
 ## 2026-08-07 — the second floor gets its floor back
 
 **Shipped: v0.6.88.** `SEC` `DOCS` `CLAIMS` `SMOKE` all pass.

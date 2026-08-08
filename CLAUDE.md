@@ -1,4 +1,4 @@
-﻿# SPOILS — session handoff (read this first)
+# SPOILS — session handoff (read this first)
 
 ## MIGRATING FROM ANOTHER CHAT? Read these two, in this order
 
@@ -35,7 +35,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
 	 form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.88 shipped, 2026-08-07.** Milestone 1 (a walkable world) is DONE.
+**v0.6.89 shipped, 2026-08-07.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 
@@ -134,17 +134,22 @@ Deliver the intent with additive glow sprites, the way lamps already do.
   position and offset the ART, never the node. A z-band puts a thing in
   front of *everything* — that is how the upper floor ended up clipping
   over the roofline.
-- **A SECOND FLOOR SITS AT `_wall_h` (40), NEVER `_story_h` (32).** The two
-  read interchangeably and are not: `_wall_h` is one storey's face height —
-  the height of the storey you are standing ON TOP OF — while `_story_h` is
-  what the storey ABOVE adds. The upper slab, its edge lips, its furniture
-  and `player.floor_lift` all take `_wall_h`; only the ROOF takes
-  `_wall_h + _story_h` = 72, the whole face. Getting it wrong laid the entire
-  upper room 8 px below its own walls and you could see daylight through the
-  gap all the way round (v0.6.87). **The art is the arbiter and it is exact:**
-  `seg2_*_upper` ends 39 px above the wall base, `seg2_*_low` starts at 41,
-  so the string course where they meet — the wall's own floor line — is at
-  **40**. Measure the sprites before trusting either constant.
+- **A SECOND FLOOR SITS AT `_wall_h`, NEVER `_story_h` — AND SINCE v0.6.89
+  THEY ARE BOTH 40, WHICH MAKES THIS TRAP INVISIBLE.** They are not
+  synonyms and never were: `_wall_h` is one storey's face height, the height
+  of the storey you are standing ON TOP OF, while `_story_h` is what the
+  storey ABOVE adds. The upper slab, its edge lips, its furniture and
+  `player.floor_lift` all take `_wall_h`; only the ROOF takes
+  `_wall_h + _story_h` = 80, the whole face. **Swapping one for the other
+  compiles, runs, and looks right today**, because the values happen to
+  agree — and silently breaks the moment either is retuned. Getting it wrong
+  laid the entire upper room 8 px below its own walls, with daylight through
+  the gap all the way round (v0.6.87). **The art is the arbiter and it is
+  exact:** `seg2_*_upper` ends 39 px above the wall base, `seg2_*_low` starts
+  at 41, so the string course where they meet — the wall's own floor line —
+  is at **40**, and it stays at 40 for any `_story_h` because every
+  downstream number is expressed in terms of the constant (`tools/gen_art.py`
+  says which). Measure the sprites before trusting either constant.
 - **THE WALL-BAND STATES ARE THREE, AND EACH ONE COST A USER REPORT.**
   `set_wall_storey(show_low_near, show_low_far, show_upper)` — outside
   everything; on the ground floor the ground bands only; **upstairs the upper
@@ -152,20 +157,28 @@ Deliver the intent with additive glow sprites, the way lamps already do.
   load-bearing and each was broken in turn:
   - Hide the NEAR ground band upstairs (v0.6.86 hid every ground band) and the
     storey under the player is deleted — the room hangs in the air on the door
-    frame (*"the bottom of the houses are gone when i enter the second floor
-    ... it looks like its floating right now"*).
+	frame (*"the bottom of the houses are gone when i enter the second floor
+	... it looks like its floating right now"*).
   - Show the FAR ground band upstairs (v0.6.87 showed every ground band) and it
     draws straight **over the back of the upper floor**, because the slab sorts
     a storey NORTH of the walls while furniture keeps its true-cell sort and
     draws in FRONT of them — so the room loses its back rows of boards and the
-    furniture standing there floats on bare brick (*"the floor is still on the
-    ground ... you can see the furniture floating"*). That far band is the
+	furniture standing there floats on bare brick (*"the floor is still on the
+	ground ... you can see the furniture floating"*). That far band is the
     storey below your feet seen from behind: **your own floor is what should be
     hiding it.**
   FAR is derived from `_EDGE_OFFSET[side].y < 0` (never from hardcoded side
-  names, so it cannot drift), and for corner posts from `pos.y < mid_y`
-  **strictly** — the east and west posts sit level with the middle and must
-  count as NEAR or the building gains a notch out of its side upstairs.
+  names, so it cannot drift). **A POST IS FAR ONLY IF EVERY WALL MEETING IT
+  IS FAR**, and for the four corners that is decided by INDEX — 0=north is
+  the only far one; east and west are each the join between a far wall and a
+  near one and must stay full height, or the ground storey gains a notch at
+  the exact corner you are looking at. This was a position test (`pos.y <
+  mid_y`) for one release and it was **wrong on any room that is not
+  square**: `interior.size / 2` floors, so a 6x5 room scored the west corner
+  FAR and the east NEAR, and one side of the building lost its post while the
+  other kept it (user: *"the top floor left corner is too far out ... like the
+  post disappears"*). **Do not re-derive a post's side from its coordinates —
+  the index IS the geometry.**
   Doors are only ever on `yp`/`xp` (`_DOOR_INWARD` has no far entries), so a
   full-height door piece can never land on a far wall and repeat this.
 - **A colour grade must not change brightness.** Multiplying by a tint

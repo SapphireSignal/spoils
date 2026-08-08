@@ -3,6 +3,46 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.89] - 2026-08-07 - the upstairs corner, and a second storey you can stand up in
+
+### Fixed - one corner post vanished upstairs and the other did not
+*"the top floor left corner is too far out, i want it lined up like the right
+corner"*, *"like the post disappears or something when going up the second
+floor, only the left corner does that"*.
+
+Exactly that, and it was arithmetic. v0.6.88 decided which wall pieces sit
+behind your floor by comparing each corner post's position against the room's
+midpoint — and `interior.size / 2` **floors**. In a 6x5 room that puts the
+midpoint at cell-sum 5 while the **west** corner sits at 4 and the **east** at
+5, so west scored "behind the floor" and hid its ground band while east kept
+its. The two corners of the same building behaved differently for no reason but
+its proportions.
+
+A post is now "behind" only when **every wall meeting it is**, and for the four
+corners that is read off the index rather than a coordinate: north is the only
+one. East and west are each the join between a far wall and a near one, so they
+stay full height — which is what stops the corner stepping inward.
+
+### Changed - the second storey is as tall as the ground floor
+*"the second floors walls seem a bit smaller in height compared to the first
+floor, can we increase it so its the same height as the first floor"*.
+
+It was 32 px against the ground floor's 40, so the upper storey was the
+**shorter** of the two — part of why standing up there read as the same room
+recoloured. `STORY_H` is 40 now and buildings are 8 px taller.
+
+One constant, no other edits: everything downstream is expressed in terms of it
+and rescaled on its own. Re-measured off the regenerated sprites to prove it —
+`seg2_*_upper` still ends **39 px** above the wall base and `seg2_*_low` still
+starts at **41**, so the string course, the floor line and the slab lift are all
+still 40 and the room stays sealed. The post's band cut measures to a fixed
+`43 - bottoms[x]` above its own origin, which is why it did not drift either.
+
+**Costs the layout nothing.** `--probe-world`: DOORS 16, LAMPS 53/15,
+VEHICLES 30, UPPERS 6 floorless=0, on identical cells. The art regen touched 79
+files — the two-storey wall and post pieces plus the manifest — and deleted
+none.
+
 ## [0.6.88] - 2026-08-07 - the second floor gets its floor back
 
 ### Fixed - the upper room's floor was being covered by its own back walls

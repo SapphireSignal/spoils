@@ -70,7 +70,7 @@ var _manifest: Dictionary = {}
 var _floor_coords: Dictionary = {}
 var _families: Dictionary = {}
 var _wall_h := 40      # face height of ONE storey — and the SECOND FLOOR'S HEIGHT
-var _story_h := 32     # extra face height a second storey adds on top
+var _story_h := 40     # extra face height a second storey adds on top
 var _floor_layer: TileMapLayer
 var _fringe_layer: TileMapLayer
 var _road_rot: Dictionary = {}   # road cells worn back to bare earth
@@ -350,7 +350,7 @@ func _load_manifest() -> Dictionary:
 	_floor_coords = data["floors"]
 	_families = data["families"]
 	_wall_h = int(data["wall_h"])
-	_story_h = int(data.get("story_h", 32))
+	_story_h = int(data.get("story_h", 40))
 	return data
 
 
@@ -2152,9 +2152,14 @@ func _build_shell(plot: Dictionary) -> void:
 			for side in sides:
 				var center := _floor_layer.map_to_local(cell)
 				var verts: Array = _EDGE_VERTS[side]
+				# A POST IS FAR ONLY IF EVERY WALL MEETING IT IS FAR. The value
+				# stored against a post position is that running AND — see the
+				# corner block below for why it cannot be a position test.
+				var side_far := (_EDGE_OFFSET[side] as Vector2).y < 0.0
 				if side == door_side and cell == door_cell:
 					for v in verts:
-						posts[(center + (v as Vector2)).round()] = true
+						var dk := (center + (v as Vector2)).round()
+						posts[dk] = bool(posts.get(dk, true)) and side_far
 					# a REAL door, closed in the wall plane; F opens it
 					var leaf := "wood" if kind == "house" else "metal"
 					var axis: String = _EDGE_AXIS[side]
@@ -2198,7 +2203,8 @@ func _build_shell(plot: Dictionary) -> void:
 				if ruined and Vector2(cell - ruin_corner).length() < 3.0:
 					if _rng.randf() < 0.25:
 						for v in verts:
-							posts[(center + (v as Vector2)).round()] = true
+							var rk := (center + (v as Vector2)).round()
+							posts[rk] = bool(posts.get(rk, true)) and side_far
 						continue
 					piece = "seg_%s_%s_broken_%d" % [style, axis2, _rng.randi_range(0, 1)]
 				elif _rng.randf() < (0.42 if stories == 2 else 0.3):
@@ -2235,18 +2241,23 @@ func _build_shell(plot: Dictionary) -> void:
 		[interior.end - Vector2i(1, 1), Vector2(0, 16)],
 		[Vector2i(interior.position.x, interior.end.y - 1), Vector2(-32, 0)],
 	]
-	for entry in corner_cells:
+	# ONLY THE NORTH CORNER IS FAR. Index 0 is north, 1 east, 2 south, 3 west,
+	# and east/west are each the join between a far wall and a near one — the
+	# post has to stay full height there or the ground storey gains a notch at
+	# the exact corner you are looking at.
+	#
+	# THIS USED TO BE A POSITION TEST (`pos.y < mid_y`) AND IT WAS WRONG ON ANY
+	# ROOM THAT IS NOT SQUARE. `interior.size / 2` floors, so a 6x5 room puts
+	# the midpoint at cell-sum 5 while the west corner sits at 4 and the east at
+	# 5 — west scored FAR, east NEAR, and the two corners of the same building
+	# behaved differently for no reason but its proportions (user: "the top
+	# floor left corner is too far out, i want it lined up like the right
+	# corner ... like the post disappears"). The index is the geometry; a
+	# derived coordinate is a second source of truth that can disagree with it.
+	for ci in corner_cells.size():
+		var entry: Array = corner_cells[ci]
 		var pos := _floor_layer.map_to_local(entry[0] as Vector2i) + (entry[1] as Vector2)
-		posts[pos.round()] = true
-	# a post has no side of its own — it is the join between two — so FAR is
-	# decided by where it stands: strictly north of the room's middle and the
-	# floor is in front of it. STRICTLY, on purpose. The east and west corner
-	# posts sit level with the middle and count as NEAR, which is what keeps
-	# the ground storey unbroken at the two corners you can actually see; call
-	# them far and the building gains a notch out of its side every time you
-	# go upstairs.
-	var mid_y := _floor_layer.map_to_local(
-		interior.position + interior.size / 2).y
+		posts[pos.round()] = ci == 0
 	for pos in posts:
 		var post_node := _add_prop("%s_%s" % [post_prefix, style], pos as Vector2)
 		if stories == 2:
@@ -2255,7 +2266,7 @@ func _build_shell(plot: Dictionary) -> void:
 			# (8,76) - so swapping to it displaces every corner. The low piece
 			# shares post2's canvas and origin.
 			_register_low_wall(low_walls, post_node, "post2_%s_low" % style,
-				(pos as Vector2).y < mid_y)
+				bool(posts[pos]))
 
 	for y in range(rect.position.y, rect.end.y):
 		for x in range(rect.position.x, rect.end.x):

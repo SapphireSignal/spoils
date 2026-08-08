@@ -206,6 +206,10 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.89", [
+		"the left corner of a two storey building no longer loses its post when you go upstairs, so it lines up with the right one. it was down to the shape of the room - a room deeper than it is wide put its west corner on the wrong side of the halfway line, and only the west corner",
+		"the second storey is as tall as the ground floor now. it was eight pixels shorter, which made the upstairs room the smaller of the two",
+	]],
 	["v0.6.88", [
 		"the second floor has its floor back. the two walls behind you were drawing over the back of the room, so the boards stopped short and any furniture standing there was left floating on bare brick. those two walls are the storey below your feet seen from behind - your own floor hides them now, the way it should",
 		"the walls between you and the street still stand their full height while youre up there, so the house doesnt look like its hanging in the air",

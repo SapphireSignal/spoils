@@ -986,7 +986,19 @@ def _seg_brick(rng: random.Random, base, mortar, i: int, fy: int) -> tuple:
         return mortar
     return base
 
-STORY_H = 32  # extra face height of a second story (roof lifts by this too)
+# EQUAL TO WALL_H ON PURPOSE (user: "the second floors walls seem a bit smaller
+# in height compared to the first floor, can we increase it so its the same
+# height as the first floor"). It was 32 against the ground floor's 40, so the
+# upper storey was the SHORTER of the two - part of why standing up there read
+# as the same room recoloured.
+#
+# Everything downstream is expressed in terms of this constant and rescales on
+# its own: the band split still lands on the string course at WALL_H above the
+# base (the post's `lift = STORY_H + 1` cut measures to a fixed 43 - bottoms[x]
+# above its origin, which is why it does not drift), the roof still lifts by
+# WALL_H + STORY_H, and the upper floor still sits at WALL_H. Do NOT hardcode
+# 40 anywhere downstream - that is what makes this one line safe to change.
+STORY_H = 40  # extra face height of a second story (roof lifts by this too)
 
 def _draw_seg_window(c: Canvas, ox: int, oy: int, axis: str,
                      face_h: int, wi: int, top: int, w: int, h: int,
