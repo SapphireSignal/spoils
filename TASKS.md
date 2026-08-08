@@ -1269,6 +1269,74 @@ light pools must come out pixel-identical — **prove it with a diff**, not by
 eye. A pass that rebuilt more than was asked has been rejected on this project
 before and had to be reverted.
 
+## B14. Dust off the player's boots *(user, 2026-08-08)*
+
+*"can you make small dust clouds kick up from the player's boots as they run
+across the ground"*. Not started.
+
+**It belongs to the ENGINE-EFFECTS half, not the art half** — a particle
+emitter on the player, in the same family as `scripts/motes.gd`.
+
+Traps this project has already paid for, all of which apply directly:
+- **NEVER scale or rotate a pixel-art particle** (rule: `motes.gd` pins
+  `scale_min`/`scale_max` to 1.0 for exactly this reason). Bake puff variants
+  instead. The SOFT-ALPHA carve-out that lets the LZ beacon squash its wash
+  does not extend to a hard-edged dust sprite.
+- **Emit in WHOLE pixels** and keep the true position in its own float — see
+  the rounding trap that silently froze the menu birds and the counter rat.
+- **The surface should decide it.** `player.gd` already resolves a footstep
+  KIND per surface for `Sfx.play_step(kind, quiet)`; reuse that rather than
+  adding a second surface test, and emit nothing on wet or paved ground where
+  boots would not raise dust.
+- Tie the rate to actual speed and stance — prone and crouch should not puff —
+  and remember sprint (B1) does not exist yet, so "run" today means walk.
+- Measure the node cost against the perf baseline before shipping: the
+  district already carries ~9.8k nodes.
+
+## B15. Footprints left behind *(user, 2026-08-08)*
+
+*"add like 1 or 2 footprints that the character leaves when walking around"* —
+one or two, i.e. a SHORT trail that fades, not a permanent track. Not started.
+Pairs naturally with **B14** (boot dust): same trigger, same surface test.
+
+- **A decal, not a particle.** `_flat` already exists as the layer for things
+  that lie ON the floor under everything standing on it (world_builder.gd:189)
+  — that is where a footprint belongs, and it is why cables render correctly.
+  A z_index of -1 inside the y-sorted world sorts GLOBALLY and would put the
+  print behind the floor tilemap entirely.
+- **Alternate left and right** off the walk cycle, offset to either side of
+  the travel direction, and orient to the 8 facings by BAKED variants —
+  runtime rotation is banned.
+- Fade the oldest out and cap the count hard; a print per step across a
+  256x256 district is an unbounded node leak, and `--leakcheck` must still
+  report `nodes+0 objects+0 orphans=0`.
+- Same surface gating as B14: dirt and dust take a print, wet asphalt does
+  not.
+
+## B16. Wind debris blowing across the world *(user, 2026-08-08)*
+
+*"Wind debris: Blow occasional pixel leaves, tumbleweeds, or scrap paper
+across the world"*. Not started. Engine-effects half, and it completes a set:
+the world already has falling leaves, rain, dust motes and foliage sway, but
+nothing travels ACROSS it.
+
+- **There is already a wind value to obey** — `environment_system.gd` runs
+  `_fog_wind`, and `sway.gdshader` moves foliage. Debris drifting one way
+  while the trees lean the other would read as a bug. Drive them from one
+  source.
+- **Reuse the leaf colour rule.** `_maybe_shed_leaves` derives leaf colour
+  from the variant name; a green district blowing red leaves is a bug this
+  project has already fixed once (see B0-NEW item 9, still open, and measure
+  `_leaf_near`'s encoding before adding a second colour path).
+- Whole-pixel motion, no runtime rotation or scale — bake the tumble as
+  frames, the way `menu_spark` bakes its 5-frame sheet.
+- **It must not be one sprite family repeated**: the standing NO VISUAL
+  REPETITION rule. Leaves, paper and a tumbleweed are three different things
+  with different speeds and different amounts of lift.
+- Cheapest correct home is ONE camera-riding emitter like `scripts/motes.gd`,
+  not per-cell spawners — motes.gd is the reference for following in whole
+  world pixels without breaking the grid.
+
 ## B1. Sprint *(user)*
 
 Left shift, **hold-or-toggle like crouch**. Needs a run cycle for all 8

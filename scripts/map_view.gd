@@ -61,6 +61,7 @@ const BUILDING := Color("577277")                # civic / warehouse
 const BUILDING_WARM := Color("7a4841")           # houses
 const RING := Color("a53030")                    # the wire
 const ME := Color("cf573c")                      # you. The loudest thing here.
+const ME_RING := Color("4f8fba")                 # ...and the pulse around you
 const CAR_DOT := Color("de9e41")                 # amber
 const TRUCK_DOT := Color("4f8fba")               # blue, so the two read apart
 const LABEL := Color("ebede9")                   # place names, light on dark
@@ -217,12 +218,14 @@ func _build_poi_list(info: Dictionary) -> void:
 			if area > best_area:
 				best_area = area
 				best = i
-		for i in rects.size():
-			var r: Array = rects[i]
+		# ONE ENTRY PER ZONE, not one per rect. A zone repeats over several
+		# blocks and labelling each printed the same word twice on the map.
+		if best >= 0:
+			var r: Array = rects[best]
 			_pois.append({"name": zone_name,
 				"rect": Rect2(float(r[0]), float(r[1]), float(r[2]), float(r[3])),
 				"blurb": blurbs.get(zone_name, zone_name), "label": true,
-				"glyph": i == best})
+				"glyph": true})
 
 
 func _build_ui() -> void:
@@ -376,18 +379,15 @@ func _build_ui() -> void:
 	_transit_root.add_child(side)
 	var district_tag := Label.new()
 	district_tag.text = "district: transit"
-	district_tag.add_theme_color_override("font_color", UITheme.TEXT_DIM)
-	district_tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_map_chrome_text(district_tag)
 	side.add_child(district_tag)
 	_status = Label.new()
-	_status.add_theme_color_override("font_color", UITheme.TEXT_DIM)
-	_status.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_map_chrome_text(_status)
 	side.add_child(_status)
 	_hint = Label.new()
 	_hint.text = "drag to pan\nwheel to zoom\npress m to close"
 	_hint.custom_minimum_size = Vector2(190, 0)
-	_hint.add_theme_color_override("font_color", UITheme.TEXT_DIM)
-	_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_map_chrome_text(_hint)
 	side.add_child(_hint)
 
 	# ---- shared tooltip --------------------------------------------------
@@ -405,7 +405,13 @@ func _set_mode(mode: String) -> void:
 	_transit_root.visible = mode == "transit"
 	_hover_key = ""
 	_tooltip.visible = false
-	if mode == "transit":
+	if mode == "transit" and not _ever_centred:
+		# ONLY THE FIRST TIME. Where you left the map is where it should open
+		# (user, 2026-08-08: "if i zoom in on the map, or drag it around it
+		# should save it if i close my map and open it back up"). Re-framing on
+		# every open threw away a zoom the player had just set, which is
+		# especially annoying because the map is a thing you check repeatedly
+		# while walking to one place.
 		_recenter = true
 	_redraw_all()
 
@@ -605,6 +611,19 @@ func _update_tooltip(delta: float) -> void:
 		_tooltip.position = at.round()
 
 
+func _map_chrome_text(label: Label) -> void:
+	## WHITE WITH A THIN OUTLINE (user, 2026-08-08: "make this text white",
+	## "with a really small outline"). It was TEXT_DIM, which is a mid grey —
+	## fine on a solid panel, weak against the map's dark surround.
+	##
+	## The outline is ONE pixel on purpose: the font is a 5px-x-height bitmap
+	## cut, and anything thicker closes up the counters in "a", "e" and "o".
+	label.add_theme_color_override("font_color", LABEL)
+	label.add_theme_color_override("font_outline_color", HALO)
+	label.add_theme_constant_override("outline_size", 1)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+
 func _cell_to_bake(cell: Vector2) -> Vector2:
 	## Cell space -> pixels in the baked texture, in the GAME'S projection. This
 	## is the same arithmetic `_map_iso_px` uses in world_builder, written
@@ -629,6 +648,11 @@ func _draw_district() -> void:
 	# opened panned to nowhere because of it)
 	if _recenter and _canvas.size.x > 100.0:
 		_recenter = false
+		# ...AND NEVER AGAIN THIS RAID. `_ever_centred` guarded both callers
+		# already but NOTHING EVER SET IT, so the fit-to-window ran on every
+		# single open and threw away whatever zoom and pan the player had left
+		# it at. A flag that is only ever read is not a guard.
+		_ever_centred = true
 		var play := _playable()
 		# fill the window: the map is the point of this screen
 		_zoom = minf(_canvas.size.x / (play.size.x + 8.0),
@@ -743,64 +767,101 @@ func _draw_poi_glyph(on: Control, name: String, at: Vector2) -> void:
 
 
 func _draw_poi_labels(on: Control) -> void:
-	# POI names ON the map — no boxes any more (user: "remove all of the
-	# squares"), just type with a dark halo so it reads over anything.
-	# Collision-yield: a name that would land on one already placed is
-	# dropped rather than stacked.
-	var drawn: Array[Rect2] = []
-	for poi in _pois:
-		if not bool(poi["label"]):
+	## TWO PASSES, AND THE MARKER ALWAYS WINS.
+	##
+	## This placed a name and its symbol as ONE unit and dropped BOTH when they
+	## clashed with something already down, so a crowded corner silently lost
+	## whole places. The town's marker sits almost exactly on the courtyard's, so
+	## the town lost its icon; the playground lost icon and name together (user:
+	## "theres no playground or icon for town").
+	##
+	## A missing name is a small loss — the place is still marked and still
+	## clickable. A missing MARKER means the place is not on the map at all.
+	## So markers are placed first and NEVER yield; only names give way.
+	if _bake_size == Vector2.ZERO:
+		return
+	var map_rect := Rect2(_pan, _bake_size * _zoom)
+	var lim := map_rect.intersection(Rect2(Vector2.ZERO, _canvas.size))
+	# NOTHING HANGS OFF THE EDGE (user: "the toll gate extraction icon and text
+	# isnt inside of the map, make sure everythign is inside"). The toll gate
+	# sits hard against the south edge and was placed straight off its cell.
+	var clamp_ok := lim.size.x > 80.0 and lim.size.y > 80.0
+	var taken: Array[Rect2] = []
+	var placed: Dictionary = {}
+	for i in _pois.size():
+		var poi: Dictionary = _pois[i]
+		if not bool(poi.get("glyph", false)):
 			continue
-		var text := str(poi["name"])
-		var has_glyph := bool(poi.get("glyph", false))
 		var centre: Vector2 = _cell_to_screen((poi["rect"] as Rect2).get_center())
+		if clamp_ok:
+			centre.x = clampf(centre.x, lim.position.x + 12.0, lim.end.x - 12.0)
+			centre.y = clampf(centre.y, lim.position.y + 12.0,
+				lim.end.y - float(_font_size) - 18.0)
+		centre = centre.round()
+		# two markers on one spot help nobody — NUDGE, never drop
+		for attempt in 5:
+			var clash := false
+			for r in taken:
+				if r.intersects(Rect2(centre - Vector2(11.0, 11.0),
+						Vector2(22.0, 22.0))):
+					clash = true
+					break
+			if not clash:
+				break
+			centre.y -= 14.0
+		_draw_poi_glyph(on, str(poi["name"]), centre)
+		taken.append(Rect2(centre - Vector2(11.0, 11.0), Vector2(22.0, 22.0)))
+		placed[i] = centre
+	for i in _pois.size():
+		var poi2: Dictionary = _pois[i]
+		if not bool(poi2["label"]):
+			continue
+		var text := str(poi2["name"])
+		# THE SAFEHOUSE IS NAMED LIKE EVERYWHERE ELSE (user, 2026-08-08: "theres
+		# no safehouse text"). It was skipped on the theory that the live "me"
+		# marker sits on it at spawn and the two would print through each other
+		# — but "me" labels ABOVE its pin and a place labels BELOW its plaque,
+		# so they separate on their own, and a home you cannot find by name is
+		# a worse trade than a crowded first few seconds.
+		var has_glyph: bool = placed.has(i)
+		var anchor: Vector2 = placed.get(i,
+			_cell_to_screen((poi2["rect"] as Rect2).get_center()))
 		var tw := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1,
 			_font_size).x
-		# the name sits UNDER its symbol; a region has no symbol and keeps the
-		# centred placement it always had
-		var drop := 16.0 if has_glyph else float(_font_size) * 0.5
-		var pos := (centre + Vector2(-tw * 0.5, drop)).round()
-		# NOTHING HANGS OFF THE EDGE (user: "the toll gate extraction icon and
-		# text isnt inside of the map, make sure everythign is inside"). The
-		# toll gate sits hard against the south edge, and a label was placed
-		# straight off its cell with no regard for its own width. Clamp both the
-		# name and the marker into the canvas.
-		var map_rect := Rect2(_pan, _bake_size * _zoom)
-		var lim := map_rect.intersection(Rect2(Vector2.ZERO, _canvas.size))
-		if lim.size.x > tw + 8.0 and lim.size.y > float(_font_size) * 3.0:
-			pos.x = clampf(pos.x, lim.position.x + 3.0,
-				lim.end.x - tw - 3.0)
-			pos.y = clampf(pos.y, lim.position.y + float(_font_size) + 2.0,
-				lim.end.y - 3.0)
-			centre.x = clampf(centre.x, lim.position.x + 11.0, lim.end.x - 11.0)
-			centre.y = clampf(centre.y, lim.position.y + 11.0,
-				lim.end.y - float(_font_size) - 14.0)
-			pos = pos.round()
-		var bounds := Rect2(pos - Vector2(3.0, float(_font_size)),
-			Vector2(tw + 6.0, float(_font_size) + 4.0))
-		if has_glyph:
-			# the symbol is part of what must not be landed on, or a
-			# neighbour's name prints straight through it
-			bounds = bounds.merge(Rect2(centre - Vector2(11.0, 11.0),
-				Vector2(22.0, 22.0)))
-		var clash := false
-		for r in drawn:
-			if r.intersects(bounds):
-				clash = true
-				break
-		if clash:
-			continue
-		drawn.append(bounds)
-		if has_glyph:
-			_draw_poi_glyph(on, text, centre)
-		# THE SAFEHOUSE GETS NO NAME. You spawn on it, so the live "me" marker
-		# sits on top of it for the first stretch of every raid and the two
-		# labels printed straight through each other. Its red home glyph and
-		# the red ring round its footprint already make it the one unmistakable
-		# building on the sheet, and the hover blurb still says what it is.
-		if text == "safehouse":
-			continue
-		_halo_text(on, pos, text, LABEL)
+		# 21 CLEARS THE PLAQUE. The marker's own box reaches 11 px below its
+		# centre and a name's box starts a font-height above its baseline, so a
+		# smaller drop makes every label collide with its OWN marker and every
+		# name in the district disappears.
+		var drop := 21.0 if has_glyph else float(_font_size) * 0.5
+		# FOUR PLACES TO TRY BEFORE GIVING UP. Under the marker is the natural
+		# spot, but the town's marker sits almost on the courtyard's, so a
+		# single candidate meant the town had an icon and no name at all. Any
+		# side of the marker reads fine; no name at all does not.
+		var tries: Array[Vector2] = [
+			Vector2(-tw * 0.5, drop),           # under it
+			Vector2(-tw * 0.5, -14.0),          # over it
+			Vector2(14.0, 4.0),                 # to the right
+			Vector2(-tw - 14.0, 4.0),           # to the left
+		]
+		for cand in tries:
+			var pos := (anchor + cand).round()
+			if clamp_ok:
+				pos.x = clampf(pos.x, lim.position.x + 3.0, lim.end.x - tw - 3.0)
+				pos.y = clampf(pos.y, lim.position.y + float(_font_size) + 2.0,
+					lim.end.y - 3.0)
+				pos = pos.round()
+			var bounds := Rect2(pos - Vector2(3.0, float(_font_size)),
+				Vector2(tw + 6.0, float(_font_size) + 4.0))
+			var clash2 := false
+			for r in taken:
+				if r.intersects(bounds):
+					clash2 = true
+					break
+			if clash2:
+				continue
+			taken.append(bounds)
+			_halo_text(on, pos, text, LABEL)
+			break
 
 
 func _draw_markers() -> void:
@@ -860,10 +921,15 @@ func _draw_markers() -> void:
 	var p := _cell_to_screen(cell)
 	var beat := 0.5 + 0.5 * sin(_time_accum * 3.4)
 	var ring_r := 9.0 + 5.0 * beat
-	_markers.draw_circle(p, ring_r, Color(ME.r, ME.g, ME.b, 0.14 + 0.16 * (1.0 - beat)),
+	# THE PULSE IS BLUE, THE PIN STAYS WARM (user, 2026-08-08: "make the
+	# pulsating thing going around 'me' marker blue"). It also separates two
+	# things that were the same colour: the ring is where you ARE, and warm red
+	# is reserved for home and for the pin itself.
+	_markers.draw_circle(p, ring_r,
+		Color(ME_RING.r, ME_RING.g, ME_RING.b, 0.16 + 0.18 * (1.0 - beat)),
 		true, -1.0, true)
 	_markers.draw_arc(p, ring_r, 0.0, TAU, 28,
-		Color(ME.r, ME.g, ME.b, 0.55), 1.5, true)
+		Color(ME_RING.r, ME_RING.g, ME_RING.b, 0.70), 1.5, true)
 	# WHICH WAY YOU'RE FACING (user: "a circle i cant really tell"). The
 	# player's sheet rows are E,SE,S,SW,W,NW,N,NE, so the facing index maps
 	# straight onto screen degrees — and on an iso map screen direction is
