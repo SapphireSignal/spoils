@@ -139,6 +139,8 @@ func _ready() -> void:
 			_probe_terrain.call_deferred()
 		elif arg.begins_with("--bake-map="):
 			_bake_map.call_deferred(arg.trim_prefix("--bake-map="))
+		elif arg == "--probe-groundfx":
+			_probe_groundfx.call_deferred()
 		elif arg.begins_with("--film-walk="):
 			_film_walk.call_deferred(arg.trim_prefix("--film-walk="))
 		elif arg.begins_with("--film="):
@@ -1677,6 +1679,13 @@ func _shot(shot_name: String) -> void:
 			var map_view := get_tree().current_scene.get_node_or_null("MapView")
 			if map_view != null:
 				map_view.call("set_open", true)
+				# --poi=<name>: open a place's card so the CLICKED window can be
+				# shot — there is no way to click in a headless capture, and an
+				# unverified window is one nobody has ever seen render
+				for a in OS.get_cmdline_user_args():
+					if a.begins_with("--poi="):
+						map_view.call("_show_poi_card",
+							a.trim_prefix("--poi=").replace("_", " "))
 				map_view.call("_set_mode", wanted)
 				for i in 4:
 					await get_tree().process_frame
@@ -2485,6 +2494,108 @@ func _terrain_stem(tile_name: String) -> String:
 	if tail.is_valid_int():
 		return tile_name.substr(0, cut)
 	return tile_name
+
+
+func _probe_groundfx() -> void:
+	## DO THE EFFECTS ACTUALLY FIRE? Every one of these is easy to ship dead —
+	## this project has shipped a smoke test that touched no door and two menu
+	## creatures that never moved a pixel, all of which LOOKED fine in code.
+	##
+	## So: walk the player across real ground with `_shove` (never velocity +
+	## move_and_slide — that scales by frame delta and a headless run is
+	## uncapped, so the player travels a fraction of a pixel), then count what
+	## actually became visible.
+	await _ensure_game_scene()
+	var main_node := get_tree().current_scene
+	var pl := _find_player()
+	var fx := main_node.get_node_or_null("World/GroundFX")
+	if fx == null:
+		fx = main_node.find_child("GroundFX", true, false)
+	var birds := main_node.find_child("RoostBirds", true, false)
+	if pl == null or fx == null or birds == null:
+		printerr("GROUNDFX FAIL: player=%s fx=%s birds=%s"
+			% [str(pl), str(fx), str(birds)])
+		get_tree().quit(1)
+		return
+	var info: Dictionary = main_node.get("world_info")
+	var fl := main_node.get_node_or_null("Floor") as TileMapLayer
+
+	# STAND ON GROUND THAT ACTUALLY TAKES A PRINT. The effect is deliberately
+	# gated to soft surfaces, so testing it on asphalt would prove nothing and
+	# read as a pass.
+	var soft := Vector2i(-1, -1)
+	var coords: Dictionary = info.get("floor_coords", {})
+	var by_coord: Dictionary = {}
+	for tile_name in coords:
+		var tc: Array = coords[tile_name]
+		by_coord[Vector2i(int(tc[0]), int(tc[1]))] = tile_name
+	var cells: Vector2i = info.get("cells", Vector2i.ZERO)
+	for y in range(WorldBuilder.BARRIER_INSET, cells.y - WorldBuilder.BARRIER_INSET):
+		for x in range(WorldBuilder.BARRIER_INSET, cells.x - WorldBuilder.BARRIER_INSET):
+			var nm: String = by_coord.get(fl.get_cell_atlas_coords(Vector2i(x, y)), "")
+			if nm.begins_with("dirt_") or nm.begins_with("forest_"):
+				soft = Vector2i(x, y)
+				break
+		if soft.x >= 0:
+			break
+	if soft.x < 0:
+		printerr("GROUNDFX FAIL: no soft ground found to test on")
+		get_tree().quit(1)
+		return
+	pl.global_position = fl.map_to_local(soft)
+	await get_tree().process_frame
+
+	var puffs := 0
+	var prints := 0
+	for step in 90:
+		_shove(pl, Vector2(1.0, 0.0), 4)
+		await get_tree().process_frame
+		for child in fx.get_children():
+			var s := child as Sprite2D
+			if s != null and s.visible:
+				if s.z_index < 0:
+					prints += 1
+				else:
+					puffs += 1
+	print("GROUNDFX cell=%d,%d puff_frames=%d print_frames=%d"
+		% [soft.x, soft.y, puffs, prints])
+
+	# DEBRIS: it trickles in on its own clock, so give it real seconds
+	var debris := 0
+	for i in 240:
+		await get_tree().process_frame
+		for child2 in fx.get_children():
+			var s2 := child2 as Sprite2D
+			if s2 != null and s2.visible and s2.z_index >= 0:
+				debris += 1
+	print("GROUNDFX debris_frames=%d" % debris)
+
+	# BIRDS: park the player on a roost and see one leave
+	var perched := 0
+	var first: Vector2 = Vector2.ZERO
+	for child3 in birds.get_children():
+		var b := child3 as Sprite2D
+		if b != null and b.visible:
+			if perched == 0:
+				first = b.global_position
+			perched += 1
+	if perched > 0:
+		pl.global_position = first + Vector2(20.0, 10.0)
+		for i in 30:
+			await get_tree().process_frame
+	# READ THE STATE, NOT THE DISTANCE. A flushed bird leaves at ~60 px/s, and
+	# a headless frame is a fraction of a millisecond — measuring "has it moved
+	# 40 px yet" after thirty frames tests the clock, not the behaviour.
+	var flying := 0
+	var states = birds.get("_state")
+	if states != null:
+		for st in states:
+			if int(st) != 0:
+				flying += 1
+	print("GROUNDFX roosted=%d flushed=%d" % [perched, flying])
+	var ok := puffs > 0 and prints > 0 and perched > 0 and flying > 0
+	print("GROUNDFX %s" % ("PASS" if ok else "FAIL"))
+	get_tree().quit(0 if ok else 1)
 
 
 func _bake_map(shot_name: String) -> void:

@@ -35,7 +35,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
 	 form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.106 shipped, 2026-08-08.** Milestone 1 (a walkable world) is DONE.
+**v0.6.107 shipped, 2026-08-08.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 
@@ -361,7 +361,7 @@ Deliver the intent with additive glow sprites, the way lamps already do.
   either for a different size resamples and blurs it. If text must be
   smaller, draw a new cut in `tools/gen_font.py`.
 - **Perf baseline:** 240 fps, ~4.7 ms worst frame, **~9.8k nodes** in a raid
-  (9766 measured at v0.6.105; 9763 at v0.6.103), day and storm-night alike.
+  (9862 measured at v0.6.107; 9766 at v0.6.105), day and storm-night alike.
   (Was ~8.5k;
   v0.6.103's wall sort-strips added **+1,236 nodes** — four render strips
   under every NEAR wall piece so the sort can follow the wall's diagonal;

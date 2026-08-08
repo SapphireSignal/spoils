@@ -316,7 +316,9 @@ func _process(delta: float) -> void:
 		return
 
 	var input_vec := Vector2.ZERO
-	if not dead and not extracting and not Ui.blocks_gameplay():
+	# MOVEMENT, not gameplay: the map is a window you can walk under. The wheel
+	# zoom further down still uses blocks_gameplay, so the map keeps the wheel.
+	if not dead and not extracting and not Ui.blocks_movement():
 		# stances: prone (Z, toggle) beats crouch; taking a crouch input
 		# stands you back up out of prone
 		if Input.is_action_just_pressed("prone"):

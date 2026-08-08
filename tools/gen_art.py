@@ -5871,9 +5871,17 @@ def make_toll_booth() -> tuple[Canvas, tuple, list]:
     return cr, orr, ["diamond", 15.0, 8.0]
 
 
-def make_toll_barrier(raised: bool) -> tuple[Canvas, tuple, list | None]:
+def make_toll_barrier(raised: bool, axis: str = "x") -> tuple[Canvas, tuple,
+                                                              list | None]:
     """The boom across the road: a striped pole on a counterweight post.
-    Down means pay up; up means somebody already did."""
+    Down means pay up; up means somebody already did.
+
+    `axis` is which ISO AXIS the boom lies along when it is down. A lowered
+    boom is drawn descending to the right, which crosses a road running along
+    y — move the gate onto a road running along x and the same sprite lies
+    ALONG the asphalt instead of across it. "y" mirrors it. Raised needs no
+    variant: a boom standing up is vertical either way.
+    """
     c = Canvas(72, 68)
     px, py = 8, 50
     for k in range(14):                       # the post
@@ -5897,8 +5905,123 @@ def make_toll_barrier(raised: bool) -> tuple[Canvas, tuple, list | None]:
         for k in range(4):                    # the far rest post
             c.set(px + 48, py - 11 + 23 + k, C("394a50"))
     c.outline_auto()
+    if axis == "y" and not raised:
+        # mirror about the POST, so the pivot stays put and only the arm
+        # swings to the other iso axis
+        c = c.mirrored()
+        px = c.w - 1 - px
     cr, orr = crop_canvas(c, (px, py))
     return cr, orr, None
+
+
+def make_boot_puff(step: int) -> tuple[Canvas, tuple, list | None]:
+    """Dust off a boot (user: "small dust clouds kick up from the player's
+    boots as they run across the ground"). Four BAKED sizes rather than one
+    sprite scaled up — runtime scale is banned on pixel art, so a puff grows
+    by swapping frames."""
+    c = Canvas(14, 10)
+    rng = random.Random(4400 + step)
+    r = 1.6 + step * 1.15
+    cx, cy = 7, 6
+    for y in range(10):
+        for x in range(14):
+            dx, dy = (x - cx) / r, (y - cy) / (r * 0.55)
+            d = dx * dx + dy * dy
+            if d > 1.0:
+                continue
+            # thins as it grows, so the last frame is a ghost rather than a
+            # solid blob popping out of existence
+            if rng.random() < 0.20 + 0.16 * step:
+                continue
+            c.set(x, y, C("819796") if d < 0.45 else C("577277"))
+    return crop_canvas(c, (cx, cy)) + (None,)
+
+
+def make_footprint(facing: int) -> tuple[Canvas, tuple, list | None]:
+    """One boot print, pressed into soft ground. BAKED PER FACING — eight of
+    them — because runtime rotation breaks the pixel grid.
+
+    Drawn as a dark scuff rather than a cartoon sole: at this size a shaped
+    print reads as noise, and what actually sells it is the direction the
+    long axis runs.
+    """
+    c = Canvas(10, 8)
+    ang = facing * math.pi / 4.0
+    dx, dy = math.cos(ang), math.sin(ang) * 0.5      # iso foreshortening
+    cx, cy = 5, 4
+    for k in range(-2, 3):
+        x = int(round(cx + dx * k * 0.9))
+        y = int(round(cy + dy * k * 0.9))
+        c.set(x, y, C("341c27") if abs(k) < 2 else C("4d2b32"))
+        c.set(x, y + 1, C("4d2b32"))
+    return crop_canvas(c, (cx, cy)) + (None,)
+
+
+def make_wind_debris(kind: str, frame: int) -> tuple[Canvas, tuple, list | None]:
+    """Litter the wind pushes across the district (user: "Blow occasional
+    pixel leaves, tumbleweeds, or scrap paper across the world").
+
+    THREE DIFFERENT THINGS, not one sprite repeated — the standing no-visual-
+    repetition rule. A leaf flutters, paper tumbles flat and catches the
+    light, a weed ball rolls. Each carries baked frames so nothing rotates at
+    runtime.
+    """
+    c = Canvas(10, 8)
+    if kind == "leaf":
+        col = [C("be772b"), C("884b2b"), C("de9e41")][frame % 3]
+        pts = [(4, 3), (5, 3), (6, 4), (5, 4), (4, 4)] if frame % 2 == 0 \
+            else [(4, 3), (5, 4), (6, 4), (5, 5)]
+        for (x, y) in pts:
+            c.set(x, y, col)
+        c.set(3, 4 if frame % 2 else 3, C("602c2c"))
+    elif kind == "paper":
+        # a flat sheet seen edge-on, then face-on: the flip IS the tumble
+        if frame % 2 == 0:
+            c.rect(3, 3, 7, 5, C("c7cfcc"))
+            c.hline(3, 7, 3, C("ebede9"))
+            c.hline(3, 7, 5, C("819796"))
+        else:
+            c.rect(4, 3, 6, 5, C("a8b5b2"))
+            c.vline(4, 3, 5, C("ebede9"))
+    else:                                    # tumbleweed
+        col = C("7a4841") if frame % 2 == 0 else C("884b2b")
+        for (x, y) in ((4, 2), (5, 2), (3, 3), (6, 3), (2, 4), (7, 4),
+                       (3, 5), (6, 5), (4, 6), (5, 6)):
+            c.set(x, y, col)
+        c.set(4 + frame % 2, 4, C("602c2c"))
+        c.set(5 - frame % 2, 3, C("602c2c"))
+    return crop_canvas(c, (5, 4)) + (None,)
+
+
+def make_roost_bird(frame: int) -> tuple[Canvas, tuple, list | None]:
+    """A bird that lives in the district's trees and leaves when you get close
+    (user: "Make birds fly away from trees").
+
+    Frame 0 is PERCHED; 1-3 are the wingbeat. Baked frames, no rotation — and
+    deliberately a size up from the menu's 7x5 yard birds, because those had to
+    be found against a busy rainy backdrop and this one flies over open ground
+    in daylight.
+    """
+    c = Canvas(11, 9)
+    body = C("202e37")
+    edge = C("394a50")
+    if frame == 0:                       # sitting: a compact blob and a tail
+        for (x, y) in ((4, 3), (5, 3), (6, 3), (4, 4), (5, 4), (6, 4),
+                       (7, 4), (5, 5), (6, 5)):
+            c.set(x, y, body)
+        c.set(3, 3, body)                # head
+        c.set(8, 5, edge)                # tail
+        c.set(3, 2, edge)
+    else:
+        # wings up, level, down — the body stays put so it does not bob
+        for (x, y) in ((4, 4), (5, 4), (6, 4), (5, 5)):
+            c.set(x, y, body)
+        c.set(3, 4, body)
+        lift = {1: -2, 2: 0, 3: 2}[frame]
+        for k in range(4):
+            c.set(4 - k, 4 + (lift * (k + 1)) // 4, body if k < 2 else edge)
+            c.set(6 + k, 4 + (lift * (k + 1)) // 4, body if k < 2 else edge)
+    return crop_canvas(c, (5, 4)) + (None,)
 
 
 def make_warden_portrait() -> tuple[Canvas, tuple, list | None]:
@@ -6455,7 +6578,17 @@ def prop_inventory() -> tuple[dict, dict]:
     fam("rail_signal", 1, make_rail_signal(True))
     props["toll_booth"] = make_toll_booth()
     props["toll_barrier"] = make_toll_barrier(False)
+    props["toll_barrier_y"] = make_toll_barrier(False, "y")
     props["toll_barrier_open"] = make_toll_barrier(True)
+    for _s in range(4):
+        props["boot_puff_%d" % _s] = make_boot_puff(_s)
+    for _f in range(8):
+        props["footprint_%d" % _f] = make_footprint(_f)
+    for _k in ("leaf", "paper", "weed"):
+        for _f in range(3):
+            props["debris_%s_%d" % (_k, _f)] = make_wind_debris(_k, _f)
+    for _b in range(4):
+        props["roost_bird_%d" % _b] = make_roost_bird(_b)
     props["warden_portrait"] = make_warden_portrait()
     props["lz_marker"] = make_lz_marker()
     props["floor_edge_x"] = make_floor_edge("x")

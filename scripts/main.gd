@@ -221,7 +221,23 @@ func _build_world() -> void:
 	for i in _uppers.size():
 		((_uppers[i] as Dictionary)["stairs_node"] as Stairs).used.connect(
 			_on_stairs_used.bind(i))
-	_player.setup_surfaces(_floor_layer, _surface_kinds_from(info["floor_coords"]))
+	var surface_kinds := _surface_kinds_from(info["floor_coords"])
+	_player.setup_surfaces(_floor_layer, surface_kinds)
+	# BOOT DUST, FOOTPRINTS AND WIND DEBRIS. One node, because all three share
+	# the same surface test and the same pixel-grid rules — see ground_fx.gd.
+	# It sits OUTSIDE the y-sorted world: prints belong under everything that
+	# stands on the ground, and debris blows over the top of it.
+	var ground_fx := GroundFX.new()
+	ground_fx.name = "GroundFX"
+	ysort.add_child(ground_fx)
+	ground_fx.setup(_player, _floor_layer, surface_kinds, environment)
+	# BIRDS THAT LEAVE WHEN YOU GET CLOSE. They roost on real canopies — the
+	# same points the shedding leaves fall from — so a bird is always in a
+	# tree rather than hanging in the air.
+	var birds := RoostBirds.new()
+	birds.name = "RoostBirds"
+	ysort.add_child(birds)
+	birds.setup(_player, info.get("leaf_trees", PackedVector2Array()))
 	# (zoom never widens past the native view, so no edge camera-guard needed)
 	_build_prompt()
 	await get_tree().process_frame

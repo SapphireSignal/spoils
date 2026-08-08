@@ -16,7 +16,11 @@ var _closed_tex: Texture2D
 var _open_tex: Texture2D
 
 
-func setup(manifest: Dictionary, boom_offset: Vector2) -> void:
+func setup(manifest: Dictionary, boom_offset: Vector2,
+		axis: String = "x") -> void:
+	## `axis` is which iso axis the road runs along, so the boom lies ACROSS it
+	## rather than down it — see make_toll_barrier. The raised texture is shared
+	## because a boom standing up is vertical either way.
 	var booth_info: Dictionary = manifest["props"]["toll_booth"]
 	var origin: Array = booth_info["origin"]
 	var booth := Sprite2D.new()
@@ -31,9 +35,10 @@ func setup(manifest: Dictionary, boom_offset: Vector2) -> void:
 		Vector2(0, float(spec[2])), Vector2(-float(spec[1]), 0)])
 	add_child(poly)
 
-	_closed_tex = load("res://art/gen/toll_barrier.png")
+	var boom_name := "toll_barrier" if axis == "x" else "toll_barrier_y"
+	_closed_tex = load("res://art/gen/%s.png" % boom_name)
 	_open_tex = load("res://art/gen/toll_barrier_open.png")
-	var boom_info: Dictionary = manifest["props"]["toll_barrier"]
+	var boom_info: Dictionary = manifest["props"][boom_name]
 	var boom_origin: Array = boom_info["origin"]
 	_boom = Sprite2D.new()
 	_boom.texture = _closed_tex

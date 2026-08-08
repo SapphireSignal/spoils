@@ -209,8 +209,10 @@ func exit_car() -> void:
 func _process(delta: float) -> void:
 	if not driven or _busy:
 		return
-	if Ui.blocks_gameplay():
-		# a window is up: coast to a stop, read no input
+	if Ui.blocks_movement():
+		# a window is up: coast to a stop, read no input. The MAP is not one of
+		# them — you can drive with it open (user), which is the case it is
+		# most useful in.
 		speed = move_toward(speed, 0.0, COAST * delta)
 		velocity = Vector2(_drive_dir.x, _drive_dir.y * 0.6) * speed
 		move_and_slide()

@@ -6641,6 +6641,17 @@
       ],
       "collider": null
     },
+    "toll_barrier_y": {
+      "size": [
+        53,
+        34
+      ],
+      "origin": [
+        50,
+        16
+      ],
+      "collider": null
+    },
     "toll_barrier_open": {
       "size": [
         9,
@@ -6649,6 +6660,281 @@
       "origin": [
         2,
         47
+      ],
+      "collider": null
+    },
+    "boot_puff_0": {
+      "size": [
+        3,
+        3
+      ],
+      "origin": [
+        1,
+        1
+      ],
+      "collider": null
+    },
+    "boot_puff_1": {
+      "size": [
+        7,
+        5
+      ],
+      "origin": [
+        3,
+        2
+      ],
+      "collider": null
+    },
+    "boot_puff_2": {
+      "size": [
+        9,
+        7
+      ],
+      "origin": [
+        4,
+        3
+      ],
+      "collider": null
+    },
+    "boot_puff_3": {
+      "size": [
+        10,
+        7
+      ],
+      "origin": [
+        4,
+        3
+      ],
+      "collider": null
+    },
+    "footprint_0": {
+      "size": [
+        7,
+        4
+      ],
+      "origin": [
+        3,
+        1
+      ],
+      "collider": null
+    },
+    "footprint_1": {
+      "size": [
+        5,
+        6
+      ],
+      "origin": [
+        2,
+        2
+      ],
+      "collider": null
+    },
+    "footprint_2": {
+      "size": [
+        3,
+        6
+      ],
+      "origin": [
+        1,
+        2
+      ],
+      "collider": null
+    },
+    "footprint_3": {
+      "size": [
+        5,
+        6
+      ],
+      "origin": [
+        2,
+        2
+      ],
+      "collider": null
+    },
+    "footprint_4": {
+      "size": [
+        7,
+        4
+      ],
+      "origin": [
+        3,
+        1
+      ],
+      "collider": null
+    },
+    "footprint_5": {
+      "size": [
+        5,
+        6
+      ],
+      "origin": [
+        2,
+        2
+      ],
+      "collider": null
+    },
+    "footprint_6": {
+      "size": [
+        3,
+        6
+      ],
+      "origin": [
+        1,
+        2
+      ],
+      "collider": null
+    },
+    "footprint_7": {
+      "size": [
+        5,
+        6
+      ],
+      "origin": [
+        2,
+        2
+      ],
+      "collider": null
+    },
+    "debris_leaf_0": {
+      "size": [
+        6,
+        4
+      ],
+      "origin": [
+        3,
+        2
+      ],
+      "collider": null
+    },
+    "debris_leaf_1": {
+      "size": [
+        6,
+        5
+      ],
+      "origin": [
+        3,
+        2
+      ],
+      "collider": null
+    },
+    "debris_leaf_2": {
+      "size": [
+        6,
+        4
+      ],
+      "origin": [
+        3,
+        2
+      ],
+      "collider": null
+    },
+    "debris_paper_0": {
+      "size": [
+        7,
+        5
+      ],
+      "origin": [
+        3,
+        2
+      ],
+      "collider": null
+    },
+    "debris_paper_1": {
+      "size": [
+        5,
+        5
+      ],
+      "origin": [
+        2,
+        2
+      ],
+      "collider": null
+    },
+    "debris_paper_2": {
+      "size": [
+        7,
+        5
+      ],
+      "origin": [
+        3,
+        2
+      ],
+      "collider": null
+    },
+    "debris_weed_0": {
+      "size": [
+        8,
+        7
+      ],
+      "origin": [
+        4,
+        3
+      ],
+      "collider": null
+    },
+    "debris_weed_1": {
+      "size": [
+        8,
+        7
+      ],
+      "origin": [
+        4,
+        3
+      ],
+      "collider": null
+    },
+    "debris_weed_2": {
+      "size": [
+        8,
+        7
+      ],
+      "origin": [
+        4,
+        3
+      ],
+      "collider": null
+    },
+    "roost_bird_0": {
+      "size": [
+        8,
+        6
+      ],
+      "origin": [
+        3,
+        3
+      ],
+      "collider": null
+    },
+    "roost_bird_1": {
+      "size": [
+        11,
+        6
+      ],
+      "origin": [
+        5,
+        3
+      ],
+      "collider": null
+    },
+    "roost_bird_2": {
+      "size": [
+        11,
+        4
+      ],
+      "origin": [
+        5,
+        1
+      ],
+      "collider": null
+    },
+    "roost_bird_3": {
+      "size": [
+        11,
+        5
+      ],
+      "origin": [
+        5,
+        1
       ],
       "collider": null
     },

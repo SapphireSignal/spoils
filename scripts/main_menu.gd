@@ -206,6 +206,15 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.107", [
+		"the map is a painting now, and it is drawn the way your game is drawn - so it fills the screen as a wide diamond instead of sitting in a square, and pressing w moves you UP on it instead of diagonally. that was all one thing: the map used to be drawn flat from above while the world is angled, so every direction was off by a corner",
+		"buildings stand up on it with roofs and walls, the woods are proper canopies, the roads finally look different from each other, and every place has a hand painted marker - including the town, warehouse, trainyard, forest and gallery, which had a word and nothing else",
+		"click any marker or its name and you get a painted picture of the place, what you can find there, and a little about it. no more hovering",
+		"the weather is on the map: sun that follows the clock, grey skies under cloud, rain drifting across it, and morning fog sitting exactly where it sits in the world",
+		"the map remembers where you left it - zoom in on the trainyard, close it, open it, still there. and you can walk or drive with it open now",
+		"the toll gate moved to the west wire beside the bus depot, on the near side of the road so you can see the warden as you drive up",
+		"your boots kick up dust on soft ground and leave prints behind you, leaves and scrap paper blow across the district on the wind, and birds sitting in the trees take off when you get too close",
+	]],
 	["v0.6.106", [
 		"lone trees no longer grow in a square. every tree standing out on its own had a pale border painted one tile deep all the way around its patch of grass, and a border like that traces a rectangle no matter how rough the edges of it are - which is why those patches read as blocks. the border is gone, and the grass now blends into whatever it is sitting on from its own real outline",
 		"that same border was quietly dropping a concrete tile onto ballast, pavement and plaza wherever a tree happened to land on them",

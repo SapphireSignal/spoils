@@ -178,6 +178,14 @@ func play_radio_tick() -> void:
 	_play(_click, -30.0)
 
 
+func play_bird_flush(_at: Vector2) -> void:
+	## Wings clattering out of a tree. QUIET ON FIRST CUT, per the standing
+	## rule that every new sound ships at or under -18 dB and only comes up on
+	## ask — and a startle that is louder than a footstep would read as a
+	## threat rather than as scenery.
+	_play(_click, -26.0)
+
+
 func play_splash_ping(quiet: bool = false) -> void:
 	var player := _players[_next]
 	_next = (_next + 1) % _players.size()

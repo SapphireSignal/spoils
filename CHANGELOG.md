@@ -3,6 +3,106 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.107] - 2026-08-08 - the map is a painting, and the ground answers back
+
+### Changed - the in-game map, rebuilt from the projection up
+
+*"i just want a map that youd see in real pixel top of the line triple a
+games, i want it to be painted ... really detailed"*, *"redesign the whole in
+game map to fit how my game looks"*.
+
+**Three separate complaints turned out to be one cause.** The map was baked
+one pixel per CELL, axis-aligned, while the world is isometric:
+
+- *"when im clicking w, on the map it shows me going top left diagonal"* — w
+  walks one iso axis, which in cell space IS a diagonal. Nothing was wrong
+  with the marker; the map was in the wrong space.
+- *"the map only being square, make it like landscape view"* — the projection
+  makes a 256x256 district a diamond **exactly 2:1**, landscape for free.
+- *"fit how my game looks"* — the projection is how the game looks.
+
+So the map is now **painted once at deploy, in the game's own projection**,
+from hand-painted 16x8 iso tiles composited with the native `blend_rect` —
+260 ms for the district, where per-pixel `set_pixel` would have cost seconds.
+`map_view` blits that texture instead of rebuilding the district from vector
+shapes on every pan, which is exactly what had capped it at flat fills.
+
+- **It reads 3D** (*"i want this perspective but the buildings, trees, stuff
+  like that to move up"*). Buildings are extruded prisms with a roof and two
+  camera-facing walls, lit SW/SE like the world's own wall segments. Trees are
+  raised canopies on 46% of forest cells, so woodland reads as clumps instead
+  of a flat green field.
+- **Roads finally read apart.** Every road in the district is the same WIDTH,
+  which is why *"all the roads are just like look all the same"* was true
+  however many colours were defined. The hierarchy keys on how far a road
+  RUNS instead.
+- **Every building kind has its own roof** — houses in red tile, warehouses,
+  civic, school, the safehouse in green. Dirt dropped a step darker so
+  buildings stop dissolving into the ground they stand on.
+- **A hand-painted marker on every POI**, including the five that had a bare
+  word and nothing else. The plaque border says what a place is FOR: green you
+  can leave from, red is home, grey is somewhere to go.
+- **Click a marker or its name** for a window with a painted view of the place,
+  what is found there and a short background from `LORE.md`. Hover tooltips
+  are gone from the district map, as asked. *The loot lines are flavour, not a
+  table — there is no loot system yet, and they sit in one place so they can
+  be wired to the real one later.*
+- **Live weather on the map**: sun that follows the clock, grey under
+  overcast, drifting rain streaks, and dawn fog drawn on the world's REAL fog
+  anchors. Read from `environment_system`, never rolled, and an overlay rather
+  than baked — the bake happens once and the weather turns during the raid.
+- **All chrome moved into one column down the side**, white with a 1 px
+  outline. The projection paid for it: a diamond in a rectangle leaves four
+  empty triangles.
+- **The map remembers its zoom and pan.** `_ever_centred` guarded both callers
+  and **nothing ever set it**, so the fit-to-window ran on every open. A flag
+  that is only ever read is not a guard.
+- **You can walk and drive with the map open.** It still owns the mouse wheel,
+  so one scroll cannot zoom the map and the world at once.
+- Nothing hangs off the edge any more, and no marker is ever dropped: markers
+  place first and nudge, only names give way, and a name tries four positions
+  before it is abandoned.
+
+### Changed - the toll gate moved to the west wire
+
+*"lets move the tollgate to above the bus depot"*, then *"move it along the
+ring"*, then *"i want the tollgate above the road, because the user will be
+driving on the road and they need to be able to see the warden"*.
+
+It sits on the west ring beside the bus depot now, on the road's north
+shoulder. **It stayed ON the ring deliberately**: the toll gate is a hole in
+the wire, the warden opens it, and `edge_guard` shoots anyone crossing the
+line anywhere else — an inland gate would be a way out that leads back into
+the map. Which road carries it is DERIVED from the spans, so a retuned span
+cannot leave the booth standing on grass, and the boom has a mirrored cut
+because the original lies along a road running the other way.
+
+**The district is otherwise bit-identical** — 16 doors on unchanged cells, 53
+lamps, 30 vehicles, 1323 walk cells, the safehouse unmoved.
+
+### Added - dust, footprints, wind debris and birds
+
+Four requests, built as two nodes because they share the surface test and the
+pixel-grid rules.
+
+- **Boot dust** off the player on soft ground, growing through four BAKED
+  frames — never a runtime scale, which breaks the pixel grid.
+- **Footprints**, alternating feet, baked per facing, pooled and fading.
+- **Wind debris** — leaves, scrap paper and tumbleweeds, three different
+  things rather than one sprite repeated, blowing on the SAME wind the dawn
+  fog uses so they cannot drift against the trees.
+- **Birds that leave the trees when you get close.** They actually fly off and
+  stay gone rather than toggling with distance, and a roost only refills when
+  the player is far enough away that the refill cannot be witnessed — which is
+  what keeps this the right side of the standing static rule.
+
+### Verified
+
+`SEC` `DOCS` `CLAIMS` `SMOKE` pass. `--probe-groundfx` (new) confirms every
+effect actually fires rather than shipping dead. Perf **240 fps, worst frame
+4.69 ms, 9862 nodes** (+96 for all four effects). `--leakcheck` **nodes+0
+objects+0 orphans=0**.
+
 ## [0.6.106] - 2026-08-08 - lone trees stop growing in squares
 
 ### Fixed - the halo that drew a rectangle round every tree

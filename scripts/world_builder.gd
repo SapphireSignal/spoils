@@ -4160,12 +4160,44 @@ func _dress_rail_line() -> void:
 		_place_pile(junk, junk_cell, _rng.randi_range(2, 3), 12.0)
 
 
+func _toll_road_h() -> int:
+	## Which CROSSTOWN road carries the toll crossing out through the WEST wire.
+	##
+	## DERIVED, NEVER HARDCODED. A road only breaches the ring if its span
+	## actually reaches it, and spans are rolled — pinning an index would leave
+	## the booth standing on grass the first time one changed. This picks a road
+	## that genuinely reaches the west line and lies nearest the bus depot.
+	var lo := BARRIER_INSET
+	var want := _depot_rect.position.y + _depot_rect.size.y / 2 \
+		if _depot_rect.size.y > 0 else MAP_H / 2
+	var best := -1
+	var best_d := 1 << 30
+	for i in _roads_h.size():
+		if i >= _road_h_span.size() or _road_h_span[i].x > lo:
+			continue                       # this one stops short of the wire
+		var d: int = absi(_roads_h[i].x - want)
+		if d < best_d:
+			best_d = d
+			best = i
+	if best < 0:
+		best = 1                           # the crosstown route kept full span
+	return best
+
+
 func _toll_booth_cell() -> Vector2i:
-	# where the warden's booth stands: beside the middle south-road breach,
-	# on the ring line. ONE definition — the barricade pass reserves these
-	# cells long before the booth itself is placed.
-	var road: Vector2i = _roads_v[_roads_v.size() / 2]
-	return Vector2i(road.x + 1 + 3, MAP_H - 1 - BARRIER_INSET)
+	# where the warden's booth stands: beside the WEST-road breach nearest the
+	# bus depot, on the ring line. ONE definition — the barricade pass reserves
+	# these cells long before the booth itself is placed.
+	#
+	# MOVED 2026-08-08 (user: "lets move the tollgate to above the bus depot",
+	# then "move it along the ring"). It stood at the middle SOUTH breach. It
+	# had to stay ON the ring: the toll gate is a hole in the WIRE, the warden
+	# opens it, and `edge_guard` shoots anyone crossing the line anywhere else —
+	# an inland gate would be a way out that leads back into the map.
+	# NORTH SHOULDER, not south (user: "on the opposite side of the road
+	# please") — `road.x` is the road's y position and `road.y` its width.
+	var road: Vector2i = _roads_h[_toll_road_h()]
+	return Vector2i(BARRIER_INSET, road.x - 2)
 
 
 func _place_toll_gate() -> void:
@@ -4173,14 +4205,16 @@ func _place_toll_gate() -> void:
 	# booth, a boom, and a warden who is a business. Paying him opens this
 	# crossing and the extract sits out past the line.
 	var booth_cell := _toll_booth_cell()
-	var gate_x := booth_cell.x - 3
-	var gate_y := booth_cell.y
+	var gate_x := booth_cell.x
+	var gate_y := booth_cell.y + 3          # the road's centre line
 	var gate := TollGate.new()
 	gate.position = _floor_layer.map_to_local(booth_cell).round()
-	# the boom spans the ROAD, so it has to travel along the map's x axis
-	# (4 cells west of the booth) — a straight screen offset lands it on
-	# the shoulder instead of across the asphalt
-	gate.setup(_manifest, Vector2(-4.0 * 32.0, -4.0 * 16.0))
+	# THE BOOM SPANS THE ROAD, so it travels along the axis the road does NOT.
+	# The crossing runs along x now, so the boom steps 4 cells back along y —
+	# world = ((cx-cy)*32, (cx+cy)*16), so -4 in cy is (+128, -64). A straight
+	# screen offset would land it on the shoulder instead of across the asphalt,
+	# and the sprite itself has to be the mirrored cut or it lies DOWN the road.
+	gate.setup(_manifest, Vector2(-2.0 * 32.0, 2.0 * 16.0), "y")
 	_ysort.add_child(gate)
 	for dx in range(-1, 2):
 		for dy in range(-1, 2):
@@ -4192,7 +4226,9 @@ func _place_toll_gate() -> void:
 	_extracts.append({
 		"name": "the toll gate",
 		"kind": "toll",
-		"pos": _floor_layer.map_to_local(Vector2i(gate_x, gate_y + 16)),
+		# 16 cells WEST of the wire now, not south of it — the crossing moved
+		# to the west ring, so the drive-out does too
+		"pos": _floor_layer.map_to_local(Vector2i(gate_x - 16, gate_y)),
 		# Big enough that you cannot DRIVE THROUGH it before the count runs
 		# out (user). The countdown is 5 s and a car tops out at 190 px/s,
 		# so a straight run through the middle needs ~950 px of zone; at the

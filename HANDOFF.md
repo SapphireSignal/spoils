@@ -41,6 +41,62 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-08 — v0.6.107: the map rebuilt, and the ground answers back
+
+**Shipped: v0.6.107.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass, `--probe-groundfx`
+PASS, perf 240 fps / 4.69 ms / 9862 nodes, `--leakcheck` nodes+0 orphans=0.
+
+### Shipped
+
+- **The in-game map, redesigned end to end.** Painted iso bake in the game's
+  own projection; 3D buildings; road hierarchy; a hand-painted marker on every
+  POI; a clicked POI window with a painted picture, loot and lore; live
+  weather; chrome down the side; zoom/pan persistence; movement allowed while
+  it is open.
+- **The toll gate** moved to the west ring beside the bus depot, north
+  shoulder, with a mirrored boom. District otherwise bit-identical.
+- **Boot dust, footprints, wind debris, and birds that flush from trees**
+  (`ground_fx.gd`, `roost_birds.gd`).
+
+### THE ONE INSIGHT WORTH INHERITING
+
+**Three unrelated-sounding map complaints were ONE cause.** "w moves me
+diagonally", "the map is square", and "it doesn't look like my game" were all
+the same fact: the map was baked one pixel per CELL, axis-aligned, while the
+world is isometric. Drawing it in the game's projection answered all three at
+once and made the landscape framing free. **When several complaints about one
+screen sound unrelated, look for the shared coordinate system before fixing
+them separately.**
+
+### What I got WRONG, loudly
+
+- **I cited ENGINE-EFFECTS-OVER-REDRAWN-ART against work the user had just
+  asked for** — hand-painted POI pictures — and claimed the menu backdrops
+  were engine captures. **They are hand-painted in `gen_art.py`**, and the
+  rule's own last clause yields the moment the user asks. Both the rule and
+  the new HAND-DRAWN ART rule are now in CLAUDE.md, adjacent, so the next
+  session cannot repeat it.
+- **A ten-minute "hang" was my own shell command**, not the code: I piped a
+  Godot run through `head`, which closed the stream and stalled the writer.
+  The bake was always 260 ms. On this project a hang has meant a parse error
+  twice; this is a third cause.
+- **Two heuristics that sounded right and were not.** Anchoring a zone marker
+  to its LARGEST rect put "town" on the courtyard's block; anchoring by
+  building count alone still did not move it. It took *also* penalising a
+  block another POI already names.
+- **A probe that measured the wrong thing.** My first terrain metric counted
+  `rail` as its own material and reported 218 hard edges on a boundary nobody
+  can see. A rail tile is ballast with rails drawn on it.
+
+### Picked up at
+
+B0-NEW: the rail corridor's residual ~35 hard edges, fallen trees, puddles,
+pylons, autumn leaves, the one-frame walking pop (frame-diff is the next
+step), C3 non-rectangular buildings. Then the art queue: **the warden**
+(bundle with B2 and B8), the deploy screen, the debrief, item icons.
+
+---
+
 ## 2026-08-08 — v0.6.106: lone trees stopped growing in squares
 
 **Shipped: v0.6.106.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass, layout

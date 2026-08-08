@@ -123,6 +123,16 @@ var _bake_top := 0.0
 var _bake_hw := 8.0
 var _bake_hh := 4.0
 var _icons: Dictionary = {}                # poi name -> Texture2D
+# the clicked-POI card (user: hover tooltips out, a real window in)
+var _poi_hits: Array[Dictionary] = []      # {rect (screen), name}
+var _drag_from := Vector2.ZERO
+var _drag_moved := 0.0
+var _card: PanelContainer
+var _card_pic: TextureRect
+var _card_title: Label
+var _card_body: RichTextLabel
+var _card_open := ""
+var _fog_spots := PackedVector2Array()     # the world's real dawn-mist anchors
 
 
 func setup(info: Dictionary, player: Player, environment: Node,
@@ -142,6 +152,7 @@ func setup(info: Dictionary, player: Player, environment: Node,
 	var tile: Array = info.get("map_iso_tile", [16, 8])
 	_bake_hw = float(tile[0]) * 0.5
 	_bake_hh = float(tile[1]) * 0.5
+	_fog_spots = info.get("fog_spots", PackedVector2Array())
 	_vec = info.get("map_vec", {})
 	var theme := UITheme.get_theme()
 	_font = theme.default_font
@@ -421,6 +432,7 @@ func _build_ui() -> void:
 	_hint.custom_minimum_size = Vector2(190, 0)
 	_map_chrome_text(_hint)
 	side.add_child(_hint)
+	_build_poi_card(_transit_root)
 
 	# ---- shared tooltip --------------------------------------------------
 	_tooltip = PanelContainer.new()
@@ -535,10 +547,22 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _on_canvas_input(event: InputEvent) -> void:
+	## ONE BUTTON DOES BOTH, and the difference is whether the mouse MOVED.
+	## Left-drag pans, left-click opens the place you clicked (user asked
+	## whether panning should move to right-click: it does not need to — a
+	## drag/click threshold is unambiguous and it is what every game map does,
+	## so there is nothing to learn). Right-click stays free.
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
 		if mb.button_index == MOUSE_BUTTON_LEFT:
-			_dragging = mb.pressed
+			if mb.pressed:
+				_dragging = true
+				_drag_from = mb.position
+				_drag_moved = 0.0
+			else:
+				_dragging = false
+				if _drag_moved <= 4.0:      # a click, not a drag
+					_click_poi(mb.position)
 			_canvas.accept_event()
 		elif mb.pressed and mb.button_index == MOUSE_BUTTON_WHEEL_UP:
 			_step_zoom(1)
@@ -547,9 +571,32 @@ func _on_canvas_input(event: InputEvent) -> void:
 			_step_zoom(-1)
 			_canvas.accept_event()
 	elif event is InputEventMouseMotion and _dragging:
-		_pan += (event as InputEventMouseMotion).relative
+		var rel := (event as InputEventMouseMotion).relative
+		_drag_moved += rel.length()
+		_pan += rel
 		_clamp_pan()
 		_redraw_all()
+
+
+func _click_poi(at: Vector2) -> void:
+	## Nearest marker within its own plaque, so a click just off centre still
+	## counts — and the LABEL counts too (user: "you have to click on the text
+	## or icon").
+	var best := -1
+	var best_d := 1.0e12
+	for i in _poi_hits.size():
+		var hit: Dictionary = _poi_hits[i]
+		var r: Rect2 = hit["rect"]
+		if not r.has_point(at):
+			continue
+		var d: float = at.distance_squared_to(r.get_center())
+		if d < best_d:
+			best_d = d
+			best = i
+	if best < 0:
+		_close_poi_card()
+		return
+	_show_poi_card(str((_poi_hits[best] as Dictionary)["name"]))
 
 
 func _step_zoom(direction: int) -> void:
@@ -577,7 +624,17 @@ func _process(delta: float) -> void:
 	_time_accum += delta
 	if _mode == "transit":
 		_markers.queue_redraw()         # only the markers move each frame
-		if _recenter:
+		# ...unless the weather is moving on it. Rain streaks and breathing fog
+		# live on the canvas layer because they belong UNDER the markers, so
+		# the canvas has to redraw while either is running. It is one texture
+		# blit plus the labels, and only while the map is actually open.
+		var live_weather := false
+		if _environment != null:
+			var spell: int = int(_environment.get("weather"))
+			live_weather = spell == 2 or spell == 3 \
+				or float(_environment.call("_morning_amount",
+					float(_environment.get("day_time")))) > 0.02
+		if _recenter or live_weather:
 			_canvas.queue_redraw()
 		var t: float = float(_environment.get("day_time"))
 		var hour := int(t * 24.0)
@@ -616,15 +673,12 @@ func _update_tooltip(delta: float) -> void:
 				key = "world_%d" % i
 				blurb = _world_tiles[i]["blurb"]
 				break
-	else:
-		var mouse := _canvas.get_local_mouse_position()
-		if Rect2(Vector2.ZERO, _canvas.size).has_point(mouse):
-			var cell := (mouse - _pan) / _zoom
-			for poi in _pois:
-				if (poi["rect"] as Rect2).has_point(cell):
-					key = str(poi["name"]) + str(poi["rect"])
-					blurb = poi["blurb"]
-					break
+	# THE DISTRICT MAP HAS NO HOVER TOOLTIP ANY MORE (user, 2026-08-08: "lets
+	# not make the stuff hoverable to show tooltips on the map, lets change it
+	# so you have to click on the text or icon and it brings up a window").
+	# Clicking a marker or its name opens the POI card instead — see
+	# `_click_poi`. The WORLD view keeps its tooltips: those tiles are buttons
+	# with nothing to open.
 	if key != _hover_key:
 		_hover_key = key
 		_hover_time = 0.0
@@ -641,6 +695,170 @@ func _update_tooltip(delta: float) -> void:
 		at.x = clampf(at.x, 4.0, view.x - _tooltip.size.x - 4.0)
 		at.y = clampf(at.y, 4.0, view.y - _tooltip.size.y - 4.0)
 		_tooltip.position = at.round()
+
+
+## WHAT EACH PLACE IS AND WHAT IS IN IT. The background text comes from
+## LORE.md — the courtyard's dry fountain, the gallery "where somebody still
+## paints", the comms relay in the trees — rather than inventing a parallel
+## lore for the map to disagree with.
+##
+## THE LOOT LINES ARE FLAVOUR, NOT A TABLE. There is no loot system yet; it
+## lands in a later milestone. They live here in ONE place so they can be wired
+## to the real tables when those exist, instead of being scattered.
+const POI_CARD := {
+	"town": ["packed housing, some of it two storeys. doors are shut, not locked.",
+		"tinned food, tools, clothing, the odd hidden stash"],
+	"courtyard": ["the town square. the fountain has been dry a long time.",
+		"benches, planters, whatever people dropped running"],
+	"forest": ["dense cover and shedding oaks. the quietest ground in the district.",
+		"firewood, mushrooms, a cache if somebody buried one"],
+	"warehouse": ["racks and freight nobody came back for.",
+		"crates, pallets, industrial parts, fuel"],
+	"school": ["classrooms over a playground. the bell still hangs.",
+		"first aid, paper, tools from the workshop"],
+	"playground": ["swings, a slide, a sandbox going to weeds.",
+		"little worth taking - but people cut through here"],
+	"trainyard": ["boxcars and rails going nowhere. the freight still runs at night.",
+		"sealed freight, coal, tools - and a way out"],
+	"bus depot": ["the last buses, some of them pried open already.",
+		"fuel, batteries, fare boxes, driver lockers"],
+	"comms": ["a mast still blinking at nobody.",
+		"radio parts, copper, batteries"],
+	"gallery": ["fresh paint on old walls. somebody is still working here.",
+		"spray cans, solvent, whatever the painter left"],
+	"scrapyard": ["wrecks stacked three high and one crane that still turns.",
+		"metal, engine parts, tyres, tools"],
+	"safehouse": ["home. you wake up here every raid and you leave from here.",
+		"your own stash - nothing spawns for you here"],
+	"lz": ["the lift. green smoke, and a bird if you can pay for it.",
+		"nothing to take - this is a way out"],
+	"toll gate": ["the warden sells his blind eye. pay him and the wire opens.",
+		"nothing to take - this is a way out"],
+}
+
+
+func _build_poi_card(parent: Control) -> void:
+	_card = PanelContainer.new()
+	_card.visible = false
+	_card.custom_minimum_size = Vector2(228, 0)
+	_card.position = Vector2(10, 300)
+	_card.mouse_filter = Control.MOUSE_FILTER_STOP
+	parent.add_child(_card)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 5)
+	_card.add_child(col)
+	_card_pic = TextureRect.new()
+	_card_pic.custom_minimum_size = Vector2(128, 76)
+	_card_pic.stretch_mode = TextureRect.STRETCH_KEEP
+	# the picture is PIXEL ART and is shown at 1:1 — never let it resample
+	_card_pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	col.add_child(_card_pic)
+	_card_title = Label.new()
+	_map_chrome_text(_card_title)
+	col.add_child(_card_title)
+	_card_body = RichTextLabel.new()
+	_card_body.bbcode_enabled = false
+	_card_body.fit_content = true
+	_card_body.scroll_active = false
+	_card_body.custom_minimum_size = Vector2(210, 0)
+	_card_body.add_theme_color_override("default_color", LABEL)
+	_card_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(_card_body)
+	var shut := Button.new()
+	shut.text = "close"
+	shut.custom_minimum_size = Vector2(60, 20)
+	shut.pressed.connect(_close_poi_card)
+	col.add_child(shut)
+
+
+func _show_poi_card(poi_name: String) -> void:
+	if _card == null:
+		return
+	if _card_open == poi_name and _card.visible:
+		_close_poi_card()               # clicking the same marker shuts it
+		return
+	_card_open = poi_name
+	var tex: Texture2D = load("res://art/gen/map_pic_%s.png"
+		% poi_name.replace(" ", "_"))
+	_card_pic.texture = tex
+	_card_pic.visible = tex != null
+	_card_title.text = poi_name
+	var entry: Array = POI_CARD.get(poi_name, ["", ""])
+	_card_body.text = "%s\n\nfound here: %s" % [str(entry[0]), str(entry[1])]
+	_card.visible = true
+	Sfx.play_click()
+
+
+func _close_poi_card() -> void:
+	if _card == null:
+		return
+	_card.visible = false
+	_card_open = ""
+
+
+func _draw_map_weather() -> void:
+	## THE SKY THE DISTRICT IS ACTUALLY UNDER (user: "if its raining add some
+	## subtle rain, if its sunny add some subtle sunlight, add subtle fogs
+	## around the map whereever the fog is in game").
+	##
+	## READ, NEVER ROLLED. Every value comes from `environment_system` — the
+	## weather spell, the sun clock, the dawn-mist amount and the REAL fog
+	## anchor list the world uses. The map shows the raid's weather; it does
+	## not invent its own.
+	##
+	## AN OVERLAY, NEVER BAKED. The bake happens once at deploy and the weather
+	## turns during the raid.
+	##
+	## SUBTLE (their word, twice): nothing here goes over ~0.16 alpha, and the
+	## whole layer is clipped to the map so it cannot tint the surround.
+	if _environment == null or _bake_size == Vector2.ZERO:
+		return
+	var map_rect := Rect2(_pan, _bake_size * _zoom)
+	var view := map_rect.intersection(Rect2(Vector2.ZERO, _canvas.size))
+	if view.size.x <= 1.0 or view.size.y <= 1.0:
+		return
+	var spell: int = int(_environment.get("weather"))
+	var wet := spell == 2 or spell == 3          # RAIN or STORM
+	var t: float = float(_environment.get("day_time"))
+
+	# SUN: a warm wash that follows the clock, strongest at midday and gone
+	# under cloud. `sun_blocked()` already folds rain and overcast together.
+	var blocked: float = float(_environment.call("sun_blocked"))
+	var noon := 1.0 - clampf(absf(t - 0.5) * 3.4, 0.0, 1.0)
+	var sun := noon * (1.0 - blocked)
+	if sun > 0.01:
+		_canvas.draw_rect(view,
+			Color(0.91, 0.76, 0.40, 0.11 * sun), true)
+	elif spell == 1:                             # OVERCAST: flat and grey
+		_canvas.draw_rect(view, Color(0.55, 0.60, 0.63, 0.09), true)
+
+	# RAIN: short streaks on the same diagonal the world's rain falls on,
+	# hashed off their index so they do not crawl while you drag the map.
+	if wet:
+		_canvas.draw_rect(view, Color(0.24, 0.37, 0.55, 0.13), true)
+		var count := 90 if spell == 3 else 52
+		var drift := _time_accum * (150.0 if spell == 3 else 96.0)
+		for i in count:
+			var hx := float(posmod(i * 7919, 977)) / 977.0
+			var hy := float(posmod(i * 6151, 883)) / 883.0
+			var x := view.position.x + hx * view.size.x
+			var y := view.position.y + fmod(hy * view.size.y + drift,
+				view.size.y)
+			_canvas.draw_line(Vector2(x, y), Vector2(x - 2.0, y + 6.0),
+				Color(0.72, 0.83, 0.90, 0.30), 1.0)
+
+	# FOG: soft pools ON THE REAL ANCHORS the world mists up, so the map
+	# agrees with what you can see when you look up from it.
+	var mist: float = float(_environment.call("_morning_amount", t))
+	if mist > 0.02 and not _fog_spots.is_empty():
+		for i in _fog_spots.size():
+			var spot: Vector2 = _fog_spots[i]
+			var at := _cell_to_screen(_floor_layer.local_to_map(spot))
+			if not view.has_point(at):
+				continue
+			var wob := 1.0 + 0.14 * sin(_time_accum * 0.7 + float(i))
+			_canvas.draw_circle(at, 13.0 * _zoom * wob,
+				Color(0.78, 0.83, 0.86, 0.10 * mist), true, -1.0, true)
 
 
 func _map_chrome_text(label: Label) -> void:
@@ -703,6 +921,7 @@ func _draw_district() -> void:
 	# Everything still drawn live sits on TOP of this: markers, labels, icons and
 	# the player, none of which can be baked because they move.
 	_canvas.draw_texture_rect(_map_tex, Rect2(_pan, _bake_size * _zoom), false)
+	_draw_map_weather()
 	# ...and the place markers on top of it. These belong to the STATIC layer,
 	# not to `_markers`: they only move when you pan or zoom, while `_markers`
 	# redraws every frame to follow the player.
@@ -820,6 +1039,10 @@ func _draw_poi_labels(on: Control) -> void:
 	var clamp_ok := lim.size.x > 80.0 and lim.size.y > 80.0
 	var taken: Array[Rect2] = []
 	var placed: Dictionary = {}
+	# CLICK TARGETS ARE COLLECTED WHERE THINGS ARE ACTUALLY DRAWN, not
+	# recomputed from cells. Markers nudge and names take one of four
+	# positions, so anything that re-derived a hit box would drift off them.
+	_poi_hits.clear()
 	for i in _pois.size():
 		var poi: Dictionary = _pois[i]
 		if not bool(poi.get("glyph", false)):
@@ -842,8 +1065,10 @@ func _draw_poi_labels(on: Control) -> void:
 				break
 			centre.y -= 14.0
 		_draw_poi_glyph(on, str(poi["name"]), centre)
-		taken.append(Rect2(centre - Vector2(11.0, 11.0), Vector2(22.0, 22.0)))
+		var plaque := Rect2(centre - Vector2(11.0, 11.0), Vector2(22.0, 22.0))
+		taken.append(plaque)
 		placed[i] = centre
+		_poi_hits.append({"rect": plaque, "name": str(poi["name"])})
 	for i in _pois.size():
 		var poi2: Dictionary = _pois[i]
 		if not bool(poi2["label"]):
@@ -892,6 +1117,9 @@ func _draw_poi_labels(on: Control) -> void:
 			if clash2:
 				continue
 			taken.append(bounds)
+			# the NAME is clickable too (user: "you have to click on the text
+			# or icon"), grown a little so small words are not a pixel hunt
+			_poi_hits.append({"rect": bounds.grow(2.0), "name": text})
 			_halo_text(on, pos, text, LABEL)
 			break
 

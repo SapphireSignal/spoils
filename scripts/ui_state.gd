@@ -39,10 +39,30 @@ func any_open() -> bool:
 	return not _stack.is_empty()
 
 
+## Windows you can keep PLAYING under. Everything else holds the world still.
+const WALKABLE_WINDOWS: Array[StringName] = [&"map"]
+
+
 func blocks_gameplay() -> bool:
 	## while a window is up the world does not read the keyboard, the
 	## mouse wheel or the mouse buttons
 	return not _stack.is_empty()
+
+
+func blocks_movement() -> bool:
+	## THE MAP DOES NOT STOP YOU MOVING (user, 2026-08-08: "you should still be
+	## able to click wsad while the map is open, so you can walk around or
+	## drive around while map is open"). Checking a map while you walk is the
+	## whole point of having one that tracks you live.
+	##
+	## SEPARATE FROM `blocks_gameplay` ON PURPOSE, not a replacement for it: the
+	## map still owns the MOUSE WHEEL, or one scroll would zoom the map and the
+	## world at once — which was a real user report. Movement is keyboard, so
+	## the two do not collide.
+	for window in _stack:
+		if not WALKABLE_WINDOWS.has(window):
+			return true
+	return false
 
 
 func clear() -> void:
