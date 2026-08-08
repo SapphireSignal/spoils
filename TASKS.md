@@ -848,7 +848,7 @@ Draw-neutral routes, in order of preference:
 
 Verify with DOORS 16 on identical cells, plus LAMPS and VEHICLES.
 
-## B11. Walking along an inside wall cuts the player in bands — **FIXED in v0.6.97**
+## B11. Walking along an inside wall cuts the player in bands — **PARTLY DONE (far faces, v0.6.97-98); REOPENED for the near faces**
 
 *"i can clip into walls from the inside, and then i see half my character
 through the wall"*, then the two details that actually solved it: *"it happens
@@ -885,6 +885,38 @@ one-cell spacing. Then choose between:
 2. giving an interior wall face ONE shared sort key per side, so there are no
    seams to cross at all — cheaper, and a wall face has no reason to sort
    per-cell against the room it encloses.
+
+
+### REOPENED 2026-08-08 — the banding is on the NEAR faces
+
+*"now the interval wall clippings are back"*, immediately after v0.6.98 limited
+the shared key to FAR faces. That is the answer to a question nobody had asked:
+**the bands the user sees are on the NEAR faces**, which is the half v0.6.98
+just stopped treating.
+
+So both halves are now known and they conflict under the current design:
+- near face, per-cell (v0.6.98)  -> bands come back
+- near face, shared at max y (v0.6.97) -> wall moves up to a building width
+  toward the camera and out-sorts an open door leaf
+
+**THE DESIGN THAT RESOLVES IT — aim the near face at the player, the way doors
+already do.** Do not collapse a near face onto its own extreme; collapse it onto
+`player.y + margin` while the player is inside. Then:
+- every piece of the face shares ONE key, so there are no seams to cross and the
+  face covers the player uniformly — the bands cannot exist;
+- that key is only just south of the player, so it stays far behind an open
+  door leaf (`door_y + 7.4..17.4`, and an inside player has `y < door_y`), which
+  is what v0.6.97 broke;
+- anything outdoors south of the wall still out-sorts it, correctly.
+
+It has to run PER FRAME, like `Door._aim_leaf_sort`, so `set_face_sort` stops
+being a one-shot toggle: either give RoofReveal a `_process` that runs only
+while inside, or call it from main.gd's per-frame path. Mind `process_priority`
+— the door needed 10 to update AFTER the player moved, and this will too, or it
+will band by one frame on the frame you cross.
+
+**Verify with BOTH wall facings and an open door in the same shot**
+(`--door-pick=0` and `=1`), plus a walk along the inside of a near wall.
 
 ## B0. Parking lots and aprons should JOIN the road network *(user, 2026-08-05)*
 
