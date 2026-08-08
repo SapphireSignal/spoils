@@ -3,6 +3,42 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.90] - 2026-08-07 - downstairs is a living room, upstairs is a bedroom
+
+### Fixed - both floors of a house were furnished from the same families
+*"i dont want the same furniture on the floors of one house"*, *"it should be
+different"*. They shared **cabinet, bookshelf and crate**, so you could climb
+the stairs and find the same bookshelf you had just walked past.
+
+There are only eight domestic furniture families, so the two floors take a side
+each and nothing is shared:
+
+| floor | what's up there |
+|---|---|
+| house, ground | couch, tv stand, table, chairs, crates — a living room |
+| house, upstairs | beds, cabinet, bookshelf — a bedroom |
+| hall & school, upstairs | crates, stacks, pallets — storage over the desks |
+
+**The fixed district did not move a pixel.** Changing which family a pick site
+asks for is only free when the site draws once; `_pick_variant_varied` takes a
+*second* draw whenever it happens to repeat, so swapping a family there would
+have shortened the layout stream and re-rolled every door, lamp and vehicle
+after it. So every original roll is still taken and thrown away — they also
+advance the no-repeat memory the other floor reads — and the replacements come
+off a local generator seeded from `DISTRICT_SEED` and the building's own
+corner. The one swap that was genuinely free on its own, `_pick_variant("crate")`
+to `_pick_variant_norepeat("bed")`, was done directly; it is the norepeat cut
+and not plain `_pick_variant` so a room can never get the same bed twice.
+
+Verified with `--probe-world`: DOORS 16, LAMPS 53/15, VEHICLES 30, UPPERS 6
+floorless=0, on identical cells.
+
+### Settled - the camera keeps rising with you
+*"the camera already lifts with me, and i like it like that"*. Recorded as
+closed. The consequence is deliberate, not a bug: the art rises 40 px and the
+camera rises the same 40 px, so an upstairs room lands on identical screen
+pixels to the ground floor and it is the world outside that appears to drop.
+
 ## [0.6.89] - 2026-08-07 - the upstairs corner, and a second storey you can stand up in
 
 ### Fixed - one corner post vanished upstairs and the other did not

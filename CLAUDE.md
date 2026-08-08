@@ -35,7 +35,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
 	 form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.89 shipped, 2026-08-07.** Milestone 1 (a walkable world) is DONE.
+**v0.6.90 shipped, 2026-08-07.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 
@@ -181,6 +181,26 @@ Deliver the intent with additive glow sprites, the way lamps already do.
   the index IS the geometry.**
   Doors are only ever on `yp`/`xp` (`_DOOR_INWARD` has no far entries), so a
   full-height door piece can never land on a far wall and repeat this.
+- **THE CAMERA RIDES `floor_lift`, AND THE USER WANTS IT THAT WAY. SETTLED,
+  DO NOT REOPEN** (2026-08-07: *"the camera already lifts with me, and i like
+  it like that"*, then *"remove the camera lift from open"* when it was still
+  being listed as an open question). The consequence is real and is NOT a bug:
+  the art rises `_wall_h` and the camera rises the same `_wall_h`, so an
+  upstairs room lands on IDENTICAL screen pixels to the ground floor and only
+  the world outside appears to drop. They were offered the alternatives —
+  camera lifting less, an animated climb — and declined. Do not "fix" this,
+  and do not raise it again.
+- **NO BUILDING FURNISHES BOTH ITS FLOORS FROM THE SAME FAMILIES** (user,
+  v0.6.90: *"i dont want the same furniture on the floors of one house ... it
+  should be different"*). House ground = couch/tv_stand/table/chair/crate;
+  house upstairs = bed/cabinet/bookshelf; hall & school upstairs =
+  crate/crate_stack/pallet. There are only eight domestic families, so the sets
+  are tight — **adding a family to one floor means taking it off the other**,
+  never sharing it. Changing a pick site's FAMILY is only draw-neutral when the
+  site uses `_pick_variant` or `_pick_variant_norepeat` (one draw, always);
+  `_pick_variant_varied` takes a second draw on a repeat, so a swap there
+  re-rolls the whole fixed district. Take that roll and throw it away, then
+  pick from `_local_variant` off a district-seeded local rng.
 - **A colour grade must not change brightness.** Multiplying by a tint
   colour whose own luminance is 0.38 dimmed every shadowed pixel to a
   third. Normalise tints to luminance 1 so they shift hue only.

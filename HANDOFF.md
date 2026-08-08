@@ -41,6 +41,55 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-07 — a living room downstairs and a bedroom upstairs
+
+**Shipped: v0.6.90.** `SEC` `DOCS` `CLAIMS` `SMOKE` all pass.
+
+### The user's words
+
+- *"yes its good now, now do the furniture, and remove the camera lift from
+  open"*, then *"wait no i dont want the same furniture on the floors of one
+  house"*, *"it should be different"*.
+
+### Shipped
+
+1. **B0n DONE.** No building furnishes both floors from the same families.
+   House ground = couch/tv_stand/table/chair/crate, house upstairs =
+   bed/cabinet/bookshelf, hall & school upstairs = crate/crate_stack/pallet.
+   Draw-neutral: every original `_rng` roll is still taken and discarded (they
+   also advance `_last_variant`, which the other floor reads), and the
+   replacements come off `_local_variant` on a local rng seeded from
+   `DISTRICT_SEED` + the building's corner. DOORS 16 / LAMPS 53/15 /
+   VEHICLES 30 / UPPERS 6 unchanged on identical cells.
+2. **The camera lift is CLOSED, at the user's instruction.** It is in CLAUDE.md
+   as settled. Do not reopen it, and do not offer to change it again.
+
+### Learned
+
+- **CHECK FOR AN EXISTING FUNCTION BEFORE ADDING A HELPER.** I added
+  `_side_variant(family, rng)` next to an existing `_side_variant(family)` 1400
+  lines away. GDScript rejects the overload, `--probe-world` then sat there
+  doing nothing, and **it presented exactly like the documented hang** — no
+  output at all, not even the head of a log. `--check-only --script <file>`
+  names the real error in one second and is the right first move whenever a
+  headless run goes quiet. (Its "Identifier not found: Sfx" complaints are
+  autoload noise in that mode, not real.) The helper is `_local_variant` now,
+  and its doc says why it does not just spend `_side_rng`: that is one running
+  stream, and spending it would move every later road-dressing pick.
+- **THE DOMESTIC FURNITURE POOL IS EXHAUSTED — eight families, and both floors
+  are now full.** Any future "add X upstairs" means taking X off the ground
+  floor, or drawing new art (a wardrobe/dresser/nightstand family would be the
+  natural next step and would let the ground floor have its cabinet back).
+
+### Picked up at
+
+1. **B0c item 3** (clipping on props upstairs) — `--probe-upper` says
+   `invisible=0`; needs a real repro or it is closed.
+2. The standing backlog: B0-NEW geometry batch, B0 parking spurs, B0b broken
+   cars, B1 sprint, B2 warden, B3 scrapyard, B4 smoker.
+
+---
+
 ## 2026-08-07 — the upstairs corner, and a taller second storey
 
 **Shipped: v0.6.89.** `SEC` `DOCS` `CLAIMS` `SMOKE` all pass.

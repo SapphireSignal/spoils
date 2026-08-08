@@ -503,6 +503,20 @@ func _side_variant(family: String) -> String:
 	return names[_side_rng.randi_range(0, names.size() - 1)]
 
 
+func _local_variant(family: String, rng: RandomNumberGenerator) -> String:
+	## Same idea as `_side_variant`, but off a generator the CALLER owns — for a
+	## placement whose FAMILY changed after the district was fixed. The original
+	## `_rng` roll still has to be taken and discarded at the call site; this
+	## only decides what gets drawn, and costs the layout stream nothing. Seed
+	## the generator from DISTRICT_SEED so the result is still fixed per district
+	## (CLAUDE.md: "_side_rng, or a local RNG seeded off the district seed").
+	##
+	## It does NOT share `_side_rng`: that one is a single running stream, and
+	## spending it here would move every later road-dressing pick that reads it.
+	var names: Array = _families[family]
+	return names[rng.randi_range(0, names.size() - 1)]
+
+
 func _road_v_at(cell: Vector2i) -> int:
 	for i in _roads_v.size():
 		var r := _roads_v[i]
@@ -2550,7 +2564,26 @@ func _furnish_house(interior: Rect2i, pocket: Array[Vector2i],
 	_shuffle(wall_cells)
 	for a in avoid_late:
 		wall_cells.erase(a)   # this is the row the flight leans into
-	for piece in [_pick_variant_varied("cabinet"), _pick_variant_varied("bookshelf")]:
+	# THE CABINET AND THE BOOKSHELF MOVED UPSTAIRS. No house may furnish both its
+	# floors from the same families (user: "i dont want the same furniture on the
+	# floors of one house ... it should be different"), and there are only eight
+	# domestic families to split, so the two floors take a side each: down here
+	# is the LIVING ROOM (couch, tv, table, chairs, crates), up there is the
+	# BEDROOM (beds, cabinet, bookshelf). See _build_upper.
+	#
+	# THE TWO ROLLS ARE STILL TAKEN AND THROWN AWAY — that is the standing rule,
+	# not laziness. Deleting them would shorten the layout stream and re-roll the
+	# whole fixed district (doors, lamps, vehicles, every later building), and
+	# they also advance `_last_variant`, which the upstairs picks read. The
+	# replacements come off a LOCAL rng seeded from the district seed and this
+	# building's own corner: deterministic, per-house, and it costs the layout
+	# stream nothing.
+	_pick_variant_varied("cabinet")
+	_pick_variant_varied("bookshelf")
+	var furn := RandomNumberGenerator.new()
+	furn.seed = hash("%s:furnish:%d,%d" % [DISTRICT_SEED,
+		interior.position.x, interior.position.y])
+	for piece in [_local_variant("crate", furn), _local_variant("table", furn)]:
 		if wall_cells.is_empty():
 			break
 		collect.append(_add_prop_at_cell(piece, wall_cells.pop_front(), Vector2(6, 2)))
@@ -2800,16 +2833,42 @@ func _build_upper(interior: Rect2i, stairs_cell: Vector2i, kind: String,
 		stairs_cell + Vector2i(1, 0)]
 	var cells := _interior_free_cells(interior, keep)
 	_shuffle(cells)
+	# NO HOUSE FURNISHES BOTH ITS FLOORS FROM THE SAME FAMILIES (user: "i dont
+	# want the same furniture on the floors of one house ... it should be
+	# different"). Eight domestic families exist, so the floors take a side each:
+	#
+	#   ground   couch, tv_stand, table, chair, crate   — the living room
+	#   upstairs bed, cabinet, bookshelf                — the bedroom
+	#
+	# Nothing appears on both. See _furnish_house for the other half.
 	var pieces: Array[String] = []
 	if kind == "house":
+		# `crate` was the fourth piece and belongs downstairs now. A SECOND BED
+		# takes its slot, via `_pick_variant_norepeat` — one draw, exactly like
+		# the `_pick_variant` it replaces, so the layout stream cannot tell. It
+		# has to be the norepeat cut and not plain `_pick_variant`: that would
+		# happily hand out the same bed twice in one room, which is the
+		# no-visual-repetition rule broken in the most obvious place there is.
 		pieces = [_pick_variant_varied("bed"), _pick_variant_varied("cabinet"),
-			_pick_variant_varied("bookshelf"), _pick_variant("crate")]
+			_pick_variant_varied("bookshelf"), _pick_variant_norepeat("bed")]
 		if _rng.randf() < 0.4:
 			pieces.append(_pick_variant_varied("bed"))
 	else:
-		pieces = [_pick_variant_varied("table"), _pick_variant_varied("chair"),
-			_pick_variant_varied("table"), _pick_variant_varied("chair"),
-			_pick_variant_varied("bookshelf")]
+		# HALLS AND THE SCHOOL: their ground floors are desks and shelving, so
+		# upstairs becomes STORAGE instead. The five rolls are still taken and
+		# thrown away — see _furnish_house for why that is not optional — and a
+		# local district-seeded rng picks what actually stands there.
+		_pick_variant_varied("table")
+		_pick_variant_varied("chair")
+		_pick_variant_varied("table")
+		_pick_variant_varied("chair")
+		_pick_variant_varied("bookshelf")
+		var store := RandomNumberGenerator.new()
+		store.seed = hash("%s:upstore:%d,%d" % [DISTRICT_SEED,
+			interior.position.x, interior.position.y])
+		pieces = [_local_variant("crate", store), _local_variant("pallet", store),
+			_local_variant("crate_stack", store), _local_variant("crate", store),
+			_local_variant("pallet", store)]
 	for piece in pieces:
 		if cells.is_empty():
 			break

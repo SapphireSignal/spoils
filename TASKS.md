@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.89.** The release history was renumbered evenly on
+**Current version: v0.6.90.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -809,12 +809,27 @@ The original diagnosis below is kept for the record.
    flight's cells before furnishing, and remember the flight's ART spans about
    two cells up-right of its anchor, not one.
 
-## B0n. Upper and ground furniture still overlap *(user, 2026-08-07)*
+## B0n. Upper and ground furniture overlap — **DONE in v0.6.90**
 
-*"same with the furniture"* — the second floor should not be furnished from
-the same families as the ground floor. Today both use **cabinet, bookshelf and
-crate**. Wanted: disjoint sets, e.g. ground = couch/tv_stand/table/chair/crate,
-upper = bed/cabinet/bookshelf.
+*"same with the furniture"*, then *"i dont want the same furniture on the floors
+of one house"*, *"it should be different"*. Shipped as the split this entry
+proposed:
+
+| floor | families |
+|---|---|
+| ground (house) | couch, tv_stand, table, chair, crate — the living room |
+| upstairs (house) | bed, cabinet, bookshelf — the bedroom |
+| upstairs (hall/school) | crate, crate_stack, pallet — storage over the desks |
+
+**Nothing appears on both floors of one building.** Route 3 from the list below
+did it: every original `_rng` roll is still taken and thrown away, and the
+replacement families are picked off a LOCAL generator seeded from
+`DISTRICT_SEED` plus that building's own corner (`_local_variant`). The one
+family swap that WAS draw-neutral on its own — `_pick_variant("crate")` to
+`_pick_variant_norepeat("bed")`, one draw either way — was done directly.
+Verified: DOORS 16, LAMPS 53/15, VEHICLES 30, UPPERS 6, identical cells.
+
+**Kept for the next person, because the reasoning still applies:**
 
 **NOT a simple list edit, and this is the whole difficulty.** The picks go
 through `_pick_variant_varied`, which takes **one draw usually and TWO when it
