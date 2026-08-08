@@ -1337,6 +1337,73 @@ nothing travels ACROSS it.
   not per-cell spawners — motes.gd is the reference for following in whole
   world pixels without breaking the grid.
 
+## B17. Environmental reactions *(user, 2026-08-08)*
+
+*"Environmental Reactions: Make birds fly away from trees, im not sure what
+else we could add"*. Not started.
+
+**FIRST, THE LINE THIS MUST NOT CROSS.** The standing STATIC RULE says nothing
+in the world changes how it LOOKS because of where the player is. A reaction is
+not a violation of it — but the distinction is sharp and it decides the design:
+
+- **CONTINUOUS reactions are fine.** A bush bending as you push through it, a
+  puddle throwing a splash, a bird taking off — these are EVENTS with their own
+  motion and their own timing. They do not pop, because nothing snaps between
+  two states at a threshold.
+- **THRESHOLD flips are the banned thing.** If a bird is drawn on the branch
+  within N metres and gone beyond it — and comes straight back when you step
+  away — that is the exact artifact the rule exists to stop. **A flushed bird
+  must actually LEAVE and stay gone**, not toggle with distance.
+
+Ideas, cheapest and highest-feel first:
+
+1. **Birds flushing from trees** *(the user's)*. **There is prior art to
+   reuse**: `main_menu.gd` already flies five birds over the yard with parallel
+   arrays and a `menu_yard_bird` sprite. **Take its hard-won bug with it** —
+   those birds sat still for three sessions because they did
+   `position = roundf(position + speed * delta)`, and at 240 fps that rounds
+   straight back to zero. Keep the true position in its own float.
+2. **Puddle splashes underfoot.** Probably the best value in the list: the
+   splash POOL, the sprite and the puddle-blue already exist in
+   `environment_system.gd` for rain, and puddles are already world-anchored.
+   Reuse the pool rather than adding a second one.
+3. **World-to-world reactions, not just player-to-world** — these are what make
+   a place feel alive rather than feel like it is watching you. A car alarm
+   going off flushes the birds near it; the night freight passing sags the
+   street lamps. `car_alarms.gd` and `night_freight.gd` already exist to hang
+   these off.
+4. **Foliage brushing** as you walk through a bush — `sway.gdshader` is already
+   per-instance with a hashed phase, so a local displacement is a shader
+   uniform rather than new nodes.
+5. Vermin bolting from bins and boxcars (the counter scene already has a rat).
+
+## B18. Move the toll gate *(user, 2026-08-08)* — **NEEDS THEIR ANSWER FIRST**
+
+*"also lets move the tollgate to above the bus depot"*, with a screenshot
+circling an empty block up-left of the bus depot marker.
+
+**RAISED WITH THEM, NOT YET DONE, because the spot they circled is INSIDE the
+district and the toll gate is a hole in the WIRE.** It sits at [147, 187]
+today, hard on the barricade ring, and that is load-bearing rather than
+incidental: the whole extraction is "pay the warden to cross the line" (LORE
+§7c, DESIGN §8.4), the warden opens the wire, and `edge_guard` snipers shoot
+anyone crossing the ring anywhere else. A toll gate in the middle of the map
+would be a way out that leads back into the map.
+
+Two readings, and they change the work completely:
+1. **Move it along the ring** to the stretch nearest the bus depot — keeps the
+   design intact, is a deliberate map revision, and is straightforward.
+2. **They really do want it inland**, in which case the extraction needs a
+   different fiction (a tunnel mouth? a checkpoint on a road out?) and that is
+   a design change, not a move.
+
+**Whichever it is, this is a MAP REVISION**: `DISTRICT_SEED` stays
+`"transit-01"`, so it must be done the way v0.6.53 was — moving the POI
+without spending `_rng` draws, then re-probing `--probe-world` for DOORS 16 on
+unchanged cells to prove the rest of the layout did not re-roll. Also re-check
+`_place_toll_gate`'s clearances and the warden's own placement (**B8**, he
+faces away from the road) at the same time.
+
 ## B1. Sprint *(user)*
 
 Left shift, **hold-or-toggle like crouch**. Needs a run cycle for all 8

@@ -210,13 +210,45 @@ func _build_poi_list(info: Dictionary) -> void:
 		# were the ones with a bare word and nothing else. A zone can repeat
 		# over several rects and a marker on each would carpet the map, so only
 		# the LARGEST rect of a zone carries one — the rest keep just the name.
+		# ANCHOR A ZONE TO WHERE ITS STUFF ACTUALLY IS, not to its biggest
+		# rectangle (user, 2026-08-08: "the town icon and text is above the
+		# courtyard, it should be where the town is, like to the right of
+		# courtyard more down, where the other houses are"). Town spans two
+		# blocks and the larger of them is the one the COURTYARD occupies, so
+		# "largest" put the town's name on a square with no houses in it.
+		# Counting buildings finds the block a player would call the town.
+		var buildings: Array = _vec.get("buildings", []) as Array
 		var best := -1
-		var best_area := -1.0
+		var best_score := -1.0
 		for i in rects.size():
 			var rr: Array = rects[i]
-			var area := float(rr[2]) * float(rr[3])
-			if area > best_area:
-				best_area = area
+			var box := Rect2(float(rr[0]), float(rr[1]), float(rr[2]),
+				float(rr[3]))
+			var count := 0
+			for b in buildings:
+				var ba: Array = b
+				var centre := Vector2(float(ba[0]) + float(ba[2]) * 0.5,
+					float(ba[1]) + float(ba[3]) * 0.5)
+				if box.has_point(centre):
+					count += 1
+			# A BLOCK ANOTHER POI ALREADY NAMES IS THE WRONG BLOCK. The town's
+			# west block IS the courtyard's block, so naming it there put two
+			# markers on one square and left the actual houses unlabelled. This
+			# does not depend on the building list being populated, which the
+			# count above does — belt and braces, because the count alone did
+			# not move it.
+			var taken_here := false
+			for other in _pois:
+				if box.has_point((other["rect"] as Rect2).get_center()):
+					taken_here = true
+					break
+			# area only breaks ties, and only matters for a zone with no
+			# buildings at all in it — the woods, for instance
+			var score := float(count) * 1000.0 + box.get_area()
+			if taken_here:
+				score -= 100000.0
+			if score > best_score:
+				best_score = score
 				best = i
 		# ONE ENTRY PER ZONE, not one per rect. A zone repeats over several
 		# blocks and labelling each printed the same word twice on the map.

@@ -1336,6 +1336,194 @@ def make_map_icon(name: str) -> Canvas:
     return c
 
 
+MAP_PIC_W, MAP_PIC_H = 128, 76
+
+
+def make_map_pic(name: str) -> Canvas:
+    """A small painted view of a place, for the window you get when you click
+    its marker (user: "a little picture of the POI and some loot you can find
+    there and a little background of the POI").
+
+    Painted the way the menu backdrops are — banded cel light, a sky, a ground
+    plane and a silhouette — just much smaller. Under the standing HAND-DRAWN
+    ART rule: the medium is sanctioned, the bar is that it is done well.
+    """
+    c = Canvas(MAP_PIC_W, MAP_PIC_H)
+    rng = random.Random(hash(name) & 0xFFFFFFFF)
+    W, H = MAP_PIC_W, MAP_PIC_H
+
+    def sky(top, bot, horizon):
+        for y in range(H):
+            if y < horizon:
+                t = y / max(1.0, float(horizon))
+                c.hline(0, W - 1, y, top if t < 0.5 else bot)
+            else:
+                c.hline(0, W - 1, y, C("202e37"))
+
+    def ground(y0, col, dark):
+        for y in range(y0, H):
+            c.hline(0, W - 1, y, col if (y - y0) < 3 else dark)
+
+    def box(x0, y0, x1, y1, face, top, side=None):
+        c.rect(x0, y0, x1, y1, face)
+        c.hline(x0, x1, y0, top)
+        if side is not None:
+            c.vline(x1, y0, y1, side)
+
+    def specks(y0, y1, col, n):
+        for _ in range(n):
+            c.set(rng.randrange(W), rng.randrange(y0, y1), col)
+
+    # every picture shares a horizon so the set reads as one place
+    hz = 44
+    if name in ("town", "courtyard", "safehouse", "gallery", "school"):
+        sky(C("3c5e8b"), C("73bed3"), hz)
+    elif name in ("forest", "playground", "comms"):
+        sky(C("253a5e"), C("4f8fba"), hz)
+    elif name in ("trainyard", "scrapyard", "warehouse", "bus depot"):
+        sky(C("602c2c"), C("be772b"), hz)
+    else:
+        sky(C("172038"), C("3c5e8b"), hz)
+
+    if name == "town":
+        for i, x in enumerate((6, 40, 74, 104)):
+            h = 14 + (i % 3) * 7
+            box(x, hz - h, x + 26, hz + 6, C("884b2b"), C("a53030"), C("602c2c"))
+            for wy in range(hz - h + 5, hz + 2, 6):
+                c.rect(x + 4, wy, x + 7, wy + 2, C("de9e41"))
+                c.rect(x + 15, wy, x + 18, wy + 2, C("253a5e"))
+        ground(hz + 6, C("577277"), C("394a50"))
+    elif name == "courtyard":
+        ground(hz, C("819796"), C("577277"))
+        c.rect(48, hz - 4, 79, hz + 10, C("577277"))      # the dry basin
+        c.rect(52, hz - 2, 75, hz + 6, C("394a50"))
+        c.rect(61, hz - 20, 66, hz - 2, C("a8b5b2"))      # the pillar
+        c.rect(55, hz - 24, 72, hz - 20, C("819796"))
+        specks(hz + 12, H, C("394a50"), 60)
+    elif name == "safehouse":
+        ground(hz + 8, C("577277"), C("394a50"))
+        box(30, hz - 20, 96, hz + 8, C("884b2b"), C("a53030"), C("602c2c"))
+        for i in range(9):                                 # a pitched roof
+            c.hline(30 + i * 4, 96 - i * 4, hz - 20 - i, C("cf573c"))
+        c.rect(56, hz - 8, 68, hz + 8, C("341c27"))        # the door, lit
+        c.rect(60, hz - 2, 62, hz + 1, C("e8c170"))
+        c.rect(38, hz - 14, 46, hz - 8, C("de9e41"))
+    elif name == "gallery":
+        ground(hz + 4, C("577277"), C("394a50"))
+        c.rect(0, hz - 30, W - 1, hz + 4, C("577277"))     # a long wall
+        for i, col in enumerate((C("a23e8c"), C("4f8fba"), C("de9e41"),
+                                 C("468232"), C("cf573c"))):
+            x = 6 + i * 24
+            c.rect(x, hz - 26 + (i % 3) * 3, x + 18, hz - 8 + (i % 2) * 4, col)
+        specks(hz - 30, hz + 4, C("819796"), 40)
+    elif name == "school":
+        ground(hz + 6, C("577277"), C("394a50"))
+        box(14, hz - 22, 112, hz + 6, C("ad7757"), C("de9e41"), C("884b2b"))
+        for wx in range(20, 106, 14):
+            c.rect(wx, hz - 16, wx + 8, hz - 6, C("253a5e"))
+        c.rect(58, hz - 34, 66, hz - 22, C("819796"))      # the bell tower
+        c.set(61, hz - 36, C("e8c170"))
+    elif name == "forest":
+        ground(hz + 2, C("25562e"), C("19332d"))
+        # SOLID CONIFERS. Drawing one line every fourth row left 3px gaps and
+        # the whole stand read as horizontal dashes rather than trees.
+        for i in range(11):
+            x = 4 + i * 11 + rng.randrange(-2, 3)
+            top = hz - 30 + rng.randrange(-6, 7)
+            for k in range(24):
+                half = 1 + k // 2
+                band = C("468232") if k < 7 else (C("25562e") if k < 16
+                                                  else C("19332d"))
+                c.hline(x - half, x + half, top + k, band)
+            c.rect(x - 1, top + 24, x + 1, hz + 2, C("341c27"))
+    elif name == "playground":
+        ground(hz + 6, C("884b2b"), C("602c2c"))
+        c.rect(20, hz - 26, 100, hz - 23, C("819796"))     # the swing frame
+        for x in (24, 96):
+            for k in range(30):
+                c.set(x + (1 if x == 24 else -1) * (k // 4), hz - 23 + k,
+                      C("577277"))
+        for x in (46, 70):
+            c.vline(x, hz - 22, hz - 6, C("a8b5b2"))
+            c.rect(x - 5, hz - 6, x + 5, hz - 3, C("de9e41"))
+    elif name == "comms":
+        ground(hz + 4, C("25562e"), C("19332d"))
+        c.rect(61, hz - 40, 66, hz + 4, C("819796"))       # the mast
+        for k in range(11):
+            c.set(56 - k // 2, hz - 36 + k * 3, C("577277"))
+            c.set(71 + k // 2, hz - 36 + k * 3, C("577277"))
+        c.rect(59, hz - 44, 68, hz - 40, C("577277"))
+        c.rect(62, hz - 47, 65, hz - 45, C("a53030"))      # still blinking
+    elif name == "trainyard":
+        ground(hz + 6, C("4d2b32"), C("341c27"))
+        for i, col in enumerate((C("752438"), C("25562e"), C("752438"))):
+            x = 2 + i * 44
+            box(x, hz - 18, x + 38, hz + 4, col, C("a53030")
+                if i != 1 else C("468232"), C("341c27"))
+            c.rect(x + 12, hz - 12, x + 26, hz - 2, C("341c27"))
+        for ry in (hz + 10, hz + 16):
+            c.hline(0, W - 1, ry, C("819796"))
+        for x in range(2, W, 9):
+            c.rect(x, hz + 10, x + 4, hz + 16, C("4d2b32"))
+    elif name == "scrapyard":
+        ground(hz + 4, C("4d2b32"), C("341c27"))
+        c.rect(10, hz - 40, 16, hz + 4, C("de9e41"))       # the crane
+        c.rect(10, hz - 40, 84, hz - 34, C("de9e41"))
+        c.vline(80, hz - 34, hz - 16, C("819796"))
+        c.rect(74, hz - 16, 86, hz - 8, C("577277"))
+        for i in range(4):                                  # stacked wrecks
+            x = 40 + (i % 2) * 40
+            y = hz + 2 - (i // 2) * 10
+            box(x, y - 8, x + 34, y, C("752438") if i % 2 else C("253a5e"),
+                C("a53030") if i % 2 else C("3c5e8b"))
+    elif name == "warehouse":
+        ground(hz + 6, C("577277"), C("394a50"))
+        box(6, hz - 30, 120, hz + 6, C("577277"), C("819796"), C("394a50"))
+        c.rect(40, hz - 14, 86, hz + 6, C("341c27"))       # roller door
+        for y in range(hz - 14, hz + 6, 3):
+            c.hline(40, 86, y, C("4d2b32"))
+        c.rect(14, hz - 24, 30, hz - 16, C("253a5e"))
+    elif name == "bus depot":
+        ground(hz + 8, C("394a50"), C("202e37"))
+        for i in range(3):
+            x = 4 + i * 42
+            box(x, hz - 16, x + 36, hz + 8, C("de9e41"), C("e8c170"),
+                C("884b2b"))
+            c.rect(x + 4, hz - 12, x + 32, hz - 4, C("253a5e"))
+            c.rect(x + 4, hz + 8, x + 10, hz + 11, C("341c27"))
+            c.rect(x + 26, hz + 8, x + 32, hz + 11, C("341c27"))
+    elif name == "lz":
+        ground(hz + 6, C("577277"), C("394a50"))
+        for k in range(22):                                # the smoke column
+            c.rect(56 - k // 3, hz - 34 + k, 70 + k // 3, hz - 33 + k,
+                   C("468232") if k % 3 else C("75a743"))
+        c.rect(34, hz + 8, 94, hz + 20, C("394a50"))       # the pad
+        c.hline(34, 94, hz + 8, C("a8b5b2"))
+        c.rect(58, hz + 10, 70, hz + 18, C("468232"))
+    elif name == "toll gate":
+        ground(hz + 8, C("394a50"), C("202e37"))
+        c.rect(18, hz - 26, 26, hz + 8, C("577277"))       # the booth
+        c.rect(20, hz - 22, 24, hz - 12, C("de9e41"))
+        for i in range(26):                                 # the barrier arm
+            c.rect(28 + i * 4, hz - 8 - i // 4, 31 + i * 4, hz - 5 - i // 4,
+                   C("a53030") if (i // 3) % 2 == 0 else C("ebede9"))
+        for x in range(0, W, 16):                           # wire either side
+            c.vline(x, hz - 2, hz + 8, C("577277"))
+    else:
+        ground(hz, C("577277"), C("394a50"))
+    # CEL LIGHT: SOLID BANDS, never per-pixel. The first cut rolled a 35%
+    # chance per pixel across the top six rows and it came out as television
+    # static — which is also the single-pixel dot noise banned project-wide
+    # ("remove those little dots everywhere"). The backdrops band their light
+    # in solid strips with a wavy seam, and so does this.
+    for y in range(3):
+        c.hline(0, W - 1, y, C("a4dddb") if y < 2 else C("73bed3"))
+    for x in range(W):
+        wob = int(2.0 + 1.6 * math.sin(x * 0.11) + 0.8 * math.sin(x * 0.037))
+        c.set(x, 3 + max(0, wob - 2), C("73bed3"))
+    return c
+
+
 MAP_ICON_NAMES = [
     "town", "forest", "warehouse", "school", "playground", "courtyard",
     "trainyard", "bus depot", "comms", "gallery", "scrapyard", "safehouse",
@@ -19833,6 +20021,11 @@ def main() -> None:
         icon = make_map_icon(icon_name)
         assert_palette(icon.img, "map_icon_%s" % icon_name)
         icon.img.save(OUT / ("map_icon_%s.png" % icon_name.replace(" ", "_")))
+        pic = make_map_pic(icon_name)
+        assert_palette(pic.img, "map_pic_%s" % icon_name)
+        pic.img.save(OUT / ("map_pic_%s.png" % icon_name.replace(" ", "_")))
+    for extra_pic in ("safehouse",):     # named places that are not zones too
+        pass
 
     map_atlas, map_coords = make_map_atlas()
     assert_palette(map_atlas, "map_tiles")
