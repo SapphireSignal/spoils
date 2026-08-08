@@ -41,6 +41,49 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-08 — v0.6.102: the static rule, and props that escaped their rooms
+
+**Shipped: v0.6.102.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass, `--probe-propclip`
+0 of 165.
+
+### THE RULE THAT NOW GOVERNS ALL OF THIS
+
+*"like every single thing in my world shouldnt move or change the way it looks
+like that you know what i mean? everything is static unless i asked otherwise
+... stuff shouldnt change on depending on where i am on the map or if i go
+through a door"*. In CLAUDE.md, in full. **Read it before touching sorting.**
+
+Exceptions are ONLY the two asked for by name: the roof fade, and
+`set_wall_storey` when climbing. It permanently rules out fading the near walls
+while inside — so B11 has static options only (collision clearance, or art).
+
+### Shipped
+
+`_sprite_escapes` + `--probe-propclip`. `_drop_hidden_furniture` only cleared
+the two NEAR rows; the FAR rows were unguarded and upstairs had no pass at all.
+7 of 172 props hung out through a wall; now 0 of 165. Freed after placement, so
+no draw moves — DOORS 16 / LAMPS 53/15 / VEHICLES 30 / UPPERS 6 propless=0.
+
+### Learned
+
+- **MEASURE THE POPULATION BEFORE FIXING ONE INSTANCE.** The user photographed
+  one crate. The probe found seven, in three different buildings, including two
+  upstairs that no cleanup pass had ever visited. Fixing the photographed one
+  would have left six.
+- **The probe's first cut counted the WALLS as escapees** (248 of 413) because
+  structure is supposed to straddle the boundary. A probe that flags everything
+  is as useless as one that flags nothing — filter to the population you mean.
+
+### Picked up at
+
+1. **B11** — banding, static options only now. Do not attempt a fourth sorting
+   fix.
+2. **B12** — power boxes (was only an issue under the reverted aiming; recheck
+   whether it still reproduces before doing anything).
+3. Backlog: B4 (smoker, NEXT UP), B0-NEW, B0, B0b, B1, B2, B3, B6, B8, B10, C3.
+
+---
+
 ## 2026-08-08 — v0.6.101: the face-sort mechanism is gone entirely
 
 **Shipped: v0.6.101.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass.

@@ -35,7 +35,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
 	 form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.101 shipped, 2026-08-08.** Milestone 1 (a walkable world) is DONE.
+**v0.6.102 shipped, 2026-08-08.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 
@@ -198,6 +198,28 @@ Deliver the intent with additive glow sprites, the way lamps already do.
   regression where the leaf lost to the WALL. Do not read a probe PASS as "the
   frame is right" — it means only that the one pair it compares is ordered
   correctly.
+- **NOTHING IN THE WORLD CHANGES HOW IT LOOKS BECAUSE OF WHERE THE PLAYER IS.**
+  User call, 2026-08-08, and it is a STANDING RULE, not a bug report: *"like
+  every single thing in my world shouldnt move or change the way it looks like
+  that you know what i mean? everything is static unless i asked otherwise and i
+  never asked for these boxes to clip or whatever theyre doing, like stuff
+  shouldnt change on depending on where i am on the map or if i go through a
+  door"*.
+  An object's appearance — its depth, its position, its visibility — is a
+  property of the OBJECT, not of the camera or the player. If a thing draws one
+  way when you are outside and another way when you step in, it will pop at the
+  threshold and the player is looking straight at it when it does. **Three
+  versions (v0.6.97-v0.6.101) were burned learning this the expensive way.**
+  **The only sanctioned exceptions are the ones the user asked for by name:**
+  the ROOF fade on entering a building, and the WALL BAND switch when climbing
+  a storey (`set_wall_storey`). Both were requested explicitly. Everything else
+  is static, inside and out, near and far.
+  **What this rules OUT, permanently:** fading or cutting the near walls while
+  inside (the standard iso answer to walls hiding the player — it is off the
+  table here); any per-face or per-piece sort that keys off the player's
+  position; any "reveal" that switches at a doorway. If an artefact cannot be
+  fixed by changing the ART or the COLLISION — both static — then say so plainly
+  rather than reaching for a positional trick.
 - **THE CAMERA RIDES `floor_lift`, AND THE USER WANTS IT THAT WAY. SETTLED,
   DO NOT REOPEN** (2026-08-07: *"the camera already lifts with me, and i like
   it like that"*, then *"remove the camera lift from open"* when it was still

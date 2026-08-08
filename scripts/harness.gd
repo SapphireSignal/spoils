@@ -125,6 +125,8 @@ func _ready() -> void:
 			_probe_floordoor.call_deferred()
 		elif arg == "--probe-upper":
 			_probe_upper.call_deferred()
+		elif arg == "--probe-propclip":
+			_probe_propclip.call_deferred()
 		elif arg == "--probe-wallclip":
 			_probe_wallclip.call_deferred()
 		elif arg == "--probe-doorsort":
@@ -1991,6 +1993,77 @@ func _probe_upper() -> void:
 	for g in ghosts.slice(0, 12):
 		print("UPPER GHOST %s" % g)
 	get_tree().quit(0)
+
+
+func _probe_propclip() -> void:
+	## WHICH INTERIOR PROPS POKE THROUGH THEIR OWN BUILDING'S WALLS?
+	##
+	## `_drop_hidden_furniture` already clears the SOUTH and EAST border rows,
+	## because a near wall stands in front of those. Nothing guards the NORTH
+	## and WEST rows — and a wide sprite standing there hangs out past the wall
+	## line, which is what the user photographed: a crate half outside the
+	## building.
+	##
+	## Static geometry, so this is a static measurement: take each prop's sprite
+	## rect, walk its BASE corners (the object sits on those), and report any
+	## that land outside their building's interior. Prints the overhang in
+	## pixels so a fix can be sized rather than guessed.
+	await _ensure_game_scene()
+	var main_node := get_tree().current_scene
+	var info: Dictionary = main_node.get("world_info")
+	var fl := main_node.get("_floor_layer") as TileMapLayer
+	var roofs: Array = info.get("roofs", []) as Array
+	if fl == null or roofs.is_empty():
+		print("PROPCLIP FAIL: no world")
+		get_tree().quit(1)
+		return
+	var world := main_node.get_node_or_null("World")
+	var total := 0
+	var bad := 0
+	for r in roofs:
+		var cells: Rect2i = (r as RoofReveal).cells
+		for n in world.get_children():
+			var node := n as Node2D
+			if node == null:
+				continue
+			var here := fl.local_to_map(node.position)
+			if not cells.has_point(here):
+				continue
+			var spr: Sprite2D = null
+			for c in node.get_children():
+				if c is Sprite2D:
+					spr = c as Sprite2D
+					break
+			if spr == null or spr.texture == null:
+				continue
+			# STRUCTURE IS SUPPOSED TO SIT ON THE BOUNDARY — walls, posts, door
+			# pieces and the wall-mounted power box all straddle the line by
+			# design. Only FURNITURE standing inside the room is a candidate.
+			var fname := spr.texture.resource_path.get_file()
+			if fname.begins_with("seg_") or fname.begins_with("seg2_") 					or fname.begins_with("post_") or fname.begins_with("post2_") 					or fname.begins_with("door_") or fname.begins_with("power_box"):
+				continue
+			var tex := spr.texture.get_size()
+			var top_left := node.global_position + spr.offset
+			total += 1
+			# the two BASE corners of the sprite: where the object stands
+			var corners := [
+				top_left + Vector2(0.0, tex.y),
+				top_left + Vector2(tex.x, tex.y),
+			]
+			var worst := 0
+			for pt in corners:
+				var cc := fl.local_to_map(pt as Vector2)
+				var dx := maxi(cells.position.x - cc.x, cc.x - (cells.end.x - 1))
+				var dy := maxi(cells.position.y - cc.y, cc.y - (cells.end.y - 1))
+				worst = maxi(worst, maxi(dx, dy))
+			if worst > 0:
+				bad += 1
+				var f := spr.texture.resource_path.get_file()
+				print("PROPCLIP out=%d cell=%s room=%s %s"
+					% [worst, str(here), str(cells), f])
+	print("PROPCLIP interior_props=%d poking_out=%d" % [total, bad])
+	print("PROPCLIP %s" % ("PASS" if bad == 0 else "FAIL"))
+	get_tree().quit(0 if bad == 0 else 1)
 
 
 func _probe_wallclip() -> void:

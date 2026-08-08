@@ -3,6 +3,42 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.102] - 2026-08-08 - no furniture hangs out through its own wall
+
+### Fixed - crates, pallets and a bed standing half outside their building
+*"remove this box, its clipping outside of the building and the wall, and fix
+any other clipped boxes or any clipped furniture in any buildings"*.
+
+A placement fault, not a sorting one — which matters, because under the new
+standing rule (nothing may change with the player's position) placement is the
+only kind of fix available.
+
+`_drop_hidden_furniture` already cleared the two NEAR border rows, since a wall
+stands in front of those. Nothing guarded the FAR ones, so a wide sprite on the
+north or west row hung out past the wall line. Upstairs props went through no
+such pass at all.
+
+Measured first with a new `--probe-propclip`, which walks every interior prop's
+sprite BASE corners — the two the object actually stands on, since a tall sprite
+may legitimately rise above a wall but its feet must be in the room:
+
+**Before: 7 of 172 poking out. After: 0 of 165.**
+
+Anything that escapes is freed AFTER placement, the same way the near-row pass
+already worked, so not one rng draw moves. Verified: DOORS 16, LAMPS 53/15,
+VEHICLES 30, UPPERS 6 with `propless=0` — no room was stripped bare.
+
+### Recorded - a standing rule, in the user's words
+*"everything is static unless i asked otherwise ... stuff shouldnt change on
+depending on where i am on the map or if i go through a door"*. Now in
+CLAUDE.md. An object's depth, position and visibility belong to the OBJECT, not
+to the camera. The only sanctioned exceptions are the two that were asked for by
+name: the roof fade, and the wall-band switch when climbing a storey.
+
+**It also permanently rules out** the standard iso answer to walls hiding the
+player — fading the near walls while inside. B11's remaining options are static
+ones only.
+
 ## [0.6.101] - 2026-08-08 - nothing changes when you walk through a doorway
 
 ### Fixed - furniture and crates jumped as you entered or left a building

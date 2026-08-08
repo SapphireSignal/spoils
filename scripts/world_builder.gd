@@ -2384,8 +2384,48 @@ func _drop_hidden_furniture(interior: Rect2i, props: Array[Node2D]) -> void:
 		if cell.y == south or cell.x == east:
 			node.queue_free()
 			continue
+		# ...AND ANYTHING WHOSE SPRITE HANGS OUT THROUGH ITS OWN WALL.
+		#
+		# The rule above only clears the two NEAR rows. Nothing guarded the far
+		# ones, so a wide sprite standing on the north or west row hung out past
+		# the wall line and sat half outside the building — user, with photos:
+		# "remove this box, its clipping outside of the building and the wall,
+		# and fix any other clipped boxes or any clipped furniture in any
+		# buildings".
+		#
+		# Measured with `--probe-propclip` before writing this: SEVEN of 172
+		# interior props district-wide, each hanging out by exactly one cell. It
+		# is a placement fault, not a sorting one — which is the only kind of fix
+		# allowed here, since nothing may change with the player's position.
+		#
+		# The test is the sprite's BASE corners, the two the object actually
+		# stands on: a tall sprite legitimately rises above a wall, but its feet
+		# must be in the room. Freed AFTER placement like everything else in this
+		# function, so the layout stream is untouched.
+		if _sprite_escapes(node, interior):
+			node.queue_free()
+			continue
 		kept.append(node)
 	props.assign(kept)
+
+
+func _sprite_escapes(node: Node2D, interior: Rect2i) -> bool:
+	## Does this prop's sprite stand outside the room it belongs to? Base
+	## corners only — see _drop_hidden_furniture.
+	var spr: Sprite2D = null
+	for c in node.get_children():
+		if c is Sprite2D:
+			spr = c as Sprite2D
+			break
+	if spr == null or spr.texture == null:
+		return false
+	var tex := spr.texture.get_size()
+	var top_left := node.position + spr.offset
+	for pt in [top_left + Vector2(0.0, tex.y),
+			top_left + Vector2(tex.x, tex.y)]:
+		if not interior.has_point(_floor_layer.local_to_map(pt as Vector2)):
+			return true
+	return false
 
 
 func _yard_fits(yard: Rect2i) -> bool:
@@ -2881,6 +2921,14 @@ func _build_upper(interior: Rect2i, stairs_cell: Vector2i, kind: String,
 		node.visible = false
 		if node is StaticBody2D:
 			(node as StaticBody2D).collision_layer = 0
+		# the same escape test the ground floor gets: a sprite whose FEET land
+		# outside the room hangs through its own wall. Upstairs props were not
+		# covered by `_drop_hidden_furniture` at all, and `--probe-propclip`
+		# found three of them (a bed and two storage pieces) doing exactly that.
+		# Freed after placement, so no rng draw moves.
+		if _sprite_escapes(node, interior):
+			node.queue_free()
+			continue
 		upper_props.append(node)
 
 	_uppers.append({

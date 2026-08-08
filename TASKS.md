@@ -5,7 +5,7 @@ one. **Read `CLAUDE.md` first** (project rules, systems map, verification
 workflow), then this file for what to actually build. `CHANGELOG.md`
 records what already shipped.
 
-**Current version: v0.6.101.** The release history was renumbered evenly on
+**Current version: v0.6.102.** The release history was renumbered evenly on
 2026-08-02 — read the versioning note in CLAUDE.md before quoting any old
 version number, because they were all remapped.
 
@@ -855,8 +855,23 @@ through the wall"*, then the two details that actually solved it: *"it happens
 like 3 times on that side of the wall"* and *"theyre at regular intervals, not
 near the corners"*.
 
-**FIXED by option 2 below — one shared sort key per face, applied only while
-inside. Do NOT fix the collision; that was the wrong diagnosis.**
+**OPEN, AND THE SOLUTION SPACE IS NOW MUCH SMALLER.** Three sorting attempts
+(v0.6.97, v0.6.99, v0.6.100) each cured the bands and broke something worse;
+all three are reverted. The user has since made it a standing rule that
+**nothing may change appearance based on where the player is** — see CLAUDE.md.
+
+That rules out every approach tried so far AND the industry-standard one
+(fading the near walls while inside). What is left is STATIC only:
+
+1. **Collision** — hold the player far enough off a wall that their sprite never
+   overlaps more than one wall tile. Static, legal under the rule, and it
+   REDUCES the banding rather than removing it: a 30 px sprite against a 40 px
+   wall would need most of a cell of clearance to be fully clear, which would
+   read as an invisible skirting board. Measure before committing to it.
+2. **Art** — a shorter interior wall face, or a wall drawn so the overlap does
+   not read as a cut. Also static. Not costed yet.
+
+**Do not attempt a fourth sorting fix.**
 
 A wall face is built as ONE SPRITE PER CELL, each with a single y-sort key.
 Walking along the inside of a wall crosses those keys one at a time, so at every

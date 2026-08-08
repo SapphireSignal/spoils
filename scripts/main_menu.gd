@@ -206,6 +206,9 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.102", [
+		"no furniture hangs out through its own wall any more. crates, a pallet and a bed were standing half outside their buildings - the cleanup pass only ever checked the two walls nearest the camera, and never checked upstairs at all. seven across the district, all gone, and no room lost its furniture",
+	]],
 	["v0.6.101", [
 		"walking through a doorway no longer changes how the building is drawn. furniture and crates near the back walls were shifting the instant you stepped in or out, because the walls were switching depth at the threshold. that switch is gone entirely - walls draw the same way inside and out now, and the roof lifting is the only thing that changes when you enter",
 	]],
