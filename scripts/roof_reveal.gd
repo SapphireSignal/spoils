@@ -11,10 +11,6 @@ var cells: Rect2i
 ## transom). `is_far` means the piece is on the north/west edge, so the room
 ## lies in front of it on screen.
 var low_walls: Array = []
-## [wall_node, delta] for every wall piece whose face gets a SHARED sort key
-## while the player is inside — see set_face_sort.
-var face_walls: Array = []
-var _face_on := false
 
 var _inside := false
 var _tween: Tween
@@ -78,51 +74,6 @@ func set_wall_storey(show_low_near: bool, show_low_far: bool,
 		_upper_from = 1.0 if show_upper else 0.0
 		_near_from = 1.0 if show_low_near else 0.0
 		_far_from = 1.0 if show_low_far else 0.0)
-
-
-func set_face_sort(on: bool) -> void:
-	## ONE SORT KEY PER WALL FACE, WHILE THE PLAYER IS INSIDE (B11).
-	##
-	## A face is one sprite per cell and each has its own y-sort key, so walking
-	## along the inside of a wall crosses them one at a time — at every cell
-	## boundary you are in front of the cell just passed and behind the next,
-	## and that next one's brick draws across you. The user saw it as being cut
-	## in half at regular intervals, one band per cell.
-	##
-	## A face has no reason to sort per-cell against the room it encloses: it is
-	## one flat surface, wholly behind the room or wholly in front of it. So
-	## every piece is pushed onto its own face's extreme — computed once at
-	## build time — and the whole face becomes a single plane with no seams to
-	## cross.
-	##
-	## ONLY WHILE INSIDE. From the street a face genuinely does interleave with
-	## things standing along it, so outside it goes straight back to per-cell.
-	##
-	## THE SPRITE MOVES, NEVER THE NODE. These are StaticBody2D; moving one
-	## would move the wall's collision and depenetrate anything resting against
-	## it. `y_sort_enabled` on the piece lets its sprites carry the depth
-	## instead — the same split the second-floor slab and the door leaf use.
-	if on == _face_on:
-		return
-	_face_on = on
-	for entry in face_walls:
-		var node := entry[0] as Node2D
-		var delta := float(entry[1]) if on else 0.0
-		var back := -float(entry[1]) if on else 0.0
-		for child in node.get_children():
-			var spr := child as Sprite2D
-			if spr == null:
-				continue
-			spr.position.y = delta
-			spr.offset.y = _sprite_base_offset(spr) + back
-
-
-func _sprite_base_offset(spr: Sprite2D) -> float:
-	## the offset the piece was BUILT with, remembered per sprite so the shift
-	## can be added and taken away without accumulating
-	if not spr.has_meta("base_off_y"):
-		spr.set_meta("base_off_y", spr.offset.y)
-	return float(spr.get_meta("base_off_y"))
 
 
 func set_inside(inside: bool) -> void:

@@ -206,6 +206,9 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.101", [
+		"walking through a doorway no longer changes how the building is drawn. furniture and crates near the back walls were shifting the instant you stepped in or out, because the walls were switching depth at the threshold. that switch is gone entirely - walls draw the same way inside and out now, and the roof lifting is the only thing that changes when you enter",
+	]],
 	["v0.6.100", [
 		"reverted last version's wall change. making a whole wall face take its depth from where you stand cured the banding, but it made everything attached to that wall depend on you too - the corner posts flickered, the power boxes vanished, and the warehouse crates jumped as you crossed the doorway. the bands are back and nothing else is broken while a proper fix is designed",
 	]],

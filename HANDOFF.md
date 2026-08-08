@@ -41,6 +41,43 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-08 — v0.6.101: the face-sort mechanism is gone entirely
+
+**Shipped: v0.6.101.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass.
+
+*"fix the boxes and any furniture changing when i walk in the buildings or
+houses, like i can see it clip out and back in"*.
+
+v0.6.100 reverted the aimed near faces but kept the FAR-face collapse. That is
+still a state change at the doorway: far pieces move to their face's northern
+extreme on entry and back on exit, so anything near a far wall changes what
+covers it as you cross. Removed. `roof_reveal.gd`, `world_builder.gd` and
+`main.gd` are restored to their v0.6.96 state.
+
+**THE RULE THIS EARNED: DO NOT SWITCH SORT STATE AT A THRESHOLD.** Any scheme
+that draws walls one way inside and another way outside will pop at the moment
+of crossing, and the player is looking straight at the building when it happens.
+Three versions were spent learning it (v0.6.97 near+far, v0.6.98 far only,
+v0.6.100 far only again). If a fix cannot be applied identically inside and out,
+it is the wrong fix.
+
+**ALSO LEARNED, and it explains several confusing reports:** the user plays from
+the working tree, so uncommitted edits reach their running game immediately.
+Several "it's broken" reports were half-finished work, not shipped versions.
+**Keep the tree runnable at all times**, and say explicitly when something in it
+is mid-change.
+
+### Picked up at
+
+1. **B11 open.** Three sorting attempts, three regressions. Do not try a fourth.
+   The industry answer is to CUT THE NEAR WALLS AWAY while inside — which this
+   repo already does for the roof — and it is blocked only by the user's
+   standing "walls always stay visible" rule. **Ask that question first.**
+2. **B12** (power boxes) — only reachable once B11's approach is settled.
+3. Backlog: B4 (smoker, NEXT UP), B0-NEW, B0, B0b, B1, B2, B3, B6, B8, B10, C3.
+
+---
+
 ## 2026-08-08 — v0.6.100: reverted the near-face aiming, and the REAL fix named
 
 **Shipped: v0.6.100.** Scripts restored to v0.6.98's face behaviour.

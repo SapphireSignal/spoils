@@ -778,10 +778,6 @@ func _process(delta: float) -> void:
 		# own floor is what should be hiding it.
 		var up_here := here and _player.upstairs
 		reveal.set_wall_storey(true, not up_here, (not here) or up_here)
-		# B11: inside, each wall FACE collapses to a single sort key so walking
-		# along one stops crossing its per-cell keys and being cut into bands.
-		# Outside it goes back to per-cell, where the interleaving is right.
-		reveal.set_face_sort(here)
 		indoors = indoors or here
 	_indoors_now = indoors
 	# a roof over your head muffles the weather (user). Same test that

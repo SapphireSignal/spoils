@@ -3,6 +3,31 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.101] - 2026-08-08 - nothing changes when you walk through a doorway
+
+### Fixed - furniture and crates jumped as you entered or left a building
+*"fix the boxes and any furniture changing when i walk in the buildings or
+houses, like i can see it clip out and back in"*.
+
+v0.6.100 reverted the aimed NEAR faces but KEPT the far-face collapse from
+v0.6.97 — and that is still a state change, switched on at the doorway. Every
+far wall piece moves to its face's northernmost depth when you step inside and
+back again when you leave, so anything standing near a far wall changes what
+covers it at the exact moment you cross. That is the clipping in and out.
+
+**The whole face-sort mechanism is gone.** Walls sort per tile, always, inside
+and out, exactly as they did in v0.6.96. Crossing a doorway now changes nothing
+about how the building draws except the roof, which is the one thing that
+should change.
+
+`RoofReveal` and `WorldBuilder` are byte-identical to v0.6.96 on this;
+`--probe-wallclip` stays, because the measurement is still worth having.
+
+**B11 (the wall banding) is open again, and deliberately so.** Three attempts at
+solving it by sorting have each traded it for something worse. The next attempt
+should not be a fourth — see HANDOFF for the approach the industry actually
+uses and the one question that unlocks it.
+
 ## [0.6.100] - 2026-08-08 - reverted: the near wall faces stop aiming at you
 
 ### Reverted - v0.6.99 traded one artefact for four
