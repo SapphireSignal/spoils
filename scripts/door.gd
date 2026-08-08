@@ -13,6 +13,7 @@ extends StaticBody2D
 const FRAMES := 4          # frames per swing; the sheet holds two swings
 const FRAME_TIME := 0.06
 const JAMB_EPS := 0.01     # sub-pixel; decides leaf-vs-jamb ties ONLY
+const LEAF_AIM_MARGIN := 1.0   # how far past the player the aimed leaf key sits
 
 var _sprite: Sprite2D
 var _occ: LightOccluder2D          # blocks LIGHT exactly when _poly blocks bodies
@@ -204,6 +205,25 @@ func _leaf_sort_depth() -> float:
 	return (span.y if _swing_out else span.x) + eps
 
 
+func leaf_base_segment() -> Array:
+	## The open leaf's base line in GLOBAL space — the two ends of the longest
+	## edge of its collision polygon. This is the panel the leaf stands on, and
+	## which SIDE of it you are on is the only true answer to "is the player
+	## behind the door". A y-sort key is a single number and cannot express it;
+	## `--probe-doorsort` measures the gap between the two.
+	var poly := _active_leaf()
+	var pts := poly.polygon
+	var best := 0
+	var best_len := -1.0
+	for i in pts.size():
+		var l := (pts[(i + 1) % pts.size()] - pts[i]).length()
+		if l > best_len:
+			best_len = l
+			best = i
+	return [to_global(poly.position + pts[best]),
+		to_global(poly.position + pts[(best + 1) % pts.size()])]
+
+
 func _leaf_span(poly: CollisionPolygon2D) -> Vector2:
 	var lo := INF
 	var hi := -INF
@@ -325,7 +345,60 @@ func set_floor_blocked(blocked: bool) -> void:
 		_poly.set_deferred("disabled", true)
 
 
+func _aim_leaf_sort() -> void:
+	## AIM THE LEAF'S SORT KEY AT THE PLAYER, because a single number cannot
+	## describe a panel standing on a diagonal.
+	##
+	## An open leaf is a plane, and "is the player behind it" is a HALF-PLANE
+	## test against that plane's base line. Y-sort compares two floats, i.e. it
+	## tests against a HORIZONTAL line. The two agree only where they cross, and
+	## diverge in a wedge that widens with distance — `--probe-doorsort`
+	## measured 35 of 73 squares around one open leaf drawing on the wrong side.
+	## That is both halves of the user's report at once: standing behind the
+	## leaf and being drawn in front of it ("hes infront of the door"), and
+	## standing beside it and being eaten by it ("my character clips in the
+	## door").
+	##
+	## No fixed key can fix that. So the key stops being fixed: every frame,
+	## work out which side of the leaf's own base line the player is really on,
+	## and put the key just the other side of THEM. Exact for the player —
+	## which is the only thing that ever stands in a doorway, since the entrance
+	## pocket is kept prop-free inside and out — and unnoticeable for the rest.
+	##
+	## The one hard floor is the wall: the leaf must still out-sort the jamb and
+	## the wall it stands in front of, or it draws inside its own building
+	## (v0.6.7x, user: "the door clips in the wall when its opened outside").
+	## That is what the JAMB_EPS bound is, and it is never traded away.
+	var player := get_tree().get_first_node_in_group("player_shake") as Node2D
+	if player == null:
+		_apply_sort_shift(_leaf_sort_depth())
+		return
+	var seg := leaf_base_segment()
+	var a0: Vector2 = seg[0]
+	var along: Vector2 = (seg[1] - a0).normalized()
+	# screen normal pointing TOWARD the camera; +y is toward the viewer
+	var nrm := Vector2(-along.y, along.x)
+	if nrm.y < 0.0:
+		nrm = -nrm
+	var rel := player.global_position.y - global_position.y
+	var behind := (player.global_position - a0).dot(nrm) < 0.0
+	var want := rel + LEAF_AIM_MARGIN if behind else rel - LEAF_AIM_MARGIN
+	if _swing_out:
+		want = maxf(want, JAMB_EPS)
+	else:
+		want = minf(want, -JAMB_EPS)
+	_apply_sort_shift(want)
+
+
 func _process(delta: float) -> void:
+	if not _animating:
+		# settled. An OPEN leaf keeps re-aiming its sort key at the player every
+		# frame; a shut one has nothing to do and stops processing.
+		if _open:
+			_aim_leaf_sort()
+		else:
+			set_process(false)
+		return
 	_frame_timer += delta
 	if _frame_timer < FRAME_TIME:
 		return
@@ -333,13 +406,17 @@ func _process(delta: float) -> void:
 	var target := FRAMES - 1 if _open else 0
 	if _frame == target:
 		_animating = false
-		set_process(false)
 		if _open:
 			# ...unless an upper floor is standing on this shell, in which
 			# case the gap stays sealed while the door still reads as open
 			_poly.set_deferred("disabled", not _floor_blocked)
 			_occ.occluder = null                    # ...and light comes through
+			# NOTE: processing stays ON while open — _aim_leaf_sort has to run
+			# every frame, because the player moves and the leaf's correct sort
+			# key moves with them.
+			_aim_leaf_sort()
 		else:
+			set_process(false)
 			_poly.set_deferred("disabled", false)
 			_occ.occluder = _occ_poly
 			_leaf.set_deferred("disabled", true)

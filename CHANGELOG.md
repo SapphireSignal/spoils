@@ -3,6 +3,43 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.91] - 2026-08-07 - an open door knows which side of it you are standing
+
+### Fixed - standing behind an open door drew you in front of it, and standing beside one cut you in half
+*"my character clips in the door"* and *"my character is supposed to be behind
+the door inside, but he just looks like hes infrontof the door"* — two photos,
+one cause.
+
+An open leaf is a **panel standing on a diagonal line**, so "is the player
+behind the door" is a question about which SIDE of that line they are on.
+Y-sort answers a different question: it compares two single numbers, which is a
+test against a **horizontal** line. The two agree only where they cross and
+diverge in a wedge that widens with distance — one side of the doorway drew the
+raider through a door he was behind, the other let the leaf eat a raider who was
+merely beside it.
+
+`--probe-doorsort` (new) measures it directly: it opens a door, steps the player
+over a grid around it, and prints the geometric truth beside the drawn order for
+every square. **Before: 35 of 73 squares wrong.**
+
+No fixed sort key can fix that, so the key stopped being fixed. Every frame an
+open leaf now works out which side of its own base line the player is really on
+and puts its sort key just the other side of *them*. Exact for the player — the
+only thing that ever stands in a doorway, since entrance pockets are kept
+prop-free inside and out — and unchanged for everything else. The hard floor
+stays: the leaf must still out-sort the jamb and the wall it stands in front of,
+or it draws inside its own building.
+
+**After: 0 wrong of 14 squares on one facing, 1 of 15 on the other** — that last
+one sits on the threshold itself, in the ambiguous strip where the player and
+the leaf occupy the same spot, and most of that strip is solid anyway.
+
+The probe discounts two kinds of square rather than pretending they are
+failures: those outside the leaf's screen-x range, where the two share no pixels
+and no order is observable, and those the player physically cannot stand in
+(`test_move` with `recovery_as_collision`, which is the only way a zero-length
+sweep reports an existing overlap).
+
 ## [0.6.90] - 2026-08-07 - downstairs is a living room, upstairs is a bedroom
 
 ### Fixed - both floors of a house were furnished from the same families

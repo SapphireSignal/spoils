@@ -41,6 +41,58 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-07 — an open door knows which side of it you are on
+
+**Shipped: v0.6.91.** `SEC` `DOCS` `CLAIMS` `SMOKE` all pass, plus the new
+`--probe-doorsort`.
+
+### The user's words
+
+- *"my character clips in the door, fix the collision or something"* and *"my
+  character is supposed to be behind the door inside, but he just looks like hes
+  infrontof the door"* — two photos, ONE cause.
+
+### Shipped
+
+**The leaf's sort key is aimed at the player every frame** (`_aim_leaf_sort`).
+An open leaf stands on a DIAGONAL base line, so "is the player behind it" is a
+half-plane test; y-sort compares two floats, which is a test against a
+HORIZONTAL line. They agree only where they cross and diverge in a widening
+wedge — which is both halves of the report at once. Measured 35/73 squares
+wrong before, 0/14 and 1/15 after. The residual is on the threshold itself,
+where player and leaf occupy the same spot.
+
+**It was NOT a collision bug**, though the user reasonably read it as one. The
+leaf's collider matches the manifest polygon and is enabled while open.
+
+### Learned
+
+- **THE PROBE'S FIRST TWO CUTS BOTH OVER-COUNTED, and a wrong probe is worse
+  than none.** It treated the leaf's plane as INFINITE (demanding a correct
+  order out past the leaf's ends, where the two share no pixels) and it
+  TELEPORTED the player into the leaf's own collider (squares nobody can reach).
+  35 -> 24 -> 4 -> 1 as each was corrected, and only the last number means
+  anything. **When a probe reports failures, check what it counts before
+  changing the code it is judging.**
+- **`test_move(xf, Vector2.ZERO, null, margin, true)` — the last argument is
+  `recovery_as_collision` and without it a zero-length sweep reports NOTHING.**
+  CLAUDE.md already warned about this; it is now used correctly in a second
+  place.
+- **A single y-sort key cannot describe a diagonal panel.** If another thin
+  angled thing ever needs to occlude the player (a gate leaf, a fence panel,
+  a car door), aim its key the same way rather than hunting for a constant.
+
+### Picked up at
+
+1. **The residual threshold square** on inward-swinging doors — bounded, on the
+   doorway line, mostly inside solid collision. Left deliberately.
+2. **B0c item 3** (clipping on props upstairs) — `--probe-upper` says
+   `invisible=0`; needs a real repro or it is closed.
+3. The standing backlog: B0-NEW geometry batch, B0 parking spurs, B0b broken
+   cars, B1 sprint, B2 warden, B3 scrapyard, B4 smoker.
+
+---
+
 ## 2026-08-07 — a living room downstairs and a bedroom upstairs
 
 **Shipped: v0.6.90.** `SEC` `DOCS` `CLAIMS` `SMOKE` all pass.

@@ -125,6 +125,8 @@ func _ready() -> void:
 			_probe_floordoor.call_deferred()
 		elif arg == "--probe-upper":
 			_probe_upper.call_deferred()
+		elif arg == "--probe-doorsort":
+			_probe_doorsort.call_deferred()
 		elif arg == "--probe-railwalk":
 			_probe_railwalk.call_deferred()
 		elif arg.begins_with("--film-walk="):
@@ -1987,6 +1989,106 @@ func _probe_upper() -> void:
 	for g in ghosts.slice(0, 12):
 		print("UPPER GHOST %s" % g)
 	get_tree().quit(0)
+
+
+func _probe_doorsort() -> void:
+	## DOES AN OPEN LEAF DRAW IN FRONT OF EXACTLY THE THINGS IT IS IN FRONT OF?
+	##
+	## The report is two photos: the raider "clips in the door", and standing
+	## behind an open leaf he "looks like hes infront of the door". Both are the
+	## same question asked from two sides, and it is answerable without guessing:
+	## an open leaf is a PANEL standing on a base segment, so for any player
+	## position the true answer is which SIDE of that segment they are on — and
+	## y-sort only ever compares two single numbers.
+	##
+	## So: open one door, step the player over a grid around it, and for every
+	## square print the geometric truth beside the drawn order. Rows where they
+	## disagree are the bug, and the sign of the disagreement says which way.
+	await _ensure_game_scene()
+	var pl := _find_player()
+	var doors := get_tree().get_nodes_in_group("doors")
+	if pl == null or doors.is_empty():
+		print("DOORSORT FAIL: no player/doors")
+		get_tree().quit(1)
+		return
+	var pick := 0
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--door-pick="):
+			pick = int(a.trim_prefix("--door-pick="))
+	pick = clampi(pick, 0, doors.size() - 1)
+	var d := doors[pick] as Door
+	var centre := d.doorway_center()
+	# open it OUTWARD: stand inside first, so the leaf swings toward the camera
+	pl.global_position = centre - d.doorway_through() * 22.0
+	await get_tree().process_frame
+	d.toggle(pl.global_position)
+	for i in 30:
+		await get_tree().process_frame
+	# the leaf's base segment, in global space, longest edge of its polygon
+	var seg: Array = d.leaf_base_segment()
+	var a0: Vector2 = seg[0]
+	var a1: Vector2 = seg[1]
+	var along := (a1 - a0).normalized()
+	# screen normal pointing TOWARD the camera (+y is toward the viewer)
+	var nrm := Vector2(-along.y, along.x)
+	if nrm.y < 0.0:
+		nrm = -nrm
+	print("DOORSORT door=%d open=%s shift=%.1f base=(%.1f,%.1f)-(%.1f,%.1f)"
+		% [pick, str(d.is_open()), d.sort_shift(), a0.x, a0.y, a1.x, a1.y])
+	var wrong := 0
+	var tested := 0
+	for gy in range(-3, 4):
+		var row := ""
+		for gx in range(-5, 6):
+			var at := centre + Vector2(float(gx) * 6.0, float(gy) * 6.0)
+			# ONLY WHERE THE TWO CAN ACTUALLY OVERLAP ON SCREEN. A leaf is a
+			# FINITE panel, and the half-plane test below treats its plane as
+			# infinite — so it demands a correct draw order out past the leaf's
+			# ends, where the player and the leaf share no pixels and no order
+			# is observable. The panel is vertical, so its screen-x range is
+			# exactly its base segment's; anything further than half a player
+			# width outside that cannot be occluded by it either way.
+			var lx0 := minf(a0.x, a1.x) - 7.0
+			var lx1 := maxf(a0.x, a1.x) + 7.0
+			if at.x < lx0 or at.x > lx1:
+				row += "-"          # cannot overlap; unobservable, not a fail
+				continue
+			# ...AND ONLY WHERE THE PLAYER CAN ACTUALLY STAND. This probe
+			# teleports, so it will happily place them inside the leaf's own
+			# collider and then report the draw order there as wrong. Nobody can
+			# reach those squares in play. `recovery_as_collision = true` is
+			# load-bearing: a zero-length test_move does NOT report an existing
+			# overlap without it, which is how a spawn guard in this file sat
+			# doing nothing for a long time.
+			var probe_xf := Transform2D(0.0, at)
+			if pl.test_move(probe_xf, Vector2.ZERO, null, 0.08, true):
+				row += "b"          # blocked: unreachable, not a fail
+				continue
+			# TRUE answer: which side of the leaf's own plane the player stands
+			var side := (at - a0).dot(nrm)
+			if absf(side) < 1.0:
+				row += "."          # on the plane; no right answer, skip
+				continue
+			# THE KEY IS NO LONGER FIXED — the leaf re-aims it at the player
+			# every frame, so it has to be MOVED and re-read, not computed once.
+			# Reading it once and sweeping positions against it would measure
+			# the old design and report a fail that is not there any more.
+			pl.global_position = at
+			await get_tree().process_frame
+			var leaf_key: float = d.global_position.y + d.sort_shift()
+			var truly_behind := side < 0.0
+			# DRAWN answer: y-sort compares the two keys
+			var drawn_behind := at.y < leaf_key
+			tested += 1
+			if truly_behind == drawn_behind:
+				row += "o"
+			else:
+				row += "X"
+				wrong += 1
+		print("DOORSORT %+3d %s" % [gy * 6, row])
+	print("DOORSORT squares=%d disagreeing=%d" % [tested, wrong])
+	print("DOORSORT %s" % ("PASS" if wrong == 0 else "FAIL"))
+	get_tree().quit(0 if wrong == 0 else 1)
 
 
 func _probe_railwalk() -> void:
