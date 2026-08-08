@@ -206,6 +206,9 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.98", [
+		"a door opened outwards no longer clips into the wall beside it. last version gave each wall face a single depth to stop it slicing you into bands - but on the near faces that pushed the wall forward, far enough to out-sort a door standing in front of it. the shared depth is on the far faces only now, where it can only ever move a wall further back",
+	]],
 	["v0.6.97", [
 		"walking along the inside of a wall no longer slices your character into bands. a wall is built one panel per floor tile and each panel had its own depth, so walking past them you kept crossing from in front of one to behind the next and the next one drew across you - once per tile, which is why it repeated at even spacing and never at the corners. inside a building a wall face is now one flat surface with no seams to cross",
 	]],

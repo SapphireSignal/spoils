@@ -3,6 +3,26 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.98] - 2026-08-08 - the shared wall sort applies to the FAR faces only
+
+### Fixed - a v0.6.97 regression: an outward-opening door clipped into the wall
+*"now when the door is opened towards outside, it clips in the wall"*.
+
+v0.6.97 collapsed every wall face onto a single sort key. On a NEAR face that
+extreme is its southernmost point, so each piece moved up to a whole building
+width TOWARD the camera — and the wall then out-sorted things genuinely standing
+in front of it. An open door leaf was the first casualty.
+
+The shared key is applied to the FAR faces only now. A far face collapses onto
+its minimum y, which only ever moves pieces further BEHIND: that direction is
+safe by construction, because it cannot make a wall cover anything in the room
+it encloses. A near face is also the half you are standing behind, where the
+wall covers you whatever its seams do — so it had the least to gain and the most
+to break.
+
+Verified on **both wall facings** (`--door-pick=0` and `=1`, plus 4 and 8), which
+is the check this project has now had to be reminded of three times.
+
 ## [0.6.97] - 2026-08-08 - walking along a wall inside stops cutting you in bands
 
 ### Fixed - one sort key per wall face, while you are inside

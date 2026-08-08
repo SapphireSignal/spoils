@@ -2279,6 +2279,19 @@ func _build_shell(plot: Dictionary) -> void:
 	for side in face_pieces:
 		var pieces: Array = face_pieces[side]
 		var far_side := (_EDGE_OFFSET[side] as Vector2).y < 0.0
+		# FAR FACES ONLY, and this is a fix for a fix. Collapsing a NEAR face
+		# onto its extreme moves every piece SOUTH — up to a whole building
+		# width — so the wall then out-sorts things genuinely standing in front
+		# of it, and an open door leaf was the first casualty (user: "now when
+		# the door is opened towards outside, it clips in the wall").
+		#
+		# A far face collapses onto its MINIMUM y, which only ever moves pieces
+		# further BEHIND. That direction is safe by construction: it cannot make
+		# a wall cover anything in the room it encloses. A near face is also the
+		# half you are behind, where the wall covers you whatever the seams do,
+		# so it has the least to gain from this and the most to break.
+		if not far_side:
+			continue
 		var shared := (pieces[0] as Node2D).position.y
 		for n in pieces:
 			var ny := (n as Node2D).position.y

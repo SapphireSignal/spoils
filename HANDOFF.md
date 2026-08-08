@@ -41,6 +41,27 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-08 — the shared wall sort is FAR faces only
+
+**Shipped: v0.6.98.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass.
+
+*"now when the door is opened towards outside, it clips in the wall"*, then
+*"make sure you test on different door"*.
+
+v0.6.97's shared face key moved NEAR-face pieces up to a building width toward
+the camera, so the wall out-sorted an open door leaf. Far faces only now: they
+collapse onto their MINIMUM y, which only moves pieces further behind, and that
+direction cannot cover anything in the room.
+
+**Learned: a fix whose direction is only safe one way must be applied only that
+way.** Far = behind = safe. Near = forward = it can out-sort anything. I applied
+it to both without asking which direction each moved.
+
+**And the user had to say "test on different door" for the THIRD time.** Both
+facings, every time — the rule is already in CLAUDE.md. Shot picks 0, 1, 4, 8.
+
+---
+
 ## 2026-08-08 — B11: one sort key per wall face
 
 **Shipped: v0.6.97.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass; layout untouched
