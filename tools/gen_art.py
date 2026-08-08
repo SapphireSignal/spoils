@@ -1048,7 +1048,13 @@ def make_map_tile(kind: str, variant: int) -> Canvas:
         # SHADED DOWN, NEVER LIFTED - the same lesson v0.6.105 learned on the
         # world's dirt: a pale tan highlight is what makes a brown field read
         # orange, because the brightest value dominates a large area.
-        wash(C("884b2b"), C("602c2c"), C("7a4841"), 0.30, 0.20)
+        #
+        # AND IT MUST NOT COMPETE WITH A ROOF. The first cut built dirt on
+        # 884b2b and house roofs on 7a4841/ad7757 - the same brown family, so
+        # at map zoom the buildings dissolved into the ground they stand on
+        # (user: "the dirt not looking so huge"). Dirt now sits a full step
+        # darker and the house roof moved to red tile, which no ground uses.
+        wash(C("7a4841"), C("4d2b32"), C("884b2b"), 0.32, 0.16)
     elif kind == "grass":
         wash(C("25562e"), C("19332d"), C("468232"), 0.30, 0.14)
     elif kind == "grass_aut":
@@ -1084,7 +1090,7 @@ def make_map_tile(kind: str, variant: int) -> Canvas:
         # houses looking the same at the top" - they were one flat salmon fill
         # with one lighter edge, for every plot in the district.
         tone = {
-            "roof_house_a": (C("7a4841"), C("602c2c"), C("ad7757")),
+            "roof_house_a": (C("a53030"), C("752438"), C("cf573c")),
             "roof_house_b": (C("577277"), C("394a50"), C("819796")),
             "roof_civic":   (C("411d31"), C("241527"), C("752438")),
             "roof_ware":    (C("253a5e"), C("172038"), C("3c5e8b")),
@@ -1106,6 +1112,101 @@ def make_map_tile(kind: str, variant: int) -> Canvas:
     return c
 
 
+MAP_WALL_H = 12          # one storey of map wall, in map pixels
+
+# The tone each roof kind's WALLS take: (lit, shade, line). The lit face is the
+# SW one and the shaded face the SE one, which is the same convention the
+# world's own wall segments use (seg_x lit, seg_y shadowed) — so the map is lit
+# from the same direction as the game.
+MAP_WALL_TONES = {
+    "roof_house_a": (C("884b2b"), C("602c2c"), C("341c27")),
+    "roof_house_b": (C("819796"), C("577277"), C("394a50")),
+    "roof_civic":   (C("577277"), C("394a50"), C("202e37")),
+    "roof_ware":    (C("577277"), C("394a50"), C("202e37")),
+    "roof_school":  (C("ad7757"), C("884b2b"), C("602c2c")),
+    "roof_safe":    (C("75a743"), C("468232"), C("25562e")),
+}
+
+
+def _diamond_bottom() -> dict:
+    """Column -> the lowest row of the tile diamond. A wall hangs off exactly
+    this line, so the face can never float above its own footprint or bite
+    into it."""
+    bottom: dict = {}
+    for y in range(MAP_TH):
+        s = map_diamond_span(y)
+        if s is None:
+            continue
+        for x in range(s[0], s[1] + 1):
+            bottom[x] = max(bottom.get(x, 0), y)
+    return bottom
+
+
+def make_map_wall(kind: str, face: str) -> Canvas:
+    """ONE STOREY OF EXTRUDED WALL, hanging below a cell's lower edge (user:
+    "i want this perspective but the buildings, trees, stuff like that to move
+    up"). A flat map of an isometric game reads as a floor plan; giving every
+    structure a top face and two side faces is the same "angular view illusion"
+    the standing rule demands of every prop in the world.
+
+    `face` is "l" for the SW half of the diamond's lower edge and "r" for the
+    SE half. Together they cover it exactly, so a box drawn from both is
+    watertight. Stacking this tile vertically gives extra storeys — its top and
+    bottom edges carry the same slope, so the joins are invisible.
+    """
+    c = Canvas(MAP_TW, MAP_WALL_H + MAP_TH)
+    rng = random.Random(hash((kind, face)) & 0xFFFFFFFF)
+    lit, shade, line = MAP_WALL_TONES[kind]
+    body = lit if face == "l" else shade
+    dark = shade if face == "l" else line
+    bottom = _diamond_bottom()
+    cols = range(1, MAP_TW // 2) if face == "l" else range(MAP_TW // 2, MAP_TW - 1)
+    for x in cols:
+        top = bottom.get(x)
+        if top is None:
+            continue
+        for k in range(MAP_WALL_H):
+            y = top + 1 + k
+            col = body
+            if k == 0:
+                col = dark               # the eave line under the roof edge
+            elif rng.random() < 0.14:
+                col = dark               # brickwork, sparse and solid
+            c.set(x, y, col)
+    return c
+
+
+def make_map_tree(variant: int) -> Canvas:
+    """A canopy that stands UP off the ground plane. Drawn on a subset of
+    forest cells rather than all of them, so woodland reads as clumps with
+    ground breaking through instead of a flat green field."""
+    c = Canvas(MAP_TW, MAP_TH + 8)
+    rng = random.Random(9100 + variant)
+    autumn = variant >= 3
+    deep = C("602c2c") if autumn else C("19332d")
+    body = C("884b2b") if autumn else C("25562e")
+    lite = C("be772b") if autumn else C("468232")
+    cx, cy = MAP_TW // 2, 5
+    rad = 4 + (variant % 3)
+    c.set(cx, cy + rad + 1, C("341c27"))       # a trunk, just visible
+    c.set(cx, cy + rad + 2, C("341c27"))
+    for y in range(MAP_TH + 8):
+        for x in range(MAP_TW):
+            dx, dy = (x - cx) / float(rad), (y - cy) / float(rad * 0.62)
+            d = dx * dx + dy * dy
+            if d > 1.0:
+                continue
+            col = body
+            if dy < -0.25 and d < 0.72:
+                col = lite                      # sun on the crown
+            elif dy > 0.30:
+                col = deep                      # shade under it
+            elif rng.random() < 0.18:
+                col = deep
+            c.set(x, y, col)
+    return c
+
+
 MAP_TILE_KINDS = [
     "outside", "land", "urban", "paved", "walk", "dirt", "grass", "grass_aut",
     "road_major", "road_minor", "road_line", "ballast", "rail", "water",
@@ -1115,17 +1216,41 @@ MAP_TILE_KINDS = [
 MAP_TILE_VARIANTS = 3
 
 
+MAP_TREE_VARIANTS = 6        # 0-2 green, 3-5 turned
+
+
 def make_map_atlas() -> tuple[Image.Image, dict[str, list[int]]]:
     """One row per kind, one column per variant — so world_builder addresses a
-    tile as (variant, kind_index) and never has to know the packing order."""
-    cols = MAP_TILE_VARIANTS
-    rows = len(MAP_TILE_KINDS)
-    atlas = Image.new("RGBA", (cols * MAP_TW, rows * MAP_TH), (0, 0, 0, 0))
+    tile as (variant, kind_index) and never has to know the packing order.
+
+    GROUND TILES, WALLS AND TREES ARE DIFFERENT HEIGHTS, so they cannot share
+    one grid. They get three bands stacked down the atlas and the manifest
+    carries a pixel RECT per entry rather than a cell coordinate — which also
+    means retuning MAP_WALL_H never desynchronises the GDScript side.
+    """
+    band_h = MAP_TH
+    wall_h = MAP_WALL_H + MAP_TH
+    tree_h = MAP_TH + 8
+    cols = max(MAP_TILE_VARIANTS, MAP_TREE_VARIANTS)
+    rows_t = len(MAP_TILE_KINDS)
+    rows_w = len(MAP_WALL_TONES) * 2
+    height = rows_t * band_h + rows_w * wall_h + tree_h
+    atlas = Image.new("RGBA", (cols * MAP_TW, height), (0, 0, 0, 0))
     coords: dict[str, list[int]] = {}
-    for r, kind in enumerate(MAP_TILE_KINDS):
-        for v in range(cols):
-            atlas.paste(make_map_tile(kind, v).img, (v * MAP_TW, r * MAP_TH))
-        coords[kind] = [0, r]
+    y = 0
+    for kind in MAP_TILE_KINDS:
+        for v in range(MAP_TILE_VARIANTS):
+            atlas.paste(make_map_tile(kind, v).img, (v * MAP_TW, y))
+        coords[kind] = [0, y, MAP_TW, band_h, MAP_TILE_VARIANTS]
+        y += band_h
+    for kind in MAP_WALL_TONES:
+        for face in ("l", "r"):
+            atlas.paste(make_map_wall(kind, face).img, (0, y))
+            coords["%s_wall_%s" % (kind, face)] = [0, y, MAP_TW, wall_h, 1]
+            y += wall_h
+    for v in range(MAP_TREE_VARIANTS):
+        atlas.paste(make_map_tree(v).img, (v * MAP_TW, y))
+    coords["tree"] = [0, y, MAP_TW, tree_h, MAP_TREE_VARIANTS]
     return atlas, coords
 
 
@@ -19584,6 +19709,7 @@ def main() -> None:
     manifest["map_tiles"] = map_coords
     manifest["map_tile"] = [MAP_TW, MAP_TH]
     manifest["map_tile_variants"] = MAP_TILE_VARIANTS
+    manifest["map_wall_h"] = MAP_WALL_H
 
     # entries: 3-tuples, or 4 with light coords (vehicles)
     entries, families = prop_inventory()

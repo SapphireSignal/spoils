@@ -4705,6 +4705,13 @@ const MAP_TH := 8
 ## pixels per cell at the same texture size, which is where the detail came
 ## from — the tile went 8x4 to 16x8.
 const MAP_BAKE_PAD := 10
+## HEADROOM ABOVE THE GROUND PLANE. Structures are drawn LIFTED, so the roof of
+## a cell near the top of the diamond lands at a negative y and would be
+## clipped away. Every iso position is shifted down by this, and it has to
+## clear the tallest thing on the map: two storeys of wall plus a canopy.
+const MAP_BAKE_TOP := 40
+
+var _map_wall_h := 12       # from the manifest; gen_art owns the real value
 
 
 func _map_bake_lo() -> int:
@@ -4724,7 +4731,8 @@ func _map_iso_px(cell: Vector2i) -> Vector2i:
 	var n := _map_bake_span()
 	var ax := cell.x - lo
 	var ay := cell.y - lo
-	return Vector2i((ax - ay + n - 1) * (MAP_TW / 2), (ax + ay) * (MAP_TH / 2))
+	return Vector2i((ax - ay + n - 1) * (MAP_TW / 2),
+		(ax + ay) * (MAP_TH / 2) + MAP_BAKE_TOP)
 
 
 func _map_major_roads() -> Array:
@@ -4805,14 +4813,21 @@ func _bake_map_iso() -> Image:
 	var lo := _map_bake_lo()
 	var hi := MAP_W - 1 - lo
 	var n := _map_bake_span()
-	var img := Image.create(MAP_TW * n, MAP_TH * n, false, Image.FORMAT_RGBA8)
+	_map_wall_h = int(_manifest.get("map_wall_h", 12))
+	var img := Image.create(MAP_TW * n, MAP_TH * n + MAP_BAKE_TOP, false,
+		Image.FORMAT_RGBA8)
 	var majors := _map_major_roads()
 	var majv: Dictionary = majors[0]
 	var majh: Dictionary = majors[1]
 
-	# roofs last, so a building always sits ON its ground rather than being
-	# overwritten by the next row of terrain
+	# WHICH CELLS CARRY A STRUCTURE, and how tall. Buildings stand UP off the
+	# ground plane rather than being painted flat onto it (user: "i want this
+	# perspective but the buildings, trees, stuff like that to move up") —
+	# a flat map of an isometric game reads as a floor plan.
 	var roof_of: Dictionary = {}
+	var lift_of: Dictionary = {}
+	var edge_r: Dictionary = {}     # cells on the building's +x face
+	var edge_l: Dictionary = {}     # ...and its +y face
 	for plot in _plots:
 		var pr: Rect2i = plot["rect"]
 		var kind := "roof_house_a" if plot["style"] == "brick_a" else "roof_house_b"
@@ -4824,30 +4839,92 @@ func _bake_map_iso() -> Image:
 			kind = "roof_ware"
 		elif plot["kind"] != "house":
 			kind = "roof_civic"
+		var storeys: int = maxi(1, int(plot.get("stories", 1)))
 		for by in range(pr.position.y, pr.end.y):
 			for bx in range(pr.position.x, pr.end.x):
-				roof_of[Vector2i(bx, by)] = kind
+				var bc := Vector2i(bx, by)
+				roof_of[bc] = kind
+				lift_of[bc] = storeys * _map_wall_h
+				if bx == pr.end.x - 1:
+					edge_r[bc] = true
+				if by == pr.end.y - 1:
+					edge_l[bc] = true
 
-	# ROW ORDER IS (cx+cy), NOT y. That is the iso depth order, so a roof drawn
-	# for one cell can never be clipped by ground painted for a cell behind it.
+	# GROUND FIRST, EVERY CELL, INCLUDING UNDER BUILDINGS. A raised roof no
+	# longer covers its own footprint, so without this a building would sit
+	# over a hole.
 	for d in range(2 * n - 1):
 		await _tick()
 		for ax in range(maxi(0, d - n + 1), mini(n, d + 1)):
 			var cell := Vector2i(lo + ax, lo + d - ax)
 			if cell.x > hi or cell.y > hi:
 				continue
-			var kind: String = roof_of.get(cell, "")
-			if kind == "":
-				kind = _map_tile_kind(cell, majv, majh)
-			if not kinds.has(kind):
+			var kind := _map_tile_kind(cell, majv, majh)
+			_map_blit(img, atlas, kinds, kind, _map_iso_px(cell), cell, variants)
+
+	# STRUCTURES SECOND, IN ISO DEPTH ORDER (cx+cy), so a nearer building
+	# correctly overlaps a farther one and a tree in front of a wall hides it.
+	for d in range(2 * n - 1):
+		await _tick()
+		for ax in range(maxi(0, d - n + 1), mini(n, d + 1)):
+			var cell := Vector2i(lo + ax, lo + d - ax)
+			if cell.x > hi or cell.y > hi:
 				continue
-			var row: int = int((kinds[kind] as Array)[1])
-			var v: int = posmod(hash(Vector3i(cell.x, cell.y, _zone_salt ^ 0x5b1d)),
-				variants)
 			var at := _map_iso_px(cell)
-			img.blend_rect(atlas,
-				Rect2i(v * MAP_TW, row * MAP_TH, MAP_TW, MAP_TH), at)
+			if roof_of.has(cell):
+				var kind: String = roof_of[cell]
+				var lift: int = lift_of[cell]
+				# the two visible faces, stacked one storey at a time from the
+				# ground up — each unit's slanted top and bottom match, so the
+				# joins between storeys are invisible
+				var storeys := lift / _map_wall_h
+				for s in storeys:
+					var wy := at.y - (s + 1) * _map_wall_h
+					if edge_r.has(cell):
+						_map_blit(img, atlas, kinds, kind + "_wall_r",
+							Vector2i(at.x, wy), cell, 1)
+					if edge_l.has(cell):
+						_map_blit(img, atlas, kinds, kind + "_wall_l",
+							Vector2i(at.x, wy), cell, 1)
+				_map_blit(img, atlas, kinds, kind,
+					Vector2i(at.x, at.y - lift), cell, variants)
+			elif _forest.has(cell):
+				# A TREE ON A SUBSET OF FOREST CELLS, not on all of them: one
+				# canopy per cell packs into a flat green field, which is what
+				# made the woods read as specks rather than woodland.
+				var hsh := posmod(hash(Vector3i(cell.x, cell.y,
+					_zone_salt ^ 0x77c1)), 100)
+				if hsh < 46:
+					var tv := posmod(hash(Vector3i(cell.x, cell.y,
+						_zone_salt ^ 0x2f19)), 3)
+					if _autumn_rect.has_point(cell):
+						tv += 3
+					_map_blit_at(img, atlas, kinds, "tree",
+						Vector2i(at.x, at.y - 7), tv)
 	return img
+
+
+func _map_blit(img: Image, atlas: Image, kinds: Dictionary, kind: String,
+		at: Vector2i, cell: Vector2i, variants: int) -> void:
+	if not kinds.has(kind):
+		return
+	var v: int = 0
+	if variants > 1:
+		v = posmod(hash(Vector3i(cell.x, cell.y, _zone_salt ^ 0x5b1d)), variants)
+	_map_blit_at(img, atlas, kinds, kind, at, v)
+
+
+func _map_blit_at(img: Image, atlas: Image, kinds: Dictionary, kind: String,
+		at: Vector2i, v: int) -> void:
+	## The manifest carries a pixel RECT per entry, so nothing here has to know
+	## how gen_art packed the atlas or how tall a wall unit is.
+	if not kinds.has(kind):
+		return
+	var e: Array = kinds[kind]
+	var count: int = int(e[4])
+	var vv: int = 0 if count <= 1 else posmod(v, count)
+	img.blend_rect(atlas,
+		Rect2i(int(e[0]) + vv * int(e[2]), int(e[1]), int(e[2]), int(e[3])), at)
 
 
 func _bake_map_image() -> Image:
