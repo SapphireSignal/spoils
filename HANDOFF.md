@@ -41,6 +41,49 @@ chat that dies mid-session still leaves a record.
 
 ---
 
+## 2026-08-08 - v0.6.105: the dirt, settled by measurement
+
+**Shipped: v0.6.105.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass, layout identical,
+user signed off on the before/after before the push.
+
+*"can you make all of the dirt on the world look more brown, its like
+orangeish"* / *"make it like the same brown colour as the trees or close to
+that"*.
+
+### What was actually wrong
+
+Hue 19 deg (correct earth) at **45% saturation** (terracotta). Three previous
+sessions moved the HUE by eye and each traded one complaint for the other. Two
+real causes: the `ad7757` pale-tan highlight, which is brighter than anything on
+a tree and is what the eye picks out of a field; and `speckle()` being capped at
+~5% coverage, so every attempt to retint via speckle probabilities did nothing
+measurable. Fixed by shading DOWN like a tree trunk (same base `884b2b`, no
+lift) and moving the mottle to `_tonal`. **45% -> 28% saturation, hue held.**
+
+### Learned - both now in CLAUDE.md
+
+- **`speckle()` cannot change a surface's colour.** Capped at three 6-16 px
+  patches regardless of the probabilities passed. Only the base or `_tonal`
+  moves an average.
+- **Measure saturation, not hue, when a colour "reads wrong".** And remember
+  the BRIGHTEST value in a mix dominates perception of a large field.
+
+### Learned - process
+
+**A user's comparison target is worth more than my own number.** I set out to
+hit "saturation under 35%" from theory; the answer came from measuring the
+TREES they pointed at, which showed the base was already identical and the
+fault was elsewhere entirely. Ask what it should look like *next to*.
+
+### Picked up at
+
+Backlog: B0-NEW geometry batch, B0 parking spurs, B0b broken cars, B1 sprint,
+B2 warden, B3 scrapyard, B6 cosy safehouse, B8 warden placement, B10 door
+creak, B13 prop outlines (sample -> sign-off -> fleet), C3 non-rectangular
+buildings.
+
+---
+
 ## 2026-08-08 - v0.6.104: the smoker and his bench
 
 **Shipped: v0.6.104.** `SEC` `DOCS` `CLAIMS` `SMOKE` pass, propclip 0/165,

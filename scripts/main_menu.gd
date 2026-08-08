@@ -206,6 +206,9 @@ var _ms_transit_frame: PanelContainer
 const CHANGELOG_ENTRIES := [
 	# ONE STRING PER BULLET. The labels autowrap, so hand-wrapping a
 	# sentence across several entries put a dash on every line (user).
+	["v0.6.105", [
+		"the dirt is brown now instead of orange. it turned out the colour itself was right all along - it was the pale tan flecks mixed through it that the eye kept picking out, and the trees you compared it to use the exact same brown, just shaded darker instead of lighter. same idea now, with more of the grey mud showing through",
+	]],
 	["v0.6.104", [
 		"the man on the bench is built from your own character sheet now, so he stands in the same world as you instead of looking like he wandered in from another game - but dyed his own man: rust coat, grey beard, blue eyes, black beanie. he sits on the bench rather than inside it, facing out from the backrest, and his exhale is real smoke now instead of a white speck",
 		"the benches were drawing their own back legs straight across the seat - which is what that black bar on his lap was - and their four feet never shared a ground plane, so one pair stood hovering. both fixed, and the broken bench has lost its bent leg",

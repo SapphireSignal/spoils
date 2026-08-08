@@ -336,10 +336,45 @@ def make_floor_tile(kind: str, variant: int) -> Canvas:
         # 884b2b and the highlight to ad7757. 4d2b32 is kept ONLY as the
         # shadow: it is -7 (blue over green) and would pull the whole surface
         # back toward wine if it were the base.
-        region = _floor_base(c, rng, C("884b2b"), C("4d2b32"), C("ad7757"),
-                             0.16, 0.10)
-        speckle(c, rng, region, [C("202e37"), C("394a50")], [0.17, 0.07])
-        _tonal(c, rng, region, [C("7a4841"), C("ad7757")], 3, 16, 34)
+        # BROWN IS A SATURATION PROBLEM, NOT A HUE ONE (user, 2026-08-08: "can
+        # you make all of the dirt on the world look more brown, its like
+        # orangeish"). Measured before touching it: the field came out hue 19.5
+        # deg at 45% SATURATION, which is terracotta. Earth reads brown at the
+        # same hue around 30% or below - so the fix is to desaturate, not to
+        # move the hue again.
+        #
+        # THAT MATTERS BECAUSE THE HUE HAS BEEN CHASED TWICE ALREADY and each
+        # move traded one complaint for the other: 341c27/241527 read as wine
+        # ("more red than brown"), so it went to 7a4841, still "a bit red", so
+        # it went to 884b2b - which has the best hue in the palette but is a
+        # 52% saturated orange, and that is what has been on screen since.
+        # Apollo has no muted mid-brown to swap in; the desaturation has to
+        # come from MIXING. So the base keeps its hue and the grey mud does
+        # the work, with the bright tan pulled back to an accent.
+        # AND THE DESATURATION HAS TO COME FROM `_tonal`, NOT `speckle`. The
+        # first attempt at this raised the speckle probabilities and the
+        # measured saturation did not move one point — `speckle` is capped at
+        # three patches of 6-16 px, under 5% of a tile whatever you pass it, so
+        # the base colour is ~85% of the field and nothing else can shift the
+        # average. `_tonal` paints solid blotches of real area, which is also
+        # what earth honestly looks like: mottled, not evenly dyed.
+        # THE BRIGHT TAN WAS THE ORANGE. Measured the trees, because that is
+        # the target the user gave ("make it like the same brown colour as the
+        # trees or close to that") — and their trunks are 884b2b, which is
+        # already the dirt's base. Same colour, and yet one reads brown and the
+        # other orange: the difference is that a trunk is 884b2b shaded DOWN
+        # with 341c27, while the dirt was 884b2b lifted UP with ad7757
+        # (173,119,87), a tan far lighter than anything on a tree. Those pale
+        # flecks are what the eye picks out of a whole field of it.
+        #
+        # So the dirt is shaded like a trunk now: nothing lighter than the
+        # base anywhere in it, 341c27 for the dark, and the grey mud for the
+        # mottle. Brown IS dark orange — the fix is to stop lifting it.
+        region = _floor_base(c, rng, C("884b2b"), C("4d2b32"), C("7a4841"),
+                             0.20, 0.14)
+        speckle(c, rng, region, [C("202e37"), C("394a50")], [0.25, 0.12])
+        _tonal(c, rng, region, [C("7a4841"), C("4d2b32")], 5, 28, 50)
+        _tonal(c, rng, region, [C("394a50"), C("202e37")], 8, 30, 56)
         for i in range(rng.randint(10, 14)):
             x = 6 + rng.randrange(52)
             y = 4 + rng.randrange(24)

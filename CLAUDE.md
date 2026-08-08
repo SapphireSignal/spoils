@@ -35,7 +35,7 @@ This file carries everything a fresh session needs that isn't in those two.
 
 <!-- CHECKED: --checkdocs parses the version out of the next line. Keep the
 	 form "vX.Y.Z shipped" or the check will fail loudly. -->
-**v0.6.104 shipped, 2026-08-08.** Milestone 1 (a walkable world) is DONE.
+**v0.6.105 shipped, 2026-08-08.** Milestone 1 (a walkable world) is DONE.
 Milestone 2 — guns, tunnels, the story opening — is designed and waiting
 on the user's explicit "go".
 
@@ -250,6 +250,22 @@ Deliver the intent with additive glow sprites, the way lamps already do.
   `_pick_variant_varied` takes a second draw on a repeat, so a swap there
   re-rolls the whole fixed district. Take that roll and throw it away, then
   pick from `_local_variant` off a district-seeded local rng.
+- **`speckle()` CANNOT CHANGE A SURFACE'S COLOUR — it is capped, and the cap
+  is not in its signature.** Whatever probabilities you pass, it paints at most
+  three patches of 6-16 px: under 5% of a 64x32 tile. A floor's BASE colour is
+  ~85% of what you see, and only `_floor_base`'s base or `_tonal`'s large solid
+  blotches can move the average. Raising speckle probabilities to retint the
+  dirt moved its measured saturation by ZERO points (v0.6.105).
+- **JUDGE A GROUND COLOUR BY MEASUREMENT, AND MEASURE SATURATION, NOT HUE.**
+  The dirt's hue was chased three times across three sessions — wine, then red,
+  then orange — because each session eyeballed it and moved the hue. Measured,
+  the fault was never the hue: it sat at a correct earth 19 deg the whole time
+  at **45% saturation**, which is terracotta. Earth reads brown at the same hue
+  near 28%. `scratchpad`-style one-off scripts that print mean RGB + hue + sat
+  + lightness per tile settle this in seconds; do that before touching a value.
+  **And the brightest colour in the mix is what the eye picks out of a field**
+  — the pale tan `ad7757` flecks were most of the orange, and the trees the
+  user compared it to are the SAME base `884b2b` shaded DOWN rather than up.
 - **A colour grade must not change brightness.** Multiplying by a tint
   colour whose own luminance is 0.38 dimmed every shadowed pixel to a
   third. Normalise tints to luminance 1 so they shift hue only.

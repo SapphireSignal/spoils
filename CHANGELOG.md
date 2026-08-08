@@ -3,6 +3,40 @@
 All notable changes to SPOILS are documented here. Versions follow a simple
 `0.minor.patch` scheme while the game is pre-release.
 
+## [0.6.105] - 2026-08-08 - the dirt reads as earth, not terracotta
+
+### Changed - browner ground, measured rather than eyeballed
+*"can you make all of the dirt on the world look more brown, its like
+orangeish"*, then the target that actually settled it: *"make it like the same
+brown colour as the trees or close to that"*.
+
+**The hue was never the problem.** It has been chased three times across three
+sessions - wine, then red, then orange - each time by eye. Measured, the field
+sat at hue 19 deg, which is a correct earth colour, and **45% saturation**,
+which is terracotta. Earth reads brown at the same hue around 28%.
+
+Two things were making it bright:
+
+- **The pale tan.** `ad7757` (173,119,87) was the highlight, far lighter than
+  anything on a tree, and those flecks are what the eye picks out of a whole
+  field. The trees the user compared it to are the SAME base `884b2b` - shaded
+  DOWN with a dark, never lifted with a tan. The dirt is shaded like a trunk
+  now: nothing in it is lighter than its own base.
+- **The mottle had no area.** Raising the speckle probabilities moved the
+  measured saturation by exactly zero points, because `speckle()` is capped at
+  three patches of 6-16 px whatever you pass it. The desaturation had to come
+  from `_tonal`'s large solid blotches, which is also what earth honestly looks
+  like - mottled, not evenly dyed.
+
+**Result: hue held at 17 deg, saturation 45% -> 28%, lightness 34% -> 30%.**
+The grey mud does the neutralising, because every browner Apollo value also
+pulls the hue toward red - which is the trap the previous two attempts fell
+into, and why a muted-base variant was built, measured at hue 6 deg, and
+rejected before it ever reached a screenshot.
+
+The terrain fringes composite from the real tiles, so they follow with no
+separate change. Layout untouched: DOORS 16, LAMPS 53/15, VEHICLES 30.
+
 ## [0.6.104] - 2026-08-08 - the smoker, and the bench he sits on
 
 ### Changed - he is built from the player's own character sheet now
